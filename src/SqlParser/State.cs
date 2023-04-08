@@ -1,33 +1,26 @@
-﻿
-namespace SqlParser;
+﻿namespace SqlParser;
 
-public interface IState
+public ref struct State
 {
-    void Next();
-    char? SkipWhile(Func<char, bool> skipPredicate);
-}
-
-public class State : IState
-{
-    private readonly char[] _characters;
+    private readonly ReadOnlySpan<char> _characters;
     private readonly Location _location;
-    private long _index;
+    private int _index;
     private bool _finished;
 
-    internal State(string sql)
+    internal State(ReadOnlySpan<char> sql)
     {
-        _characters = sql.ToCharArray();
+        _characters = sql;
         _location = new Location();
     }
 
-    private State(long index, Location location, char[] characters)
+    private State(int index, Location location, ReadOnlySpan<char> characters)
     {
-        _index= index;
+        _index = index;
         _location = location;
         _characters = characters;
     }
 
-    internal char Peek()
+    public char Peek()
     {
         if (_finished)
         {
@@ -85,8 +78,6 @@ public class State : IState
 
     internal State Clone()
     {
-        var cloneCharacters = new char[_characters.Length];
-        _characters.CopyTo(cloneCharacters, 0);
-        return new State(_index, CloneLocation(), cloneCharacters);
+        return new State(_index, CloneLocation(), _characters);
     }
 }

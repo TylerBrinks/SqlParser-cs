@@ -30,7 +30,7 @@ public class RedshiftDialect : Dialect
     /// It's needed to distinguish treating square brackets as quotes from
     /// treating them as json path. If there is identifier then we assume
     /// there is no json path.
-    public override bool IsProperIdentifierInsideQuotes(IState state)
+    public override bool IsProperIdentifierInsideQuotes(State state)
     {
         state.Next();
         var notWhiteChar = state.SkipWhile(c => string.IsNullOrWhiteSpace(c.ToString()));

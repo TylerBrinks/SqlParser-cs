@@ -3,9 +3,8 @@ using SqlParser.Tokens;
 
 namespace SqlParser;
 
-public class Tokenizer
+public ref struct Tokenizer
 {
-    #pragma warning disable CS8618
     private Dialect _dialect;
     private State _state;
 
@@ -15,7 +14,7 @@ public class Tokenizer
     /// <param name="sql">SQL string to tokenize</param>
     /// <returns>IEnumerable list of SQL tokens</returns>
     /// <exception cref="TokenizeException">Thrown when an unexpected token in encountered while parsing the input string</exception>
-    public IList<Token> Tokenize(string sql)
+    public IList<Token> Tokenize(ReadOnlySpan<char> sql)
     {
         return Tokenize(sql, new GenericDialect());
     }
@@ -26,13 +25,13 @@ public class Tokenizer
     /// <param name="dialect">SQL dialect</param>
     /// <returns>IEnumerable list of SQL tokens</returns>
     /// <exception cref="TokenizeException">Thrown when an unexpected token in encountered while parsing the input string</exception>
-    public IList<Token> Tokenize(string sql, Dialect dialect)
+    public IList<Token> Tokenize(ReadOnlySpan<char> sql, Dialect dialect)
     {
         _dialect = dialect;
         return TokenizeWithLocation(sql);
     }
 
-    private IList<Token> TokenizeWithLocation(string sql)
+    private IList<Token> TokenizeWithLocation(ReadOnlySpan<char> sql)
     {
         _state = new State(sql);
 
@@ -438,7 +437,8 @@ public class Tokenizer
             switch (current)
             {
                 case Symbols.SingleQuote:
-                    var escaped = EscapeSingleQuote();
+                    var (escaped, continueEscape) = EscapeSingleQuote(s, current, isEscaped);
+                    isEscaped = continueEscape;
 
                     if (escaped)
                     {
@@ -447,17 +447,17 @@ public class Tokenizer
                     break;
 
                 case Symbols.Backslash:
-                    EscapeBackslash();
+                    isEscaped = EscapeBackslash(s, isEscaped);
                     break;
 
                 case 'r':
-                    EscapeControlCharacter(Symbols.CarriageReturn);
+                    isEscaped = EscapeControlCharacter(s, current, isEscaped, Symbols.CarriageReturn);
                     break;
                 case 'n':
-                    EscapeControlCharacter(Symbols.NewLine);
+                    isEscaped = EscapeControlCharacter(s, current, isEscaped, Symbols.NewLine);
                     break;
                 case 't':
-                    EscapeControlCharacter(Symbols.Tab);
+                    isEscaped = EscapeControlCharacter(s, current, isEscaped, Symbols.Tab);
                     break;
 
                 default:
@@ -469,56 +469,66 @@ public class Tokenizer
             }
         }
 
-        bool EscapeSingleQuote()
-        {
-            _state.Next();
-            if (isEscaped)
-            {
-                s.Add(current);
-                isEscaped = false;
-                return false;
-            }
 
-            if (_state.Peek() == Symbols.SingleQuote)
-            {
-                s.Add(current);
-                isEscaped = false;
-                return false;
-            }
+       
 
-            return true;
-        }
-
-        void EscapeBackslash()
-        {
-            if (isEscaped)
-            {
-                s.Add(Symbols.Backslash);
-                isEscaped = false;
-            }
-            else
-            {
-                isEscaped = true;
-            }
-
-            _state.Next();
-        }
-
-        void EscapeControlCharacter(char escaped)
-        {
-            if (isEscaped)
-            {
-                s.Add(escaped);
-                isEscaped = false;
-            }
-            else
-            {
-                s.Add(current);
-            }
-            _state.Next();
-        }
+       
 
         throw new TokenizeException($"Unterminated encoded string literal after {start}", start);
+    }
+
+    private (bool, bool) EscapeSingleQuote(ICollection<char> s, char current, bool isEscaped)
+    {
+        _state.Next();
+        if (isEscaped)
+        {
+            s.Add(current);
+            return (false, false);
+        }
+
+        if (_state.Peek() == Symbols.SingleQuote)
+        {
+            s.Add(current);
+            return (false, false);
+        }
+
+        return (true, isEscaped);
+    }
+
+    private bool EscapeBackslash(ICollection<char> s, bool isEscaped)
+    {
+        bool escaped;
+
+        if (isEscaped)
+        {
+            s.Add(Symbols.Backslash);
+            escaped = false;
+        }
+        else
+        {
+            escaped = true;
+        }
+
+        _state.Next();
+        return escaped;
+    }
+
+    private bool EscapeControlCharacter(ICollection<char> s, char current, bool isEscaped, char escaped)
+    {
+        var continueEscaped = isEscaped;
+
+        if (isEscaped)
+        {
+            s.Add(escaped);
+            continueEscaped = false;
+        }
+        else
+        {
+            s.Add(current);
+        }
+        _state.Next();
+        
+        return continueEscaped;
     }
 
     private Token TokenizeMinus()
@@ -527,32 +537,32 @@ public class Tokenizer
         return _state.Peek() switch
         {
             // -- inline comment
-            Symbols.Minus => TokenizeComment(),
+            Symbols.Minus => TokenizeHyphenComment(),
             // -> or ->> long arrow
             Symbols.GreaterThan => TokenizeLongArrow(),
             // Regular - operator
             _ => new Minus()
         };
+    }
 
-        Whitespace TokenizeComment()
+    private Whitespace TokenizeHyphenComment()
+    {
+        _state.Next();
+        var comment = TokenizeInlineComment();
+        return new Whitespace(WhitespaceKind.InlineComment, new string(comment)) { Prefix = "--" };
+    }
+
+    private Token TokenizeLongArrow()
+    {
+        _state.Next();
+        if (_state.Peek() != Symbols.GreaterThan)
         {
-            _state.Next();
-            var comment = TokenizeInlineComment();
-            return new Whitespace(WhitespaceKind.InlineComment, new string(comment)) { Prefix = "--" };
+            return new Arrow();
         }
 
-        Token TokenizeLongArrow()
-        {
-            _state.Next();
-            if (_state.Peek() != Symbols.GreaterThan)
-            {
-                return new Arrow();
-            }
+        _state.Next();
+        return new LongArrow();
 
-            _state.Next();
-            return new LongArrow();
-
-        }
     }
 
     private Token TokenizeDivide()
@@ -561,62 +571,64 @@ public class Tokenizer
 
         return _state.Peek() switch
         {
-            Symbols.Asterisk => TokenizeComment(),
+            Symbols.Asterisk => TokenizeAsteriskComment(),
             Symbols.Divide when _dialect is SnowflakeDialect => ParseSnowflakeComment(),
             _ => new Divide()
         };
 
-        Whitespace TokenizeComment()
-        {
-            var comment = new Stack<char>();
-            var lastChar = Symbols.Space;
-            var nested = 1;
+      
+    }
 
-            while (true)
-            {
-                _state.Next();
+    private Whitespace TokenizeAsteriskComment()
+    {
+        var comment = new Stack<char>();
+        var lastChar = Symbols.Space;
+        var nested = 1;
 
-                var current = _state.Peek();
-
-                if (current == Symbols.EndOfFile)
-                {
-                    throw new TokenizeException("Unexpected EOF while in a multi-line comment", _state.CloneLocation());
-                }
-
-                switch (lastChar)
-                {
-                    case Symbols.Divide when current == Symbols.Asterisk:
-                        nested++;
-                        break;
-
-                    case Symbols.Asterisk when current == Symbols.Divide:
-                        {
-                            nested--;
-                            if (nested == 0)
-                            {
-                                comment.Pop();
-                                _state.Next();
-                                return new Whitespace(WhitespaceKind.MultilineComment, new string(comment.Reverse().ToArray()));
-                            }
-
-                            break;
-                        }
-                }
-
-                comment.Push(current);
-                lastChar = current;
-            }
-        }
-
-        Whitespace ParseSnowflakeComment()
+        while (true)
         {
             _state.Next();
-            var comment = TokenizeInlineComment();
-            return new Whitespace(WhitespaceKind.InlineComment, new string(comment))
+
+            var current = _state.Peek();
+
+            if (current == Symbols.EndOfFile)
             {
-                Prefix = "//"
-            };
+                throw new TokenizeException("Unexpected EOF while in a multi-line comment", _state.CloneLocation());
+            }
+
+            switch (lastChar)
+            {
+                case Symbols.Divide when current == Symbols.Asterisk:
+                    nested++;
+                    break;
+
+                case Symbols.Asterisk when current == Symbols.Divide:
+                {
+                    nested--;
+                    if (nested == 0)
+                    {
+                        comment.Pop();
+                        _state.Next();
+                        return new Whitespace(WhitespaceKind.MultilineComment, new string(comment.Reverse().ToArray()));
+                    }
+
+                    break;
+                }
+            }
+
+            comment.Push(current);
+            lastChar = current;
         }
+    }
+
+    private Whitespace ParseSnowflakeComment()
+    {
+        _state.Next();
+        var comment = TokenizeInlineComment();
+        return new Whitespace(WhitespaceKind.InlineComment, new string(comment))
+        {
+            Prefix = "//"
+        };
     }
 
     private char[] TokenizeInlineComment()
