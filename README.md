@@ -11,7 +11,7 @@ It's a .NET library capable of parsing SQL statements into an abstract syntax tr
 ## Getting Started
 
 Installation
-Install [SqlParser](https://www.nuget.org/packages/sqlparser-cs/) from the 
+Install [SqlParser](https://www.nuget.org/packages/sqlparsercs/) from the 
 .NET CLI as:
 ```
 dotnet add package SqlParserCS
@@ -39,9 +39,14 @@ var ast =  new Parser().ParseSql(sql);
 ```
 SqlParser reads the output into a token stream and parses it into a SQL syntax tree. 
 
+## Demo Project
+Need more than just a code snippet?  The solution includes a demo console app where you can test out parsing SQL as well as look at few 
+simple examples of how to use the AST to query an arbitrary data source like a CSV file.  Download or clone the project, set the demo
+project as startup, and run it.  The console app will prompt you through the examples.
 
 ## AST Object Model
-Once the syntax tree has been parsed, you can query and traverse the object model.  The example below is (highly) manual way of parsing the output.  The library contains numerous convenience methods to help traverse the tree gracefully.
+Once the syntax tree has been parsed, you can query and traverse the object model.  The example below is (highly) manual way of parsing the output. 
+The library contains numerous convenience methods to help traverse the tree gracefully.
 
 ```cs
 // Get the query statement since parsed results can have multiple
