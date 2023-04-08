@@ -5,11 +5,11 @@ VisualStudioVersion = 17.4.33403.182
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SqlParser", "src\SqlParser\SqlParser.csproj", "{724A010F-5B99-4C84-84AD-6531BC66421C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SqlParserConsole", "src\SqlParserConsole\SqlParserConsole.csproj", "{08DA29F1-A783-4434-AE7D-618B3619C4FC}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SqlParser.Tests", "src\SqlParser.Tests\SqlParser.Tests.csproj", "{33A8E06A-4755-46BD-8B89-1142B8EFEB6A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqlParser.Benchmarks", "src\SqlParser.Benchmarks\SqlParser.Benchmarks.csproj", "{BD220AD6-7880-4481-8D04-7DF3E0D87086}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SqlParser.Benchmarks", "src\SqlParser.Benchmarks\SqlParser.Benchmarks.csproj", "{BD220AD6-7880-4481-8D04-7DF3E0D87086}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SqlParserDemo", "src\SqlParserDemo\SqlParserDemo.csproj", "{591D225E-46C1-49D7-A32F-31DDBECC09D6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,10 +21,6 @@ Global
 		{724A010F-5B99-4C84-84AD-6531BC66421C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{724A010F-5B99-4C84-84AD-6531BC66421C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{724A010F-5B99-4C84-84AD-6531BC66421C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{08DA29F1-A783-4434-AE7D-618B3619C4FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{08DA29F1-A783-4434-AE7D-618B3619C4FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{08DA29F1-A783-4434-AE7D-618B3619C4FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{08DA29F1-A783-4434-AE7D-618B3619C4FC}.Release|Any CPU.Build.0 = Release|Any CPU
 		{33A8E06A-4755-46BD-8B89-1142B8EFEB6A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{33A8E06A-4755-46BD-8B89-1142B8EFEB6A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{33A8E06A-4755-46BD-8B89-1142B8EFEB6A}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -33,6 +29,10 @@ Global
 		{BD220AD6-7880-4481-8D04-7DF3E0D87086}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BD220AD6-7880-4481-8D04-7DF3E0D87086}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BD220AD6-7880-4481-8D04-7DF3E0D87086}.Release|Any CPU.Build.0 = Release|Any CPU
+		{591D225E-46C1-49D7-A32F-31DDBECC09D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{591D225E-46C1-49D7-A32F-31DDBECC09D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{591D225E-46C1-49D7-A32F-31DDBECC09D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{591D225E-46C1-49D7-A32F-31DDBECC09D6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

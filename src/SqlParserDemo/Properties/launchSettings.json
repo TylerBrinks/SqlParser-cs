@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "SqlParserConsole": {
+    "SqlParserDemo": {
       "commandName": "Project"
     }
   }

@@ -1,5 +1,6 @@
 ﻿// ReSharper disable StringLiteralTypo
 // ReSharper disable CommentTypo
+// ReSharper disable UnusedMember
 namespace SqlParser.Ast;
 
 public abstract record Statement : IWriteSql, IElement
@@ -1179,10 +1180,7 @@ public abstract record Statement : IWriteSql, IElement
 
             Source.ToSql(writer);
 
-            if (On != null)
-            {
-                On.ToSql(writer);
-            }
+            On?.ToSql(writer);
 
             if (Returning.SafeAny())
             {

@@ -4,7 +4,7 @@ using SqlParser.Ast;
 using Action = System.Action;
 using Table = Spectre.Console.Table;
 
-namespace SqlParserConsole;
+namespace SqlParserDemo;
 
 public class CsvQuery
 {

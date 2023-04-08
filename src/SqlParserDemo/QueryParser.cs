@@ -3,7 +3,7 @@ using Spectre.Console;
 using Spectre.Console.Json;
 using SqlParser;
 
-namespace SqlParserConsole;
+namespace SqlParserDemo;
 
 public class QueryParser
 {
