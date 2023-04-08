@@ -48,7 +48,7 @@ public class Parser
     /// <returns></returns>
     /// <exception cref="TokenizeException">Thrown when an unexpected token in encountered while parsing the input string</exception>
     /// <exception cref="ParserException">Thrown when the sequence of tokens does not match the dialect's expected grammar</exception>
-    public Sequence<Statement> ParseSql(string sql, ParserOptions? options = null)
+    public Sequence<Statement> ParseSql(ReadOnlySpan<char> sql, ParserOptions? options = null)
     {
         return ParseSql(sql, new GenericDialect(), options);
     }
@@ -59,7 +59,7 @@ public class Parser
     /// <param name="dialect">SQL dialect instance</param>
     /// <param name="options">Parsing options</param>
     /// <returns></returns>
-    public Sequence<Statement> ParseSql(string sql, Dialect dialect, ParserOptions? options = null)
+    public Sequence<Statement> ParseSql(ReadOnlySpan<char> sql, Dialect dialect, ParserOptions? options = null)
     {
         _options = options ?? new ParserOptions();
         _depthGuard = new DepthGuard(_options.RecursionLimit);
@@ -71,7 +71,7 @@ public class Parser
         return ParseStatements();
     }
 
-    internal Parser TryWithSql(string sql, Dialect dialect, ParserOptions? options = null)
+    internal Parser TryWithSql(ReadOnlySpan<char> sql, Dialect dialect, ParserOptions? options = null)
     {
         _options = options ?? new ParserOptions();
         _depthGuard = new DepthGuard(50);

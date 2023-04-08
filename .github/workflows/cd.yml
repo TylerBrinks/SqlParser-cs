@@ -1,4 +1,4 @@
-name: continuous-delivery
+name: "CD"
 run-name: Publish pipeline after ${{github.event_name}} by @${{ github.actor }}
 
 on:

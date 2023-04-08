@@ -1,4 +1,4 @@
-name: continuous-integration
+name: "CI"
 run-name: Build pipeline after ${{github.event_name}} by @${{ github.actor }}
 
 on:

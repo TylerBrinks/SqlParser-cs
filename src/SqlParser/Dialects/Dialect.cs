@@ -36,7 +36,7 @@ public abstract class Dialect
     /// Determine if quoted characters are proper for identifier
     /// </summary>
     /// <returns>True if proper; otherwise false.</returns>
-    public virtual bool IsProperIdentifierInsideQuotes(IState state)
+    public virtual bool IsProperIdentifierInsideQuotes(State state)
     {
         return true;
     }
