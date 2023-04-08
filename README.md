@@ -1,5 +1,7 @@
 # Extensible SQL Lexer and Parser for .NET
 
+[![NuGet Status](https://img.shields.io/nuget/v/sqlparsercs.svg)](https://www.nuget.org/packages/sqlparsercs/)  [![CD](https://github.com/TylerBrinks/SqlParser-cs/actions/workflows/cd.yml/badge.svg)](https://github.com/TylerBrinks/SqlParser-cs/actions/workflows/cd.yml) 
+
 This project is .NET port from the original Rust [sqlparser-rs project](https://github.com/sqlparser-rs/sqlparser-rs).
 
 It's a .NET library capable of parsing SQL statements into an abstract syntax tree (AST).  It contains a lexer and parser for SQL that conforms with the
