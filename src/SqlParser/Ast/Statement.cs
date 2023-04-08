@@ -362,7 +362,8 @@ public abstract record Statement : IWriteSql, IElement
         public Sequence<DataLoadingOption>? DirectoryTableParams { get; init; }
         public Sequence<DataLoadingOption>? FileFormat { get; init; }
         public Sequence<DataLoadingOption>? CopyOptions { get; init; }
-        public string? Comment { get; init; }
+        // ReSharper disable once MemberHidesStaticFromOuterClass
+        public new string? Comment { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {

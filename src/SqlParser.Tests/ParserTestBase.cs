@@ -30,7 +30,7 @@ public class ParserTestBase
 
     public Query VerifiedQuery(string sql, IEnumerable<Dialect> dialects, bool preserveFormatting = false)
     {
-        return (Query)VerifiedStatement(sql, dialects, preserveFormatting);
+        return VerifiedStatement(sql, dialects, preserveFormatting).AsQuery()!;
     }
 
     public Statement VerifiedStatement(string sql, bool preserveFormatting = false)

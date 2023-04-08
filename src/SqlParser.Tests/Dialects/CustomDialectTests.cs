@@ -18,7 +18,7 @@ namespace SqlParser.Tests.Dialects
         {
             var dialect = new CustomDialect { ParsePrefixAction = ParsePrefix };
             var statements = new Parser().ParseSql("SELECT 1 + 2", dialect);
-            var query = (Query)statements.First();
+            var query = statements.First().AsQuery();
             var body = new SetExpression.SelectExpression(new Select(new []
             {
                 new SelectItem.UnnamedExpression(new Expression.BinaryOp(
