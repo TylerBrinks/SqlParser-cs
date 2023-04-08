@@ -1,0 +1,724 @@
+﻿using SqlParser.Ast;
+using SqlParser.Dialects;
+using SqlParser.Tokens;
+using static SqlParser.Ast.Expression;
+using DataType = SqlParser.Ast.DataType;
+
+// ReSharper disable StringLiteralTypo
+
+namespace SqlParser.Tests.Dialects
+{
+    public class MySqlDialectTests : ParserTestBase
+    {
+        public MySqlDialectTests()
+        {
+            DefaultDialects = new[] { new MySqlDialect() };
+        }
+
+        [Fact]
+        public void Parse_Identifier()
+        {
+            VerifiedStatement("SELECT $a$, àà");
+        }
+
+        [Fact]
+        public void Parse_Literal_String()
+        {
+            var select = VerifiedOnlySelect("SELECT 'single', \"double\"");
+            Assert.Equal(2, select.Projection.Count);
+            Assert.Equal(new LiteralValue(new Value.SingleQuotedString("single")), select.Projection.First().AsExpr());
+            Assert.Equal(new LiteralValue(new Value.DoubleQuotedString("double")), select.Projection.Last().AsExpr());
+        }
+
+        [Fact]
+        public void Parse_Show_Columns()
+        {
+            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+
+            var tableName = new ObjectName("mytable");
+            Assert.Equal(new Statement.ShowColumns(false, false, tableName), VerifiedStatement("SHOW COLUMNS FROM mytable"));
+
+            tableName = new ObjectName(new Ident[] { "mydb", "mytable" });
+            Assert.Equal(new Statement.ShowColumns(false, false, tableName), VerifiedStatement("SHOW COLUMNS FROM mydb.mytable"));
+
+            tableName = new ObjectName("mytable");
+            Assert.Equal(new Statement.ShowColumns(true, false, tableName), VerifiedStatement("SHOW EXTENDED COLUMNS FROM mytable"));
+            Assert.Equal(new Statement.ShowColumns(false, true, tableName), VerifiedStatement("SHOW FULL COLUMNS FROM mytable"));
+
+            var filter = new ShowStatementFilter.Like("pattern");
+            Assert.Equal(new Statement.ShowColumns(false, false, tableName, filter), VerifiedStatement("SHOW COLUMNS FROM mytable LIKE 'pattern'"));
+
+            var where = new ShowStatementFilter.Where(VerifiedExpr("1 = 2"));
+            Assert.Equal(new Statement.ShowColumns(false, false, tableName, where), VerifiedStatement("SHOW COLUMNS FROM mytable WHERE 1 = 2"));
+
+            OneStatementParsesTo("SHOW FIELDS FROM mytable", "SHOW COLUMNS FROM mytable");
+            OneStatementParsesTo("SHOW COLUMNS IN mytable", "SHOW COLUMNS FROM mytable");
+            OneStatementParsesTo("SHOW FIELDS IN mytable", "SHOW COLUMNS FROM mytable");
+            OneStatementParsesTo("SHOW COLUMNS FROM mytable FROM mydb", "SHOW COLUMNS FROM mydb.mytable");
+        }
+
+        [Fact]
+        public void Parse_Show_Tables()
+        {
+            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+
+            var show = VerifiedStatement<Statement.ShowTables>("SHOW TABLES");
+            Assert.Equal(new Statement.ShowTables(false, false), show);
+
+            show = VerifiedStatement<Statement.ShowTables>("SHOW TABLES FROM mydb");
+            Assert.Equal(new Statement.ShowTables(false, false, "mydb"), show);
+
+            show = VerifiedStatement<Statement.ShowTables>("SHOW EXTENDED TABLES");
+            Assert.Equal(new Statement.ShowTables(true, false), show);
+
+            show = VerifiedStatement<Statement.ShowTables>("SHOW FULL TABLES");
+            Assert.Equal(new Statement.ShowTables(false, true), show);
+
+            show = VerifiedStatement<Statement.ShowTables>("SHOW TABLES LIKE 'pattern'");
+            Assert.Equal(new Statement.ShowTables(false, false, null, new ShowStatementFilter.Like("pattern")), show);
+
+            OneStatementParsesTo("SHOW TABLES IN mydb", "SHOW TABLES FROM mydb");
+        }
+
+        [Fact]
+        public void Parse_Show_Extended_Full()
+        {
+            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+
+            ParseSqlStatements("SHOW EXTENDED FULL TABLES");
+            ParseSqlStatements("SHOW EXTENDED FULL COLUMNS FROM mytable");
+            Assert.Throws<ParserException>(() => ParseSqlStatements("SHOW EXTENDED FULL CREATE TABLE mytable"));
+            Assert.Throws<ParserException>(() => ParseSqlStatements("SHOW EXTENDED FULL COLLATION"));
+            Assert.Throws<ParserException>(() => ParseSqlStatements("SHOW EXTENDED FULL VARIABLES"));
+        }
+
+        [Fact]
+        public void Parse_Show_Create()
+        {
+            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+
+            var name = new ObjectName("myident");
+
+            foreach (var type in new[]
+                     {
+                         ShowCreateObject.Table,
+                         ShowCreateObject.Trigger,
+                         ShowCreateObject.Event,
+                         ShowCreateObject.Function,
+                         ShowCreateObject.Procedure,
+                         ShowCreateObject.View
+                     })
+            {
+                var statement = VerifiedStatement($"SHOW CREATE {type} myident");
+                Assert.Equal(new Statement.ShowCreate(type, name), statement);
+            }
+        }
+
+        [Fact]
+        public void Parse_Show_Collation()
+        {
+            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+
+            Assert.Equal(new Statement.ShowCollation(), VerifiedStatement("SHOW COLLATION"));
+            Assert.Equal(new Statement.ShowCollation(new ShowStatementFilter.Like("pattern")), VerifiedStatement("SHOW COLLATION LIKE 'pattern'"));
+            Assert.Equal(new Statement.ShowCollation(new ShowStatementFilter.Where(VerifiedExpr("1 = 2"))), VerifiedStatement("SHOW COLLATION WHERE 1 = 2"));
+        }
+
+        [Fact]
+        public void Parse_Use()
+        {
+            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+
+            Assert.Equal(new Statement.Use("mydb"), VerifiedStatement("USE mydb"));
+        }
+
+        [Fact]
+        public void Parse_Set_Variables()
+        {
+            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+            VerifiedStatement("SET sql_mode = CONCAT(@@sql_mode, ',STRICT_TRANS_TABLES')");
+
+            var expected = new Statement.SetVariable(true, false, "autocommit", new []
+            {
+                new LiteralValue(Number("1"))
+            });
+
+            Assert.Equal(expected, VerifiedStatement("SET LOCAL autocommit = 1"));
+        }
+
+        [Fact]
+        public void Parse_Create_Table_Auto_Increment()
+        {
+            var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (bar INT PRIMARY KEY AUTO_INCREMENT)");
+
+            Assert.Equal("foo", create.Name);
+            Assert.Equal(new ColumnDef[]{ 
+                new("bar", new DataType.Int(), 
+                Options: new ColumnOptionDef[]
+                {
+                    new (new ColumnOption.Unique(true)),
+                    new (new ColumnOption.DialectSpecific(new []{new Word("AUTO_INCREMENT") }))
+
+                })}, create.Columns);
+        }
+
+        [Fact]
+        public void Parse_Create_Table_Set_Enum()
+        {
+            var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (bar SET('a', 'b'), baz ENUM('a', 'b'))");
+
+            Assert.Equal("foo", create.Name);
+            Assert.Equal(new ColumnDef[]{
+                new("bar", new DataType.Set(new []{"a","b"})),
+                new("baz", new DataType.Enum(new []{"a","b"}))
+            }, create.Columns);
+        }
+
+        [Fact]
+        public void Parse_Create_Table_Engine_Default_Charset()
+        {
+            var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (id INT(11)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3");
+
+            Assert.Equal("foo", create.Name);
+            Assert.Equal("InnoDB", create.Engine);
+            Assert.Equal("utf8mb3", create.DefaultCharset);
+            Assert.Equal(new ColumnDef[]{
+                new("id", new DataType.Int(11))
+
+            }, create.Columns);
+        }
+
+        [Fact]
+        public void Parse_Create_Table_Collate()
+        {
+            var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (id INT(11)) COLLATE=utf8mb4_0900_ai_ci");
+
+            Assert.Equal("foo", create.Name);
+            Assert.Equal("utf8mb4_0900_ai_ci", create.Collation);
+            Assert.Equal(new ColumnDef[] { new("id", new DataType.Int(11)) }, create.Columns);
+        }
+
+        [Fact]
+        public void Parse_Create_Table_Comment_Character_Set()
+        {
+            var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (s TEXT CHARACTER SET utf8mb4 COMMENT 'comment')");
+
+            Assert.Equal("foo", create.Name);
+            Assert.Equal(new ColumnDef[] { new("s", new DataType.Text(), 
+                Options: new ColumnOptionDef[]
+                {
+                    new(new ColumnOption.CharacterSet("utf8mb4")),
+                    new(new ColumnOption.Comment("comment"))
+                })
+            }, create.Columns);
+        }
+
+        [Fact]
+        public void Parse_Quote_Identifiers()
+        {
+            var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE `PRIMARY` (`BEGIN` INT PRIMARY KEY)");
+
+            Assert.Equal("`PRIMARY`", create.Name);
+            Assert.Equal(new ColumnDef[]{
+                new(new Ident("BEGIN", Symbols.Backtick), new DataType.Int(), Options:new ColumnOptionDef[]
+                {
+                    new (new ColumnOption.Unique(true))
+                })
+            }, create.Columns);
+        }
+
+        [Fact]
+        public void Parse_Quote_Identifiers_2()
+        {
+            var query = VerifiedStatement<Statement.Select>("SELECT `quoted `` identifier`");
+            var body = new SetExpression.SelectExpression(new Select(new []
+            {
+                new SelectItem.UnnamedExpression(new Identifier(new Ident("quoted ` identifier", Symbols.Backtick)))
+            }));
+            var expected = new Statement.Select(new Query(body));
+
+            Assert.Equal(expected, query);
+        }
+
+        [Fact]
+        public void Parse_Quote_Identifiers_3()
+        {
+            var query = VerifiedStatement<Statement.Select>("SELECT ```quoted identifier```");
+            var body = new SetExpression.SelectExpression(new Select(new []
+            {
+                new SelectItem.UnnamedExpression(new Identifier(new Ident("`quoted identifier`", Symbols.Backtick)))
+            }));
+            var expected = new Statement.Select(new Query(body));
+
+            Assert.Equal(expected, query);
+        }
+
+        [Fact]
+        public void Parse_Unterminated_Escape()
+        {
+            var ex = Assert.Throws<TokenizeException>(() => OneStatementParsesTo("SELECT 'I\'m not fine\'", ""));
+            Assert.Equal("Unterminated string literal. Expected ' after Line: 1, Col: 21", ex.Message);
+            ex = Assert.Throws<TokenizeException>(() => OneStatementParsesTo("SELECT 'I\\\\'m not fine'", ""));
+            Assert.Equal("Unterminated string literal. Expected ' after Line: 1, Col: 23", ex.Message);
+        }
+
+        [Fact]
+        public void Parse_Escaped_String()
+        {
+            var statement = OneStatementParsesTo("SELECT 'I\\'m fine'", "");
+
+            var query = (Statement.Select)statement;
+            var body = (SetExpression.SelectExpression)query.Query.Body;
+            Assert.Equal(new LiteralValue(new Value.SingleQuotedString("I'm fine")), body.Select.Projection.Single().AsExpr());
+
+            var projection = VerifiedOnlySelect("SELECT 'I''m fine'").Projection;
+            Assert.Equal(new SelectItem.UnnamedExpression(new LiteralValue(new Value.SingleQuotedString("I'm fine"))), projection[0]);
+        }
+
+        [Fact]
+        public void Parse_Create_Table_With_Minimum_Display_Width()
+        {
+            const string sql = "CREATE TABLE foo (bar_tinyint TINYINT(3), bar_smallint SMALLINT(5), bar_mediumint MEDIUMINT(6), bar_int INT(11), bar_bigint BIGINT(20))";
+            var create = VerifiedStatement<Statement.CreateTable>(sql);
+
+            var expected = new ColumnDef[]
+            {
+                new("bar_tinyint", new DataType.TinyInt(3)),
+                new("bar_smallint", new DataType.SmallInt(5)),
+                new("bar_mediumint", new DataType.MediumInt(6)),
+                new("bar_int", new DataType.Int(11)),
+                new("bar_bigint", new DataType.BigInt(20)),
+            };
+
+            Assert.Equal("foo", create.Name.Values[0]);
+            Assert.Equal(expected, create.Columns);
+        }
+
+        [Fact]
+        public void Parse_Create_Table_Unsigned()
+        {
+            const string sql = "CREATE TABLE foo (bar_tinyint TINYINT(3) UNSIGNED, bar_smallint SMALLINT(5) UNSIGNED, bar_mediumint MEDIUMINT(13) UNSIGNED, bar_int INT(11) UNSIGNED, bar_bigint BIGINT(20) UNSIGNED)";
+            var create = VerifiedStatement<Statement.CreateTable>(sql);
+
+            var expected = new ColumnDef[]
+            {
+                new("bar_tinyint", new DataType.UnsignedTinyInt(3)),
+                new("bar_smallint", new DataType.UnsignedSmallInt(5)),
+                new("bar_mediumint", new DataType.UnsignedMediumInt(13)),
+                new("bar_int", new DataType.UnsignedInt(11)),
+                new("bar_bigint", new DataType.UnsignedBigInt(20)),
+            };
+
+            Assert.Equal("foo", create.Name.Values[0]);
+            Assert.Equal(expected, create.Columns);
+        }
+
+        [Fact]
+        public void Parse_Simple_Insert()
+        {
+            const string sql = "INSERT INTO tasks (title, priority) VALUES ('Test Some Inserts', 1), ('Test Entry 2', 2), ('Test Entry 3', 3)";
+            var insert = VerifiedStatement<Statement.Insert>(sql);
+            var body = new SetExpression.ValuesExpression(new Values(new Sequence<Expression>[]
+            {
+                new()
+                {
+                    new LiteralValue(new Value.SingleQuotedString("Test Some Inserts")),
+                    new LiteralValue(Number("1"))
+                },
+                new()
+                {
+                    new LiteralValue(new Value.SingleQuotedString("Test Entry 2")),
+                    new LiteralValue(Number("2"))
+                },
+                new()
+                {
+                    new LiteralValue(new Value.SingleQuotedString("Test Entry 3")),
+                    new LiteralValue(Number("3"))
+                }
+            }));
+            var expected = new Query(body);
+
+            Assert.Equal("tasks", insert.Name);
+            Assert.Equal(new Ident[] { "title", "priority" }, insert.Columns!);
+            Assert.Equal(expected, insert.Source.Query);
+        }
+
+        [Fact]
+        public void Parse_Empty_Row_Insert()
+        {
+            ParseSqlStatements("INSERT INTO tb () VALUES (), ()");
+            ParseSqlStatements("INSERT INTO tb VALUES (), ()");
+
+            var insert = OneStatementParsesTo<Statement.Insert>(
+                "INSERT INTO tb () VALUES (), ()",
+                "INSERT INTO tb VALUES (), ()");
+
+            Assert.Equal("tb", insert.Name);
+            Assert.Equal(new Statement.Select(
+                new Query(new SetExpression.ValuesExpression(new Values(new Sequence<Expression>[]
+                {
+                    new (),
+                    new ()
+                }))))
+                , insert.Source);
+        }
+
+        [Fact]
+        public void Parse_Insert_With_On_Duplicate_Update()
+        {
+            const string sql = "INSERT INTO permission_groups (name, description, perm_create, perm_read, perm_update, perm_delete) VALUES ('accounting_manager', 'Some description about the group', true, true, true, true) ON DUPLICATE KEY UPDATE description = VALUES(description), perm_create = VALUES(perm_create), perm_read = VALUES(perm_read), perm_update = VALUES(perm_update), perm_delete = VALUES(perm_delete)";
+
+            var insert = VerifiedStatement<Statement.Insert>(sql);
+
+            Assert.Equal("permission_groups", insert.Name);
+            Assert.Equal(new Ident[] { "name", "description", "perm_create", "perm_read", "perm_update", "perm_delete" }, insert.Columns!);
+
+            var rows = new Sequence<Expression>[] { new()
+            {
+                new LiteralValue(new Value.SingleQuotedString("accounting_manager")), 
+                new LiteralValue(new Value.SingleQuotedString("Some description about the group")), 
+                new LiteralValue(new Value.Boolean(true)), 
+                new LiteralValue(new Value.Boolean(true)), 
+                new LiteralValue(new Value.Boolean(true)), 
+                new LiteralValue(new Value.Boolean(true))
+            } };
+
+            Assert.Equal(new Query(new SetExpression.ValuesExpression(new Values(rows))), (Query)insert.Source);
+
+            var update = new OnInsert.DuplicateKeyUpdate(new Statement.Assignment[]
+            {
+                new (new Ident[]{"description"}, new Function("VALUES")
+                {
+                    Args = new FunctionArg[]
+                    {
+                        new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("description")))
+                    }
+                }),
+
+                new (new Ident[] { "perm_create" }, new Function("VALUES")
+                {
+                    Args = new FunctionArg[]
+                    {
+                        new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("perm_create")))
+                    }
+                }),
+
+                new (new Ident[] { "perm_read" }, new Function("VALUES")
+                {
+                    Args = new FunctionArg[]
+                    {
+                        new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("perm_read")))
+                    }
+                }),
+
+                new (new Ident[] { "perm_update" }, new Function("VALUES")
+                {
+                    Args = new FunctionArg[]
+                    {
+                        new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("perm_update")))
+                    }
+                }),
+
+                new (new Ident[] { "perm_delete" }, new Function("VALUES")
+                {
+                    Args = new FunctionArg[]
+                    {
+                        new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("perm_delete")))
+                    }
+                })
+            });
+
+            Assert.Equal(update, insert.On);
+        }
+
+        [Fact]
+        public void Parse_Update_With_Joins()
+        {
+            const string sql = "UPDATE orders AS o JOIN customers AS c ON o.customer_id = c.id SET o.completed = true WHERE c.firstname = 'Peter'";
+
+            var update = VerifiedStatement<Statement.Update>(sql);
+
+            var table = new TableWithJoins(new TableFactor.Table("orders")
+            {
+                Alias = new TableAlias("o")
+            })
+            {
+                Joins = new Join[]
+                {
+                    new (new TableFactor.Table("customers")
+                    {
+                        Alias = new TableAlias("c")
+                    })
+                    {
+                        JoinOperator = new JoinOperator.Inner(new JoinConstraint.On(new BinaryOp(
+                            new CompoundIdentifier(new Ident[]{"o", "customer_id"}),
+                           BinaryOperator.Eq,
+                            new CompoundIdentifier(new Ident[]{"c","id"})
+                        )))
+                    }
+                }
+            };
+
+            var assignments = new Statement.Assignment[]
+            {
+                new (new Ident[]{"o", "completed"}, new LiteralValue(new Value.Boolean(true)))
+            };
+
+            var op = new BinaryOp(
+                new CompoundIdentifier(new Ident[] { "c", "firstname" }),
+               BinaryOperator.Eq,
+                new LiteralValue(new Value.SingleQuotedString("Peter"))
+            );
+
+            Assert.Equal(table, update.Table);
+            Assert.Equal(assignments, update.Assignments);
+            Assert.Equal(op, update.Selection);
+        }
+
+        [Fact]
+        public void Parse_Alter_Table_Drop_Primary_Key()
+        {
+            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+
+            var alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE tab DROP PRIMARY KEY");
+
+            Assert.Equal("tab", alter.Name);
+        }
+
+        [Fact]
+        public void Parse_Alter_Table_Change_Column()
+        {
+            var alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE orders CHANGE COLUMN description desc TEXT NOT NULL");
+
+            var operation = new AlterTableOperation.ChangeColumn("description", "desc", new DataType.Text(),
+                new []
+                {
+                    new ColumnOption.NotNull()
+                });
+
+            Assert.Equal("orders", alter.Name);
+            Assert.Equal(operation, alter.Operation);
+
+            alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE orders CHANGE COLUMN description desc TEXT NOT NULL");
+            Assert.Equal("orders", alter.Name);
+            Assert.Equal(operation, alter.Operation);
+        }
+
+        [Fact]
+        public void Parse_Substring_In_Select()
+        {
+            var query = OneStatementParsesTo<Statement.Select>(
+                "SELECT DISTINCT SUBSTRING(description, 0, 1) FROM test",
+                "SELECT DISTINCT SUBSTRING(description FROM 0 FOR 1) FROM test");
+            var body = new SetExpression.SelectExpression(new Select(new []
+            {
+                new SelectItem.UnnamedExpression(new Substring(
+                    new Identifier("description"),
+                    new LiteralValue(Number("0")),
+                    new LiteralValue(Number("1"))
+                ))
+            })
+            {
+                Distinct = true,
+                From = new TableWithJoins[]
+                {
+                    new(new TableFactor.Table("test"))
+                }
+            });
+            var expected = new Statement.Select(new Query(body));
+
+            Assert.Equal(expected, query);
+        }
+
+        [Fact]
+        public void Parse_Show_Variables()
+        {
+            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+
+            VerifiedStatement("SHOW VARIABLES");
+            VerifiedStatement("SHOW VARIABLES LIKE 'admin%'");
+            VerifiedStatement("SHOW VARIABLES WHERE value = '3306'");
+        }
+
+        [Fact]
+        public void Parse_Kill()
+        {
+            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+
+            var kill = VerifiedStatement<Statement.Kill>("KILL CONNECTION 5");
+            Assert.Equal(new Statement.Kill(KillType.Connection, 5), kill);
+
+            kill = VerifiedStatement<Statement.Kill>("KILL QUERY 5");
+            Assert.Equal(new Statement.Kill(KillType.Query, 5), kill);
+
+            kill = VerifiedStatement<Statement.Kill>("KILL 5");
+            Assert.Equal(new Statement.Kill(KillType.None, 5), kill);
+        }
+
+        [Fact]
+        public void Public_Table_Column_Option_On_Update()
+        {
+            var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (`modification_time` DATETIME ON UPDATE CURRENT_TIMESTAMP())");
+            Assert.Equal("foo", create.Name);
+
+            Assert.Equal(new ColumnDef[]
+            {
+                new (new Ident("modification_time", Symbols.Backtick),new DataType.Datetime(),
+                Options:new ColumnOptionDef[]
+                {
+                    new (Option:new ColumnOption.OnUpdate(new Function("CURRENT_TIMESTAMP")))
+                })
+            }, create.Columns);
+        }
+
+        [Fact]
+        public void Parse_Set_Names()
+        {
+            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+
+            var set = VerifiedStatement<Statement.SetNames>("SET NAMES utf8mb4");
+            Assert.Equal("utf8mb4", set.CharsetName);
+
+            set = VerifiedStatement<Statement.SetNames>("SET NAMES utf8mb4 COLLATE bogus");
+            Assert.Equal("utf8mb4", set.CharsetName);
+            Assert.Equal("bogus", set.CollationName);
+            
+            set = VerifiedStatement<Statement.SetNames>("set names utf8mb4 collate bogus");
+            Assert.Equal("utf8mb4", set.CharsetName);
+
+            var def = VerifiedStatement<Statement.SetNamesDefault>("SET NAMES DEFAULT");
+            Assert.Equal(new Statement.SetNamesDefault(), def);
+        }
+
+        [Fact]
+        public void Parse_Limit_MySql_Syntax()
+        {
+            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+
+            OneStatementParsesTo(
+                "SELECT id, fname, lname FROM customer LIMIT 5, 10",
+                "SELECT id, fname, lname FROM customer LIMIT 10 OFFSET 5");
+        }
+
+        [Fact]
+        public void Parse_Create_Table_With_Index_Definition()
+        {
+            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+
+            OneStatementParsesTo(
+                "CREATE TABLE tb (id INT, INDEX (id))",
+                "CREATE TABLE tb (id INT, INDEX (id))");
+
+            OneStatementParsesTo(
+                "CREATE TABLE tb (id INT, index USING BTREE (id))",
+                "CREATE TABLE tb (id INT, INDEX USING BTREE (id))");
+
+            OneStatementParsesTo(
+                "CREATE TABLE tb (id INT, KEY USING HASH (id))",
+                "CREATE TABLE tb (id INT, KEY USING HASH (id))");
+
+            OneStatementParsesTo(
+                "CREATE TABLE tb (id INT, key index (id))",
+                "CREATE TABLE tb (id INT, KEY index (id))");
+
+            OneStatementParsesTo(
+                "CREATE TABLE tb (id INT, INDEX 'index' (id))",
+                "CREATE TABLE tb (id INT, INDEX 'index' (id))");
+
+            OneStatementParsesTo(
+                "CREATE TABLE tb (id INT, INDEX index USING BTREE (id))",
+                "CREATE TABLE tb (id INT, INDEX index USING BTREE (id))");
+
+            OneStatementParsesTo(
+                "CREATE TABLE tb (id INT, INDEX index USING HASH (id))",
+                "CREATE TABLE tb (id INT, INDEX index USING HASH (id))");
+
+            OneStatementParsesTo(
+                "CREATE TABLE tb (id INT, INDEX (c1, c2, c3, c4,c5))",
+                "CREATE TABLE tb (id INT, INDEX (c1, c2, c3, c4, c5))");
+        }
+
+        [Fact]
+        public void Parse_Create_Table_With_Fulltext_Definition()
+        {
+            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+
+            VerifiedStatement("CREATE TABLE tb (id INT, FULLTEXT (id))");
+            VerifiedStatement("CREATE TABLE tb (id INT, FULLTEXT INDEX (id))");
+            VerifiedStatement("CREATE TABLE tb (id INT, FULLTEXT KEY (id))");
+            VerifiedStatement("CREATE TABLE tb (id INT, FULLTEXT potato (id))");
+            VerifiedStatement("CREATE TABLE tb (id INT, FULLTEXT INDEX potato (id))");
+            VerifiedStatement("CREATE TABLE tb (id INT, FULLTEXT KEY potato (id))");
+            VerifiedStatement("CREATE TABLE tb (c1 INT, c2 INT, FULLTEXT KEY potato (c1, c2))");
+        }
+
+        [Fact]
+        public void Parse_Create_Table_With_Special_Definition()
+        {
+            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+          
+            VerifiedStatement("CREATE TABLE tb (id INT, SPATIAL (id))");
+            VerifiedStatement("CREATE TABLE tb (id INT, SPATIAL INDEX (id))");
+            VerifiedStatement("CREATE TABLE tb (id INT, SPATIAL KEY (id))");
+            VerifiedStatement("CREATE TABLE tb (id INT, SPATIAL potato (id))");
+            VerifiedStatement("CREATE TABLE tb (id INT, SPATIAL INDEX potato (id))");
+            VerifiedStatement("CREATE TABLE tb (id INT, SPATIAL KEY potato (id))");
+            VerifiedStatement("CREATE TABLE tb (c1 INT, c2 INT, SPATIAL KEY potato (c1, c2))");
+        }
+
+        [Fact]
+        public void Parse_Fulltext_Expression()
+        {
+            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+            
+            VerifiedStatement("SELECT * FROM tb WHERE MATCH (c1) AGAINST ('string')");
+            VerifiedStatement("SELECT * FROM tb WHERE MATCH (c1) AGAINST ('string' IN NATURAL LANGUAGE MODE)");
+            VerifiedStatement("SELECT * FROM tb WHERE MATCH (c1) AGAINST ('string' IN NATURAL LANGUAGE MODE WITH QUERY EXPANSION)");
+            VerifiedStatement("SELECT * FROM tb WHERE MATCH (c1) AGAINST ('string' IN BOOLEAN MODE)");
+            VerifiedStatement("SELECT * FROM tb WHERE MATCH (c1) AGAINST ('string' WITH QUERY EXPANSION)");
+            VerifiedStatement("SELECT * FROM tb WHERE MATCH (c1, c2, c3) AGAINST ('string')");
+            VerifiedStatement("SELECT * FROM tb WHERE MATCH (c1) AGAINST (123)");
+            VerifiedStatement("SELECT * FROM tb WHERE MATCH (c1) AGAINST (NULL)");
+            VerifiedStatement("SELECT COUNT(IF(MATCH (title, body) AGAINST ('database' IN NATURAL LANGUAGE MODE), 1, NULL)) AS count FROM articles");
+        }
+
+        [Fact]
+        public void Parse_Create_Table_With_Fulltext_Definition_Should_Not_Accept_Constraint_Name()
+        {
+            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() }; 
+
+            Assert.Throws<ParserException>(() => VerifiedStatement("CREATE TABLE tb (c1 INT, CONSTRAINT cons FULLTEXT (c1))"));
+        }
+
+        [Fact]
+        public void Parse_Values()
+        {
+            VerifiedStatement("VALUES ROW(1, true, 'a')");
+            VerifiedStatement("SELECT a, c FROM (VALUES ROW(1, true, 'a'), ROW(2, false, 'b'), ROW(3, false, 'c')) AS t (a, b, c)");
+        }
+
+
+        [Fact]
+        public void Parse_Hex_String_Introducer()
+        {
+            var query = VerifiedStatement<Statement.Select>("SELECT _latin1 X'4D7953514C'");
+
+            var projection = new SelectItem[]
+            {
+                new SelectItem.UnnamedExpression(new IntroducedString("_latin1", new Value.HexStringLiteral("4D7953514C")))
+            };
+           
+            Assert.Equal(projection, ((SetExpression.SelectExpression)query.Query.Body).Select.Projection);
+        }
+
+        [Fact]
+        // ReSharper disable once IdentifierTypo
+        public void Parse_String_Introducers()
+        {
+            VerifiedStatement("SELECT _binary 'abc'");
+            OneStatementParsesTo("SELECT _utf8'abc'", "SELECT _utf8 'abc'");
+            OneStatementParsesTo("SELECT _utf8mb4'abc'", "SELECT _utf8mb4 'abc'");
+            VerifiedStatement("SELECT _binary 'abc', _utf8mb4 'abc'");
+        }
+    }
+}
