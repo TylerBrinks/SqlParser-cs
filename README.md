@@ -29,7 +29,7 @@ Parse a simple `SELECT` statement:
 using SqlParser;
 
 var sql = """
-		select top 10 *
+	select top 10 *
         from my_table
         where abc > 99
         order by xyz desc
