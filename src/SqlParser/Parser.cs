@@ -6883,7 +6883,7 @@ public class Parser
 
     public static ParserException Expected(string message, Token actual)
     {
-        return Expected($"{message}{Found(actual)}");
+        return new ParserException($"Expected {message}{Found(actual)}", actual.Location);
     }
 
     public static ParserException Expected(string message)
