@@ -40,10 +40,10 @@ namespace SqlParser.Tests.Visitors
         public List<string> Visited = new();
         public List<IElement> Elements = new();
 
-        public override ControlFlow PostVisitRelation(ObjectName relation)
+        public override ControlFlow PostVisitRelation(TableFactor relation)
         {
             Elements.Add(relation);
-            Visited.Add($"POST Relation: {relation.Values[0].Value}");
+            Visited.Add($"POST Relation: {relation.AsTable().Name}");
             return ControlFlow.Continue;
         }
         public override ControlFlow PostVisitExpression(Expression expression)
@@ -71,9 +71,9 @@ namespace SqlParser.Tests.Visitors
             Visited.Add($"PRE Expression: {expression.ToSql()}");
             return ControlFlow.Continue;
         }
-        public override ControlFlow PreVisitRelation(ObjectName relation)
+        public override ControlFlow PreVisitRelation(TableFactor relation)
         {
-            Visited.Add($"PRE Statement: {relation.Values[0].Value}");
+            Visited.Add($"PRE Statement: {relation.AsTable().Name}");
             return ControlFlow.Continue;
         }
     }

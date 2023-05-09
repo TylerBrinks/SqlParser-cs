@@ -14,40 +14,42 @@ public interface IElement
     {
         switch (this)
         {
-            case ObjectName o:
+            case TableFactor t:
             {
-                var flow = visitor.PreVisitRelation(o);
+                var flow = visitor.PreVisitRelation(t);
+
                 if (flow == ControlFlow.Break)
                 {
                     return flow;
                 }
+
                 VisitChildren(this, visitor);
-                return visitor.PostVisitRelation(o);
+                return visitor.PostVisitRelation(t);
             }
 
             case Expression e:
-            {
-                var flow =visitor.PreVisitExpression(e);
-
-                if (flow == ControlFlow.Break)
                 {
-                    return flow;
+                    var flow = visitor.PreVisitExpression(e);
+
+                    if (flow == ControlFlow.Break)
+                    {
+                        return flow;
+                    }
+                    VisitChildren(this, visitor);
+                    return visitor.PostVisitExpression(e);
                 }
-                VisitChildren(this, visitor);
-                return visitor.PostVisitExpression(e);
-            }
 
             case Statement s:
-            {
-                var flow = visitor.PreVisitStatement(s);
-                if (flow == ControlFlow.Break)
                 {
-                    return flow;
+                    var flow = visitor.PreVisitStatement(s);
+                    if (flow == ControlFlow.Break)
+                    {
+                        return flow;
+                    }
+
+                    VisitChildren(this, visitor);
+                    return visitor.PostVisitStatement(s);
                 }
-            
-                VisitChildren(this, visitor);
-                return visitor.PostVisitStatement(s);
-            }
 
             default:
                 VisitChildren(this, visitor);
@@ -73,7 +75,7 @@ public interface IElement
                 continue;
             }
 
-            var child = (IElement) value;
+            var child = (IElement)value;
             child.Visit(visitor);
         }
     }
@@ -88,23 +90,58 @@ public interface IElement
             .OrderBy(p => p.GetCustomAttribute<VisitAttribute>()!.Order)
             .ToList();
 
-        if (decorated.Any())
+        // No decorated properties uses the default visit order.
+        // No need to look for additional properties
+        if (!decorated.Any())
         {
-            properties = decorated.ToArray();
+            return properties.ToArray();
         }
 
-        return properties.ToArray();
+        // Visit orders are not specified in the constructor; return the decorated list.
+        if (decorated.Count == properties.Length)
+        {
+            return decorated.ToArray();
+        }
+
+        // Although identified as properties, primary constructor parameters 
+        // use parameter attributes, not property attributes and must be identified
+        // apart from the property list. This find their order and inserts
+        // the missing properties into the decorated property list.
+        try
+        {
+            var constructors = elementType.GetConstructors();
+            var primaryConstructor = constructors.Single();
+            var constructorParams = primaryConstructor.GetParameters();
+
+            var decoratedParameters = constructorParams.Where(p => p.GetCustomAttribute<VisitAttribute>() != null)
+                .OrderBy(p => p.GetCustomAttribute<VisitAttribute>()!.Order)
+                .Select(p => (Property:p, p.GetCustomAttribute<VisitAttribute>()!.Order))
+                .ToList();
+
+            foreach (var param in decoratedParameters)
+            {
+                var property = properties.FirstOrDefault(p => p.Name == param.Property.Name);
+
+                if (property != null)
+                {
+                    decorated.Insert(param.Order, property);
+                }
+            }
+        }
+        catch { }
+
+        return decorated.ToArray();
     }
 }
 
 public abstract class Visitor
 {
-    public virtual ControlFlow PreVisitRelation(ObjectName relation)
+    public virtual ControlFlow PreVisitRelation(TableFactor relation)
     {
         return ControlFlow.Continue;
     }
 
-    public virtual ControlFlow PostVisitRelation(ObjectName relation)
+    public virtual ControlFlow PostVisitRelation(TableFactor relation)
     {
         return ControlFlow.Continue;
     }
