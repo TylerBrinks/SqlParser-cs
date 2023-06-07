@@ -70,8 +70,16 @@ public class Parser
         _index = 0;
         return ParseStatements();
     }
-
-    internal Parser TryWithSql(ReadOnlySpan<char> sql, Dialect dialect, ParserOptions? options = null)
+    /// <summary>
+    /// Builds a parser with a SQL fragment that is tokenized but not yet parsed.  This
+    /// allows the parser to be used for with subsets of SQL calling any of the parser's
+    /// underlying parsing methods.
+    /// </summary>
+    /// <param name="sql">SQL fragment to tokenize</param>
+    /// <param name="dialect">SQL dialect instance</param>
+    /// <param name="options">Parsing options</param>
+    /// <returns></returns>
+    public Parser TryWithSql(ReadOnlySpan<char> sql, Dialect dialect, ParserOptions? options = null)
     {
         _options = options ?? new ParserOptions();
         _depthGuard = new DepthGuard(50);
