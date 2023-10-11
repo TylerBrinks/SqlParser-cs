@@ -61,7 +61,7 @@ Console.WriteLine(table.Name); // <-- writes "my_table"
 ```
 
 ### C# Records
-While C# and Rust programming languages have high feature parity, there are some things that (at present), C# cannot duplicate. In particular, Rust uses discriminated unions.  Simply put, Rust allows enums to carry class-like (or record-like) implementations.  [C# can come close](https://github.com/dotnet/csharplang/blob/main/proposals/discriminated-unions.md) with creative use of record types, particularly due to their ByValue equality.  However they still fall short of the Rust counterpart.  
+While C# and Rust programming languages have high feature parity, there are some things that (at present), C# cannot duplicate. In particular, Rust uses discriminated unions.  Simply put, Rust allows enums to carry class-like (or record-like) implementations.  [C# can come close](https://github.com/dotnet/csharplang/blob/main/proposals/discriminated-unions.md) with creative use of record types, particularly due to their ByValue equality. However, they still fall short of the Rust counterpart.  
 
 In this project, every effort has been made to duplicate the object hierarchy by using a combination of abstract base records with enclosed sub-class implementations.  While somewhat unconventional, it allows each major syntax tree type to have a pseudo namespace within the containing record type.
 
@@ -76,7 +76,7 @@ var statement = new Statement.Select(...)
 The library supports multiple SQL dialects (Postgres, MsSql, etc.) as well as multiple output modes.  The code and can be extended to display the syntax tree
 in custom formats.
 
-This example calls `ToString()` and redners the AST's default format showing the  object hierarchy
+This example calls `ToString()` and renders the AST's default format showing the  object hierarchy
 
 ```cs
 var sql = "select top 10 * from mytable where abc > 99 order by xyz desc";
@@ -156,7 +156,7 @@ The library supports a number of inbuilt dialects, but it is not comprehensive. 
 Please see the included examples for reference.
 
 ### Visitors
-The library also contains a base class visitor implementation that allows you to walk the entire syntax tree.  The visitor only traverses non-null elements in the tree and resports all Statements, Expressions, and Relations before and after each element is visited.  The base class is a jumping-off point for traversing the AST, and is only one of several ways the AST can be navigated.
+The library also contains a base class visitor implementation that allows you to walk the entire syntax tree.  The visitor only traverses non-null elements in the tree and reports all Statements, Expressions, and Relations before and after each element is visited.  The base class is a jumping-off point for traversing the AST, and is only one of several ways the AST can be navigated.
 
 ```cs
 var visitor = new YourCustomVisitor();
@@ -184,7 +184,7 @@ a traditional, hand-written recursive descent parser. Eli Bendersky has a good
 [tutorial on TDOP parsers][tdop-tutorial], if you are interested in learning
 more about the technique.
 
-Like the Rust project author's,  we're are a fan of this design pattern over parser generators for the following due to simplicity, performancee, ease of debugging, and extensibility.
+Like the Rust project authors, we're fans of this design pattern over parser generators for the following due to simplicity, performance, ease of debugging, and extensibility.
 
 If you like Lexing & Parsing, I have a similar example of a hand-written [CSS lexer/parser](https://github.com/TylerBrinks/ExCSS).
 
@@ -194,8 +194,8 @@ If you like Lexing & Parsing, I have a similar example of a hand-written [CSS le
 
 Contributions are highly encouraged! Please keep in mind that this project
 is a port of the Rust SQL parser, and every effort will be made to keep 
-the projects functionally in sync.  Therefore pull requests will 
-generally follow the spirit of the oriignal project.  Ideally, pull requests that
+the projects functionally in sync.  Therefore, pull requests will 
+generally follow the spirit of the original project.  Ideally, pull requests that
 affect the parser or a dialect specifically will be submitted back to the original
 Rust project as well.
 
