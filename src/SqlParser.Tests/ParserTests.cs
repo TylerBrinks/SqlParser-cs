@@ -1,6 +1,7 @@
 ﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
+using System.Globalization;
 using DataType = SqlParser.Ast.DataType;
 
 // ReSharper disable StringLiteralTypo
@@ -11,6 +12,14 @@ namespace SqlParser.Tests
 {
     public class ParserTests : ParserTestBase
     {
+        [Fact]
+        public void Parser_Adjusts_Culture_Number_Separator()
+        {
+            var parser = new Parser();
+            _ = parser.ParseSql("select a from tbl where b = 123.45");
+            // Successful test will not throw an exception
+        }
+
         [Fact]
         public void Test_Previous_Index()
         {

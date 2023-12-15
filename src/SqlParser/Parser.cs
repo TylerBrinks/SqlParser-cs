@@ -9,6 +9,7 @@ using static SqlParser.Ast.GrantObjects;
 using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
 using Select = SqlParser.Ast.Select;
+using System.Globalization;
 
 namespace SqlParser;
 
@@ -61,6 +62,16 @@ public class Parser
     /// <returns></returns>
     public Sequence<Statement> ParseSql(ReadOnlySpan<char> sql, Dialect dialect, ParserOptions? options = null)
     {
+        //var originalCulture = Thread.CurrentThread.CurrentCulture;
+        //const string parserCurrencySeparator = ".";
+
+        //if(originalCulture.NumberFormat.NumberDecimalSeparator != parserCurrencySeparator)
+        //{
+        //    var parserCulture = new CultureInfo(originalCulture.Name, true);
+        //    parserCulture.NumberFormat.NumberDecimalSeparator = parserCurrencySeparator;
+        //    Thread.CurrentThread.CurrentCulture = parserCulture;
+        //}
+
         _options = options ?? new ParserOptions();
         _depthGuard = new DepthGuard(_options.RecursionLimit);
         _dialect = dialect;
@@ -68,7 +79,11 @@ public class Parser
         var tokenizer = new Tokenizer();
         _tokens = tokenizer.Tokenize(sql, dialect).ToSequence();
         _index = 0;
-        return ParseStatements();
+
+        var statements = ParseStatements();
+        //Thread.CurrentThread.CurrentCulture = originalCulture;
+
+        return statements;
     }
     /// <summary>
     /// Builds a parser with a SQL fragment that is tokenized but not yet parsed.  This
@@ -4263,7 +4278,7 @@ public class Parser
     public static Value.Number ParseNumeric(Number number)
     {
         var value = number.Value;
-        var parsed = double.TryParse(value, out _);
+        var parsed = double.TryParse(value, CultureInfo.InvariantCulture, out _);
 
         if (!parsed)
         {
