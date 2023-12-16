@@ -10,7 +10,7 @@
     <Description>Friendly SQL Parser for .NET</Description>
     <Copyright>2023 Tyler Brinks</Copyright>
     <PackageProjectUrl>https://github.com/TylerBrinks/SqlParser-cs</PackageProjectUrl>
-    <PackageReadmeFile>readme.md</PackageReadmeFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/TylerBrinks/SqlParser-cs</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>SQL, Parser,Lexer, AST, Dialect, Postgres, MySQL, MsSql, Redshift, Snowflake, SQLite</PackageTags>
@@ -32,6 +32,10 @@
 
   <ItemGroup>
     <None Include="..\..\docs\images\icon.jpg">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\..\README.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
