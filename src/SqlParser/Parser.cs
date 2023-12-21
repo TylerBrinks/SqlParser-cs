@@ -161,7 +161,7 @@ public class Parser
     /// <returns>Parsed statement</returns>
     public Statement ParseStatement()
     {
-        _depthGuard.Decrease();
+        using var guard = _depthGuard.Decrement();
         var statement = _dialect.ParseStatement(this);
         if (statement != null)
         {
@@ -407,7 +407,7 @@ public class Parser
     /// <returns>Expression</returns>
     public Expression ParseExpr()
     {
-        _depthGuard.Decrease();
+        using var guard = _depthGuard.Decrement();
         return ParseSubExpression(0);
     }
 
@@ -5039,7 +5039,7 @@ public class Parser
             PrevToken();
         }
 
-        _depthGuard.Decrease();
+        using var guard = _depthGuard.Decrement();
 
         var with = ParseInit(ParseKeyword(Keyword.WITH), () =>
         {

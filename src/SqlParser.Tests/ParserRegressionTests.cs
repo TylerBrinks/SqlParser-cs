@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using Newtonsoft.Json;
+using SqlParser.Dialects;
 using Xunit.Abstractions;
 using Xunit.Sdk;
 

@@ -3,24 +3,31 @@
 /// <summary>
 /// Tracks parser depth to prevent deep recursion
 /// </summary>
-public sealed class DepthGuard
+public sealed class DepthGuard(uint remainingDepth)
 {
-    private uint _remainingDepth;
+    public DepthGuard? Parent { get; }
 
-    public DepthGuard(uint remainingDepth)
+    public DepthGuard(uint remainingDepth, DepthGuard parent) : this(remainingDepth)
     {
-        _remainingDepth = remainingDepth;
+        Parent = parent;
     }
 
-    public void Decrease()
+    public DepthScope Decrement()
     {
-        var oldValue = _remainingDepth;
+        var oldValue = remainingDepth - 1;
 
         if (oldValue == 0)
         {
             throw new ParserException("Recursion limit exceeded.");
         }
 
-        _remainingDepth--;
+        remainingDepth--;
+
+        return new DepthScope(this);
+    }
+
+    public void Increment()
+    {
+        remainingDepth++;
     }
 }
