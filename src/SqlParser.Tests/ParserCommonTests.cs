@@ -4404,5 +4404,16 @@ namespace SqlParser.Tests
             Assert.Equal(expected, relation);
             Assert.Equal(sql.Replace("\r", "").Replace("\n", ""), VerifiedStatement(sql).ToSql());
         }
+
+        [Fact]
+        public void Parser_Manages_Recursion_Depth()
+        {
+            // No exception thrown guarantees recursion did not reach zero. 
+            // The default depth is 50 which, if the scope is set correctly,
+            // will never be reached.
+            var range = Enumerable.Range(0, 100).Select(_ => "select * from tablename;");
+            var query = string.Join(Environment.NewLine, range);
+            new Parser().ParseSql(query);
+        }
     }
 }
