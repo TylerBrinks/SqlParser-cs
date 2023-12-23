@@ -17,12 +17,11 @@ internal static class Keywords
     {
         var renamedKeywords = new Dictionary<string, string>
         {
-            {"END-EXEC", "END_EXEC"}
+            {"END_EXEC", "END-EXEC"}
         };
         var keywords = Enum.GetNames(typeof(Keyword))
                 .Where(n => n != nameof(Keyword.undefined))
-                .ToArray()
-            ;
+                .ToArray();
 
         foreach (var renamed in renamedKeywords)
         {
@@ -272,7 +271,6 @@ public enum Keyword
     END,
     END_FRAME,
     END_PARTITION,
-    [Hyphenated]
     END_EXEC,
     ENDPOINT,
     ENGINE,
@@ -692,9 +690,4 @@ public enum Keyword
     ZONE,
 
     undefined,
-}
-
-[AttributeUsage(AttributeTargets.Field)]
-public class HyphenatedAttribute : Attribute
-{
 }

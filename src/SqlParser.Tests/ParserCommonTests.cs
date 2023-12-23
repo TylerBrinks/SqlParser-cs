@@ -3990,7 +3990,14 @@ namespace SqlParser.Tests
 
             for (var i = 0; i < names.Length; i++)
             {
-                Assert.True(names[i] == keywords[i] || names[i].Replace("-", "_") == keywords[i]); 
+                var name = names[i];
+
+                if (i == (int) Keyword.END_EXEC)
+                {
+                    name = name.Replace("_", "-");
+                }
+
+                Assert.True(name == keywords[i]); 
             }
         }
 
