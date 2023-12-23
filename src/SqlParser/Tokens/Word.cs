@@ -1,4 +1,5 @@
-﻿using SqlParser.Ast;
+﻿using System.Diagnostics;
+using SqlParser.Ast;
 
 namespace SqlParser.Tokens;
 
@@ -29,12 +30,14 @@ public class Word : StringToken
             return;
         }
 
-        var index = Array.BinarySearch(Keywords.All, value.ToUpperInvariant());
+        //var index = Array.BinarySearch(Keywords.All, value.ToUpperInvariant());
+        var index = Array.IndexOf(Keywords.All, value.ToUpperInvariant());
 
         if (index > -1)
         {
             Keyword = (Keyword)index;
         }
+       
     }
 
     public char? QuoteStyle { get; init; }

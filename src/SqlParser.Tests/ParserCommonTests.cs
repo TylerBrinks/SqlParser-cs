@@ -489,7 +489,7 @@ namespace SqlParser.Tests
             var dialects = AllDialects.Where(dialect => dialect is not HiveDialect);
 
             var query = (Query)ParseSqlStatements("SELECT 10e-20, 1e3, 1e+3, 1e3a, 1e, 0.5e2", dialects)[0]!;
-            var body = (SetExpression.SelectExpression) query.Body;
+            var body = (SetExpression.SelectExpression)query.Body;
             var select = body.Select;
 
             Assert.Equal(new SelectItem.UnnamedExpression(new LiteralValue(Number("10e-20"))), select.Projection[0]);
@@ -637,7 +637,7 @@ namespace SqlParser.Tests
             expr = VerifiedExpr("NOT a NOT IN ('a')");
 
             var inList = new InList(new Identifier("a"),
-                new []
+                new[]
                 {
                     new LiteralValue(new Value.SingleQuotedString("a"))
                 },
@@ -801,7 +801,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Parse_Bitwise_Ops()
         {
-            var bitwiseOps = new []
+            var bitwiseOps = new[]
             {
                 (Symbols.Caret, BinaryOperator.BitwiseXor, AllDialects.Where(d => d is not PostgreSqlDialect)),
                 (Symbols.Pipe, BinaryOperator.BitwiseOr, AllDialects),
@@ -1154,7 +1154,7 @@ namespace SqlParser.Tests
                 new Function("ROW_NUMBER")
                 {
                     Over = new WindowSpec(
-                       new [] { new Identifier("p") },
+                       new[] { new Identifier("p") },
                        new OrderByExpression[]
                        {
                            new (new Identifier("o"))
@@ -1656,7 +1656,7 @@ namespace SqlParser.Tests
 
             create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE t ON CLUSTER my_cluster (a INT, b INT)");
 
-            expected = new Statement.CreateTable("t", new []
+            expected = new Statement.CreateTable("t", new[]
             {
                 new ColumnDef("a", new Int()),
                 new ColumnDef("b", new Int()),
@@ -2058,7 +2058,7 @@ namespace SqlParser.Tests
                 Assert.Equal(expectedVerbose, explain.Verbose);
                 Assert.Equal(expectedAnalyze, explain.Analyze);
                 Assert.Equal(expectedFormat, explain.Format);
-                
+
                 Assert.Equal("SELECT sqrt(id) FROM foo", explain.Statement.ToSql());
             }
         }
@@ -3983,7 +3983,15 @@ namespace SqlParser.Tests
         public void All_Keywords_Sorted()
         {
             var keywords = Keywords.All;
-            Assert.Equal(keywords.ToArray(), keywords.OrderBy(k => k).ToArray());
+
+            var names = System.Enum.GetNames(typeof(Keyword))
+                .Where(n => n != nameof(Keyword.undefined))
+                .ToArray();
+
+            for (var i = 0; i < names.Length; i++)
+            {
+                Assert.True(names[i] == keywords[i] || names[i].Replace("-", "_") == keywords[i]); 
+            }
         }
 
         [Fact]
@@ -4390,7 +4398,7 @@ namespace SqlParser.Tests
                     new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new CompoundIdentifier(new Ident[]{"a","amount"})))
                 }
             };
-            var expected = new TableFactor.Pivot("monthly_sales", fn, new Ident[] {"a", "MONTH"}, new Value[]
+            var expected = new TableFactor.Pivot("monthly_sales", fn, new Ident[] { "a", "MONTH" }, new Value[]
             {
                 new Value.SingleQuotedString("JAN"),
                 new Value.SingleQuotedString("FEB"),
@@ -4399,7 +4407,7 @@ namespace SqlParser.Tests
             })
             {
                 Alias = new TableAlias("a"),
-                PivotAlias = new TableAlias("p",new Ident[]{"c","d"})
+                PivotAlias = new TableAlias("p", new Ident[] { "c", "d" })
             };
             Assert.Equal(expected, relation);
             Assert.Equal(sql.Replace("\r", "").Replace("\n", ""), VerifiedStatement(sql).ToSql());

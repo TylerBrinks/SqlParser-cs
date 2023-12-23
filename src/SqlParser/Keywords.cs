@@ -15,21 +15,21 @@ internal static class Keywords
     /// </summary>
     static Keywords()
     {
-        var keywordType = typeof(Keyword);
-        var renamedKeywords = keywordType
-            .GetFields(BindingFlags.Public | BindingFlags.Static)
-            .Where(e => e.IsDefined(typeof(HyphenatedAttribute), false))
-            .Select(e => e.GetValue(null)!.ToString())
-            .ToList();
+        var renamedKeywords = new Dictionary<string, string>
+        {
+            {"END-EXEC", "END_EXEC"}
+        };
+        var keywords = Enum.GetNames(typeof(Keyword))
+                .Where(n => n != nameof(Keyword.undefined))
+                .ToArray()
+            ;
 
-        var keywords = Enum.GetNames(typeof(Keyword)).Where(n => n != nameof(Keyword.undefined)).ToArray();
-        
         foreach (var renamed in renamedKeywords)
         {
-            var index = Array.FindIndex(keywords, k => k == renamed);
+            var index = Array.FindIndex(keywords, k => k == renamed.Key);
             if (index > -1)
             {
-                keywords[index] = renamed!.Replace("_", "-");
+                keywords[index] = renamed.Value;
             }
         }
 
