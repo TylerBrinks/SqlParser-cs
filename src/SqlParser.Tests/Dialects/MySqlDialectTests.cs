@@ -697,7 +697,6 @@ namespace SqlParser.Tests.Dialects
             VerifiedStatement("SELECT a, c FROM (VALUES ROW(1, true, 'a'), ROW(2, false, 'b'), ROW(3, false, 'c')) AS t (a, b, c)");
         }
 
-
         [Fact]
         public void Parse_Hex_String_Introducer()
         {
@@ -719,6 +718,14 @@ namespace SqlParser.Tests.Dialects
             OneStatementParsesTo("SELECT _utf8'abc'", "SELECT _utf8 'abc'");
             OneStatementParsesTo("SELECT _utf8mb4'abc'", "SELECT _utf8mb4 'abc'");
             VerifiedStatement("SELECT _binary 'abc', _utf8mb4 'abc'");
+        }
+
+        [Fact]
+        public void Parse_Select_With_Numeric_Prefix_Column_Name()
+        {
+            const string sql = "SELECT 123col_$@123abc FROM \"table\"";
+            var select = VerifiedOnlySelect(sql);
+            Assert.Equal(new Identifier(new Ident("123col_$@123abc")), select.Projection.First().AsExpr());
         }
     }
 }

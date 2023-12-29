@@ -78,7 +78,7 @@ public ref struct Tokenizer
                 !_dialect.IsDelimitedIdentifierStart(character) &&
                 !_dialect.IsIdentifierStart(character)
                     => new DoubleQuotedString(new string(TokenizeQuotedString(Symbols.DoubleQuote))),
-            
+
             // Delimited (quote) identifier
             _ when
                 _dialect.IsDelimitedIdentifierStart(character) &&
@@ -120,7 +120,7 @@ public ref struct Tokenizer
             Symbols.At => TokenizeAt(),
             Symbols.QuestionMark => TokenizeQuestionMark(),
             Symbols.Dollar => TokenizeDollar(),
-            _ when string.IsNullOrWhiteSpace(character.ToString()) =>TokenizeSingleCharacter(new Whitespace(WhitespaceKind.Space)),
+            _ when string.IsNullOrWhiteSpace(character.ToString()) => TokenizeSingleCharacter(new Whitespace(WhitespaceKind.Space)),
             // Unknown character
             _ when character != Symbols.EndOfFile => TokenizeSingleCharacter(new SingleCharacterToken(character)),
             _ => new EOF()
@@ -195,7 +195,7 @@ public ref struct Tokenizer
             return new EscapedStringLiteral(quoted);
         }
 
-        var word = ConcatArrays(new[] {first}, TokenizeWord());
+        var word = ConcatArrays(new[] { first }, TokenizeWord());
         return new Word(new string(word), null);
     }
 
@@ -225,8 +225,8 @@ public ref struct Tokenizer
             return new Word(new string(chars), null);
         }
 
-        //// Dialect supports digit identifier. Capture the remainder of the whole word
-        //// with all digits and dots. 
+        // Dialect supports digit identifier. Capture the remainder of the whole word
+        // with all digits and dots. 
         var additional = PeekTakeWhile(c => c.IsDigit() || c == Symbols.Dot);
 
 
@@ -248,8 +248,8 @@ public ref struct Tokenizer
 
         var word = PeekTakeWhile(_dialect.IsIdentifierPart);
 
-        return prefix.Any() 
-            ? ConcatArrays(prefix.ToArray(), word) 
+        return prefix.Any()
+            ? ConcatArrays(prefix.ToArray(), word)
             : word;
     }
 
@@ -318,12 +318,12 @@ public ref struct Tokenizer
         var quoteEnd = Word.GetEndQuote(startQuote);
 
         var (word, lastChar) = ParseQuotedIdent(quoteEnd);
-        
+
         if (lastChar == quoteEnd)
         {
             return new Word(word, startQuote);
         }
-        
+
         throw new TokenizeException($"Expected close delimiter '{quoteEnd}' before EOF.", errorLocation);
 
     }
@@ -331,7 +331,7 @@ public ref struct Tokenizer
     private Token TokenizeNumber()
     {
         var parsed = new List<char>(PeekTakeWhile(c => c.IsDigit()));
-        
+
         // match binary literal that starts with 0x
         if (parsed is [Symbols.Zero] && _state.Peek() == 'x')
         {
@@ -356,14 +356,13 @@ public ref struct Tokenizer
         }
         var number = parsed.ToArray();
 
+        var exponent = new List<char>();
+
         // Parse exponent as number
         if (_state.Peek() is 'e' or 'E')
         {
             var exponentState = _state.Clone();
-            var exponent = new List<char>
-            {
-                exponentState.Peek()
-            };
+            exponent.Add(exponentState.Peek());
             exponentState.Next();
 
             var next = exponentState.Peek();
@@ -384,8 +383,19 @@ public ref struct Tokenizer
 
                 var exponentNumber = PeekTakeWhile(c => c.IsDigit());
                 exponent.AddRange(exponentNumber);
-           
+
                 number = ConcatArrays(number, exponent.ToArray());
+            }
+        }
+
+        if (_dialect is MySqlDialect && exponent.Count == 0)
+        {
+            var word = PeekTakeWhile(_dialect.IsIdentifierPart);
+
+            if (word.Length > 0)
+            {
+                parsed.AddRange(word);
+                return new Word(new string(parsed.ToArray()));
             }
         }
 
@@ -469,11 +479,6 @@ public ref struct Tokenizer
             }
         }
 
-
-       
-
-       
-
         throw new TokenizeException($"Unterminated encoded string literal after {start}", start);
     }
 
@@ -527,7 +532,7 @@ public ref struct Tokenizer
             s.Add(current);
         }
         _state.Next();
-        
+
         return continueEscaped;
     }
 
@@ -576,7 +581,7 @@ public ref struct Tokenizer
             _ => new Divide()
         };
 
-      
+
     }
 
     private Whitespace TokenizeAsteriskComment()
@@ -603,17 +608,17 @@ public ref struct Tokenizer
                     break;
 
                 case Symbols.Asterisk when current == Symbols.Divide:
-                {
-                    nested--;
-                    if (nested == 0)
                     {
-                        comment.Pop();
-                        _state.Next();
-                        return new Whitespace(WhitespaceKind.MultilineComment, new string(comment.Reverse().ToArray()));
-                    }
+                        nested--;
+                        if (nested == 0)
+                        {
+                            comment.Pop();
+                            _state.Next();
+                            return new Whitespace(WhitespaceKind.MultilineComment, new string(comment.Reverse().ToArray()));
+                        }
 
-                    break;
-                }
+                        break;
+                    }
             }
 
             comment.Push(current);
@@ -664,8 +669,8 @@ public ref struct Tokenizer
     private Token TokenizeEqual()
     {
         _state.Next();
-        return _state.Peek() == Symbols.GreaterThan 
-            ? TokenizeSingleCharacter(new RightArrow()) 
+        return _state.Peek() == Symbols.GreaterThan
+            ? TokenizeSingleCharacter(new RightArrow())
             : new Equal();
     }
 
@@ -682,8 +687,8 @@ public ref struct Tokenizer
 
             case Symbols.Tilde:
                 _state.Next();
-                return _state.Peek() == Symbols.Asterisk 
-                    ? TokenizeSingleCharacter(new ExclamationMarkTildeAsterisk()) 
+                return _state.Peek() == Symbols.Asterisk
+                    ? TokenizeSingleCharacter(new ExclamationMarkTildeAsterisk())
                     : new ExclamationMarkTilde();
 
             default:
@@ -714,7 +719,8 @@ public ref struct Tokenizer
     private Token TokenizeGreaterThan()
     {
         _state.Next();
-        return _state.Peek() switch{
+        return _state.Peek() switch
+        {
             Symbols.Equal => TokenizeSingleCharacter(new GreaterThanOrEqual()),
             Symbols.GreaterThan => TokenizeSingleCharacter(new ShiftRight()),
             _ => new GreaterThan()
@@ -724,8 +730,8 @@ public ref struct Tokenizer
     private Token TokenizeColon()
     {
         _state.Next();
-        return _state.Peek() == Symbols.Colon 
-            ? TokenizeSingleCharacter(new DoubleColon()) 
+        return _state.Peek() == Symbols.Colon
+            ? TokenizeSingleCharacter(new DoubleColon())
             : new Colon();
     }
 
@@ -743,11 +749,11 @@ public ref struct Tokenizer
     private Token TokenizeTilde()
     {
         _state.Next();
-        return _state.Peek() == Symbols.Asterisk 
-            ? TokenizeSingleCharacter(new TildeAsterisk()) 
+        return _state.Peek() == Symbols.Asterisk
+            ? TokenizeSingleCharacter(new TildeAsterisk())
             : new Tilde();
     }
-    
+
     private Token TokenizeHash()
     {
         _state.Next();
@@ -787,10 +793,10 @@ public ref struct Tokenizer
     {
         _state.Next();
         var word = PeekTakeWhile(c => c.IsDigit());
-        var question = ConcatArrays(new[] {Symbols.QuestionMark}, word);
+        var question = ConcatArrays(new[] { Symbols.QuestionMark }, word);
         return new Placeholder(new string(question));
     }
-    
+
     private Token TokenizeDollar()
     {
         var s = new List<char>();
@@ -802,7 +808,7 @@ public ref struct Tokenizer
         {
             _state.Next();
             var isTerminated = false;
-            char? prev =null;
+            char? prev = null;
             char current;
 
             while ((current = _state.Peek()) != Symbols.EndOfFile)
@@ -819,7 +825,7 @@ public ref struct Tokenizer
                     s.Add(Symbols.Dollar);
                     s.Add(current);
                 }
-                else if(current != Symbols.Dollar)
+                else if (current != Symbols.Dollar)
                 {
                     s.Add(current);
                 }
@@ -873,7 +879,7 @@ public ref struct Tokenizer
                     {
                         throw new TokenizeException("Unterminated dollar-quoted, expected $", _state.CloneLocation());
                     }
-                    
+
                     break;
 
                 default:
@@ -882,11 +888,11 @@ public ref struct Tokenizer
         }
         else
         {
-            return new Placeholder(new string(ConcatArrays(new[] {Symbols.Dollar}, value.ToArray())));
+            return new Placeholder(new string(ConcatArrays(new[] { Symbols.Dollar }, value.ToArray())));
         }
 
         var quoted = new DollarQuotedString(new string(s.ToArray()));
-        if(value.Any())
+        if (value.Any())
         {
             quoted.Tag = new string(value.ToArray());
         }
