@@ -47,6 +47,15 @@ public abstract record CopyTarget : IWriteSql
     }
 }
 /// <summary>
+/// Copy source
+/// </summary>
+public abstract record CopySource
+{
+    public record Table(ObjectName TableName, Sequence<Ident> Columns) : CopySource;
+
+    public record CopySourceQuery(Query? Query) : CopySource;
+}
+/// <summary>
 /// Copy options
 /// </summary>
 public abstract record CopyOption : IWriteSql

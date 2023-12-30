@@ -665,12 +665,13 @@ namespace SqlParser.Tests.Dialects
         public void Test_Copy_To()
         {
             var copy = VerifiedStatement<Statement.Copy>("COPY users TO 'data.csv'");
-            var expected = new Statement.Copy("users", null, true, new CopyTarget.File("data.csv"));
+            var source = new CopySource.Table(new ObjectName("users"), new Sequence<Ident>());
+            var expected = new Statement.Copy(source, true, new CopyTarget.File("data.csv"));
             Assert.Equal(expected, copy);
 
 
             copy = VerifiedStatement<Statement.Copy>("COPY users TO 'data.csv' DELIMITER ','");
-            expected = new Statement.Copy("users", null, true, new CopyTarget.File("data.csv"))
+            expected = new Statement.Copy(source, true, new CopyTarget.File("data.csv"))
             {
                 LegacyOptions = new []
                 {
@@ -681,7 +682,7 @@ namespace SqlParser.Tests.Dialects
 
 
             copy = VerifiedStatement<Statement.Copy>("COPY users TO 'data.csv' DELIMITER ',' CSV HEADER");
-            expected = new Statement.Copy("users", null, true, new CopyTarget.File("data.csv"))
+            expected = new Statement.Copy(source, true, new CopyTarget.File("data.csv"))
             {
                 LegacyOptions = new CopyLegacyOption[]
                 {
@@ -720,9 +721,10 @@ namespace SqlParser.Tests.Dialects
 
             var copy = OneStatementParsesTo(sql, "");
 
+            var source = new CopySource.Table(new ObjectName("table"), new Sequence<Ident> {"a", "b"});
+
             var expected = new Statement.Copy(
-                "table",
-                new Ident[] { "a", "b" },
+                source,
                 false,
                 new CopyTarget.File("file.csv"))
             {
@@ -753,12 +755,14 @@ namespace SqlParser.Tests.Dialects
         public void Parse_Copy_To()
         {
             var copy = VerifiedStatement<Statement.Copy>("COPY users TO 'data.csv'");
-            var expected = new Statement.Copy("users", null, true, new CopyTarget.File("data.csv"));
+            var source = new CopySource.Table(new ObjectName("users"), new Sequence<Ident>());
+            var expected = new Statement.Copy(source, true, new CopyTarget.File("data.csv"));
             Assert.Equal(expected, copy);
 
 
             copy = VerifiedStatement<Statement.Copy>("COPY country TO STDOUT (DELIMITER '|')");
-            expected = new Statement.Copy("country", null, true, new CopyTarget.Stdout())
+            source = new CopySource.Table(new ObjectName("country"), new Sequence<Ident>());
+            expected = new Statement.Copy(source, true, new CopyTarget.Stdout())
             {
                 Options = new [] { new CopyOption.Delimiter(Symbols.Pipe) }
             };
@@ -766,7 +770,7 @@ namespace SqlParser.Tests.Dialects
 
 
             copy = VerifiedStatement<Statement.Copy>("COPY country TO PROGRAM 'gzip > /usr1/proj/bray/sql/country_data.gz'");
-            expected = new Statement.Copy("country", null, true, new CopyTarget.Program("gzip > /usr1/proj/bray/sql/country_data.gz"));
+            expected = new Statement.Copy(source, true, new CopyTarget.Program("gzip > /usr1/proj/bray/sql/country_data.gz"));
             Assert.Equal(expected, copy);
         }
 
@@ -775,7 +779,8 @@ namespace SqlParser.Tests.Dialects
         {
             var copy = VerifiedStatement<Statement.Copy>(
                 "COPY users FROM 'data.csv' BINARY DELIMITER ',' NULL 'null' CSV HEADER QUOTE '\"' ESCAPE '\\' FORCE NOT NULL column");
-            var expected = new Statement.Copy("users", null, false, new CopyTarget.File("data.csv"))
+            var source = new CopySource.Table(new ObjectName("users"), new Sequence<Ident>());
+            var expected = new Statement.Copy(source, false, new CopyTarget.File("data.csv"))
             {
                 LegacyOptions = new CopyLegacyOption[]
                 {
@@ -799,7 +804,7 @@ namespace SqlParser.Tests.Dialects
 
             copy = OneStatementParsesTo<Statement.Copy>("COPY users FROM 'data.csv' DELIMITER AS ',' NULL AS 'null' CSV QUOTE AS '\"' ESCAPE AS '\\'", "");
 
-            expected = new Statement.Copy("users", null, false, new CopyTarget.File("data.csv"))
+            expected = new Statement.Copy(source, false, new CopyTarget.File("data.csv"))
             {
                 LegacyOptions = new CopyLegacyOption[]
                 {
@@ -821,7 +826,8 @@ namespace SqlParser.Tests.Dialects
         {
             var copy = VerifiedStatement<Statement.Copy>(
                 "COPY users TO 'data.csv' BINARY DELIMITER ',' NULL 'null' CSV HEADER QUOTE '\"' ESCAPE '\\' FORCE QUOTE column");
-            var expected = new Statement.Copy("users", null, true, new CopyTarget.File("data.csv"))
+            var source = new CopySource.Table(new ObjectName("users"), new Sequence<Ident>());
+            var expected = new Statement.Copy(source, true, new CopyTarget.File("data.csv"))
             {
                 LegacyOptions = new CopyLegacyOption[]
                 {

@@ -211,11 +211,10 @@ public abstract record Statement : IWriteSql, IElement
     /// Copy statement
     /// 
     /// </summary>
-    /// <param name="Name">Object name</param>
-    /// <param name="Columns">Columns</param>
+    /// <param name="Source">Source of the Coyp To</param>
     /// <param name="To">True if to</param>
     /// <param name="Target">Copy target</param>
-    public record Copy(ObjectName Name, Sequence<Ident>? Columns, bool To, CopyTarget Target) : Statement
+    public record Copy(/*ObjectName Name, Sequence<Ident>? Columns,*/CopySource Source, bool To, CopyTarget Target) : Statement
     {
         public Sequence<CopyOption>? Options { get; init; }
         // WITH options (before PostgreSQL version 9.0)
@@ -225,10 +224,20 @@ public abstract record Statement : IWriteSql, IElement
 
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"COPY {Name}");
-            if (Columns.SafeAny())
+            writer.Write("COPY");
+            if (Source is CopySource.CopySourceQuery query)
             {
-                writer.WriteSql($" ({Columns})");
+                writer.WriteSql($"({query})");
+            }else if (Source is CopySource.Table table)
+            {
+                writer.WriteSql($" {table.TableName}");
+
+                if (table.Columns.SafeAny())
+                {
+                    writer.Write("(");
+                    writer.WriteDelimited(table.Columns, ", ");
+                    writer.Write(")");
+                }
             }
 
             var direction = To ? "TO" : "FROM";

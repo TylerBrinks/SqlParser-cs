@@ -4004,14 +4004,31 @@ public class Parser
 
     public Copy ParseCopy()
     {
-        var tableName = ParseObjectName();
-        var columns = ParseParenthesizedColumnList(IsOptional.Optional, false);
+        CopySource source;
+
+        if (ConsumeToken<LeftParen>())
+        {
+            source = new CopySource.CopySourceQuery(ParseQuery());
+            ExpectRightParen();
+        }
+        else
+        {
+            var tableName = ParseObjectName();
+            var columns = ParseParenthesizedColumnList(IsOptional.Optional, false);
+            source = new CopySource.Table(tableName, columns);
+        }
+
         var to = ParseOneOfKeywords(Keyword.FROM, Keyword.TO) switch
         {
             Keyword.FROM => false,
             Keyword.TO => true,
             _ => throw Expected("FROM or TO", PeekToken())
         };
+
+        if (!to && source is CopySource.CopySourceQuery)
+        {
+            throw new ParserException("COPY ... FROM does not support query as a source");
+        }
 
         CopyTarget target =
             ParseKeyword(Keyword.STDIN) ? new CopyTarget.Stdin() :
@@ -4040,7 +4057,7 @@ public class Parser
             values = ParseTabValue();
         }
 
-        return new Copy(tableName, columns.Any() ? columns : null, to, target)
+        return new Copy(source, to, target)
         {
             Options = options.SafeAny() ? options : null,
             LegacyOptions = legacyOptions.Any() ? legacyOptions : null,
