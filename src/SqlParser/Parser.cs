@@ -62,16 +62,6 @@ public class Parser
     /// <returns></returns>
     public Sequence<Statement> ParseSql(ReadOnlySpan<char> sql, Dialect dialect, ParserOptions? options = null)
     {
-        //var originalCulture = Thread.CurrentThread.CurrentCulture;
-        //const string parserCurrencySeparator = ".";
-
-        //if(originalCulture.NumberFormat.NumberDecimalSeparator != parserCurrencySeparator)
-        //{
-        //    var parserCulture = new CultureInfo(originalCulture.Name, true);
-        //    parserCulture.NumberFormat.NumberDecimalSeparator = parserCurrencySeparator;
-        //    Thread.CurrentThread.CurrentCulture = parserCulture;
-        //}
-
         _options = options ?? new ParserOptions();
         _depthGuard = new DepthGuard(_options.RecursionLimit);
         _dialect = dialect;
@@ -81,7 +71,6 @@ public class Parser
         _index = 0;
 
         var statements = ParseStatements();
-        //Thread.CurrentThread.CurrentCulture = originalCulture;
 
         return statements;
     }

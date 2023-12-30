@@ -63,10 +63,15 @@ public class SnowflakeDialect : Dialect
             }
         }
 
+        if (parser.ParseKeywordSequence(Keyword.COPY, Keyword.INTO))
+        {
+            return ParseCopyInto(parser);
+        }
+
         return null;
     }
 
-    private Statement ParseCreateStage(bool orReplace, bool temp, Parser parser)
+    private static Statement ParseCreateStage(bool orReplace, bool temp, Parser parser)
     {
         //[ IF NOT EXISTS ]
         var ifNot = parser.ParseIfNotExists();
@@ -124,9 +129,9 @@ public class SnowflakeDialect : Dialect
         };
     }
 
-    private StageParams ParseStageParams(Parser parser)
+    private static StageParams ParseStageParams(Parser parser)
     {
-        string? url=null;
+        string? url = null;
         string? storageIntegration = null;
         string? endpoint = null;
         Sequence<DataLoadingOption>? credentials = null;
@@ -183,7 +188,7 @@ public class SnowflakeDialect : Dialect
         };
     }
 
-    private Sequence<DataLoadingOption>? ParseParenOptions(Parser parser)
+    private static Sequence<DataLoadingOption>? ParseParenOptions(Parser parser)
     {
         Sequence<DataLoadingOption>? options = null;
 
@@ -193,7 +198,7 @@ public class SnowflakeDialect : Dialect
         {
             var token = parser.NextToken();
 
-            switch(token)
+            switch (token)
             {
                 case RightParen:
                     loop = false;
@@ -235,5 +240,403 @@ public class SnowflakeDialect : Dialect
         }
 
         return options;
+    }
+
+    private static Statement ParseCopyInto(Parser parser)
+    {
+        var into = ParseStageName(parser);
+        Sequence<string>? files = null;
+        Sequence<StageLoadSelectItem>? fromTransformations = null;
+        Ident? fromStageAlias = null;
+        ObjectName? fromStage;
+        StageParams? stageParams;
+
+        parser.ExpectKeyword(Keyword.FROM);
+
+        var next = parser.NextToken();
+        // Check if data load transformations are present
+        switch (next)
+        {
+            case LeftParen:
+                // Data load with transformations
+                parser.ExpectKeyword(Keyword.SELECT);
+                fromTransformations = ParseSelectItemsForDataLoad(parser);
+
+                parser.ExpectKeyword(Keyword.FROM);
+
+                fromStage = ParseSnowflakeStageName(parser);
+                stageParams = ParseStageParams(parser);
+
+                // As
+                if (parser.ParseKeyword(Keyword.AS))
+                {
+                    var asNext = parser.NextToken();
+                    if (asNext is Word word)
+                    {
+                        fromStageAlias = new Ident(word.Value);
+                    }
+                    else
+                    {
+                        throw Parser.Expected("Stage alias", parser.PeekToken());
+                    }
+                }
+                parser.ExpectRightParen();
+                break;
+
+            default:
+                parser.PrevToken();
+                fromStage = parser.ParseObjectName();
+                stageParams = ParseStageParams(parser);
+
+                // As
+                if (parser.ParseKeyword(Keyword.AS))
+                {
+                    var asNext = parser.NextToken();
+                    if (asNext is Word word)
+                    {
+                        fromStageAlias = new Ident(word.Value);
+                    }
+                    else
+                    {
+                        throw Parser.Expected("Stage alias", parser.PeekToken());
+                    }
+                }
+
+                break;
+        }
+
+        // Files
+        if (parser.ParseKeyword(Keyword.FILES))
+        {
+            parser.ExpectToken<Equal>();
+            parser.ExpectLeftParen();
+            var loop = true;
+
+            while (loop)
+            {
+                loop = false;
+                if (parser.NextToken() is SingleQuotedString file)
+                {
+                    files ??= [];
+                    files!.Add(file.Value);
+                }
+                else
+                {
+                    throw Parser.Expected("File token", parser.PeekToken());
+                }
+
+                if (parser.NextToken() is Comma)
+                {
+                    loop = true;
+                }
+                else
+                {
+                    parser.PrevToken();
+                }
+            }
+            parser.ExpectRightParen();
+        }
+
+        SingleQuotedString? pattern = null;
+
+        // Pattern
+        if (parser.ParseKeyword(Keyword.PATTERN))
+        {
+            parser.ExpectToken<Equal>();
+
+            if (parser.NextToken() is SingleQuotedString p)
+            {
+                pattern = p;
+            }
+            else
+            {
+                throw Parser.Expected("Pattern", parser.PeekToken());
+            }
+        }
+
+        // File format
+        Sequence<DataLoadingOption>? fileFormat = null;
+        if (parser.ParseKeyword(Keyword.FILE_FORMAT))
+        {
+            parser.ExpectToken<Equal>();
+            fileFormat = ParseParenthesesOptions(parser);
+        }
+
+        // Copy options
+        Sequence<DataLoadingOption>? copyOptions = null;
+        if (parser.ParseKeyword(Keyword.COPY_OPTIONS))
+        {
+            parser.ExpectToken<Equal>();
+            copyOptions = ParseParenthesesOptions(parser);
+        }
+
+        // Validation mode
+        string? validationMode = null;
+        if (parser.ParseKeyword(Keyword.VALIDATION_MODE))
+        {
+            parser.ExpectToken<Equal>();
+            validationMode = parser.NextToken().ToString();
+        }
+
+        return new Statement.CopyIntoSnowflake(into, fromStage, fromStageAlias, stageParams,
+            fromTransformations, files, pattern?.Value, fileFormat, copyOptions, validationMode);
+    }
+
+    private static ObjectName ParseSnowflakeStageName(Parser parser)
+    {
+        if (parser.NextToken() is AtSign)
+        {
+            parser.PrevToken();
+            var idents = new List<Ident>();
+
+            while (true)
+            {
+                idents.Add(ParseStageNameIdentifier(parser));
+
+                if (!parser.ConsumeToken<Period>())
+                {
+                    break;
+                }
+            }
+
+            return new ObjectName(idents);
+        }
+
+        parser.PrevToken();
+        return parser.ParseObjectName();
+    }
+
+    private static Sequence<StageLoadSelectItem> ParseSelectItemsForDataLoad(Parser parser)
+    {
+        var selectItems = new Sequence<StageLoadSelectItem>();
+
+        while (true)
+        {
+            Ident? alias = null;
+            var fileColumnNumber = 0;
+            Ident? element = null;
+            Ident? itemAs = null;
+
+            var next = parser.NextToken();
+
+            switch (next)
+            {
+                case Placeholder p:
+                    var rightHalf = p.Value[1..];
+                    var parsed = int.TryParse(rightHalf, out fileColumnNumber);
+
+                    if (!parsed)
+                    {
+                        throw new ParserException($"Could not parse '{p}'", p.Location);
+                    }
+
+                    break;
+
+                case Word w:
+                    alias = new Ident(w.Value);
+                    break;
+
+                default:
+                    throw Parser.Expected("Alias for file_col_num", next);
+            }
+
+            if (alias != null)
+            {
+                parser.ExpectToken<Period>();
+
+                if (parser.NextToken() is Placeholder p)
+                {
+                    var rightHalf = p.Value[1..];
+                    var parsed = int.TryParse(rightHalf, out fileColumnNumber);
+
+                    if (!parsed)
+                    {
+                        throw new ParserException($"Could not parse '{p}'", p.Location);
+                    }
+                }
+                else
+                {
+                    throw Parser.Expected("file_col_num", parser.PeekToken());
+                }
+            }
+
+            // Try extracting optional element
+            next = parser.NextToken();
+            if (next is Colon)
+            {
+                if (parser.NextToken() is Word w)
+                {
+                    element = new Ident(w.Value);
+                }
+                else
+                {
+                    throw Parser.Expected("file_col_num", parser.PeekToken());
+                }
+            }
+            else
+            {
+                parser.PrevToken();
+            }
+
+            // as
+            if (parser.ParseKeyword(Keyword.AS))
+            {
+                if (parser.NextToken() is Word w)
+                {
+                    itemAs = new Ident(w.Value);
+                }
+                else
+                {
+                    throw Parser.Expected("Column item alias", parser.PeekToken());
+                }
+            }
+
+            selectItems.Add(new StageLoadSelectItem
+            {
+                Alias = alias,
+                FileColumnNumber = fileColumnNumber,
+                Element = element,
+                ItemAs = itemAs
+            });
+
+            if (parser.NextToken() is Comma)
+            {
+                continue;
+            }
+
+            parser.PrevToken();
+            break;
+        }
+
+        return selectItems;
+    }
+
+    private static Sequence<DataLoadingOption> ParseParenthesesOptions(Parser parser)
+    {
+        var options = new Sequence<DataLoadingOption>();
+
+        parser.ExpectToken<LeftParen>();
+        var loop = true;
+
+        while (loop)
+        {
+            var next = parser.NextToken();
+
+            switch (next)
+            {
+                case RightParen:
+                    loop = false;
+                    break;
+
+                case Word key:
+                    parser.ExpectToken<Equal>();
+                    if (parser.ParseKeyword(Keyword.TRUE))
+                    {
+                        options.Add(new DataLoadingOption(key.Value, DataLoadingOptionType.Boolean, "TRUE"));
+                    }
+                    else if (parser.ParseKeyword(Keyword.FALSE))
+                    {
+                        options.Add(new DataLoadingOption(key.Value, DataLoadingOptionType.Boolean, "FALSE"));
+                    }
+                    else
+                    {
+                        var wordNext = parser.NextToken();
+                        switch (wordNext)
+                        {
+                            case SingleQuotedString s:
+                                options.Add(new DataLoadingOption(key.Value, DataLoadingOptionType.String, s.Value));
+                                break;
+                            case Word w:
+                                options.Add(new DataLoadingOption(key.Value, DataLoadingOptionType.Enum, w.Value));
+                                break;
+                            default:
+                                throw Parser.Expected("expected option value", parser.PeekToken());
+                        }
+                    }
+                    break;
+
+                default:
+                    throw Parser.Expected("another option or ')'", parser.PeekToken());
+            }
+        }
+
+        return options;
+    }
+    /// <summary>
+    /// Parses options provided within parenthesis
+    ///  (
+    ///     ENABLE = { TRUE | FALSE }
+    ///     REFRESH_ON_CREATE =  { TRUE | FALSE }
+    ///  )
+    /// </summary>
+    /// <param name="parser"></param>
+    /// <returns></returns>
+    private static ObjectName ParseStageName(Parser parser)
+    {
+        var next = parser.NextToken();
+
+        if (next is AtSign atSign)
+        {
+            parser.PrevToken();
+            var idents = new List<Ident>();
+            while (true)
+            {
+                idents.Add(ParseStageNameIdentifier(parser));
+                if (!parser.ConsumeToken<Period>())
+                {
+                    break;
+                }
+            }
+            return new ObjectName(idents);
+        }
+
+        parser.PrevToken();
+        return parser.ParseObjectName();
+    }
+
+    private static Ident ParseStageNameIdentifier(Parser parser)
+    {
+        var ident = new List<char>();
+        var loop = true;
+
+        while (loop && parser.NextTokenNoSkip() is { } next)
+        {
+            switch (next)
+            {
+                case Whitespace:
+                    loop = false;
+                    break;
+
+                case Period:
+                    parser.PrevToken();
+                    loop = false;
+                    break;
+
+                case AtSign:
+                    ident.Add(Symbols.At);
+                    break;
+
+                case Tilde:
+                    ident.Add(Symbols.Tilde);
+                    break;
+
+                case Modulo:
+                    ident.Add(Symbols.Percent);
+                    break;
+
+                case Divide:
+                    ident.Add(Symbols.Divide);
+                    break;
+
+                case Word w:
+                    ident.AddRange(w.Value);
+                    break;
+
+                default:
+                    throw Parser.Expected("Stage name identifier", parser.PeekToken());
+            }
+        }
+
+        return new Ident(new string(ident.ToArray()));
     }
 }

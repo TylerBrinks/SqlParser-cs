@@ -30,7 +30,7 @@ public abstract class Dialect
     /// <returns>True if ident start; otherwise false</returns>
     public virtual bool IsDelimitedIdentifierStart(char character)
     {
-        return character == Symbols.DoubleQuote;
+        return character is Symbols.DoubleQuote or Symbols.Backtick;
     }
     /// <summary>
     /// Determine if quoted characters are proper for identifier

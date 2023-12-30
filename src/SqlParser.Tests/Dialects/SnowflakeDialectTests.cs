@@ -1,4 +1,5 @@
-﻿using SqlParser.Ast;
+﻿using System.Data;
+using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
 using static SqlParser.Ast.Expression;
@@ -178,7 +179,7 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal(3, select.Projection.Count);
             Assert.Equal(new CompoundIdentifier(new Ident[]
             {
-                new("alias", Symbols.DoubleQuote), 
+                new("alias", Symbols.DoubleQuote),
                 new("bar baz", Symbols.DoubleQuote)
             }), select.Projection[0].AsExpr());
 
@@ -265,7 +266,7 @@ namespace SqlParser.Tests.Dialects
             var select = VerifiedOnlySelect("SELECT * EXCLUDE (col_a) FROM data");
             SelectItem expected = new SelectItem.Wildcard(new WildcardAdditionalOptions
             {
-                ExcludeOption = new ExcludeSelectItem.Multiple(new Ident[] { "col_a"})
+                ExcludeOption = new ExcludeSelectItem.Multiple(new Ident[] { "col_a" })
             });
             Assert.Equal(expected, select.Projection[0]);
 
@@ -282,9 +283,9 @@ namespace SqlParser.Tests.Dialects
 
             select = VerifiedOnlySelect("SELECT * EXCLUDE (department_id, employee_id) FROM employee_table");
             expected = new SelectItem.Wildcard(new WildcardAdditionalOptions
-                {
-                    ExcludeOption = new ExcludeSelectItem.Multiple(new Ident[] { "department_id", "employee_id" })
-                });
+            {
+                ExcludeOption = new ExcludeSelectItem.Multiple(new Ident[] { "department_id", "employee_id" })
+            });
             Assert.Equal(expected, select.Projection[0]);
         }
 
@@ -292,7 +293,7 @@ namespace SqlParser.Tests.Dialects
         public void Test_Select_Wildcard_With_Rename()
         {
             DefaultDialects = new Dialect[] { new SnowflakeDialect(), new GenericDialect() };
-           
+
             var select = VerifiedOnlySelect("SELECT * RENAME col_a AS col_b FROM data");
 
             SelectItem expected = new SelectItem.Wildcard(new WildcardAdditionalOptions
@@ -308,7 +309,7 @@ namespace SqlParser.Tests.Dialects
             {
                 RenameOption = new RenameSelectItem.Multiple(new IdentWithAlias[]
                 {
-                    new("department_id", "new_dep"), 
+                    new("department_id", "new_dep"),
                     new("employee_id", "new_emp")
                 })
             });
@@ -351,7 +352,7 @@ namespace SqlParser.Tests.Dialects
         public void Test_Drop_Stage()
         {
             DefaultDialects = new Dialect[] { new SnowflakeDialect(), new GenericDialect() };
-           
+
             var drop = VerifiedStatement<Statement.Drop>("DROP STAGE s1");
 
             Assert.False(drop.IfExists);
@@ -394,7 +395,7 @@ namespace SqlParser.Tests.Dialects
         public void Test_Create_Stage_With_Stage_Params()
         {
             DefaultDialects = new Dialect[] { new SnowflakeDialect() };
-            
+
             var sql = """
                 CREATE OR REPLACE STAGE my_ext_stage 
                 URL='s3://load/files/' 
@@ -427,13 +428,13 @@ namespace SqlParser.Tests.Dialects
                 CREATE OR REPLACE STAGE my_ext_stage URL='s3://load/files/' 
                 DIRECTORY=(ENABLE=TRUE REFRESH_ON_CREATE=FALSE NOTIFICATION_INTEGRATION='some-string')
                 """;
-           
+
             var create = VerifiedStatement<Statement.CreateStage>(sql);
 
             Assert.Equal(new DataLoadingOption("ENABLE", DataLoadingOptionType.Boolean, "TRUE"), create.DirectoryTableParams![0]);
             Assert.Equal(new DataLoadingOption("REFRESH_ON_CREATE", DataLoadingOptionType.Boolean, "FALSE"), create.DirectoryTableParams![1]);
             Assert.Equal(new DataLoadingOption("NOTIFICATION_INTEGRATION", DataLoadingOptionType.String, "some-string"), create.DirectoryTableParams![2]);
-            
+
             Assert.Equal(sql.Replace("\r", "").Replace("\n", ""), create.ToSql());
         }
 
@@ -443,7 +444,7 @@ namespace SqlParser.Tests.Dialects
         {
             DefaultDialects = new Dialect[] { new SnowflakeDialect() };
 
-            var sql = "CREATE OR REPLACE STAGE my_ext_stage URL='s3://load/files/' FILE_FORMAT=(COMPRESSION=AUTO BINARY_FORMAT=HEX ESCAPE='\\')";
+            const string sql = "CREATE OR REPLACE STAGE my_ext_stage URL='s3://load/files/' FILE_FORMAT=(COMPRESSION=AUTO BINARY_FORMAT=HEX ESCAPE='\\')";
 
             var create = VerifiedStatement<Statement.CreateStage>(sql);
 
@@ -459,7 +460,7 @@ namespace SqlParser.Tests.Dialects
         {
             DefaultDialects = new Dialect[] { new SnowflakeDialect() };
 
-            var sql = "CREATE OR REPLACE STAGE my_ext_stage URL='s3://load/files/' COPY_OPTIONS=(ON_ERROR=CONTINUE FORCE=TRUE)";
+            const string sql = "CREATE OR REPLACE STAGE my_ext_stage URL='s3://load/files/' COPY_OPTIONS=(ON_ERROR=CONTINUE FORCE=TRUE)";
 
             var create = VerifiedStatement<Statement.CreateStage>(sql);
 
@@ -467,6 +468,164 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal(new DataLoadingOption("FORCE", DataLoadingOptionType.Boolean, "TRUE"), create.CopyOptions![1]);
 
             Assert.Equal(sql, create.ToSql());
+        }
+
+        [Fact]
+        public void Test_Coppy_Into()
+        {
+            const string sql = "COPY INTO my_company.emp_basic FROM 'gcs://mybucket/./../a.csv'";
+
+            var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
+
+            var expected = new Statement.CopyIntoSnowflake(
+                new ObjectName(new[] { new Ident("my_company"), new Ident("emp_basic") }),
+                new ObjectName(new Ident("gcs://mybucket/./../a.csv", Symbols.SingleQuote)));
+
+            Assert.Equal(expected, copy);
+        }
+
+        [Fact]
+        public void Test_Copy_Into_With_Stage_Params()
+        {
+            var sql = """
+                COPY INTO my_company.emp_basic 
+                FROM 's3://load/files/' 
+                STORAGE_INTEGRATION=myint 
+                ENDPOINT='<s3_api_compatible_endpoint>' 
+                CREDENTIALS=(AWS_KEY_ID='1a2b3c' AWS_SECRET_KEY='4x5y6z') 
+                ENCRYPTION=(MASTER_KEY='key' TYPE='AWS_SSE_KMS')
+                """;
+
+            var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
+
+            var expected = new Statement.CopyIntoSnowflake(
+                new ObjectName(new[] { new Ident("my_company"), new Ident("emp_basic") }),
+                new ObjectName(new Ident("s3://load/files/", Symbols.SingleQuote)),
+                StageParams: new StageParams
+                {
+                    Endpoint = "<s3_api_compatible_endpoint>",
+                    StorageIntegration = "myint",
+                    Credentials = new Sequence<DataLoadingOption>
+                    {
+                        new ("AWS_KEY_ID", DataLoadingOptionType.String, "1a2b3c"),
+                        new ("AWS_SECRET_KEY", DataLoadingOptionType.String, "4x5y6z"),
+                    },
+                    Encryption = new Sequence<DataLoadingOption>
+                    {
+                        new ("MASTER_KEY", DataLoadingOptionType.String, "key"),
+                        new ("TYPE", DataLoadingOptionType.String, "AWS_SSE_KMS"),
+                    }
+                });
+
+            Assert.Equal(expected, copy);
+
+            sql = """
+                COPY INTO my_company.emp_basic FROM 
+                (SELECT t1.$1 FROM 's3://load/files/' STORAGE_INTEGRATION=myint)
+                """;
+
+            copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
+
+            Assert.Equal(new ObjectName(new Ident("s3://load/files/", Symbols.SingleQuote)), copy.FromStage);
+            Assert.Equal("myint", copy.StageParams.StorageIntegration);
+        }
+
+        [Fact]
+        public void Test_Copy_Into_With_Fies_And_Pattern_And_Verification()
+        {
+            var sql = """
+                      COPY INTO my_company.emp_basic 
+                      FROM 'gcs://mybucket/./../a.csv' AS some_alias 
+                      FILES = ('file1.json', 'file2.json') 
+                      PATTERN = '.*employees0[1-5].csv.gz' 
+                      VALIDATION_MODE = RETURN_7_ROWS
+                      """;
+
+            var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
+
+            Assert.Equal(new Sequence<string> { "file1.json", "file2.json" }, copy.Files);
+            Assert.Equal(".*employees0[1-5].csv.gz", copy.Pattern);
+            Assert.Equal("RETURN_7_ROWS", copy.ValidationMode);
+            Assert.Equal(new Ident("some_alias"), copy.FromStageAlias);
+        }
+
+        [Fact]
+        public void Test_Copy_Into_With_Transformations()
+        {
+            var sql = """
+                    COPY INTO my_company.emp_basic 
+                    FROM (SELECT t1.$1:st AS st, $1:index, t2.$1 FROM @schema.general_finished AS T) 
+                    FILES = ('file1.json', 'file2.json') PATTERN = '.*employees0[1-5].csv.gz' 
+                    VALIDATION_MODE = RETURN_7_ROW
+                    """;
+
+            var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
+
+            Assert.Equal(new ObjectName(new Ident[] { "@schema", "general_finished" }), copy.FromStage);
+            Assert.Equal(new Sequence<StageLoadSelectItem>
+            {
+                new () { Alias = "t1", FileColumnNumber = 1, Element = "st", ItemAs = "st" },
+                new () { FileColumnNumber = 1, Element = "index" },
+                new () { Alias = "t2", FileColumnNumber = 1 },
+            }, copy.FromTransformations);
+            
+        }
+
+        [Fact]
+        public void Test_Copy_Into_File_Format()
+        {
+            var sql = """
+                COPY INTO my_company.emp_basic 
+                FROM 'gcs://mybucket/./../a.csv' 
+                FILES = ('file1.json', 'file2.json') 
+                PATTERN = '.*employees0[1-5].csv.gz' 
+                FILE_FORMAT=(COMPRESSION=AUTO BINARY_FORMAT=HEX ESCAPE='\')
+                """;
+            
+            var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
+
+            Assert.True(copy!.FileFormat!.Any(o => o is {Name: "COMPRESSION", OptionType: DataLoadingOptionType.Enum, Value: "AUTO"}));
+            Assert.True(copy!.FileFormat!.Any(o => o is {Name: "BINARY_FORMAT", OptionType: DataLoadingOptionType.Enum, Value: "HEX"}));
+            Assert.True(copy!.FileFormat!.Any(o => o is {Name: "ESCAPE", OptionType: DataLoadingOptionType.String, Value: "\\"}));
+        }
+
+        [Fact]
+        public void Test_Copy_Into_Copy_Format()
+        {
+            var sql = """
+                      COPY INTO my_company.emp_basic 
+                      FROM 'gcs://mybucket/./../a.csv' 
+                      FILES = ('file1.json', 'file2.json') 
+                      PATTERN = '.*employees0[1-5].csv.gz' 
+                      COPY_OPTIONS=(ON_ERROR=CONTINUE FORCE=TRUE)
+                      """;
+
+            var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
+
+            Assert.True(copy!.CopyOptions!.Any(o => o is { Name: "ON_ERROR", OptionType: DataLoadingOptionType.Enum, Value: "CONTINUE" }));
+            Assert.True(copy!.CopyOptions!.Any(o => o is { Name: "FORCE", OptionType: DataLoadingOptionType.Boolean, Value: "TRUE" }));
+        }
+
+        [Fact]
+        public void Test_Copy_Stage_Object_Names()
+        {
+            var allowedObjectNames = new List<ObjectName>
+            {
+                new (new Ident[]{ "my_compan", "emp_basic"}),
+                new (new Ident[]{ "@namespace", "%table_name"}),
+                new (new Ident[]{ "@namespace", "%table_name/path"}),
+                new (new Ident[]{ "@namespace", "stage_name/path"}),
+                new (new Ident("@~/path")),
+            };
+
+            foreach (var objectName in allowedObjectNames)
+            {
+                var sql = $"COPY INTO {objectName} FROM 'gcs://mybucket/./../a.csv'";
+
+                var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
+                
+                Assert.Equal(objectName, copy.Into);
+            }
         }
     }
 }

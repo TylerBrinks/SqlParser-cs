@@ -260,6 +260,98 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
+
+    /// <summary>
+    /// COPPY INTO statement
+    /// See https://docs.snowflake.com/en/sql-reference/sql/copy-into-table
+    /// Copy Into syntax available for Snowflake is different than the one implemented in
+    /// Postgres. Although they share common prefix, it is reasonable to implement them
+    /// in different enums. This can be refactored later once custom dialects
+    /// are allowed to have custom Statements.
+    /// </summary>
+    /// <param name="Into">Into name</param>
+    /// <param name="FromStage">From stage</param>
+    /// <param name="FromStageAlias">From stage alias</param>
+    /// <param name="StageParams">Stage params</param>
+    /// <param name="FromTransformations">From transformations</param>
+    /// <param name="Files">Files</param>
+    /// <param name="Pattern">Pattern</param>
+    /// <param name="FileFormat">File format</param>
+    /// <param name="CopyOptions">Copy options</param>
+    /// <param name="ValidationMode">Validation mode</param>
+    public record CopyIntoSnowflake(
+        ObjectName Into,
+        ObjectName FromStage,
+        Ident? FromStageAlias = null,
+        StageParams? StageParams = null,
+        Sequence<StageLoadSelectItem>? FromTransformations = null,
+        Sequence<string>? Files = null,
+        string? Pattern = null,
+        Sequence<DataLoadingOption>? FileFormat = null,
+        Sequence<DataLoadingOption>? CopyOptions = null,
+        string? ValidationMode = null) : Statement
+    {
+        public StageParams StageParams = StageParams ?? new();
+
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"COPY INTO {Into}");
+
+            if (FromTransformations == null || FromTransformations.Count == 0)
+            {
+                writer.WriteSql($" FROM {FromStage}{StageParams}");
+
+                if (FromStageAlias != null)
+                {
+                    writer.WriteSql($" AS {FromStageAlias}");
+                }
+            }
+            else
+            {
+                writer.WriteSql($" FROM (SELECT ");
+                writer.WriteDelimited(FromTransformations, ", ");
+                writer.WriteSql($" FROM {FromStage}{StageParams}");
+
+                if (FromStageAlias != null)
+                {
+                    writer.WriteSql($" AS {FromStageAlias}");
+                }
+
+                writer.Write(")");
+            }
+
+            if (Files != null && Files.Count != 0)
+            {
+                writer.WriteSql($" FILES = ('");
+                writer.Write(string.Join("', '", Files));
+                writer.Write("')");
+            }
+
+            if (Pattern != null)
+            {
+                writer.WriteSql($" PATTERN = '{Pattern}'");
+            }
+
+            if (FileFormat != null && FileFormat.Count != 0)
+            {
+                writer.WriteSql($" FILE_FORMAT=(");
+                writer.WriteDelimited(FileFormat, " ");
+                writer.Write(")");
+            }
+
+            if (CopyOptions != null && CopyOptions.Count != 0)
+            {
+                writer.WriteSql($" COPY_OPTIONS=(");
+                writer.WriteDelimited(CopyOptions, " ");
+                writer.Write(")");
+            }
+
+            if (ValidationMode != null)
+            {
+                writer.WriteSql($" VALIDATION_MODE = {ValidationMode}");
+            }
+        }
+    }
     /// <summary>
     /// Create Database statement
     /// </summary>
@@ -432,7 +524,7 @@ public abstract record Statement : IWriteSql, IElement
             var global = Global.HasValue ? Global.Value ? "GLOBAL " : "LOCAL " : null;
             var temp = Temporary ? "TEMPORARY " : null;
             var transient = Transient ? "TRANSIENT " : null;
-            var ifNot = IfNotExists ?$"{AsIne.IfNotExistsText} " : null;
+            var ifNot = IfNotExists ? $"{AsIne.IfNotExistsText} " : null;
             writer.WriteSql($"CREATE {orReplace}{external}{global}{temp}{transient}TABLE {ifNot}{Name}");
 
             if (OnCluster != null)
@@ -769,7 +861,7 @@ public abstract record Statement : IWriteSql, IElement
     /// </example>
     /// </summary>
     /// <param name="Name">Schema name</param>
-    public record CreateSequence([property: Visit(0)]ObjectName Name) : Statement, IIfNotExists
+    public record CreateSequence([property: Visit(0)] ObjectName Name) : Statement, IIfNotExists
     {
         public bool Temporary { get; init; }
         public bool IfNotExists { get; init; }
@@ -1629,8 +1721,8 @@ public abstract record Statement : IWriteSql, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.Write(IfExists 
-                ? $"UNCACHE TABLE IF EXISTS {Name}" 
+            writer.Write(IfExists
+                ? $"UNCACHE TABLE IF EXISTS {Name}"
                 : $"UNCACHE TABLE {Name}");
         }
     }

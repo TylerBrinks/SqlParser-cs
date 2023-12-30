@@ -69,8 +69,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_With_Cte()
         {
-            VerifiedStatement(
-                "WITH a AS (SELECT * FROM b) INSERT INTO TABLE db.table_table PARTITION (a) SELECT * FROM b");
+            VerifiedStatement("WITH a AS (SELECT * FROM b) INSERT INTO TABLE db.table_table PARTITION (a) SELECT * FROM b");
         }
 
         [Fact]
