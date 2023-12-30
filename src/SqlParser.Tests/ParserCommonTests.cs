@@ -194,8 +194,10 @@ namespace SqlParser.Tests
         {
             var statement = VerifiedStatement("DELETE FROM \"table\"");
 
-            var factor = new ObjectName(new Ident("table", Symbols.DoubleQuote));
-            var delete = new Statement.Delete(new TableFactor.Table(factor));
+            var factor = new TableFactor.Table(new ObjectName(new Ident("table", Symbols.DoubleQuote)));
+            var from = new TableWithJoins(factor);
+
+            var delete = new Statement.Delete(null, new Sequence<TableWithJoins> { from });
 
             Assert.Equal(delete, statement);
         }
@@ -209,7 +211,7 @@ namespace SqlParser.Tests
             var binaryOp = new BinaryOp(new Identifier("name"), BinaryOperator.Eq, new LiteralValue(Number("5")));
 
             var delete = statement.AsDelete();
-            Assert.Equal(table, delete.Name);
+            Assert.Equal(table, delete.From.First().Relation);
             Assert.Null(delete.Using);
             Assert.Equal(binaryOp, delete.Selection);
         }
@@ -226,7 +228,7 @@ namespace SqlParser.Tests
                 BinaryOperator.Lt,
                 new CompoundIdentifier(new Ident[] { "b", "id" }));
 
-            Assert.Equal(table, delete.Name);
+            Assert.Equal(table, delete.From.First().Relation);
             Assert.Equal(@using, delete.Using);
             Assert.Equal(binaryOp, delete.Selection);
             Assert.Null(delete.Returning);

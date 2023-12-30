@@ -1065,15 +1065,25 @@ public abstract record Statement : IWriteSql, IElement
     /// <summary>
     /// Delete statement
     /// </summary>
-    /// <param name="Name">Table name</param>
+    /// <param name="Tables">Table names</param>
+    /// <param name="From">Join table names</param>
     /// <param name="Using">Using</param>
     /// <param name="Selection">Selection expression</param>
     /// <param name="Returning">Select items to return</param>
-    public record Delete(TableFactor Name, TableFactor? Using = null, Expression? Selection = null, Sequence<SelectItem>? Returning = null) : Statement
+    public record Delete(Sequence<ObjectName>? Tables, Sequence<TableWithJoins> From, TableFactor? Using = null, Expression? Selection = null, Sequence<SelectItem>? Returning = null) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"DELETE FROM {Name}");
+            writer.Write("DELETE ");
+
+            if (Tables is {Count: > 0})
+            {
+                writer.WriteDelimited(Tables, ", ");
+            }
+
+            writer.Write("From ");
+            writer.WriteDelimited(From, ", ");
+
             if (Using != null)
             {
                 writer.WriteSql($" USING {Using}");

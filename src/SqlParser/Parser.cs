@@ -4924,14 +4924,21 @@ public class Parser
 
     public Delete ParseDelete()
     {
-        ExpectKeyword(Keyword.FROM);
+        Sequence<ObjectName>? tables = null;
 
-        var tableName = ParseTableFactor();
+        if (!ParseKeyword(Keyword.FROM))
+        {
+            tables = ParseCommaSeparated(ParseObjectName);
+            ExpectKeyword(Keyword.FROM);
+        }
+
+        var from = ParseCommaSeparated(ParseTableAndJoins);
         var @using = ParseInit(ParseKeyword(Keyword.USING), ParseTableFactor);
+
         var selection = ParseInit(ParseKeyword(Keyword.WHERE), ParseExpr);
         var returning = ParseInit(ParseKeyword(Keyword.RETURNING), () => ParseCommaSeparated(ParseSelectItem));
 
-        return new Delete(tableName, @using, selection, returning);
+        return new Delete(tables, from, @using, selection, returning);
     }
     /// <summary>
     /// KILL[CONNECTION | QUERY | MUTATION] processlist_id
