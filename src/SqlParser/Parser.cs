@@ -726,7 +726,7 @@ public class Parser
         ListAgg ParseListAggExpr()
         {
             ExpectLeftParen();
-            var distinct = ParseAllOrDistinct();
+            var distinct = ParseAllOrDistinct() != null;
             var expr = ParseExpr();
             // While ANSI SQL would would require the separator, Redshift makes this optional. Here we
 
@@ -1077,7 +1077,7 @@ public class Parser
     public Expression ParseFunction(ObjectName name)
     {
         ExpectLeftParen();
-        var distinct = ParseAllOrDistinct();
+        var distinct = ParseAllOrDistinct() != null;
         var args = ParseOptionalArgs();
         WindowSpec? over = null;
 
@@ -1767,8 +1767,8 @@ public class Parser
                 => MultiplyPrecedence,
 
 
-            DoubleColon 
-                or Colon 
+            DoubleColon
+                or Colon
                 or ExclamationMark => ArrowPrecedence,
 
             LeftBracket
@@ -2181,17 +2181,44 @@ public class Parser
     /// </summary>
     /// <returns>True if All or Distinct</returns>
     /// <exception cref="ParserException"></exception>
-    public bool ParseAllOrDistinct()
+    public DistinctFilter? ParseAllOrDistinct()
     {
+        var location = PeekToken();
         var all = ParseKeyword(Keyword.ALL);
         var distinct = ParseKeyword(Keyword.DISTINCT);
 
-        if (all && distinct)
+        if (!distinct)
+        {
+            return null;
+        }
+
+        if (all)
         {
             throw new ParserException("Cannot specify both ALL and DISTINCT");
         }
 
-        return distinct;
+        var on = ParseKeyword(Keyword.ON);
+
+        if (!on)
+        {
+            return new DistinctFilter.Distinct();
+        }
+
+        ExpectLeftParen();
+        Sequence<Expression> columnNames;
+
+        if (ConsumeToken<RightParen>())
+        {
+            PrevToken();
+            columnNames = new Sequence<Expression>();
+        }
+        else
+        {
+            columnNames = ParseCommaSeparated(ParseExpr);
+        }
+
+        ExpectRightParen();
+        return new DistinctFilter.On(columnNames);
     }
     /// <summary>
     /// Parse a SQL CREATE statement
@@ -2205,7 +2232,7 @@ public class Parser
         var parsedGlobal = ParseOneOfKeywords(Keyword.GLOBAL) != Keyword.undefined;
         bool? global = null;
 
-        if(parsedGlobal)
+        if (parsedGlobal)
         {
             global = true;
         }
@@ -6489,7 +6516,7 @@ public class Parser
         var expr = ParseExpr();
         var asKeyword = ParseKeyword(Keyword.AS);
         var ident = ParseIdentifier();
-       
+
         return new ReplaceSelectElement(expr, ident, asKeyword);
     }
     /// <summary>

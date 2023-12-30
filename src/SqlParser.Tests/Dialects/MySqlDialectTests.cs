@@ -519,7 +519,7 @@ namespace SqlParser.Tests.Dialects
                 ))
             })
             {
-                Distinct = true,
+                Distinct = new DistinctFilter.Distinct(),
                 From = new TableWithJoins[]
                 {
                     new(new TableFactor.Table("test"))

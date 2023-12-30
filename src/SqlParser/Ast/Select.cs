@@ -8,7 +8,7 @@
 /// <param name="Projection">Select projections</param>
 public record Select([Visit(1)] Sequence<SelectItem> Projection) : IWriteSql, IElement
 {
-    public bool Distinct { get; init; }
+    public DistinctFilter? Distinct { get; init; }
     [Visit(0)] public Top? Top { get; init; }
     [Visit(2)] public SelectInto? Into { get; init; }
     [Visit(3)] public Sequence<TableWithJoins>? From { get; init; }
@@ -23,8 +23,12 @@ public record Select([Visit(1)] Sequence<SelectItem> Projection) : IWriteSql, IE
 
     public void ToSql(SqlTextWriter writer)
     {
-        var distinct = Distinct ? " DISTINCT" : null;
-        writer.Write($"SELECT{distinct}");
+        writer.Write($"SELECT");
+
+        if (Distinct != null)
+        {
+            writer.WriteSql($" {Distinct}");
+        }
 
         if (Top != null)
         {

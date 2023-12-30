@@ -249,7 +249,7 @@ namespace SqlParser.Tests
         {
             const string sql = "SELECT id, fname, lname FROM customer WHERE id = 1 LIMIT 5";
             var select = VerifiedOnlySelect(sql);
-            Assert.False(select.Distinct);
+            Assert.Null(select.Distinct);
             Assert.Equal(3, select.Projection.Count);
             var query = VerifiedQuery(sql);
             Assert.Equal(new LiteralValue(Number("5")), query.Limit);
@@ -270,7 +270,7 @@ namespace SqlParser.Tests
         {
             const string sql = "SELECT DISTINCT name FROM customer";
             var select = VerifiedOnlySelect(sql);
-            Assert.True(select.Distinct);
+            Assert.IsType<DistinctFilter.Distinct>(select.Distinct);
             Assert.Equal(new SelectItem.UnnamedExpression(new Identifier("name")), select.Projection.Single());
         }
 
@@ -279,7 +279,7 @@ namespace SqlParser.Tests
         {
             const string sql = "SELECT DISTINCT name, id FROM customer";
             var select = VerifiedOnlySelect(sql);
-            Assert.True(select.Distinct);
+            Assert.IsType<DistinctFilter.Distinct>(select.Distinct);
             Assert.Equal(new SelectItem.UnnamedExpression(new Identifier("name")), select.Projection.First());
             Assert.Equal(new SelectItem.UnnamedExpression(new Identifier("id")), select.Projection.Last());
         }
@@ -2278,7 +2278,7 @@ namespace SqlParser.Tests
                 new SelectItem.UnnamedExpression(new Identifier("col"))
             })
             {
-                Distinct = false,
+                Distinct = null,
                 From = new TableWithJoins[]
                 {
                     new(new TableFactor.Table("test"))
