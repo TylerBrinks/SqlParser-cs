@@ -16,7 +16,7 @@
 public record ArrayAggregate([property:Visit(0)]Expression Expression) : IWriteSql, IElement
 {
     [Visit(1)]
-    public OrderByExpression? OrderBy { get; init; }
+    public Sequence<OrderByExpression>? OrderBy { get; set; }
     [Visit(2)] 
     public Expression? Limit { get; init; }
     public bool Distinct { get; init; }
@@ -30,7 +30,8 @@ public record ArrayAggregate([property:Visit(0)]Expression Expression) : IWriteS
         {
             if (OrderBy != null)
             {
-                writer.WriteSql($" ORDER BY {OrderBy}");
+                writer.WriteSql($" ORDER BY ");
+                writer.WriteDelimited(OrderBy, ", ");
             }
             if (Limit != null)
             {
@@ -44,7 +45,9 @@ public record ArrayAggregate([property:Visit(0)]Expression Expression) : IWriteS
         {
             if (OrderBy != null)
             {
-                writer.WriteSql($" WITHIN GROUP (ORDER BY {OrderBy})");
+                writer.WriteSql($" WITHIN GROUP (ORDER BY ");
+                writer.WriteDelimited(OrderBy, ", ");
+                writer.Write(")");
             }
         }
     }

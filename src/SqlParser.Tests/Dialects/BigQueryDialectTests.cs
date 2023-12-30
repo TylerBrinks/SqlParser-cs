@@ -9,7 +9,7 @@ namespace SqlParser.Tests.Dialects
     {
         public BigQueryDialectTests()
         {
-            DefaultDialects = new[]{ new BigQueryDialect()};
+            DefaultDialects = new[] { new BigQueryDialect() };
         }
 
         [Fact]
@@ -202,23 +202,35 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Array_Agg_Func()
         {
-            foreach(var sql in new[]{
-            "SELECT ARRAY_AGG(x ORDER BY x) AS a FROM T",
-            "SELECT ARRAY_AGG(x ORDER BY x LIMIT 2) FROM tbl",
-            "SELECT ARRAY_AGG(DISTINCT x ORDER BY x LIMIT 2) FROM tbl"})
+            var supportedDialects = new List<Dialect>
             {
-                VerifiedStatement(sql);
+                new GenericDialect(),
+                new PostgreSqlDialect(),
+                new MsSqlDialect(),
+                new AnsiDialect(),
+                new HiveDialect()
+            };
+
+            foreach (var sql in new[]{
+                "SELECT ARRAY_AGG(x ORDER BY x) AS a FROM T",
+                "SELECT ARRAY_AGG(x ORDER BY x LIMIT 2) FROM tbl",
+                "SELECT ARRAY_AGG(DISTINCT x ORDER BY x LIMIT 2) FROM tbl",
+                "SELECT ARRAY_AGG(x ORDER BY x, y) AS a FROM T",
+                "SELECT ARRAY_AGG(x ORDER BY x ASC, y DESC) AS a FROM T"
+            })
+            {
+                VerifiedStatement(sql, supportedDialects);
             }
         }
 
         [Fact]
         public void Test_Select_Wildcard_With_Except()
         {
-            DefaultDialects = new Dialect[] {new BigQueryDialect(), new GenericDialect()};
+            DefaultDialects = new Dialect[] { new BigQueryDialect(), new GenericDialect() };
             var select = VerifiedOnlySelect("SELECT * EXCEPT (col_a) FROM data");
             var expected = new SelectItem.Wildcard(new WildcardAdditionalOptions
             {
-                ExceptOption = new ExceptSelectItem("col_a", new Ident[]{}),
+                ExceptOption = new ExceptSelectItem("col_a", new Ident[] { }),
             });
             Assert.Equal(expected, select.Projection[0]);
 
@@ -226,7 +238,7 @@ namespace SqlParser.Tests.Dialects
             select = VerifiedOnlySelect("SELECT * EXCEPT (department_id, employee_id) FROM employee_table");
             expected = new SelectItem.Wildcard(new WildcardAdditionalOptions
             {
-                ExceptOption = new ExceptSelectItem("department_id", new Ident[]{ "employee_id" }),
+                ExceptOption = new ExceptSelectItem("department_id", new Ident[] { "employee_id" }),
             });
             Assert.Equal(expected, select.Projection[0]);
 
@@ -271,7 +283,7 @@ namespace SqlParser.Tests.Dialects
         {
             var select = VerifiedOnlySelect("SELECT d[offset(0)]");
             var expected = new SelectItem.UnnamedExpression(new MapAccess(
-                new Identifier("d"), new []
+                new Identifier("d"), new[]
                 {
                     new Function("offset")
                     {
@@ -284,7 +296,7 @@ namespace SqlParser.Tests.Dialects
 
             Assert.Equal(expected, select.Projection[0]);
 
-            foreach(var sql in new[]{
+            foreach (var sql in new[]{
                 "SELECT d[SAFE_OFFSET(0)]",
                 "SELECT d[ORDINAL(0)]",
                 "SELECT d[SAFE_ORDINAL(0)]"

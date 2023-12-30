@@ -835,7 +835,7 @@ public class Parser
 
             if (!_dialect.SupportsWithinAfterArrayAggregation())
             {
-                var orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY), ParseOrderByExpr);
+                var orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY), () => ParseCommaSeparated(ParseOrderByExpr));
 
                 var limit = ParseInit(ParseKeyword(Keyword.LIMIT), ParseLimit);
 
@@ -851,18 +851,20 @@ public class Parser
 
             // Snowflake defines ORDERY BY in within group instead of inside the function like ANSI SQL
             ExpectRightParen();
-            var withGroup = ParseInit(ParseKeywordSequence(Keyword.WITHIN, Keyword.GROUP), () =>
+          
+            Sequence<OrderByExpression>? withinGroup = null;
+            if (ParseKeywordSequence(Keyword.WITHIN, Keyword.GROUP))
             {
-                return ExpectParens(() =>
-                {
-                    ExpectKeywords(Keyword.ORDER, Keyword.BY);
-                    return ParseOrderByExpr();
-                });
-            });
+                ExpectLeftParen();
+
+                withinGroup = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY), () => ParseCommaSeparated(ParseOrderByExpr));
+
+                ExpectRightParen();
+            }
 
             return new ArrayAgg(new ArrayAggregate(expr)
             {
-                OrderBy = withGroup,
+                OrderBy = withinGroup,
                 Distinct = distinct,
                 WithinGroup = true
             });
