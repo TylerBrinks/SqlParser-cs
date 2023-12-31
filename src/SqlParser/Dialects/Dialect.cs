@@ -84,7 +84,7 @@ public abstract class Dialect
     /// <param name="Expression">Expression</param>
     /// <param name="precedence">Token precedence</param>
     /// <returns>Parsed Expression</returns>
-    public virtual Expression? ParseInfix(Parser parser, Expression expr, int precedence)
+    public virtual Expression? ParseInfix(Parser parser, Expression Expression, int precedence)
     {
         return null;
 
@@ -98,4 +98,9 @@ public abstract class Dialect
     {
         return null;
     }
+
+    /// <summary>
+    /// True if the dialect supports 'group sets, rollup, or cube' expressions
+    /// </summary>
+    public virtual bool SupportsGroupByExpression => false;
 }

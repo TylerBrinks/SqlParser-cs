@@ -1253,26 +1253,32 @@ public class Parser
     /// <returns>Expression</returns>
     public Expression ParseGroupByExpr()
     {
-        if (_dialect is not (PostgreSqlDialect or DuckDbDialect or GenericDialect))
+        //if (_dialect is not (PostgreSqlDialect or DuckDbDialect or GenericDialect))
+        //{
+        //    return ParseExpr();
+        //}
+        if (_dialect.SupportsGroupByExpression)
         {
-            return ParseExpr();
+            if (ParseKeywordSequence(Keyword.GROUPING, Keyword.SETS))
+            {
+                return CreateGroupExpr(false, true, e => new GroupingSets(e));
+            }
+
+            if (ParseKeyword(Keyword.CUBE))
+            {
+                return CreateGroupExpr(true, true, e => new Cube(e));
+            }
+
+            return ParseKeyword(Keyword.ROLLUP)
+                ? CreateGroupExpr(true, true, e => new Rollup(e))
+                : ParseExpr();
         }
 
-        if (ParseKeywordSequence(Keyword.GROUPING, Keyword.SETS))
-        {
-            return CreateGroupExpr(false, true, e => new GroupingSets(e));
-        }
+        return ParseExpr();
 
-        if (ParseKeyword(Keyword.CUBE))
-        {
-            return CreateGroupExpr(true, true, e => new Cube(e));
-        }
 
-        return ParseKeyword(Keyword.ROLLUP)
-            ? CreateGroupExpr(true, true, e => new Rollup(e))
-            : ParseExpr();
-
-        Expression CreateGroupExpr(bool liftSingleton, bool allowEmpty, Func<Sequence<Sequence<Expression>>, Expression> create)
+        Expression CreateGroupExpr(bool liftSingleton, bool allowEmpty,
+            Func<Sequence<Sequence<Expression>>, Expression> create)
         {
             return ExpectParens(() =>
             {

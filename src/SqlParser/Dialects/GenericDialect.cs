@@ -22,4 +22,6 @@ public class GenericDialect : Dialect
                    or Symbols.Num 
                    or Symbols.Underscore;
     }
+
+    public override bool SupportsGroupByExpression => true;
 }

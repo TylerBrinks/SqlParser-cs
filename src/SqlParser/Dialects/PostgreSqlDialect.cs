@@ -68,4 +68,6 @@ public class PostgreSqlDialect : Dialect
 
         return new Statement.Comment(name, objectType, comment, ifExists);
     }
+
+    public override bool SupportsGroupByExpression => true;
 }
