@@ -524,11 +524,12 @@ public class Parser
 
         Function ParseTimeFunctions(ObjectName name)
         {
-            var args = ParseInit(ConsumeToken<LeftParen>(), ParseOptionalArgs);
+            var (args, orderBy) = ParseInit(ConsumeToken<LeftParen>(), ParseOptionalArgsWithOrderBy);
 
             return new Function(name)
             {
                 Args = args.SafeAny() ? args : null,
+                OrderBy = orderBy
             };
         }
 
@@ -1080,7 +1081,7 @@ public class Parser
     {
         ExpectLeftParen();
         var distinct = ParseAllOrDistinct() != null;
-        var args = ParseOptionalArgs();
+        var (args, orderBy) = ParseOptionalArgsWithOrderBy();
         WindowSpec? over = null;
 
         if (ParseKeyword(Keyword.OVER))
@@ -1088,7 +1089,7 @@ public class Parser
             ExpectLeftParen();
 
             var partitionBy = ParseInit(ParseKeywordSequence(Keyword.PARTITION, Keyword.BY), () => ParseCommaSeparated(ParseExpr));
-            var orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY), () => ParseCommaSeparated(ParseOrderByExpr));
+            orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY), () => ParseCommaSeparated(ParseOrderByExpr));
             var windowFrame = ParseInit(!ConsumeToken<RightParen>(), () =>
             {
                 var windowFrame = ParseWindowFrame();
@@ -1104,7 +1105,8 @@ public class Parser
             Args = args.Any() ? args : null,
             Over = over,
             Distinct = distinct,
-            Special = false
+            Special = false,
+            OrderBy = orderBy
         };
     }
 
@@ -6353,6 +6355,27 @@ public class Parser
         var args = ParseCommaSeparated(ParseFunctionArgs);
         ExpectRightParen();
         return args;
+    }
+
+    public (Sequence<FunctionArg> Args, Sequence<OrderByExpression> OrderBy) ParseOptionalArgsWithOrderBy()
+    {
+        var orderBy = new Sequence<OrderByExpression>();
+
+        if (ConsumeToken<RightParen>())
+        {
+            return (new Sequence<FunctionArg>(), orderBy);
+        }
+
+        var args = ParseCommaSeparated(ParseFunctionArgs);
+
+        if (ParseKeywordSequence(Keyword.ORDER, Keyword.BY))
+        {
+            orderBy = ParseCommaSeparated(ParseOrderByExpr);
+        }
+
+        ExpectRightParen();
+
+        return (args, orderBy);
     }
 
     /// <summary>

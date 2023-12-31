@@ -4436,5 +4436,31 @@ namespace SqlParser.Tests
             var query = string.Join(Environment.NewLine, range);
             new Parser().ParseSql(query);
         }
+
+        [Fact]
+        public void Parse_Arg_With_Order_By()
+        {
+            var dialects = new Dialect[]
+            {
+                new GenericDialect(),
+                new PostgreSqlDialect(),
+                new MsSqlDialect(),
+                new AnsiDialect(),
+                new HiveDialect()
+            };
+
+            var queries = new[]
+            {
+                "SELECT FIRST_VALUE(x ORDER BY x) AS a FROM T",
+                "SELECT FIRST_VALUE(x ORDER BY x) FROM tbl",
+                "SELECT LAST_VALUE(x ORDER BY x, y) AS a FROM T",
+                "SELECT LAST_VALUE(x ORDER BY x ASC, y DESC) AS a FROM T"
+            };
+
+            foreach (var sql in queries)
+            {
+                VerifiedStatement(sql, dialects);
+            }
+        }
     }
 }

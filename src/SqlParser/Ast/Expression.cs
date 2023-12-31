@@ -434,6 +434,10 @@ public abstract record Expression : IWriteSql, IElement
         /// do it for current_catalog, current_schema, etc. This flags is used for formatting.
         /// </summary>
         public bool Special { get; init; }
+        /// <summary>
+        /// Required ordering for the function (if empty, there is no requirement).
+        /// </summary>
+        public Sequence<OrderByExpression>? OrderBy { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
@@ -443,8 +447,19 @@ public abstract record Expression : IWriteSql, IElement
             }
             else
             {
+                var ordered = OrderBy is { Count: > 0 };
+
                 var distinct = Distinct ? "DISTINCT " : null;
-                writer.WriteSql($"{Name}({distinct}{Args})");
+                writer.WriteSql($"{Name}({distinct}{Args}");
+
+                if (ordered)
+                {
+                    var orderBy = ordered ? " ORDER BY " : string.Empty;
+                    writer.Write(orderBy);
+                    writer.WriteDelimited(OrderBy, ", ");
+                }
+
+                writer.Write(")");
 
                 if (Over != null)
                 {
@@ -825,7 +840,7 @@ public abstract record Expression : IWriteSql, IElement
             foreach (var key in Keys)
             {
                 // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
-                if (key is LiteralValue { Value: Value.SingleQuotedString s } )
+                if (key is LiteralValue { Value: Value.SingleQuotedString s })
                 {
                     writer.WriteSql($"[\"{s.Value}\"]");
                 }
