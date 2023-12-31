@@ -276,15 +276,14 @@ public class Parser
 
     public Truncate ParseTruncate()
     {
-        ExpectKeyword(Keyword.TABLE);
-
+        var table = ParseKeyword(Keyword.TABLE);
         var tableName = ParseObjectName();
         var partitions = ParseInit(ParseKeyword(Keyword.PARTITION), () =>
         {
             return ExpectParens(() => ParseCommaSeparated(ParseExpr));
         });
 
-        return new Truncate(tableName, partitions);
+        return new Truncate(tableName, partitions, table);
     }
 
     public Statement ParseAnalyze()

@@ -1718,11 +1718,13 @@ public abstract record Statement : IWriteSql, IElement
     /// </summary>
     /// <param name="Name">Object name</param>
     /// <param name="Partitions">List of partitions</param>
-    public record Truncate(ObjectName Name, Sequence<Expression>? Partitions) : Statement
+    public record Truncate(ObjectName Name, Sequence<Expression>? Partitions, bool Table) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"TRUNCATE TABLE {Name}");
+            var table = Table ? "TABLE " : string.Empty;
+
+            writer.WriteSql($"TRUNCATE {table}{Name}");
 
             if (Partitions.SafeAny())
             {

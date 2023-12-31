@@ -1,4 +1,5 @@
-﻿using SqlParser.Ast;
+﻿using System.Data;
+using SqlParser.Ast;
 using SqlParser.Dialects;
 using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
@@ -1919,6 +1920,18 @@ namespace SqlParser.Tests.Dialects
             Assert.Throws<TokenizeException>(() => ParseSqlStatements("SELECT $x$hello$$"));
             Assert.Throws<TokenizeException>(() => ParseSqlStatements("SELECT $hello$$"));
             Assert.Throws<TokenizeException>(() => ParseSqlStatements("\"SELECT $$$"));
+        }
+
+        [Fact]
+        public void Parse_Truncate()
+        {
+            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+
+            var truncate = VerifiedStatement("TRUNCATE db.table_name");
+
+            var name = new ObjectName(new Ident[] {"db", "table_name"});
+            var expected = new Statement.Truncate(name, null, false);
+            Assert.Equal(expected, truncate);
         }
     }
 }
