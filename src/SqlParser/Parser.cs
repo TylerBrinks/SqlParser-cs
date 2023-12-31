@@ -852,7 +852,7 @@ public class Parser
 
             // Snowflake defines ORDERY BY in within group instead of inside the function like ANSI SQL
             ExpectRightParen();
-          
+
             Sequence<OrderByExpression>? withinGroup = null;
             if (ParseKeywordSequence(Keyword.WITHIN, Keyword.GROUP))
             {
@@ -1082,22 +1082,19 @@ public class Parser
         ExpectLeftParen();
         var distinct = ParseAllOrDistinct() != null;
         var (args, orderBy) = ParseOptionalArgsWithOrderBy();
-        WindowSpec? over = null;
+        WindowType? over = null;
 
         if (ParseKeyword(Keyword.OVER))
         {
-            ExpectLeftParen();
-
-            var partitionBy = ParseInit(ParseKeywordSequence(Keyword.PARTITION, Keyword.BY), () => ParseCommaSeparated(ParseExpr));
-            orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY), () => ParseCommaSeparated(ParseOrderByExpr));
-            var windowFrame = ParseInit(!ConsumeToken<RightParen>(), () =>
+            if (ConsumeToken<LeftParen>())
             {
-                var windowFrame = ParseWindowFrame();
-                ExpectRightParen();
-                return windowFrame;
-            });
-
-            over = new WindowSpec(partitionBy, orderBy, windowFrame);
+                var windowSpec = ParseWindowSpec();
+                over = new WindowType.WindowSpecType(windowSpec);
+            }
+            else
+            {
+                over = new WindowType.NamedWindow(ParseIdentifier());
+            }
         }
 
         return new Function(name)
@@ -1146,7 +1143,6 @@ public class Parser
 
         return new WindowFrame(units, startBound, endBound);
     }
-
     /// <summary>
     /// Parse `CURRENT ROW` or `{ positive number | UNBOUNDED } { PRECEDING | FOLLOWING }`
     /// </summary>
@@ -1182,6 +1178,31 @@ public class Parser
         }
 
         throw Expected("PRECEDING or FOLLOWING", PeekToken());
+    }
+
+    public NamedWindowDefinition ParseNamedWindow()
+    {
+        var ident = ParseIdentifier();
+        ExpectKeyword(Keyword.AS);
+        ExpectLeftParen();
+        var windowSpec = ParseWindowSpec();
+        return new NamedWindowDefinition(ident, windowSpec);
+    }
+    /// <summary>
+    /// Parse window spec expression
+    /// </summary>
+    public WindowSpec ParseWindowSpec()
+    {
+        var partitionBy = ParseInit(ParseKeywordSequence(Keyword.PARTITION, Keyword.BY), () => ParseCommaSeparated(ParseExpr));
+        var orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY), () => ParseCommaSeparated(ParseOrderByExpr));
+        var windowFrame = ParseInit(!ConsumeToken<RightParen>(), () =>
+        {
+            var windowFrame = ParseWindowFrame();
+            ExpectRightParen();
+            return windowFrame;
+        });
+
+        return new WindowSpec(partitionBy, orderBy, windowFrame);
     }
     /// <summary>
     /// Parse a group by expr. a group by Expression can be one of group sets, roll up, cube, or simple
@@ -5405,6 +5426,8 @@ public class Parser
 
         var having = ParseInit(ParseKeyword(Keyword.HAVING), ParseExpr);
 
+        var namedWindows = ParseInit(ParseKeyword(Keyword.WINDOW), () => ParseCommaSeparated(ParseNamedWindow));
+
         var qualify = ParseInit(ParseKeyword(Keyword.QUALIFY), ParseExpr);
 
         return new Select(projection)
@@ -5420,6 +5443,7 @@ public class Parser
             DistributeBy = distributeBy,
             SortBy = sortBy,
             Having = having,
+            NamedWindow = namedWindows,
             QualifyBy = qualify
         };
     }
@@ -6357,9 +6381,9 @@ public class Parser
         return args;
     }
 
-    public (Sequence<FunctionArg> Args, Sequence<OrderByExpression> OrderBy) ParseOptionalArgsWithOrderBy()
+    public (Sequence<FunctionArg> Args, Sequence<OrderByExpression>? OrderBy) ParseOptionalArgsWithOrderBy()
     {
-        var orderBy = new Sequence<OrderByExpression>();
+        Sequence<OrderByExpression>? orderBy = null;
 
         if (ConsumeToken<RightParen>())
         {

@@ -1156,12 +1156,12 @@ namespace SqlParser.Tests
             var expected = new BinaryOp(
                 new Function("ROW_NUMBER")
                 {
-                    Over = new WindowSpec(
+                    Over = new WindowType.WindowSpecType(new WindowSpec(
                        new[] { new Identifier("p") },
                        new OrderByExpression[]
                        {
                            new (new Identifier("o"))
-                       })
+                       }))
                 },
                BinaryOperator.Eq,
                 new LiteralValue(Number("1"))
@@ -2107,13 +2107,66 @@ namespace SqlParser.Tests
 
             var expected = new Function("row_number")
             {
-                Over = new WindowSpec(OrderBy: new OrderByExpression[]
+                Over = new WindowType.WindowSpecType(new WindowSpec(OrderBy: new OrderByExpression[]
                 {
                     new (new Identifier("dt"), false)
-                })
+                }))
             };
             Assert.Equal(7, select.Projection.Count);
             Assert.Equal(expected, select.Projection.First().AsExpr());
+        }
+
+        [Fact]
+        public void Parse_Named_Window()
+        {
+            const string sql = """
+                      SELECT 
+                      MIN(c12) OVER window1 AS min1, 
+                      MAX(c12) OVER window2 AS max1 
+                      FROM aggregate_test_100 
+                      WINDOW window1 AS (ORDER BY C12), 
+                      window2 AS (PARTITION BY C11) 
+                      ORDER BY C3
+                      """;
+
+            var actual = VerifiedOnlySelect(sql);
+
+            var projection = new Sequence<SelectItem>
+            {
+                new SelectItem.ExpressionWithAlias(new Function("MIN")
+                {
+                    Args = [new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("c12")))],
+                    Over = new WindowType.NamedWindow("window1")
+                }, "min1"),
+
+                new SelectItem.ExpressionWithAlias(new Function("MAX")
+                {
+                    Args = [new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("c12")))],
+                    Over = new WindowType.NamedWindow("window2")
+                }, "max1"),
+            };
+
+            var expected = new Select(projection)
+            {
+                From = new TableWithJoins[]
+                {
+                    new(new TableFactor.Table("aggregate_test_100"))
+                },
+                NamedWindow = new Sequence<NamedWindowDefinition>
+                {
+                    new ("window1", new WindowSpec(OrderBy: new Sequence<OrderByExpression>
+                    {
+                        new (new Identifier("C12"))
+                    })),
+
+                    new ("window2" ,new WindowSpec(new Sequence<Expression>
+                    {
+                        new Identifier("C11")
+                    }))
+                },
+            };
+
+            Assert.Equal(expected, actual);
         }
 
         [Fact]
@@ -3998,12 +4051,12 @@ namespace SqlParser.Tests
             {
                 var name = names[i];
 
-                if (i == (int) Keyword.END_EXEC)
+                if (i == (int)Keyword.END_EXEC)
                 {
                     name = name.Replace("_", "-");
                 }
 
-                Assert.True(name == keywords[i]); 
+                Assert.True(name == keywords[i]);
             }
         }
 

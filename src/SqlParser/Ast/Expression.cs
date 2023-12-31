@@ -424,7 +424,7 @@ public abstract record Expression : IWriteSql, IElement
         /// <summary>
         /// Window spec
         /// </summary>
-        public WindowSpec? Over { get; init; }
+        public WindowType? Over { get; init; }
         /// <summary>
         /// Aggregate functions may specify eg `COUNT(DISTINCT x)`
         /// </summary>
@@ -463,7 +463,7 @@ public abstract record Expression : IWriteSql, IElement
 
                 if (Over != null)
                 {
-                    writer.WriteSql($" OVER ({Over})");
+                    writer.WriteSql($" OVER {Over}");
                 }
             }
         }

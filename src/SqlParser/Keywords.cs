@@ -106,7 +106,8 @@ internal static class Keywords
         Keyword.OUTER,
         Keyword.SET,
         Keyword.QUALIFY,
-        Keyword.AS
+        Keyword.WINDOW,
+        Keyword.AS // TODO remove?
     };
 }
 

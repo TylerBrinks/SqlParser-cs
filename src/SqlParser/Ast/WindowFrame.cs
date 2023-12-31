@@ -81,3 +81,11 @@ public record WindowSpec(Sequence<Expression>? PartitionBy = null, Sequence<Orde
         }
     }
 }
+
+public record NamedWindowDefinition(Ident Name, WindowSpec WindowSpec) : IWriteSql
+{
+    public void ToSql(SqlTextWriter writer)
+    {
+        writer.WriteSql($"{Name} as ({WindowSpec})");
+    }
+}

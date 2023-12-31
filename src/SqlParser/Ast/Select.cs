@@ -19,11 +19,12 @@ public record Select([Visit(1)] Sequence<SelectItem> Projection) : IWriteSql, IE
     [Visit(8)] public Sequence<Expression>? DistributeBy { get; init; }
     [Visit(9)] public Sequence<Expression>? SortBy { get; init; }
     [Visit(10)] public Expression? Having { get; init; }
-    [Visit(11)] public Expression? QualifyBy { get; init; }
+    [Visit(11)] public Sequence<NamedWindowDefinition>? NamedWindow { get; init; }
+    [Visit(12)] public Expression? QualifyBy { get; init; }
 
     public void ToSql(SqlTextWriter writer)
     {
-        writer.Write($"SELECT");
+        writer.Write("SELECT");
 
         if (Distinct != null)
         {
@@ -83,6 +84,12 @@ public record Select([Visit(1)] Sequence<SelectItem> Projection) : IWriteSql, IE
         if (Having != null)
         {
             writer.WriteSql($" HAVING {Having}");
+        }
+
+        if (NamedWindow.SafeAny())
+        {
+            writer.Write(" WINDOW ");
+            writer.WriteDelimited(NamedWindow, ", ");
         }
 
         if (QualifyBy != null)
