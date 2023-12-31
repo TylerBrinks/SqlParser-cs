@@ -256,6 +256,7 @@ public enum Keyword
     DISCONNECT,
     DISTINCT,
     DISTRIBUTE,
+    DIV,
     DO,
     DOUBLE,
     DOW,

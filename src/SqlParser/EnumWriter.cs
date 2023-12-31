@@ -36,6 +36,7 @@ public static class EnumWriter
             BinaryOperator.BitwiseOr => "|",
             BinaryOperator.BitwiseAnd => "&",
             BinaryOperator.BitwiseXor => "^",
+            BinaryOperator.MyIntegerDivide => "DIV",
             BinaryOperator.PGBitwiseXor => "#",
             BinaryOperator.PGBitwiseShiftLeft => "<<",
             BinaryOperator.PGBitwiseShiftRight => ">>",

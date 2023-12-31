@@ -1,4 +1,6 @@
-﻿namespace SqlParser.Dialects;
+﻿using SqlParser.Ast;
+
+namespace SqlParser.Dialects;
 
 
 /// <summary>
@@ -25,5 +27,15 @@ public class MySqlDialect : Dialect
     public override bool IsDelimitedIdentifierStart(char character)
     {
         return character == Symbols.Backtick;
+    }
+
+    public override Expression? ParseInfix(Parser parser, Expression expr, int precedence)
+    {
+        if (parser.ParseKeyword(Keyword.DIV))
+        {
+            return new Expression.BinaryOp(expr, BinaryOperator.MyIntegerDivide, parser.ParseExpr());
+        }
+
+        return base.ParseInfix(parser, expr, precedence);
     }
 }

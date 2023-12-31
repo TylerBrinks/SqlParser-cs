@@ -34,6 +34,7 @@ public class Parser
     public const short PlusMinusPrecedence = 30;
     public const short MultiplyPrecedence = 40;
     public const short ArrowPrecedence = 50;
+    public const short DivOpPrecedence = 40;
 
     private int _index;
     private Sequence<Token> _tokens = null!;
@@ -1736,6 +1737,7 @@ public class Parser
             Word { Keyword: Keyword.IS } => IsPrecedence,
             Word { Keyword: Keyword.IN or Keyword.BETWEEN or Keyword.OPERATOR } => BetweenPrecedence,
             Word { Keyword: Keyword.LIKE or Keyword.ILIKE or Keyword.SIMILAR } => LikePrecedence,
+            Word { Keyword: Keyword.DIV } => DivOpPrecedence,
 
             Equal
                 or LessThan

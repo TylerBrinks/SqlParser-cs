@@ -727,5 +727,12 @@ namespace SqlParser.Tests.Dialects
             var select = VerifiedOnlySelect(sql);
             Assert.Equal(new Identifier(new Ident("123col_$@123abc")), select.Projection.First().AsExpr());
         }
+
+        [Fact]
+        public void Parse_Div_Infix()
+        {
+            const string sql = "SELECT 5 DIV 2";
+            VerifiedOnlySelect(sql);
+        }
     }
 }
