@@ -1205,6 +1205,49 @@ public class Parser
         return new WindowSpec(partitionBy, orderBy, windowFrame);
     }
     /// <summary>
+    /// Parse create type expression
+    /// </summary>
+    public Statement ParseCreateType()
+    {
+        var name = ParseObjectName();
+        ExpectKeyword(Keyword.AS);
+
+        var attributes = new Sequence<UserDefinedTypeCompositeAttributeDef>();
+
+        if (!ConsumeToken<LeftParen>() || ConsumeToken<RightParen>())
+        {
+            return new Statement.CreateType(name, new UserDefinedTypeRepresentation.Composite(attributes));
+        }
+
+
+        while (true)
+        {
+            var attributeName = ParseIdentifier();
+            var attributeDataType = ParseDataType();
+            ObjectName? attributeCollation = null;
+
+            if (ParseKeyword(Keyword.COLLATE))
+            {
+                attributeCollation = ParseObjectName();
+            }
+
+            attributes.Add(new UserDefinedTypeCompositeAttributeDef(attributeName, attributeDataType, attributeCollation));
+            var comma = ConsumeToken<Comma>();
+            if (ConsumeToken<RightParen>())
+            {
+                // Allow trailing comma
+                break;
+            }
+
+            if (!comma)
+            {
+                throw Expected("',' or ')' after attribute definition", PeekToken());
+            }
+        }
+
+        return new CreateType(name, new UserDefinedTypeRepresentation.Composite(attributes));
+    }
+    /// <summary>
     /// Parse a group by expr. a group by Expression can be one of group sets, roll up, cube, or simple
     /// </summary>
     /// <returns>Expression</returns>
@@ -2331,6 +2374,11 @@ public class Parser
         if (ParseKeyword(Keyword.SEQUENCE))
         {
             return ParseCrateSequence(temporary);
+        }
+
+        if (ParseKeyword(Keyword.TYPE))
+        {
+            return ParseCreateType();
         }
 
         throw Expected("Expected an object type after CREATE", PeekToken());

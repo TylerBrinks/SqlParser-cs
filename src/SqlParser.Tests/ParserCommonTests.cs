@@ -4515,5 +4515,22 @@ namespace SqlParser.Tests
                 VerifiedStatement(sql, dialects);
             }
         }
+
+        [Fact]
+        public void Parse_Create_Type()
+        {
+            var createType = VerifiedStatement("CREATE TYPE db.type_name AS (foo INT, bar TEXT COLLATE \"de_DE\")");
+
+            var attributes = new Sequence<UserDefinedTypeCompositeAttributeDef>
+            {
+                new("foo", new Int()),
+                new("bar", new Text(), new ObjectName(new Ident("de_DE", Symbols.DoubleQuote)))
+            };
+
+            var expected = new Statement.CreateType(new ObjectName(new Ident[] {"db", "type_name"}),
+                new UserDefinedTypeRepresentation.Composite(attributes));
+
+            Assert.Equal(expected, createType);
+        }
     }
 }

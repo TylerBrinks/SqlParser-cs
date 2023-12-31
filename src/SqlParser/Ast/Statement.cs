@@ -899,6 +899,14 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
+
+    public record CreateType(ObjectName Name, UserDefinedTypeRepresentation Representation) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"CREATE TYPE {Name} AS {Representation}");
+        }
+    }
     /// <summary>
     /// DEALLOCATE statement
     /// </summary>
