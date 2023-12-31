@@ -578,10 +578,15 @@ public ref struct Tokenizer
         {
             Symbols.Asterisk => TokenizeAsteriskComment(),
             Symbols.Divide when _dialect is SnowflakeDialect => ParseSnowflakeComment(),
+            Symbols.Divide when _dialect is DuckDbDialect or GenericDialect => ParseIntDiv(_state),
             _ => new Divide()
         };
 
-
+        static Token ParseIntDiv(State state)
+        {
+            state.Next();
+            return new DuckIntDiv();
+        }
     }
 
     private Whitespace TokenizeAsteriskComment()

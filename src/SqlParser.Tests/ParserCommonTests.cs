@@ -105,6 +105,7 @@ namespace SqlParser.Tests
             var dialects = new Dialect[]
             {
                 new GenericDialect(),
+                new DuckDbDialect(),
                 new PostgreSqlDialect(),
                 new BigQueryDialect(),
                 new SnowflakeDialect(),
@@ -1382,6 +1383,7 @@ namespace SqlParser.Tests
             var dialects = new Dialect[]
             {
                 new GenericDialect(),
+                new DuckDbDialect(),
                 new PostgreSqlDialect(),
                 new MsSqlDialect(),
                 new AnsiDialect(),
@@ -1873,7 +1875,8 @@ namespace SqlParser.Tests
             {
                 new PostgreSqlDialect(),
                 new BigQueryDialect(),
-                new GenericDialect()
+                new GenericDialect(),
+                new DuckDbDialect()
             };
 
             var alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE tab ADD IF NOT EXISTS foo TEXT", dialects);
@@ -3952,6 +3955,7 @@ namespace SqlParser.Tests
             var dialects = new Dialect[]
             {
                 new GenericDialect(),
+                new DuckDbDialect(),
                 new PostgreSqlDialect(),
                 new MsSqlDialect(),
                 new AnsiDialect(),
@@ -4288,7 +4292,6 @@ namespace SqlParser.Tests
             Assert.Equal("Recursion limit exceeded.", ex.Message);
         }
 
-
         [Fact]
         public void Parse_Deeply_Nested_Expr_Hits_Recursion_Limits()
         {
@@ -4374,6 +4377,7 @@ namespace SqlParser.Tests
             var dialects = new Dialect[]
             {
                 new GenericDialect(),
+                new DuckDbDialect(),
                 new PostgreSqlDialect(),
                 new MySqlDialect(),
                 new RedshiftDialect(),

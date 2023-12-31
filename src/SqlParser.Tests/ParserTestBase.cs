@@ -18,7 +18,8 @@ public class ParserTestBase
         new RedshiftDialect(),
         new MySqlDialect(),
         new BigQueryDialect(),
-        new SQLiteDialect()
+        new SQLiteDialect(),
+        new DuckDbDialect()
     };
 
     private IEnumerable<Dialect> Dialects => DefaultDialects ?? AllDialects;

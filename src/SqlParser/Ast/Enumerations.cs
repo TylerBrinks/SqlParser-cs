@@ -65,6 +65,8 @@ public enum BinaryOperator
     BitwiseAnd,
     // Bitwise XOR
     BitwiseXor,
+    /// Integer division operator `//` in DuckDB
+    DuckIntegerDivide,
     /// MySQL integer division https://dev.mysql.com/doc/refman/8.0/en/arithmetic-functions.html
     MyIntegerDivide,
     // Postgres bitwise XOR

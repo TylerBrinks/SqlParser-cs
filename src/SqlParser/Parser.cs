@@ -1187,7 +1187,7 @@ public class Parser
     /// <returns>Expression</returns>
     public Expression ParseGroupByExpr()
     {
-        if (_dialect is not (PostgreSqlDialect or GenericDialect))
+        if (_dialect is not (PostgreSqlDialect or DuckDbDialect or GenericDialect))
         {
             return ParseExpr();
         }
@@ -1403,8 +1403,9 @@ public class Parser
             Caret => BinaryOperator.BitwiseXor,
             Ampersand => BinaryOperator.BitwiseAnd,
             Divide => BinaryOperator.Divide,
-            ShiftLeft when _dialect is PostgreSqlDialect or GenericDialect => BinaryOperator.PGBitwiseShiftLeft,
-            ShiftRight when _dialect is PostgreSqlDialect or GenericDialect => BinaryOperator.PGBitwiseShiftRight,
+            DuckIntDiv when _dialect is DuckDbDialect or GenericDialect => BinaryOperator.DuckIntegerDivide,
+            ShiftLeft when _dialect is PostgreSqlDialect or DuckDbDialect or GenericDialect => BinaryOperator.PGBitwiseShiftLeft,
+            ShiftRight when _dialect is PostgreSqlDialect or DuckDbDialect or GenericDialect => BinaryOperator.PGBitwiseShiftRight,
             Hash when _dialect is PostgreSqlDialect => BinaryOperator.PGBitwiseXor,
             Tilde => BinaryOperator.PGRegexMatch,
             TildeAsterisk => BinaryOperator.PGRegexIMatch,
@@ -1765,6 +1766,7 @@ public class Parser
 
             Multiply
                 or Divide
+                or DuckIntDiv
                 or Modulo
                 or StringConcat
                 => MultiplyPrecedence,
@@ -3810,7 +3812,7 @@ public class Parser
         {
             case Keyword.TABLE:
                 {
-                    var _ = ParseKeyword(Keyword.ONLY);
+                    _ = ParseKeyword(Keyword.ONLY);
                     var tableName = ParseObjectName();
                     AlterTableOperation operation = null!;
 
@@ -3834,7 +3836,7 @@ public class Parser
                                 var columnKeyword = ParseKeyword(Keyword.COLUMN);
 
                                 var ifNotExistsInner = false;
-                                if (_dialect is PostgreSqlDialect or BigQueryDialect or GenericDialect)
+                                if (_dialect is PostgreSqlDialect or BigQueryDialect or DuckDbDialect or GenericDialect)
                                 {
                                     ifNotExistsInner = ParseIfNotExists() || ifNotExists;
                                 }
@@ -6300,6 +6302,7 @@ public class Parser
         if (ParseKeyword(Keyword.FROM) && _dialect
                 is GenericDialect
                 or PostgreSqlDialect
+                or DuckDbDialect
                 or BigQueryDialect
                 or SnowflakeDialect
                 or RedshiftDialect
@@ -6410,7 +6413,7 @@ public class Parser
     public WildcardAdditionalOptions ParseWildcardAdditionalOptions()
     {
         ExcludeSelectItem? optExclude = null;
-        if (_dialect is GenericDialect or SnowflakeDialect)
+        if (_dialect is GenericDialect or DuckDbDialect or SnowflakeDialect)
         {
             optExclude = ParseOptionalSelectItemExclude();
         }

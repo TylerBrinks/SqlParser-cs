@@ -12,7 +12,7 @@ public class MySqlDialect : Dialect
 {
     public override bool IsIdentifierStart(char character)
     {
-        return character.IsLetter() ||
+        return char.IsLetter(character) ||
                character is >= (char)0x0080 and < Symbols.EndOfFile 
                or Symbols.Underscore 
                or Symbols.Dollar 

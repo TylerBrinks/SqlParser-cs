@@ -84,6 +84,11 @@ internal static class Extensions
     {
         return IsUppercaseAscii(c) || IsLowercaseAscii(c);
     }
+
+    public static bool IsAlphabetic(this char c)
+    {
+        return c.IsLetter() || char.IsLetter(c);
+    }
     /// <summary>
     /// Checks if a character is a lower case ASCII letter (a-z)
     /// </summary>
