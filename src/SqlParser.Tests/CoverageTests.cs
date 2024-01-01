@@ -68,7 +68,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Unnest_WithAlias_ToSql()
         {
-            var unnest = new TableFactor.UnNest(new Expression.LiteralValue(new Value.SingleQuotedString("test")))
+            var unnest = new TableFactor.UnNest(new Sequence<Expression> { new Expression.LiteralValue(new Value.SingleQuotedString("test")) })
             {
                 WithOffsetAlias = "hello"
             };

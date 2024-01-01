@@ -2554,7 +2554,7 @@ namespace SqlParser.Tests
             // 1. both Alias and WITH OFFSET clauses.
             Test(true, true, false, new[]
             {
-                new TableWithJoins(new TableFactor.UnNest(new Identifier("expr"))
+                new TableWithJoins(new TableFactor.UnNest(new Sequence<Expression>{ new Identifier("expr") })
                 {
                     Alias = new TableAlias("numbers"),
                     WithOffset = true
@@ -2564,13 +2564,13 @@ namespace SqlParser.Tests
             // 2. neither Alias nor WITH OFFSET clause.
             Test(false, false, false, new[]
             {
-                new TableWithJoins(new TableFactor.UnNest(new Identifier("expr")))
+                new TableWithJoins(new TableFactor.UnNest(new Sequence<Expression>{ new Identifier("expr") }))
             });
 
             // 3. Alias but no WITH OFFSET clause.
             Test(false, true, false, new[]
             {
-                new TableWithJoins(new TableFactor.UnNest(new Identifier("expr"))
+                new TableWithJoins(new TableFactor.UnNest(new Sequence<Expression>{ new Identifier("expr") })
                 {
                     WithOffset = true
                 })
@@ -2579,7 +2579,7 @@ namespace SqlParser.Tests
             // 4. WITH OFFSET but no Alias.
             Test(true, false, false, new[]
             {
-                new TableWithJoins(new TableFactor.UnNest(new Identifier("expr"))
+                new TableWithJoins(new TableFactor.UnNest(new Sequence<Expression>{ new Identifier("expr") })
                 {
                     Alias = new TableAlias("numbers"),
                 })

@@ -6163,13 +6163,14 @@ public class Parser
 
         if (_dialect is BigQueryDialect or GenericDialect && ParseKeyword(Keyword.UNNEST))
         {
-            var expr = ExpectParens(ParseExpr);
+            //var expr = ExpectParens(ParseExpr);
+            var expressions = ExpectParens(() => ParseCommaSeparated(ParseExpr));
 
             var alias = ParseOptionalTableAlias(Keywords.ReservedForColumnAlias);
 
             var withOffset = ParseKeywordSequence(Keyword.WITH, Keyword.OFFSET);
             var withOffsetAlias = withOffset ? ParseOptionalAlias(Keywords.ReservedForColumnAlias) : null;
-            return new TableFactor.UnNest(expr)
+            return new TableFactor.UnNest(expressions)
             {
                 Alias = alias,
                 WithOffset = withOffset,

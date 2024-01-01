@@ -158,14 +158,16 @@ public abstract record TableFactor : IWriteSql, IElement
     /// +---------+--------+
     /// </example>
     /// </summary>
-    public record UnNest(Expression ArrayExpr) : TableFactor
+    public record UnNest(Sequence<Expression> ArrayExpressions) : TableFactor
     {
         public bool WithOffset { get; init; }
         public Ident? WithOffsetAlias { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"UNNEST({ArrayExpr})");
+            writer.Write("UNNEST(");
+            writer.WriteDelimited(ArrayExpressions, ", ");
+            writer.Write(")");
 
             if (Alias != null)
             {

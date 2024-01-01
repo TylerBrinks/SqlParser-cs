@@ -82,7 +82,7 @@ namespace SqlParser.Tests.Dialects
 
             var expected = new Join[]
             {
-                new (new TableFactor.UnNest(new CompoundIdentifier(new Ident[]{"t1","a"}))
+                new (new TableFactor.UnNest(new Sequence<Expression>{ new CompoundIdentifier(new Ident[]{"t1","a"}) })
                     {
                         Alias = new TableAlias("f"),
                     },
