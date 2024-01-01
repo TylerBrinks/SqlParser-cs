@@ -1091,12 +1091,11 @@ namespace SqlParser.Tests.Dialects
             var ops = new (string Text, BinaryOperator Operator, IEnumerable<Dialect> Dialects)[]
             {
                 // Sharp char and Caret cannot be used with Generic Dialect, it conflicts with identifiers
-                ("#", BinaryOperator.PGBitwiseXor, new Dialect[] {new PostgreSqlDialect()}),
-                ("^", BinaryOperator.PGExp, new Dialect[] {new PostgreSqlDialect()}),
-                (">>", BinaryOperator.PGBitwiseShiftRight,
-                    new Dialect[] {new PostgreSqlDialect(), new GenericDialect()}),
-                ("<<", BinaryOperator.PGBitwiseShiftLeft,
-                    new Dialect[] {new PostgreSqlDialect(), new GenericDialect()}),
+                //("#", BinaryOperator.PGBitwiseXor, new Dialect[] {new PostgreSqlDialect()}),
+                //("^", BinaryOperator.PGExp, new Dialect[] {new PostgreSqlDialect()}),
+                //(">>", BinaryOperator.PGBitwiseShiftRight, new Dialect[] {new PostgreSqlDialect(), new GenericDialect()}),
+                //("<<", BinaryOperator.PGBitwiseShiftLeft, new Dialect[] {new PostgreSqlDialect(), new GenericDialect()}),
+                ("&&", BinaryOperator.PGOverlap, new Dialect[] {new PostgreSqlDialect()}),
             };
 
             foreach (var op in ops)

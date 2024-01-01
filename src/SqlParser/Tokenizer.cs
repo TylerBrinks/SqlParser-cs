@@ -109,7 +109,7 @@ public ref struct Tokenizer
             Symbols.Backslash => TokenizeSingleCharacter(new Backslash()),
             Symbols.SquareBracketOpen => TokenizeSingleCharacter(new LeftBracket()),
             Symbols.SquareBracketClose => TokenizeSingleCharacter(new RightBracket()),
-            Symbols.Ampersand => TokenizeSingleCharacter(new Ampersand()),
+            Symbols.Ampersand => TokenizeAmpersand(), //TokenizeSingleCharacter(new Ampersand()),
             Symbols.Caret => TokenizeSingleCharacter(new Caret()),
             Symbols.CurlyBracketOpen => TokenizeSingleCharacter(new LeftBrace()),
             Symbols.CurlyBracketClose => TokenizeSingleCharacter(new RightBrace()),
@@ -743,6 +743,20 @@ public ref struct Tokenizer
             Symbols.Equal => TokenizeSingleCharacter(new DuckAssignment()),
             _ => new Colon()
         };
+    }
+
+    private Token TokenizeAmpersand()
+    {
+        _state.Next();
+        var token = _state.Peek();
+
+        if (token is not Symbols.Ampersand)
+        {
+            return new Ampersand();
+        }
+
+        _state.Next();
+        return new Overlap();
     }
 
     private Token TokenizeSnowflakeComment()

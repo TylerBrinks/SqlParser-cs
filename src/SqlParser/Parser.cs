@@ -1537,6 +1537,7 @@ public class Parser
             ShiftLeft when _dialect is PostgreSqlDialect or DuckDbDialect or GenericDialect => BinaryOperator.PGBitwiseShiftLeft,
             ShiftRight when _dialect is PostgreSqlDialect or DuckDbDialect or GenericDialect => BinaryOperator.PGBitwiseShiftRight,
             Hash when _dialect is PostgreSqlDialect => BinaryOperator.PGBitwiseXor,
+            Overlap when _dialect is PostgreSqlDialect or DuckDbDialect => BinaryOperator.PGOverlap,
             Tilde => BinaryOperator.PGRegexMatch,
             TildeAsterisk => BinaryOperator.PGRegexIMatch,
             ExclamationMarkTilde => BinaryOperator.PGRegexNotMatch,
@@ -1909,6 +1910,7 @@ public class Parser
             LeftBracket
                 or LongArrow
                 or Arrow
+                or Overlap
                 or HashArrow
                 or HashLongArrow
                 or AtArrow

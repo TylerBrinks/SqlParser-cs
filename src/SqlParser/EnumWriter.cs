@@ -42,6 +42,7 @@ public static class EnumWriter
             BinaryOperator.PGBitwiseShiftLeft => "<<",
             BinaryOperator.PGBitwiseShiftRight => ">>",
             BinaryOperator.PGExp => "^",
+            BinaryOperator.PGOverlap => "&&",
             BinaryOperator.PGRegexMatch => "~",
             BinaryOperator.PGRegexIMatch => "~*",
             BinaryOperator.PGRegexNotMatch => "!~",

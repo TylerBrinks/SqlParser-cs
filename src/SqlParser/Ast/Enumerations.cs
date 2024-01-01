@@ -77,6 +77,7 @@ public enum BinaryOperator
     PGBitwiseShiftRight,
     // Postgres Exp ^
     PGExp,
+    PGOverlap,
     // Postgres Regex Match ~
     PGRegexMatch,
     // Postgres Regex IMatch ~*
