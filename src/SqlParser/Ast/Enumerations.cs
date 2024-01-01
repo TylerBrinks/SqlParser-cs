@@ -407,8 +407,11 @@ public enum TrimWhereField
 // ReSharper disable InconsistentNaming
 public enum UnaryOperator
 {
+    // Plus, e.g. `+9`
     Plus,
+    // Minus, e.g. `-9`
     Minus,
+    // Not, e.g. `NOT(true)`
     Not,
     // Bitwise Not, e.g. ~9 (PostgreSQL-specific)
     PGBitwiseNot,
