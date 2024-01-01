@@ -4009,10 +4009,21 @@ public class Parser
 
     public Statement ParseAlter()
     {
-        var objectType = ExpectOneOfKeywords(Keyword.TABLE, Keyword.INDEX);
+        var objectType = ExpectOneOfKeywords(Keyword.VIEW, Keyword.TABLE, Keyword.INDEX);
 
         switch (objectType)
         {
+            case Keyword.VIEW:
+            {
+                var name = ParseObjectName();
+                var columns = ParseParenthesizedColumnList(IsOptional.Optional, false);
+                var withOptions = ParseOptions(Keyword.WITH);
+                ExpectKeyword(Keyword.AS);
+                var query = ParseQuery();
+
+                return new AlterView(name, columns, query, withOptions);
+            }
+
             case Keyword.TABLE:
                 {
                     _ = ParseKeyword(Keyword.ONLY);

@@ -30,6 +30,36 @@ public abstract record Statement : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// Alter view statement
+    /// </summary>
+    /// <param name="Name">Object name</param>
+    /// <param name="Columns">Columns</param>
+    /// <param name="Query">Alter query</param>
+    /// <param name="WithOptions">With options</param>
+    public record AlterView(ObjectName Name, Sequence<Ident> Columns, Query Query, Sequence<SqlOption> WithOptions) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"ALTER VIEW {Name}");
+
+            if (WithOptions.SafeAny())
+            {
+                writer.Write(" WITH (");
+                writer.WriteDelimited(WithOptions, ", ");
+                writer.Write(")");
+            }
+
+            if (Columns.SafeAny())
+            {
+                writer.Write(" (");
+                writer.WriteDelimited(Columns, ", ");
+                writer.Write(")");
+            }
+
+            writer.WriteSql($" AS {Query}");
+        }
+    }
+    /// <summary>
     /// Analyze statement
     /// </summary>
     public record Analyze([property: Visit(0)] ObjectName Name) : Statement

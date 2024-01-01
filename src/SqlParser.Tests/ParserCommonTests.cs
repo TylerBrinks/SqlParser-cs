@@ -4545,5 +4545,18 @@ namespace SqlParser.Tests
 
             Assert.Equal(expected, createType);
         }
+
+        [Fact]
+        public void Parse_Alter_View()
+        {
+            const string sql = "ALTER VIEW myschema.myview AS SELECT foo FROM bar";
+
+            var alter = (Statement.AlterView)VerifiedStatement(sql);
+
+            Assert.Equal("myschema.myview", alter.Name);
+            Assert.Empty(alter.Columns);
+            Assert.Equal("SELECT foo FROM bar", alter.Query.ToSql());
+            Assert.Empty( alter.WithOptions);
+        }
     }
 }
