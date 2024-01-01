@@ -63,7 +63,8 @@ internal static class Keywords
         Keyword.DISTRIBUTE,
         // Reserved only as a column alias in the `SELECT` clause
         Keyword.FROM,
-        Keyword.INTO
+        Keyword.INTO,
+        Keyword.END,
     };
 
     /// Can't be used as a column alias, so that `SELECT Expression alias`
@@ -107,6 +108,7 @@ internal static class Keywords
         Keyword.SET,
         Keyword.QUALIFY,
         Keyword.WINDOW,
+        Keyword.END,
         Keyword.AS // TODO remove?
     };
 }

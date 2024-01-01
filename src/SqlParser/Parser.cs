@@ -127,7 +127,13 @@ public class Parser
                 expectingStatementDelimiter = false;
             }
 
-            if (PeekTokenIs<EOF>())
+            var next = PeekToken();
+            if (next is EOF) //PeekTokenIs<EOF>())
+            {
+                break;
+            }
+            
+            if (next is Word {Keyword: Keyword.END})
             {
                 break;
             }
@@ -1203,6 +1209,58 @@ public class Parser
         });
 
         return new WindowSpec(partitionBy, orderBy, windowFrame);
+    }
+
+    public Statement ParseCreateProcedure(bool orAlter)
+    {
+        var name = ParseObjectName();
+        var parameters = ParseOptionalProcedureParameters();
+        ExpectKeywords(Keyword.AS, Keyword.BEGIN);
+        var statements = ParseStatements();
+        ExpectKeyword(Keyword.END);
+
+        return new CreateProcedure(orAlter, name, parameters, statements);
+    }
+
+    public Sequence<ProcedureParam>? ParseOptionalProcedureParameters()
+    {
+
+        if (!ConsumeToken<LeftParen>() || ConsumeToken<RightParen>())
+        {
+            return null;
+        }
+
+        var parameters = new Sequence<ProcedureParam>();
+
+        while (true)
+        {
+            var next = PeekToken();
+
+            if (next is Word w)
+            {
+                parameters.Add(ParseProcedureParam());
+            }
+
+            var comma = ConsumeToken<Comma>();
+            if (ConsumeToken<RightParen>())
+            {
+                break;
+            }
+
+            if (!comma)
+            {
+                throw Expected("',' or ')' after parameter definition", PeekToken());
+            }
+        }
+
+        return parameters;
+    }
+
+    public ProcedureParam ParseProcedureParam()
+    {
+        var name = ParseIdentifier();
+        var dataType = ParseDataType();
+        return new ProcedureParam(name, dataType);
     }
     /// <summary>
     /// Parse create type expression
@@ -2305,6 +2363,7 @@ public class Parser
     public Statement ParseCreate()
     {
         var orReplace = ParseKeywordSequence(Keyword.OR, Keyword.REPLACE);
+        var orAlter = ParseKeywordSequence(Keyword.OR, Keyword.ALTER);
         var local = ParseOneOfKeywords(Keyword.LOCAL) != Keyword.undefined;
         var parsedGlobal = ParseOneOfKeywords(Keyword.GLOBAL) != Keyword.undefined;
         bool? global = null;
@@ -2390,6 +2449,11 @@ public class Parser
         if (ParseKeyword(Keyword.TYPE))
         {
             return ParseCreateType();
+        }
+
+        if (ParseKeyword(Keyword.PROCEDURE))
+        {
+            return ParseCreateProcedure(orAlter);
         }
 
         throw Expected("Expected an object type after CREATE", PeekToken());
@@ -2483,7 +2547,10 @@ public class Parser
             throw Expected("a TABLE keyword", PeekToken());
         }
     }
-
+    /// <summary>
+    /// Parse as Select statement
+    /// </summary>
+    /// <returns>True if parsed and parsed Select statement</returns>
     public (bool, Statement.Select) ParseAsQuery()
     {
         var token = PeekToken();
@@ -2499,7 +2566,6 @@ public class Parser
 
         throw Expected("Expected a QUERY statement", token);
     }
-
     // ReSharper disable once IdentifierTypo
     /// <summary>
     /// Parse a UNCACHE TABLE statement
@@ -2766,8 +2832,13 @@ public class Parser
             }
         }
     }
-
-    public Statement? ParseCreateMacro(bool orReplace, bool temporary)
+    /// <summary>
+    /// DuckDb create macro statement
+    /// </summary>
+    /// <param name="orReplace"></param>
+    /// <param name="temporary"></param>
+    /// <returns>DuckDb CreateMacro statement</returns>
+    public Statement ParseCreateMacro(bool orReplace, bool temporary)
     {
         if (_dialect is DuckDbDialect or GenericDialect)
         {
@@ -2797,7 +2868,10 @@ public class Parser
         PrevToken();
         throw Expected("an object type after CREATE", PeekToken());
     }
-
+    /// <summary>
+    /// Parse DuckDb macro argument
+    /// </summary>
+    /// <returns>Macro argument</returns>
     public MacroArg ParseMacroArg()
     {
         var name = ParseIdentifier();

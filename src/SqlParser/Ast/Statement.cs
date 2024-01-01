@@ -450,7 +450,39 @@ public abstract record Statement : IWriteSql, IElement
             writer.WriteSql($"({Columns})");
         }
     }
+    /// <summary>
+    /// MsSql Create Procedure statement
+    /// </summary>
+    /// <param name="OrAlter">Or alter flag</param>
+    /// <param name="Name">Name</param>
+    /// <param name="ProcedureParams">Procedure params</param>
+    /// <param name="Body">Body statements</param>
+    public record CreateProcedure(bool OrAlter, ObjectName Name, Sequence<ProcedureParam>? ProcedureParams, Sequence<Statement>? Body) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            var orAlter = OrAlter ? "OR ALTER " : string.Empty;
 
+            writer.WriteSql($"CREATE {orAlter}PROCEDURE {Name}");
+
+            if (ProcedureParams.SafeAny())
+            {
+                writer.Write(" (");
+                writer.WriteDelimited(ProcedureParams, ", ");
+                writer.Write(")");
+            }
+
+            writer.WriteSql($" AS BEGIN {Body} END");
+        }
+    }
+    /// <summary>
+    /// DuckDB Create Macro statement
+    /// </summary>
+    /// <param name="OrReplace">Or replace flag</param>
+    /// <param name="Temporary">Temporary flag</param>
+    /// <param name="Name">Name</param>
+    /// <param name="Args">Macro args</param>
+    /// <param name="Definition">Macro definition</param>
     public record CreateMacro(bool OrReplace, bool Temporary, ObjectName Name, Sequence<MacroArg>? Args, MacroDefinition Definition) : Statement
     {
         public override void ToSql(SqlTextWriter writer)

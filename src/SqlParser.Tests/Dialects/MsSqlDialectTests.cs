@@ -174,5 +174,33 @@ namespace SqlParser.Tests.Dialects
                 Assert.Equal(isNull, select.Selection);
             }
         }
+
+        [Fact]
+        public void Parse_Create_Procedure()
+        {
+            const string sql = "CREATE OR ALTER PROCEDURE test (@foo INT, @bar VARCHAR(256)) AS BEGIN SELECT 1 END";
+
+            var one = new Value.Number("1");
+
+            var create = VerifiedStatement(sql);
+
+            var select = new Select(new Sequence<SelectItem>
+            {
+                new SelectItem.UnnamedExpression(new LiteralValue(one))
+            });
+
+            var selectExpr = new SetExpression.SelectExpression(select);
+            var query = new Query(selectExpr);
+
+            var parameters = new Sequence<ProcedureParam>
+            {
+                new ("@foo", new DataType.Int()),
+                new ("@bar", new DataType.Varchar(new CharacterLength(256))),
+            };
+
+            var expected = new Statement.CreateProcedure(true, "test", parameters, new Sequence<Statement>{query});
+
+            Assert.Equal(expected, create);
+        }
     }
 }
