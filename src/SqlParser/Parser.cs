@@ -31,10 +31,10 @@ public class Parser
     public const short CaretPrecedence = 22;
     public const short AmpersandPrecedence = 23;
     public const short XOrPrecedence = 24;
+    public const short MulDivModOpPrecedence = 40;
     public const short PlusMinusPrecedence = 30;
     public const short MultiplyPrecedence = 40;
     public const short ArrowPrecedence = 50;
-    public const short DivOpPrecedence = 40;
 
     private int _index;
     private Sequence<Token> _tokens = null!;
@@ -995,7 +995,7 @@ public class Parser
             try
             {
                 var op = token is Plus ? UnaryOperator.Plus : UnaryOperator.Minus;
-                return new UnaryOp(ParseSubExpression(PlusMinusPrecedence), op);
+                return new UnaryOp(ParseSubExpression(MulDivModOpPrecedence), op);
             }
             catch (ParserException)
             {
@@ -1867,7 +1867,7 @@ public class Parser
             Word { Keyword: Keyword.IS } => IsPrecedence,
             Word { Keyword: Keyword.IN or Keyword.BETWEEN or Keyword.OPERATOR } => BetweenPrecedence,
             Word { Keyword: Keyword.LIKE or Keyword.ILIKE or Keyword.SIMILAR } => LikePrecedence,
-            Word { Keyword: Keyword.DIV } => DivOpPrecedence,
+            Word { Keyword: Keyword.DIV } => MulDivModOpPrecedence,
 
             Equal
                 or LessThan
@@ -1899,7 +1899,7 @@ public class Parser
                 or DuckIntDiv
                 or Modulo
                 or StringConcat
-                => MultiplyPrecedence,
+                => MulDivModOpPrecedence, // MultiplyPrecedence,
 
 
             DoubleColon

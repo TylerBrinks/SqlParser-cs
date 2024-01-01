@@ -568,7 +568,7 @@ namespace SqlParser.Tests
         }
 
         [Fact]
-        public void Parse_Unary_Math()
+        public void Parse_Unary_Math_With_Plus()
         {
             var expr = VerifiedExpr("-a + -b");
 
@@ -576,6 +576,19 @@ namespace SqlParser.Tests
             var right = new UnaryOp(new Identifier("b"), UnaryOperator.Minus);
 
             var expected = new BinaryOp(left, BinaryOperator.Plus, right);
+
+            Assert.Equal(expected, expr);
+        }
+
+        [Fact]
+        public void Parse_Unary_Math_With_Multiply()
+        {
+            var expr = VerifiedExpr("-a * -b");
+
+            var left = new UnaryOp(new Identifier("a"), UnaryOperator.Minus);
+            var right = new UnaryOp(new Identifier("b"), UnaryOperator.Minus);
+
+            var expected = new BinaryOp(left, BinaryOperator.Multiply, right);
 
             Assert.Equal(expected, expr);
         }
