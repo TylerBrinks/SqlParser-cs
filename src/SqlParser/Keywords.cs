@@ -393,6 +393,7 @@ public enum Keyword
     LOCKED,
     LOGIN,
     LOWER,
+    MACRO,
     MANAGEDLOCATION,
     MATCH,
     MATCHED,

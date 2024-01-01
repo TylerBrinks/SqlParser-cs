@@ -450,6 +450,32 @@ public abstract record Statement : IWriteSql, IElement
             writer.WriteSql($"({Columns})");
         }
     }
+
+    public record CreateMacro(bool OrReplace, bool Temporary, ObjectName Name, Sequence<MacroArg>? Args, MacroDefinition Definition) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            var orReplace = OrReplace ? "OR REPLACE " : string.Empty;
+            var temp = Temporary ? "TEMPORARY " : string.Empty;
+            writer.WriteSql($"CREATE {orReplace}{temp}Macro {Name}");
+
+            if (Args.SafeAny())
+            {
+                writer.Write("(");
+                writer.WriteDelimited(Args, ", ");
+                writer.Write(")");
+            }
+
+            if (Definition is MacroDefinition.MacroExpression e)
+            {
+                writer.WriteSql($" AS {e}");
+            }
+            else if (Definition is MacroDefinition.MacroTable t)
+            {
+                writer.WriteSql($" AS TABLE {t}");
+            }
+        }
+    }
     /// <summary>
     /// Create stage statement
     /// <remarks>

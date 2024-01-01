@@ -2342,6 +2342,11 @@ public class Parser
             return ParseCreateFunction(orReplace, temporary);
         }
 
+        if (ParseKeyword(Keyword.MACRO))
+        {
+            return ParseCreateMacro(orReplace, temporary);
+        }
+
         if (orReplace)
         {
             ThrowExpected("[EXTERNAL] TABLE or [MATERIALIZED] VIEW or FUNCTION after CREATE OR REPLACE", PeekToken());
@@ -2760,6 +2765,50 @@ public class Parser
                 throw new ParserException($"{fieldName} specified more than once");
             }
         }
+    }
+
+    public Statement? ParseCreateMacro(bool orReplace, bool temporary)
+    {
+        if (_dialect is DuckDbDialect or GenericDialect)
+        {
+            var name = ParseObjectName();
+            ExpectLeftParen();
+            Sequence<MacroArg>? args = null;
+
+            if (ConsumeToken<RightParen>())
+            {
+                PrevToken();
+            }
+            else
+            {
+                args = ParseCommaSeparated(ParseMacroArg);
+            }
+
+            ExpectRightParen();
+            ExpectKeyword(Keyword.AS);
+
+            MacroDefinition def = ParseKeyword(Keyword.TABLE)
+                ? new MacroDefinition.MacroTable(ParseQuery())
+                : new MacroDefinition.MacroExpression(ParseExpr());
+
+            return new CreateMacro(orReplace, temporary, name, args, def);
+        }
+
+        PrevToken();
+        throw Expected("an object type after CREATE", PeekToken());
+    }
+
+    public MacroArg ParseMacroArg()
+    {
+        var name = ParseIdentifier();
+        Expression? defaultExpression = null;
+
+        if (ConsumeToken<DuckAssignment>() || ConsumeToken<RightArrow>())
+        {
+            defaultExpression = ParseExpr();
+        }
+
+        return new MacroArg(name, defaultExpression);
     }
 
     public CreateTable ParseCreateExternalTable(bool orReplace)

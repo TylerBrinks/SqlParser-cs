@@ -735,9 +735,14 @@ public ref struct Tokenizer
     private Token TokenizeColon()
     {
         _state.Next();
-        return _state.Peek() == Symbols.Colon
-            ? TokenizeSingleCharacter(new DoubleColon())
-            : new Colon();
+        var token = _state.Peek();
+
+        return token switch
+        {
+            Symbols.Colon => TokenizeSingleCharacter(new DoubleColon()),
+            Symbols.Equal => TokenizeSingleCharacter(new DuckAssignment()),
+            _ => new Colon()
+        };
     }
 
     private Token TokenizeSnowflakeComment()
