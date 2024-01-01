@@ -3549,6 +3549,8 @@ public class Parser
             onCommit = OnCommit.Drop;
         }
 
+        var strict = ParseKeyword(Keyword.STRICT);
+
         return new CreateTable(tableName, columns)
         {
             Temporary = temporary,
@@ -3570,7 +3572,8 @@ public class Parser
             DefaultCharset = defaultCharset,
             Collation = collation,
             OnCommit = onCommit,
-            OnCluster = onCluster
+            OnCluster = onCluster,
+            Strict = strict
         };
     }
 

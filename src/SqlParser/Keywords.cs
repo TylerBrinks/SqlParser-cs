@@ -599,6 +599,7 @@ public enum Keyword
     STDOUT,
     STORAGE_INTEGRATION,
     STORED,
+    STRICT,
     STRING,
     SUBMULTISET,
     SUBSTRING,

@@ -135,5 +135,16 @@ namespace SqlParser.Tests.Dialects
                 Assert.Equal(isNull, select.Selection);
             }
         }
+
+        [Fact]
+        public void Parse_Create_Table_With_Strict()
+        {
+            const string sql = "CREATE TABLE Fruits (id TEXT NOT NULL PRIMARY KEY) STRICT";
+
+            var create = (Statement.CreateTable)VerifiedStatement(sql);
+
+            Assert.Equal("Fruits", create.Name);
+            Assert.True(create.Strict);
+        }
     }
 }

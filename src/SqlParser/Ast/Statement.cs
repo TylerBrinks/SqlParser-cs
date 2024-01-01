@@ -583,6 +583,10 @@ public abstract record Statement : IWriteSql, IElement
         // Clickhouse "ON CLUSTER" clause:
         // https://clickhouse.com/docs/en/sql-reference/distributed-ddl/
         public string? OnCluster { get; init; }
+        // SQLite "STRICT" clause.
+        // if the "STRICT" table-option keyword is added to the end, after the closing ")",
+        // then strict typing rules apply to that table.
+        public bool Strict { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
@@ -748,6 +752,11 @@ public abstract record Statement : IWriteSql, IElement
                 case OnCommit.Drop:
                     writer.Write(" ON COMMIT DROP");
                     break;
+            }
+
+            if (Strict)
+            {
+                writer.Write(" STRICT");
             }
         }
     }
