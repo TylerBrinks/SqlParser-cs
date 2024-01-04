@@ -71,7 +71,7 @@ public ref struct Tokenizer
             // string, but PostgreSQL, at least, allows a lowercase 'x' too.
             'X' or 'x' => TokenizeHex(),
 
-            _ when _dialect.IsIdentifierStart(character) => TokenizeIdent(),
+            //_ when _dialect.IsIdentifierStart(character) => TokenizeIdent(),
 
             Symbols.SingleQuote => new SingleQuotedString(new string(TokenizeQuotedString(Symbols.SingleQuote))),
             Symbols.DoubleQuote when
@@ -96,7 +96,7 @@ public ref struct Tokenizer
             Symbols.Divide => TokenizeDivide(),
             Symbols.Plus => TokenizeSingleCharacter(new Plus()),
             Symbols.Asterisk => TokenizeSingleCharacter(new Multiply()),
-            Symbols.Percent => TokenizeSingleCharacter(new Modulo()),
+            Symbols.Percent => TokenizePercent(character),// TokenizeSingleCharacter(new Modulo()),
 
             Symbols.Pipe => TokenizePipe(),
             Symbols.Equal => TokenizeEqual(),
@@ -116,36 +116,17 @@ public ref struct Tokenizer
 
             Symbols.Num when _dialect is SnowflakeDialect => TokenizeSnowflakeComment(),
             Symbols.Tilde => TokenizeTilde(),
-            Symbols.Num => TokenizeHash(),
-            Symbols.At => TokenizeAt(),
+            Symbols.Num => TokenizeHash(character),
+            Symbols.At => TokenizeAt(character),
             Symbols.QuestionMark => TokenizeQuestionMark(),
+            // Identifier or keyword
+            _ when _dialect.IsIdentifierStart(character) => TokenizeIdentifierOrKeyword(new []{ character }),
             Symbols.Dollar => TokenizeDollar(),
             _ when string.IsNullOrWhiteSpace(character.ToString()) => TokenizeSingleCharacter(new Whitespace(WhitespaceKind.Space)),
             // Unknown character
             _ when character != Symbols.EndOfFile => TokenizeSingleCharacter(new SingleCharacterToken(character)),
             _ => new EOF()
         };
-    }
-
-    private char[] PeekTakeWhile(Func<char, bool> predicate)
-    {
-        char current;
-        var chars = new List<char>();
-
-        while ((current = _state.Peek()) != Symbols.EndOfFile)
-        {
-            if (predicate(current))
-            {
-                _state.Next();
-                chars.Add(current);
-            }
-            else
-            {
-                break;
-            }
-        }
-
-        return chars.ToArray();
     }
 
     public static char[] ConcatArrays(params char[][] arrays)
@@ -214,42 +195,60 @@ public ref struct Tokenizer
 
     }
 
-    private Token TokenizeIdent()
+    //private Token TokenizeIdent()
+    //{
+    //    var chars = TokenizeWord();
+
+    //    // Check for numbers given dialects like Hive support
+    //    // numeric identifiers
+    //    if (!chars.All(c => c.IsDigit() || c == Symbols.Dot))
+    //    {
+    //        return new Word(new string(chars), null);
+    //    }
+
+    //    // Dialect supports digit identifier. Capture the remainder of the whole word
+    //    // with all digits and dots. 
+    //    var additional = _state.PeekTakeWhile(c => c.IsDigit() || c == Symbols.Dot);
+
+    //    if (additional.Length > 0)
+    //    {
+    //        chars = ConcatArrays(chars, additional);
+    //    }
+
+    //    return new Number(new string(chars), false);
+    //}
+
+    public Token TokenizeIdentifierOrKeyword(char[] characters)
     {
-        var chars = TokenizeWord();
+        _state.Next();
+        var word = TokenizeWord(characters);
 
-        // Check for numbers given dialects like Hive support
-        // numeric identifiers
-        if (!chars.All(c => c.IsDigit() || c == Symbols.Dot))
+        if (word.All(c => c.IsDigit() || c == Symbols.Dot))
         {
-            return new Word(new string(chars), null);
+            var innerState = new State(word);
+
+            var s = innerState.PeekTakeWhile(w => w.IsDigit() || w is Symbols.Dot);
+            var s2 = _state.PeekTakeWhile(ch => ch.IsDigit() || ch is Symbols.Dot);
+            var number = s.Concat(s2);
+
+            return new Number(new string(number.ToArray()));
         }
 
-        // Dialect supports digit identifier. Capture the remainder of the whole word
-        // with all digits and dots. 
-        var additional = PeekTakeWhile(c => c.IsDigit() || c == Symbols.Dot);
-
-
-        if (additional.Length > 0)
-        {
-            chars = ConcatArrays(chars, additional);
-        }
-
-        return new Number(new string(chars), false);
+        return new Word(new string(word));
     }
 
-    private char[] TokenizeWord(char? first = null)
+    private char[] TokenizeWord(params char[]? first)
     {
         var prefix = new List<char>();
         if (first != null)
         {
-            prefix.Add(first.Value);
+            prefix.AddRange(first);
         }
 
-        var word = PeekTakeWhile(_dialect.IsIdentifierPart);
+        var word = _state.PeekTakeWhile(_dialect.IsIdentifierPart);
 
-        return prefix.Any()
-            ? ConcatArrays(prefix.ToArray(), word)
+        return prefix.Count != 0
+            ? ConcatArrays([.. prefix], word)
             : word;
     }
 
@@ -330,14 +329,14 @@ public ref struct Tokenizer
 
     private Token TokenizeNumber()
     {
-        var parsed = new List<char>(PeekTakeWhile(c => c.IsDigit()));
+        var parsed = new List<char>(_state.PeekTakeWhile(c => c.IsDigit()));
 
         // match binary literal that starts with 0x
         if (parsed is [Symbols.Zero] && _state.Peek() == 'x')
         {
             _state.Next();
 
-            var hex = PeekTakeWhile(c => c.IsHex());
+            var hex = _state.PeekTakeWhile(c => c.IsHex());
             return new HexStringLiteral(new string(hex));
         }
 
@@ -347,7 +346,7 @@ public ref struct Tokenizer
             parsed.Add(Symbols.Dot);
             _state.Next();
         }
-        parsed.AddRange(PeekTakeWhile(c => c.IsDigit()));
+        parsed.AddRange(_state.PeekTakeWhile(c => c.IsDigit()));
 
         // No number -> Token::Period
         if (parsed is [Symbols.Dot])
@@ -381,16 +380,16 @@ public ref struct Tokenizer
                     _state.Next();
                 }
 
-                var exponentNumber = PeekTakeWhile(c => c.IsDigit());
+                var exponentNumber = _state.PeekTakeWhile(c => c.IsDigit());
                 exponent.AddRange(exponentNumber);
 
                 number = ConcatArrays(number, exponent.ToArray());
             }
         }
 
-        if (_dialect is MySqlDialect && exponent.Count == 0)
+        if (_dialect is MySqlDialect or HiveDialect && exponent.Count == 0)
         {
-            var word = PeekTakeWhile(_dialect.IsIdentifierPart);
+            var word = _state.PeekTakeWhile(_dialect.IsIdentifierPart);
 
             if (word.Length > 0)
             {
@@ -407,6 +406,24 @@ public ref struct Tokenizer
         }
 
         return new Number(new string(number.ToArray()), @long);
+    }
+
+    private Token TokenizePercent(char character)
+    {
+        _state.Next();
+        var next = _state.Peek();
+
+        if (next is Symbols.Space)
+        {
+            return new Modulo();
+        }
+
+        if (_dialect.IsIdentifierStart(Symbols.Percent))
+        {
+            return TokenizeIdentifierOrKeyword(new[]{ character, next });
+        }
+
+        return new Modulo();
     }
 
     private Token TokenizeByteStringLiteral()
@@ -643,7 +660,7 @@ public ref struct Tokenizer
 
     private char[] TokenizeInlineComment()
     {
-        var comment = PeekTakeWhile(c => c != Symbols.NewLine);
+        var comment = _state.PeekTakeWhile(c => c != Symbols.NewLine);
 
         if (_state.Peek() == Symbols.NewLine)
         {
@@ -778,7 +795,7 @@ public ref struct Tokenizer
             : new Tilde();
     }
 
-    private Token TokenizeHash()
+    private Token TokenizeHash(char character)
     {
         _state.Next();
         switch (_state.Peek())
@@ -796,27 +813,51 @@ public ref struct Tokenizer
                 _state.Next();
                 return new HashLongArrow();
 
+            case Symbols.Space:
+                return new Hash();
+
             default:
+                if (_dialect.IsIdentifierStart(Symbols.Num))
+                {
+                    return TokenizeIdentifierOrKeyword(new[] { character, _state.Peek() });
+                }
+
                 return new Hash();
         }
     }
 
-    private Token TokenizeAt()
+    private Token TokenizeAt(char character)
     {
         _state.Next();
         return _state.Peek() switch
         {
             Symbols.GreaterThan => TokenizeSingleCharacter(new AtArrow()),
             Symbols.QuestionMark => TokenizeSingleCharacter(new AtQuestion()),
-            Symbols.At => TokenizeSingleCharacter(new AtAt()),
+            Symbols.At => TokenizeAtAt(character),
+            Symbols.Space => new AtSign(),
+            _ when _dialect.IsIdentifierStart(Symbols.At) => TokenizeIdentifierOrKeyword(new[]{ character, _state.Peek() }),
             _ => new AtSign()
         };
+    }
+
+    Token TokenizeAtAt(char character)
+    {
+        _state.Next();
+        var next = _state.Peek();
+        if (next is Symbols.Space)
+        {
+            return new AtAt();
+        }
+
+        return _dialect.IsIdentifierStart(Symbols.At) ? 
+            TokenizeIdentifierOrKeyword(new[] { character, Symbols.At, next }) 
+            : new AtAt();
     }
 
     private Token TokenizeQuestionMark()
     {
         _state.Next();
-        var word = PeekTakeWhile(c => c.IsDigit());
+        var word = _state.PeekTakeWhile(c => c.IsDigit());
         var question = ConcatArrays(new[] { Symbols.QuestionMark }, word);
         return new Placeholder(new string(question));
     }
@@ -870,14 +911,14 @@ public ref struct Tokenizer
         // not just ASCII letters and numbers.  As such, the tokenizer needs
         // to read every unicode alphanumeric character, hence the use of
         // the built in IsLetterOrDigit method.
-        var word = PeekTakeWhile(c => char.IsLetterOrDigit(c) || c == Symbols.Underscore);
+        var word = _state.PeekTakeWhile(c => char.IsLetterOrDigit(c) || c == Symbols.Underscore);
 
         value.AddRange(word);
 
         if (_state.Peek() == Symbols.Dollar)
         {
             _state.Next();
-            s.AddRange(PeekTakeWhile(c => c != Symbols.Dollar));
+            s.AddRange(_state.PeekTakeWhile(c => c != Symbols.Dollar));
 
             switch (_state.Peek())
             {

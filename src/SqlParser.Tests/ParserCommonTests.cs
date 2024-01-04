@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using SqlParser.Ast;
 using SqlParser.Dialects;
+using SqlParser.Tokens;
 using static SqlParser.Ast.DataType;
 using static SqlParser.Ast.Expression;
 using Action = SqlParser.Ast.Action;
@@ -4540,7 +4541,7 @@ namespace SqlParser.Tests
                 new("bar", new Text(), new ObjectName(new Ident("de_DE", Symbols.DoubleQuote)))
             };
 
-            var expected = new Statement.CreateType(new ObjectName(new Ident[] {"db", "type_name"}),
+            var expected = new Statement.CreateType(new ObjectName(new Ident[] { "db", "type_name" }),
                 new UserDefinedTypeRepresentation.Composite(attributes));
 
             Assert.Equal(expected, createType);
@@ -4556,7 +4557,38 @@ namespace SqlParser.Tests
             Assert.Equal("myschema.myview", alter.Name);
             Assert.Empty(alter.Columns);
             Assert.Equal("SELECT foo FROM bar", alter.Query.ToSql());
-            Assert.Empty( alter.WithOptions);
+            Assert.Empty(alter.WithOptions);
+        }
+
+        [Fact]
+        public void Parse_Json_Ops_Without_Colon()
+        {
+            var pgAndGeneric = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            var operators = new List<Tuple<string, JsonOperator, IEnumerable<Dialect>>>
+            {
+                    new("->", JsonOperator.Arrow, AllDialects),
+                    new("->>", JsonOperator.LongArrow, AllDialects),
+                new("#>", JsonOperator.HashArrow, pgAndGeneric),
+                new("#>>", JsonOperator.HashLongArrow, pgAndGeneric),
+                new("@>", JsonOperator.AtArrow, AllDialects),
+                    new("<@", JsonOperator.ArrowAt, AllDialects),
+                new("#-", JsonOperator.HashMinus, pgAndGeneric),
+                new("@?", JsonOperator.AtQuestion, AllDialects),
+                new("@@", JsonOperator.AtAt, AllDialects)
+            };
+
+            foreach (var (symbol, op, dialects) in operators)
+            {
+                var select = VerifiedOnlySelect($"SELECT a {symbol} b", dialects);
+
+                var expected = new SelectItem.UnnamedExpression(new Expression.JsonAccess(
+                    new Identifier("a"),
+                    op,
+                    new Identifier("b")
+                ));
+
+                Assert.Equal(expected, select.Projection.First());
+            }
         }
     }
 }

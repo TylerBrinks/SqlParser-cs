@@ -71,6 +71,27 @@ public ref struct State
         }
     }
 
+    internal char[] PeekTakeWhile(Func<char, bool> predicate)
+    {
+        char current;
+        var chars = new List<char>();
+
+        while ((current = Peek()) != Symbols.EndOfFile)
+        {
+            if (predicate(current))
+            {
+                Next();
+                chars.Add(current);
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        return [.. chars];
+    }
+
     internal Location CloneLocation()
     {
         return Location.From(_location.Line, _location.Column);
