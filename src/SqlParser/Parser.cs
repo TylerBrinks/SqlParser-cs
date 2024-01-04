@@ -5536,7 +5536,10 @@ public class Parser
         {
             return op switch
             {
-                SetOperator.Union when ParseKeyword(Keyword.ALL) => SetQuantifier.All,
+                SetOperator.Union when ParseKeywordSequence(Keyword.BY, Keyword.NAME) => SetQuantifier.ByName,
+                SetOperator.Union when ParseKeyword(Keyword.ALL) => ParseKeywordSequence(Keyword.BY, Keyword.NAME) 
+                    ? SetQuantifier.AllByName 
+                    : SetQuantifier.All,
                 SetOperator.Union when ParseKeyword(Keyword.DISTINCT) => SetQuantifier.Distinct,
                 SetOperator.Union => SetQuantifier.None,
                 SetOperator.Except or SetOperator.Intersect when ParseKeyword(Keyword.ALL) => SetQuantifier.All,
@@ -5544,6 +5547,17 @@ public class Parser
                 SetOperator.Except or SetOperator.Intersect => SetQuantifier.None,
                 _ => SetQuantifier.None
             };
+
+            //return op switch
+            //{
+            //    SetOperator.Union when ParseKeyword(Keyword.ALL) => SetQuantifier.All,
+            //    SetOperator.Union when ParseKeyword(Keyword.DISTINCT) => SetQuantifier.Distinct,
+            //    SetOperator.Union => SetQuantifier.None,
+            //    SetOperator.Except or SetOperator.Intersect when ParseKeyword(Keyword.ALL) => SetQuantifier.All,
+            //    SetOperator.Except or SetOperator.Intersect when ParseKeyword(Keyword.DISTINCT) => SetQuantifier.Distinct,
+            //    SetOperator.Except or SetOperator.Intersect => SetQuantifier.None,
+            //    _ => SetQuantifier.None
+            //};
         }
     }
 

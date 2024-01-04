@@ -424,6 +424,7 @@ public enum Keyword
     MSCK,
     MULTISET,
     MUTATION,
+    NAME,
     NANOSECOND,
     NANOSECONDS,
     NATIONAL,

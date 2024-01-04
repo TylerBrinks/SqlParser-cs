@@ -1,5 +1,6 @@
 ﻿using SqlParser.Dialects;
 using SqlParser.Ast;
+using static SqlParser.Ast.SetExpression;
 
 namespace SqlParser.Tests.Dialects;
 
@@ -92,5 +93,44 @@ public class DuckDbDialectTests : ParserTestBase
             new MacroDefinition.MacroTable(subquery));
 
         Assert.Equal(expected, macro);
+    }
+
+    [Fact]
+    public void Select_Union_By_Name()
+    {
+        var select = VerifiedQuery("SELECT * FROM capitals UNION BY NAME SELECT * FROM weather");
+
+        var left = new SelectExpression(new Select(new Sequence<SelectItem>
+        {
+            new SelectItem.Wildcard(new WildcardAdditionalOptions())
+        })
+        {
+            From = new Sequence<TableWithJoins>
+            {
+                new(new TableFactor.Table("capitals"))
+            }
+        });
+        var right = new SelectExpression(new Select(new Sequence<SelectItem>
+        {
+            new SelectItem.Wildcard(new WildcardAdditionalOptions())
+        })
+        {
+            From = new Sequence<TableWithJoins>
+            {
+                new(new TableFactor.Table("weather"))
+            }
+        });
+
+        SetExpression expected = new SetOperation(left, SetOperator.Union, right, SetQuantifier.ByName);
+
+        Assert.Equal(expected, select.Body);
+
+        select = VerifiedQuery("SELECT * FROM capitals UNION ALL BY NAME SELECT * FROM weather");
+        expected = new SetOperation(left, SetOperator.Union, right, SetQuantifier.ByName)
+        {
+            SetQuantifier = SetQuantifier.AllByName
+        };
+
+        Assert.Equal(expected, select.Body);
     }
 }

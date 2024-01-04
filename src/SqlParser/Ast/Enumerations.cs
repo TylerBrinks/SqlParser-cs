@@ -340,6 +340,8 @@ public enum SetQuantifier
 {
     All,
     Distinct,
+    ByName,
+    AllByName,
     None
 }
 

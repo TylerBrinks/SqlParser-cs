@@ -64,6 +64,9 @@ public static class EnumWriter
             JsonOperator.AtQuestion => "@?",
             JsonOperator.AtAt => "@@",
 
+            SetQuantifier.ByName => "BY NAME",
+            SetQuantifier.AllByName => "ALL BY NAME",
+
             NonBlock.SkipLocked => "SKIP LOCKED",
 
             ReferentialAction.NoAction => "NO ACTION",
