@@ -37,7 +37,7 @@ public abstract record Value : IWriteSql
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"\"{Value}\"");
+            writer.WriteSql($"\"{Value.EscapeDoubleQuoteString()}\"");
         }
     }
     /// <summary>
@@ -188,16 +188,16 @@ public abstract record Value : IWriteSql
         return As<Number>();
     }
 
-    public SingleQuotedString AsSingleQuoted()
-    {
-        return As<SingleQuotedString>();
-    }
+    //public SingleQuotedString AsSingleQuoted()
+    //{
+    //    return As<SingleQuotedString>();
+    //}
 
 
-    public DoubleQuotedString AsDoubleQuoted()
-    {
-        return As<DoubleQuotedString>();
-    }
+    //public DoubleQuotedString AsDoubleQuoted()
+    //{
+    //    return As<DoubleQuotedString>();
+    //}
 }
 /// <summary>
 /// Dollar quoted string value

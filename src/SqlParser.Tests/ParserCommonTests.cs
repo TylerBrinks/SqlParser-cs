@@ -1,7 +1,6 @@
 ﻿using System.Text;
 using SqlParser.Ast;
 using SqlParser.Dialects;
-using SqlParser.Tokens;
 using static SqlParser.Ast.DataType;
 using static SqlParser.Ast.Expression;
 using Action = SqlParser.Ast.Action;
@@ -513,14 +512,29 @@ namespace SqlParser.Tests
         }
 
         [Fact]
-        public void Parse_Escaped_Single_Quote_String_Predicate()
+        public void Parse_Escaped_Single_Quote_String_Predicate_With_Escape()
         {
-            var select = VerifiedOnlySelect("SELECT id, fname, lname FROM customer WHERE salary <> 'Jim''s salary'");
+            var select = VerifiedOnlySelect("SELECT id, fname, lname FROM customer WHERE salary <> 'Jim''s salary'",
+                new[] { new MySqlDialect() }, unescape:true);
 
             var expected = new BinaryOp(
                 new Identifier("salary"),
                 BinaryOperator.NotEq,
                 new LiteralValue(new Value.SingleQuotedString("Jim's salary")));
+
+            Assert.Equal(expected, select.Selection);
+        }
+
+        [Fact]
+        public void Parse_Escaped_Single_Quote_String_Predicate_With_No_Escape()
+        {
+            var select = VerifiedOnlySelect("SELECT id, fname, lname FROM customer WHERE salary <> 'Jim''s salary'",
+                new[] { new MySqlDialect() }, unescape: false);
+
+            var expected = new BinaryOp(
+                new Identifier("salary"),
+                BinaryOperator.NotEq,
+                new LiteralValue(new Value.SingleQuotedString("Jim''s salary")));
 
             Assert.Equal(expected, select.Selection);
         }

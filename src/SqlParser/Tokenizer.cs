@@ -7,6 +7,12 @@ public ref struct Tokenizer
 {
     private Dialect _dialect;
     private State _state;
+    public readonly bool _unescape;
+
+    public Tokenizer(bool unescape = true)
+    {
+        _unescape = unescape;
+    }
 
     /// <summary>
     /// Reads a string into primitive SQL tokens using a generic SQL dialect
@@ -71,15 +77,13 @@ public ref struct Tokenizer
             // string, but PostgreSQL, at least, allows a lowercase 'x' too.
             'X' or 'x' => TokenizeHex(),
 
-            //_ when _dialect.IsIdentifierStart(character) => TokenizeIdent(),
-
             Symbols.SingleQuote => new SingleQuotedString(new string(TokenizeQuotedString(Symbols.SingleQuote))),
             Symbols.DoubleQuote when
                 !_dialect.IsDelimitedIdentifierStart(character) &&
                 !_dialect.IsIdentifierStart(character)
                     => new DoubleQuotedString(new string(TokenizeQuotedString(Symbols.DoubleQuote))),
 
-            // Delimited (quote) identifier
+            // Delimited (quoted) identifier
             _ when
                 _dialect.IsDelimitedIdentifierStart(character) &&
                 _dialect.IsProperIdentifierInsideQuotes(_state.Clone())
@@ -260,7 +264,6 @@ public ref struct Tokenizer
         // Consume the quote
         _state.Next();
 
-        var isEscaped = false;
         char current;
 
         while ((current = _state.Peek()) != Symbols.EndOfFile)
@@ -268,15 +271,17 @@ public ref struct Tokenizer
             if (quoteStyle == current)
             {
                 _state.Next();
-                if (isEscaped)
-                {
-                    word.Add(current);
-                    isEscaped = false;
 
-                }
-                else if (_state.Peek() == quoteStyle)
+                if (_state.Peek() == quoteStyle)
                 {
                     word.Add(current);
+
+                    if (!_unescape)
+                    {
+                        // In no-escape mode, the given query has to be saved completely
+                        word.Add(current);
+                    }
+
                     _state.Next();
                 }
                 else
@@ -287,16 +292,45 @@ public ref struct Tokenizer
             }
             else if (current == Symbols.Backslash)
             {
+                _state.Next();
+
                 if (_dialect is MySqlDialect)
                 {
-                    isEscaped = !isEscaped;
+                    var next = _state.Peek();
+                    if (!_unescape)
+                    {
+                        word.Add(current);
+                        word.Add(next);
+                        _state.Next();
+                    }
+                    else
+                    {
+                        var symbol = next switch
+                        {
+                            Symbols.SingleQuote
+                                or Symbols.DoubleQuote 
+                                or Symbols.Backslash 
+                                or Symbols.Percent
+                                or Symbols.Underscore
+                                => next,
+                            '0' => Symbols.Null,
+                            'b' => Symbols.Backspace,
+                            'n' => Symbols.NewLine,
+                            'r' => Symbols.CarriageReturn,
+                            't' => Symbols.Tab,
+                            'Z' => Symbols.Sub,
+                            _ => next
+                        };
+                        word.Add(symbol);
+                        _state.Next();
+                    }
                 }
                 else
                 {
                     word.Add(current);
                 }
 
-                _state.Next();
+                //_state.Next();
             }
             else
             {
@@ -982,6 +1016,11 @@ public ref struct Tokenizer
                 {
                     _state.Next();
                     chars.Add(current);
+
+                    if (!_unescape)
+                    {
+                        chars.Add(current);
+                    }
                 }
                 else
                 {

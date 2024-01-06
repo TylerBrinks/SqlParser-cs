@@ -1,4 +1,5 @@
-﻿using SqlParser.Ast;
+﻿using System.Runtime.CompilerServices;
+using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
 using static SqlParser.Ast.Expression;
@@ -228,9 +229,9 @@ namespace SqlParser.Tests.Dialects
         }
 
         [Fact]
-        public void Parse_Quote_Identifiers_2()
+        public void Parse_Escaped_Quote_Identifiers_With_Escape()
         {
-            var query = VerifiedStatement<Statement.Select>("SELECT `quoted `` identifier`");
+            var query = VerifiedStatement<Statement.Select>("SELECT `quoted `` identifier`", unescape:true);
             var body = new SetExpression.SelectExpression(new Select(new []
             {
                 new SelectItem.UnnamedExpression(new Identifier(new Ident("quoted ` identifier", Symbols.Backtick)))
@@ -241,16 +242,32 @@ namespace SqlParser.Tests.Dialects
         }
 
         [Fact]
-        public void Parse_Quote_Identifiers_3()
+        public void Parse_Escaped_Quote_Identifiers_No_Escape()
         {
-            var query = VerifiedStatement<Statement.Select>("SELECT ```quoted identifier```");
+            var query = VerifiedStatement<Statement.Select>("SELECT `quoted `` identifier`");
             var body = new SetExpression.SelectExpression(new Select(new []
             {
-                new SelectItem.UnnamedExpression(new Identifier(new Ident("`quoted identifier`", Symbols.Backtick)))
+                new SelectItem.UnnamedExpression(new Identifier(new Ident("quoted `` identifier", Symbols.Backtick)))
             }));
             var expected = new Statement.Select(new Query(body));
 
             Assert.Equal(expected, query);
+        }
+
+        [Fact]
+        public void Parse_Escaped_Backticks_With_No_Escape()
+        {
+            const string sql = "SELECT ```quoted identifier```";
+
+            var statement = VerifiedStatement(sql, new[] { new MySqlDialect() });
+
+            var body = new SetExpression.SelectExpression(new Select(new() 
+            {
+                new SelectItem.UnnamedExpression(new Identifier(new Ident("``quoted identifier``", '`')))
+            }));
+            var expected = new Query(body);
+
+            Assert.Equal(expected, statement);
         }
 
         [Fact]
@@ -263,16 +280,20 @@ namespace SqlParser.Tests.Dialects
         }
 
         [Fact]
-        public void Parse_Escaped_String()
+        public void Parse_Escaped_String_With_Escape()
         {
-            var statement = OneStatementParsesTo("SELECT 'I\\'m fine'", "");
+            AssertMySqlQuotedString("SELECT 'I\\'m fine'", "I'm fine");
+            AssertMySqlQuotedString("SELECT 'I''m fine'", "I'm fine");
+            AssertMySqlQuotedString("SELECT 'I\"m fine'", "I\"m fine");
 
-            var query = (Statement.Select)statement;
-            var body = (SetExpression.SelectExpression)query.Query.Body;
-            Assert.Equal(new LiteralValue(new Value.SingleQuotedString("I'm fine")), body.Select.Projection.Single().AsExpr());
-
-            var projection = VerifiedOnlySelect("SELECT 'I''m fine'").Projection;
-            Assert.Equal(new SelectItem.UnnamedExpression(new LiteralValue(new Value.SingleQuotedString("I'm fine"))), projection[0]);
+            void AssertMySqlQuotedString(string sql, string quoted)
+            {
+                var statement = OneStatementParsesTo(sql, "", unescape: true);
+                var query = (Statement.Select)statement;
+                var body = (SetExpression.SelectExpression)query.Query.Body;
+                
+                Assert.Equal(new LiteralValue(new Value.SingleQuotedString(quoted)), body.Select.Projection.Single().AsExpr());
+            }
         }
 
         [Fact]

@@ -33,7 +33,7 @@ public class Parser
     public const short XOrPrecedence = 24;
     public const short MulDivModOpPrecedence = 40;
     public const short PlusMinusPrecedence = 30;
-    public const short MultiplyPrecedence = 40;
+    //public const short MultiplyPrecedence = 40;
     public const short ArrowPrecedence = 50;
 
     private int _index;
@@ -67,7 +67,7 @@ public class Parser
         _depthGuard = new DepthGuard(_options.RecursionLimit);
         _dialect = dialect;
 
-        var tokenizer = new Tokenizer();
+        var tokenizer = new Tokenizer(_options.Unescape);
         _tokens = tokenizer.Tokenize(sql, dialect).ToSequence();
         _index = 0;
 
@@ -89,7 +89,7 @@ public class Parser
         _options = options ?? new ParserOptions();
         _depthGuard = new DepthGuard(50);
         _dialect = dialect;
-        var tokenizer = new Tokenizer();
+        var tokenizer = new Tokenizer(options?.Unescape ?? true);
         _tokens = tokenizer.Tokenize(sql, dialect).ToSequence();
         _index = 0;
         return this;
@@ -1236,7 +1236,7 @@ public class Parser
         {
             var next = PeekToken();
 
-            if (next is Word w)
+            if (next is Word)
             {
                 parameters.Add(ParseProcedureParam());
             }
@@ -1274,7 +1274,7 @@ public class Parser
 
         if (!ConsumeToken<LeftParen>() || ConsumeToken<RightParen>())
         {
-            return new Statement.CreateType(name, new UserDefinedTypeRepresentation.Composite(attributes));
+            return new CreateType(name, new UserDefinedTypeRepresentation.Composite(attributes));
         }
 
 
@@ -2320,7 +2320,7 @@ public class Parser
     /// <exception cref="ParserException"></exception>
     public DistinctFilter? ParseAllOrDistinct()
     {
-        var location = PeekToken();
+        //var location = PeekToken();
         var all = ParseKeyword(Keyword.ALL);
         var distinct = ParseKeyword(Keyword.DISTINCT);
 
@@ -2971,7 +2971,7 @@ public class Parser
         var ifNotExists = ParseIfNotExists();
         var names = ParseCommaSeparated(ParseObjectName);
 
-        var _ = ParseKeyword(Keyword.WITH);
+        _ = ParseKeyword(Keyword.WITH);
 
         Sequence<Keyword> optionalKeywords = new();
 
@@ -6927,7 +6927,7 @@ public class Parser
 
     public Statement ParseBegin()
     {
-        var _ = ParseOneOfKeywords(Keyword.TRANSACTION, Keyword.WORK);
+        _ = ParseOneOfKeywords(Keyword.TRANSACTION, Keyword.WORK);
         return new StartTransaction(ParseTransactionModes());
     }
 
@@ -6983,7 +6983,7 @@ public class Parser
 
     public bool ParseCommitRollbackChain()
     {
-        var _ = ParseOneOfKeywords(Keyword.TRANSACTION, Keyword.WORK);
+        _ = ParseOneOfKeywords(Keyword.TRANSACTION, Keyword.WORK);
         if (ParseKeyword(Keyword.AND))
         {
             var chain = !ParseKeyword(Keyword.NO);

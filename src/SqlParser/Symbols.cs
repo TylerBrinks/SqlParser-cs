@@ -2,6 +2,9 @@
 
 internal static class Symbols
 {
+    public const char Null = '\0';                      // 0x0
+    public const char Backspace = (char) 8;
+    public const char Sub = (char) 26;
     public const char EndOfFile = char.MaxValue;
     public const char Zero = (char)0x30;                // 0
     public const char Nine = (char)0x39;                // 9

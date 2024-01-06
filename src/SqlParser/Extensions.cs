@@ -1,4 +1,6 @@
-﻿namespace SqlParser;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace SqlParser;
 
 internal static class Extensions
 {
@@ -124,16 +126,42 @@ internal static class Extensions
     /// <returns>Escapee string</returns>
     public static string? EscapeQuotedString(this string? value, char quote)
     {
-        if (value == null)
+        if (string.IsNullOrEmpty(value))
         {
             return value;
         }
 
         var builder = StringBuilderPool.Get();
 
-        foreach (var character in value)
+        char? previous = null;
+        var peekable = new State(value);
+
+        char character;
+        while ((character = peekable.Peek()) != Symbols.EndOfFile)
         {
-           builder.Append(character == quote ? $"{quote}{quote}" : $"{character}");
+            if (character == quote)
+            {
+                if (previous == Symbols.Backslash)
+                {
+                    builder.Append(character);
+                    continue;
+                }
+
+                peekable.Next();
+                builder.Append($"{character}{character}");
+
+                if (peekable.Peek() == quote)
+                {
+                    peekable.Next();
+                }
+            }
+            else
+            {
+                builder.Append(character);
+                peekable.Next();
+            }
+
+            previous = character;
         }
 
         return StringBuilderPool.Return(builder);
@@ -147,6 +175,16 @@ internal static class Extensions
     {
         return EscapeQuotedString(value, Symbols.SingleQuote);
     }
+    /// <summary>
+    /// Escapes a string with double quotes
+    /// </summary>
+    /// <param name="value">Value to escape</param>
+    /// <returns>Escaped string</returns>
+    public static string? EscapeDoubleQuoteString(this string? value)
+    {
+        return EscapeQuotedString(value, Symbols.DoubleQuote);
+    }
+
     /// <summary>
     /// Escapes a string by replacing requiring escape substitution
     ///

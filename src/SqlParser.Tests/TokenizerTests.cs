@@ -570,5 +570,24 @@ namespace SqlParser.Tests
             
             Assert.Equal(expected, tokens);
         }
+
+        [Fact]
+        public void Tokenize_Quoted_Identifier_With_No_Escape()
+        {
+            var sql = """"""
+                       "a "" b" "a """ "c """"" 
+                      """""";
+
+            var dialect = new GenericDialect();
+            var tokens = new Tokenizer(false).Tokenize(sql, dialect);
+
+            Assert.True(tokens[0] is Whitespace{WhitespaceKind:WhitespaceKind.Space});
+            Assert.True(tokens[1] is Word{Value:"a \"\" b", QuoteStyle: Symbols.DoubleQuote});
+            Assert.True(tokens[2] is Whitespace{WhitespaceKind:WhitespaceKind.Space});
+            Assert.True(tokens[3] is Word{Value:"a \"\"", QuoteStyle: Symbols.DoubleQuote });
+            Assert.True(tokens[4] is Whitespace{WhitespaceKind:WhitespaceKind.Space});
+            Assert.True(tokens[5] is Word{Value:"c \"\"\"\"", QuoteStyle: Symbols.DoubleQuote });
+            Assert.True(tokens[6] is Whitespace{WhitespaceKind:WhitespaceKind.Space});
+        }
     }
 }
