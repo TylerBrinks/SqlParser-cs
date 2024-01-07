@@ -530,12 +530,21 @@ public class Parser
 
         Function ParseTimeFunctions(ObjectName name)
         {
-            var (args, orderBy) = ParseInit(ConsumeToken<LeftParen>(), ParseOptionalArgsWithOrderBy);
+            Sequence<FunctionArg>? args = null;
+            Sequence<OrderByExpression>? orderBy = null;
+            var special = true;
+
+            if (ConsumeToken<LeftParen>())
+            {
+                (args, orderBy) = ParseOptionalArgsWithOrderBy();
+                special = false;
+            }
 
             return new Function(name)
             {
                 Args = args.SafeAny() ? args : null,
-                OrderBy = orderBy
+                OrderBy = orderBy,
+                Special = special
             };
         }
 

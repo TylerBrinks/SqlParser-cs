@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using SqlParser.Ast;
 using SqlParser.Dialects;
+using static SqlParser.Ast.CopyOption;
 using static SqlParser.Ast.DataType;
 using static SqlParser.Ast.Expression;
 using Action = SqlParser.Ast.Action;
@@ -4132,37 +4133,26 @@ namespace SqlParser.Tests
         [Fact]
         public void Parse_Time_Functions()
         {
-            var select = VerifiedOnlySelect("SELECT CURRENT_TIMESTAMP()");
-            var expected = new Function("CURRENT_TIMESTAMP");
-            Assert.Equal(expected, select.Projection.First().AsExpr());
+            TestTimeFunction("CURRENT_TIMESTAMP");
+            TestTimeFunction("CURRENT_TIME");
+            TestTimeFunction("CURRENT_DATE");
+            TestTimeFunction("LOCALTIME");
+            TestTimeFunction("LOCALTIMESTAMP");
 
-            // Validating Parenthesis
-            OneStatementParsesTo("SELECT CURRENT_TIMESTAMP", "SELECT CURRENT_TIMESTAMP()");
+            void TestTimeFunction(string timeFunction)
+            {
+                // Validating Parenthesis
+                var sql = $"SELECT {timeFunction}()";
+                var select = VerifiedOnlySelect(sql);
 
-            select = VerifiedOnlySelect("SELECT CURRENT_TIME()");
-            expected = new Function("CURRENT_TIME");
-            Assert.Equal(expected, select.Projection.First().AsExpr());
+                var expected = new Function(timeFunction);
+                Assert.Equal(expected, select.Projection.First().AsExpr());
 
-            select = VerifiedOnlySelect("SELECT CURRENT_DATE()");
-            expected = new Function("CURRENT_DATE");
-            Assert.Equal(expected, select.Projection.First().AsExpr());
-
-            // Validating Parenthesis
-            OneStatementParsesTo("SELECT CURRENT_DATE", "SELECT CURRENT_DATE()");
-
-            select = VerifiedOnlySelect("SELECT LOCALTIME()");
-            expected = new Function("LOCALTIME");
-            Assert.Equal(expected, select.Projection.First().AsExpr());
-
-            // Validating Parenthesis
-            OneStatementParsesTo("SELECT LOCALTIME", "SELECT LOCALTIME()");
-
-            select = VerifiedOnlySelect("SELECT LOCALTIMESTAMP()");
-            expected = new Function("LOCALTIMESTAMP");
-            Assert.Equal(expected, select.Projection.First().AsExpr());
-
-            // Validating Parenthesis
-            OneStatementParsesTo("SELECT LOCALTIMESTAMP", "SELECT LOCALTIMESTAMP()");
+                sql = $"SELECT {timeFunction}";
+                select = VerifiedOnlySelect(sql);
+                expected = new Function(timeFunction){Special = true};
+                Assert.Equal(expected, select.Projection.First().AsExpr());
+            }
         }
 
         [Fact]
