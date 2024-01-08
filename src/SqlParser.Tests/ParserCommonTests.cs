@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text;
 using SqlParser.Ast;
 using SqlParser.Dialects;
 using static SqlParser.Ast.CopyOption;
@@ -516,7 +517,7 @@ namespace SqlParser.Tests
         public void Parse_Escaped_Single_Quote_String_Predicate_With_Escape()
         {
             var select = VerifiedOnlySelect("SELECT id, fname, lname FROM customer WHERE salary <> 'Jim''s salary'",
-                new[] { new MySqlDialect() }, unescape:true);
+                new[] { new MySqlDialect() }, unescape: true);
 
             var expected = new BinaryOp(
                 new Identifier("salary"),
@@ -4150,7 +4151,7 @@ namespace SqlParser.Tests
 
                 sql = $"SELECT {timeFunction}";
                 select = VerifiedOnlySelect(sql);
-                expected = new Function(timeFunction){Special = true};
+                expected = new Function(timeFunction) { Special = true };
                 Assert.Equal(expected, select.Projection.First().AsExpr());
             }
         }
@@ -4593,6 +4594,37 @@ namespace SqlParser.Tests
 
                 Assert.Equal(expected, select.Projection.First());
             }
+        }
+
+        [Fact]
+        public void Parse_Create_Table_With_Alias()
+        {
+            const string sql = """
+                    CREATE TABLE public.datatype_aliases
+                    (
+                        int8_col INT8,
+                        int4_col INT4,
+                        int2_col INT2,
+                        float8_col FLOAT8,
+                        float4_col FLOAT4,
+                        bool_col BOOL,
+                    );
+                    """;
+
+            var statement = (Statement.CreateTable)OneStatementParsesTo(sql, "", new Dialect[] {new GenericDialect(), new PostgreSqlDialect()});
+
+            var expectedColumns = new Sequence<ColumnDef>
+            {
+                new ("int8_col", new Int8()),
+                new ("int4_col", new Int4()),
+                new ("int2_col", new Int2()),
+                new ("float8_col", new Float8()),
+                new ("float4_col", new Float4()),
+                new ("bool_col", new Bool()),
+            };
+
+            Assert.Equal("public.datatype_aliases", statement.Name);
+            Assert.Equal(expectedColumns, statement.Columns);
         }
     }
 }

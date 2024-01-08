@@ -73,6 +73,7 @@ public abstract record DataType : IWriteSql
             }
         }
     }
+   
     /// <summary>
     /// Array data type
     /// </summary>
@@ -91,7 +92,6 @@ public abstract record DataType : IWriteSql
             }
         }
     }
-
     /// <summary>
     /// Big integer with optional display width e.g. BIGINT or BIGINT(20)
     /// </summary>
@@ -147,6 +147,13 @@ public abstract record DataType : IWriteSql
     /// <summary>
     /// Boolean data type
     /// </summary>
+    public record Bool : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("BOOL");
+        }
+    }
     public record Boolean : DataType
     {
         public override void ToSql(SqlTextWriter writer)
@@ -238,7 +245,6 @@ public abstract record DataType : IWriteSql
             }
         }
     }
-
     /// <summary>
     /// Large character object with optional length e.g. CLOB, CLOB(1000)
     ///
@@ -369,6 +375,26 @@ public abstract record DataType : IWriteSql
         }
     }
     /// <summary>
+    /// FLOAT4 as alias for Real in postgresql
+    /// </summary>
+    public record Float4 : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+           writer.Write("FLOAT4");
+        }
+    }
+    /// <summary>
+    /// FLOAT8 as alias for Double in postgresql
+    /// </summary>
+    public record Float8 : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("FLOAT8");
+        }
+    }
+    /// <summary>
     /// Integer with optional display width e.g. INT or INT(11)
     /// <param name="Length">Length</param>
     /// </summary>
@@ -400,6 +426,45 @@ public abstract record DataType : IWriteSql
         }
     }
     /// <summary>
+    /// Int2 as alias for SmallInt in [postgresql]
+    /// Note: Int2 mean 2 bytes in postgres (not 2 bits)
+    /// Int2 with optional display width e.g. INT2 or INT2(5)
+    /// </summary>
+    /// <param name="Length">Length</param>
+    public record Int2(ulong? Length = null) : LengthDataType(Length)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            FormatTypeWithOptionalLength(writer, "INT2", Length);
+        }
+    }
+    /// <summary>
+    /// Int4 as alias for Integer in [postgresql]
+    /// Note: Int4 mean 4 bytes in postgres (not 4 bits)
+    /// Int4 with optional display width e.g. Int4 or Int4(11)
+    /// </summary>
+    /// <param name="Length">Length</param>
+    public record Int4(ulong? Length = null) : LengthDataType(Length)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            FormatTypeWithOptionalLength(writer, "INT4", Length);
+        }
+    }
+    /// <summary>
+    /// Int8 as alias for Bigint in [postgresql]
+    /// Note: Int8 mean 8 bytes in postgres (not 8 bits)
+    /// Int8 with optional display width e.g. INT8 or INT8(11)
+    /// </summary>
+    /// <param name="Length">Length</param>
+    public record Int8(ulong? Length = null) : LengthDataType(Length)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            FormatTypeWithOptionalLength(writer, "INT8", Length);
+        }
+    }
+    /// <summary>
     /// Join data type
     /// </summary>
     public record Json : DataType
@@ -409,6 +474,7 @@ public abstract record DataType : IWriteSql
             writer.Write("JSON");
         }
     }
+   
     /// <summary>
     /// MySQL medium integer ([1]) with optional display width e.g. MEDIUMINT or MEDIUMINT(5)
     ///
@@ -522,7 +588,6 @@ public abstract record DataType : IWriteSql
             writer.Write("TEXT");
         }
     }
-
     /// <summary>
     /// Time with optional time precision and time zone information
     ///
@@ -535,7 +600,6 @@ public abstract record DataType : IWriteSql
             FormattedDatetimePrecisionAndTz(writer, "TIME");
         }
     }
-
     /// <summary>
     /// Timestamp with optional time precision and time zone information
     ///
@@ -618,6 +682,39 @@ public abstract record DataType : IWriteSql
         public override void ToSql(SqlTextWriter writer)
         {
             FormatTypeWithOptionalLength(writer, "TINYINT", Length, true);
+        }
+    }
+    /// <summary>
+    /// Unsigned Int2 with optional display width e.g. INT2 Unsigned or INT2(5) Unsigned
+    /// </summary>
+    /// <param name="Length"></param>
+    public record UnsignedInt2(ulong? Length = null) : LengthDataType(Length)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            FormatTypeWithOptionalLength(writer, "INT2", Length, true);
+        }
+    }
+    /// <summary>
+    /// Unsigned Int4 with optional display width e.g. INT4 Unsigned or INT4(5) Unsigned
+    /// </summary>
+    /// <param name="Length"></param>
+    public record UnsignedInt4(ulong? Length = null) : LengthDataType(Length)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            FormatTypeWithOptionalLength(writer, "INT4", Length, true);
+        }
+    }
+    /// <summary>
+    /// Unsigned Int8 with optional display width e.g. INT8 Unsigned or INT8(5) Unsigned
+    /// </summary>
+    /// <param name="Length"></param>
+    public record UnsignedInt8(ulong? Length = null) : LengthDataType(Length)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            FormatTypeWithOptionalLength(writer, "INT8", Length, true);
         }
     }
     /// <summary>

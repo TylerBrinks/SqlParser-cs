@@ -4672,15 +4672,23 @@ public class Parser
         var data = token switch
         {
             Word { Keyword: Keyword.BOOLEAN } => new DataType.Boolean(),
+            Word { Keyword: Keyword.BOOL } => new DataType.Bool(),
             Word { Keyword: Keyword.FLOAT } => new DataType.Float(ParseOptionalPrecision()),
             Word { Keyword: Keyword.REAL } => new DataType.Real(),
+            Word { Keyword: Keyword.FLOAT4 } => new DataType.Float4(),
+            Word { Keyword: Keyword.FLOAT8 } => new DataType.Float8(),
             Word { Keyword: Keyword.DOUBLE } => ParseDouble(),
             Word { Keyword: Keyword.TINYINT } => ParseTinyInt(),
+            Word { Keyword: Keyword.INT2 } => ParseInt2(),
             Word { Keyword: Keyword.SMALLINT } => ParseSmallInt(),
             Word { Keyword: Keyword.MEDIUMINT } => ParseMediumInt(),
             Word { Keyword: Keyword.INT } => ParseInt(),
+            Word { Keyword: Keyword.INT4 } => ParseInt4(),
+
             Word { Keyword: Keyword.INTEGER } => ParseInteger(),
             Word { Keyword: Keyword.BIGINT } => ParseBigInt(),
+            Word { Keyword: Keyword.INT8 } => ParseInt8(),
+
             Word { Keyword: Keyword.VARCHAR } => new DataType.Varchar(ParseOptionalCharacterLength()),
             Word { Keyword: Keyword.NVARCHAR } => new DataType.Nvarchar(ParseOptionalPrecision()),
             Word { Keyword: Keyword.CHARACTER } => ParseCharacter(),
@@ -4739,6 +4747,12 @@ public class Parser
             return ParseKeyword(Keyword.UNSIGNED) ? new DataType.UnsignedTinyInt(precision) : new DataType.TinyInt(precision);
         }
 
+        DataType ParseInt2()
+        {
+            var precision = ParseOptionalPrecision();
+            return ParseKeyword(Keyword.UNSIGNED) ? new DataType.UnsignedInt2(precision) : new DataType.Int2(precision);
+        }
+
         DataType ParseSmallInt()
         {
             var precision = ParseOptionalPrecision();
@@ -4755,6 +4769,18 @@ public class Parser
         {
             var precision = ParseOptionalPrecision();
             return ParseKeyword(Keyword.UNSIGNED) ? new DataType.UnsignedInt(precision) : new DataType.Int(precision);
+        }
+
+        DataType ParseInt4()
+        {
+            var precision = ParseOptionalPrecision();
+            return ParseKeyword(Keyword.UNSIGNED) ? new DataType.UnsignedInt4(precision) : new DataType.Int4(precision);
+        }
+
+        DataType ParseInt8()
+        {
+            var precision = ParseOptionalPrecision();
+            return ParseKeyword(Keyword.UNSIGNED) ? new DataType.UnsignedInt8(precision) : new DataType.Int8(precision);
         }
 
         DataType ParseInteger()
