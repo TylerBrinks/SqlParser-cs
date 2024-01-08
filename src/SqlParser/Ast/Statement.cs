@@ -258,7 +258,8 @@ public abstract record Statement : IWriteSql, IElement
             if (Source is CopySource.CopySourceQuery query)
             {
                 writer.WriteSql($"({query})");
-            }else if (Source is CopySource.Table table)
+            }
+            else if (Source is CopySource.Table table)
             {
                 writer.WriteSql($" {table.TableName}");
 
@@ -1190,7 +1191,7 @@ public abstract record Statement : IWriteSql, IElement
         {
             writer.Write("DELETE ");
 
-            if (Tables is {Count: > 0})
+            if (Tables is { Count: > 0 })
             {
                 writer.WriteDelimited(Tables, ", ");
             }
@@ -1806,11 +1807,11 @@ public abstract record Statement : IWriteSql, IElement
     /// START TRANSACTION
     /// </summary>
     /// <param name="Modes">Transaction modes</param>
-    public record StartTransaction(Sequence<TransactionMode>? Modes) : Statement
+    public record StartTransaction(Sequence<TransactionMode>? Modes, bool Begin) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.Write("START TRANSACTION");
+            writer.Write(Begin ? "BEGIN TRANSACTION" : "START TRANSACTION");
 
             if (Modes.SafeAny())
             {

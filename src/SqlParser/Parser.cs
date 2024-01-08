@@ -6957,13 +6957,13 @@ public class Parser
     public StartTransaction ParseStartTransaction()
     {
         ExpectKeyword(Keyword.TRANSACTION);
-        return new StartTransaction(ParseTransactionModes());
+        return new StartTransaction(ParseTransactionModes(), false);
     }
 
     public Statement ParseBegin()
     {
         _ = ParseOneOfKeywords(Keyword.TRANSACTION, Keyword.WORK);
-        return new StartTransaction(ParseTransactionModes());
+        return new StartTransaction(ParseTransactionModes(), true);
     }
 
     public Sequence<TransactionMode>? ParseTransactionModes()

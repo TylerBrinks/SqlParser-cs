@@ -3567,11 +3567,10 @@ namespace SqlParser.Tests
                 "START TRANSACTION READ ONLY, READ WRITE, ISOLATION LEVEL SERIALIZABLE");
             Assert.Equal(modes, transaction.Modes!);
 
-
             VerifiedStatement("START TRANSACTION");
-            OneStatementParsesTo("BEGIN", "START TRANSACTION");
-            OneStatementParsesTo("BEGIN WORK", "START TRANSACTION");
-            OneStatementParsesTo("BEGIN TRANSACTION", "START TRANSACTION");
+            OneStatementParsesTo("BEGIN", "BEGIN TRANSACTION");
+            OneStatementParsesTo("BEGIN WORK", "BEGIN TRANSACTION");
+            OneStatementParsesTo("BEGIN TRANSACTION", "BEGIN TRANSACTION");
             VerifiedStatement("START TRANSACTION ISOLATION LEVEL READ UNCOMMITTED");
             VerifiedStatement("START TRANSACTION ISOLATION LEVEL READ COMMITTED");
             VerifiedStatement("START TRANSACTION ISOLATION LEVEL REPEATABLE READ");
