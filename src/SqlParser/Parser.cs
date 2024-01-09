@@ -3184,6 +3184,8 @@ public class Parser
             return ParseDropFunction();
         }
 
+        var temporary = _dialect is MySqlDialect or GenericDialect && ParseKeyword(Keyword.TEMPORARY);
+
         var objectType =
             ParseKeyword(Keyword.TABLE) ? ObjectType.Table :
             ParseKeyword(Keyword.VIEW) ? ObjectType.View :
@@ -3218,7 +3220,8 @@ public class Parser
             IfExists = ifExists,
             Cascade = cascade,
             Restrict = restrict,
-            Purge = purge
+            Purge = purge,
+            Temporary = temporary
         };
     }
     /// <summary>

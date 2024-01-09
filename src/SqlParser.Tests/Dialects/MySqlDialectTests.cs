@@ -1,5 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using SqlParser.Ast;
+﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
 using static SqlParser.Ast.Expression;
@@ -754,6 +753,14 @@ namespace SqlParser.Tests.Dialects
         {
             const string sql = "SELECT 5 DIV 2";
             VerifiedOnlySelect(sql);
+        }
+
+        [Fact]
+        public void Parse_Drop_Table()
+        {
+            var drop = VerifiedStatement<Statement.Drop>("DROP TEMPORARY TABLE foo");
+
+            Assert.True(drop.Temporary);
         }
     }
 }

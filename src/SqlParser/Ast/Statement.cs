@@ -1053,6 +1053,10 @@ public abstract record Statement : IWriteSql, IElement
         /// Hive allows you specify whether the table's stored data will be
         /// deleted along with the dropped table
         public bool Purge { get; init; }
+        /// <summary>
+        /// MySQL-specific "TEMPORARY" keyword
+        /// </summary>
+        public bool Temporary { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
@@ -1060,8 +1064,9 @@ public abstract record Statement : IWriteSql, IElement
             var cascade = Cascade ? " CASCADE" : null;
             var restrict = Restrict ? " RESTRICT" : null;
             var purge = Purge ? " PURGE" : null;
+            var temporary = Temporary ? "TEMPORARY " : null;
 
-            writer.WriteSql($"DROP {ObjectType}{ifExists} {Names}{cascade}{restrict}{purge}");
+            writer.WriteSql($"DROP {temporary}{ObjectType}{ifExists} {Names}{cascade}{restrict}{purge}");
         }
     }
     /// <summary>
