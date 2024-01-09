@@ -662,9 +662,9 @@ public class Parser
                 var expr = ParseExpr();
                 Expression? fromExpr = null;
                 Expression? toExpr = null;
-                var supportsSubstring = _dialect.SupportsSubstringFromForExpr;
-                
-                if (supportsSubstring)
+                var special = false;
+
+                if (_dialect.SupportsSubstringFromForExpr)
                 {
                     // PARSE SUBSTRING (EXPR [FROM 1] [FOR 3])
                     if (ParseKeyword(Keyword.FROM) || ConsumeToken<Comma>())
@@ -684,9 +684,10 @@ public class Parser
                     fromExpr = ParseExpr();
                     ExpectToken<Comma>();
                     toExpr = ParseExpr();
+                    special = true;
                 }
 
-                return new Substring(expr, fromExpr, toExpr, !supportsSubstring);
+                return new Substring(expr, fromExpr, toExpr, special);
             });
         }
 
