@@ -60,6 +60,16 @@ public abstract record Statement : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// Alter role statement
+    /// </summary>
+    public record AlterRole(Ident Name, AlterRoleOperation Operation) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"ALTER ROLE {Name} {Operation}");
+        }
+    }
+    /// <summary>
     /// Analyze statement
     /// </summary>
     public record Analyze([property: Visit(0)] ObjectName Name) : Statement

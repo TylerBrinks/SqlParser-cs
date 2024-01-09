@@ -1932,5 +1932,98 @@ namespace SqlParser.Tests.Dialects
             var expected = new Statement.Truncate(name, null, false);
             Assert.Equal(expected, truncate);
         }
+
+        [Fact]
+        public void Parse_Alter_Role()
+        {
+            var sql = "ALTER ROLE old_name RENAME TO new_name";
+            var dialect = new[] { new PostgreSqlDialect() };
+            var statement = ParseSqlStatements(sql, dialect).First();
+            var expected = new Statement.AlterRole("old_name", new AlterRoleOperation.RenameRole("new_name"));
+            Assert.Equal(expected, statement);
+
+            sql = "ALTER ROLE role_name WITH SUPERUSER CREATEDB CREATEROLE INHERIT LOGIN REPLICATION BYPASSRLS CONNECTION LIMIT 100 PASSWORD 'abcdef' VALID UNTIL '2025-01-01'";
+            statement = VerifiedStatement(sql, dialect);
+            var options = new Sequence<RoleOption>
+            {
+                new RoleOption.SuperUser(true),
+                new RoleOption.CreateDb(true),
+                new RoleOption.CreateRole(true),
+                new RoleOption.Inherit(true),
+                new RoleOption.Login(true),
+                new RoleOption.Replication(true),
+                new RoleOption.BypassRls(true),
+                new RoleOption.ConnectionLimit(new LiteralValue(new Value.Number("100"))),
+                new RoleOption.PasswordOption(new Password.ValidPassword(new LiteralValue(new Value.SingleQuotedString("abcdef")))),
+                new RoleOption.ValidUntil(new LiteralValue(new Value.SingleQuotedString("2025-01-01")))
+            };
+            expected = new Statement.AlterRole("role_name", new AlterRoleOperation.WithOptions(options));
+            Assert.Equal(expected, statement);
+
+            sql = "ALTER ROLE role_name WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS PASSWORD NULL";
+            statement = VerifiedStatement(sql, dialect);
+            options = new Sequence<RoleOption>
+            {
+                new RoleOption.SuperUser(false),
+                new RoleOption.CreateDb(false),
+                new RoleOption.CreateRole(false),
+                new RoleOption.Inherit(false),
+                new RoleOption.Login(false),
+                new RoleOption.Replication(false),
+                new RoleOption.BypassRls(false),
+                new RoleOption.PasswordOption(new Password.NullPassword()),
+            };
+            expected = new Statement.AlterRole("role_name", new AlterRoleOperation.WithOptions(options));
+            Assert.Equal(expected, statement);
+
+
+            sql = "ALTER ROLE role_name SET maintenance_work_mem FROM CURRENT";
+            statement = VerifiedStatement(sql, dialect);
+            expected = new Statement.AlterRole("role_name", new AlterRoleOperation.Set(
+                "maintenance_work_mem", new SetConfigValue.FromCurrent(), null));
+            Assert.Equal(expected, statement);
+
+
+            sql = "ALTER ROLE role_name IN DATABASE database_name SET maintenance_work_mem = 100000";
+            statement = ParseSqlStatements(sql, dialect).First();
+            expected = new Statement.AlterRole("role_name", new AlterRoleOperation.Set(
+                "maintenance_work_mem", 
+                new SetConfigValue.Value(new LiteralValue(new Value.Number("100000"))), 
+                new ObjectName(new Ident[]{"database_name"}) ));
+            Assert.Equal(expected, statement);
+
+
+            sql = "ALTER ROLE role_name IN DATABASE database_name SET maintenance_work_mem TO 100000";
+            statement = VerifiedStatement(sql, dialect);
+            expected = new Statement.AlterRole("role_name", new AlterRoleOperation.Set(
+                "maintenance_work_mem",
+                new SetConfigValue.Value(new LiteralValue(new Value.Number("100000"))),
+                new ObjectName(new Ident[] { "database_name" })));
+            Assert.Equal(expected, statement);
+
+
+            sql = "ALTER ROLE role_name IN DATABASE database_name SET maintenance_work_mem TO DEFAULT";
+            statement = VerifiedStatement(sql, dialect);
+            expected = new Statement.AlterRole("role_name", new AlterRoleOperation.Set(
+                "maintenance_work_mem",
+                new SetConfigValue.Default(),
+                new ObjectName(new Ident[] { "database_name" })));
+            Assert.Equal(expected, statement);
+
+
+            sql = "ALTER ROLE role_name RESET ALL";
+            statement = VerifiedStatement(sql, dialect);
+            expected = new Statement.AlterRole("role_name", new AlterRoleOperation.Reset(new ResetConfig.All(), null));
+            Assert.Equal(expected, statement);
+
+
+            sql = "ALTER ROLE role_name IN DATABASE database_name RESET maintenance_work_mem";
+            statement = VerifiedStatement(sql, dialect);
+            expected = new Statement.AlterRole("role_name",
+                new AlterRoleOperation.Reset(new ResetConfig.ConfigName("maintenance_work_mem"),
+                    new ObjectName(new Ident[] {"database_name"})));
+            Assert.Equal(expected, statement);
+
+        }
     }
 }

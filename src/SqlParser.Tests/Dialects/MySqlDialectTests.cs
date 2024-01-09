@@ -1,4 +1,5 @@
-﻿using SqlParser.Ast;
+﻿using System.Data;
+using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
 using static SqlParser.Ast.Expression;
@@ -775,6 +776,26 @@ namespace SqlParser.Tests.Dialects
                 Assert.Equal("foo", create.Name);
                 Assert.Equal("baz", create.Comment);
             }
+        }
+
+        [Fact]
+        public void Parse_Alter_Role()
+        {
+            var sql = "ALTER ROLE old_name WITH NAME = new_name";
+            var dialect = new[] {new MsSqlDialect()};
+            var alter = ParseSqlStatements(sql, dialect);
+            var expected = new Statement.AlterRole("old_name", new AlterRoleOperation.RenameRole("new_name"));
+            Assert.Equal(expected, alter.First());
+
+            sql = "ALTER ROLE role_name ADD MEMBER new_member";
+            var statement = VerifiedStatement(sql, dialect);
+            expected = new Statement.AlterRole("role_name", new AlterRoleOperation.AddMember("new_member"));
+            Assert.Equal(expected, statement);
+
+            sql = "ALTER ROLE role_name DROP MEMBER old_member";
+            statement = VerifiedStatement(sql, dialect);
+            expected = new Statement.AlterRole("role_name", new AlterRoleOperation.DropMember("old_member"));
+            Assert.Equal(expected, statement);
         }
     }
 }

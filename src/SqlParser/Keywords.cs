@@ -546,6 +546,7 @@ public enum Keyword
     REPEATABLE,
     REPLACE,
     REPLICATION,
+    RESET,
     RESTRICT,
     RESULT,
     RETURN,

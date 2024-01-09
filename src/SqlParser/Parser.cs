@@ -132,8 +132,8 @@ public class Parser
             {
                 break;
             }
-            
-            if (next is Word {Keyword: Keyword.END})
+
+            if (next is Word { Keyword: Keyword.END })
             {
                 break;
             }
@@ -4050,20 +4050,20 @@ public class Parser
 
     public Statement ParseAlter()
     {
-        var objectType = ExpectOneOfKeywords(Keyword.VIEW, Keyword.TABLE, Keyword.INDEX);
+        var objectType = ExpectOneOfKeywords(Keyword.VIEW, Keyword.TABLE, Keyword.INDEX, Keyword.ROLE);
 
         switch (objectType)
         {
             case Keyword.VIEW:
-            {
-                var name = ParseObjectName();
-                var columns = ParseParenthesizedColumnList(IsOptional.Optional, false);
-                var withOptions = ParseOptions(Keyword.WITH);
-                ExpectKeyword(Keyword.AS);
-                var query = ParseQuery();
+                {
+                    var name = ParseObjectName();
+                    var columns = ParseParenthesizedColumnList(IsOptional.Optional, false);
+                    var withOptions = ParseOptions(Keyword.WITH);
+                    ExpectKeyword(Keyword.AS);
+                    var query = ParseQuery();
 
-                return new AlterView(name, columns, query, withOptions);
-            }
+                    return new AlterView(name, columns, query, withOptions);
+                }
 
             case Keyword.TABLE:
                 {
@@ -4256,6 +4256,9 @@ public class Parser
 
                     return new AlterIndex(indexName, operation);
                 }
+
+            case Keyword.ROLE:
+                return ParseAlterRole();
 
             default:
                 throw new ParserException("ParseAlter");
@@ -5125,6 +5128,190 @@ public class Parser
         throw Expected("a list of columns in parenthesis", PeekToken());
     }
 
+    public Statement ParseAlterRole()
+    {
+        return _dialect switch
+        {
+            PostgreSqlDialect => ParsePgAlterRole(),
+            MsSqlDialect => ParseMsSqlAlterRole(),
+            _ => throw new ParserException("ALTER ROLE is only support for PostgreSqlDialect and MsSqlDialect")
+        };
+    }
+
+    private Statement ParseMsSqlAlterRole()
+    {
+        var roleName = ParseIdentifier();
+        AlterRoleOperation operation = null!;
+
+        if (ParseKeywordSequence(Keyword.ADD, Keyword.MEMBER))
+        {
+            operation = new AlterRoleOperation.AddMember(ParseIdentifier());
+        }
+        else if (ParseKeywordSequence(Keyword.DROP, Keyword.MEMBER))
+        {
+            operation = new AlterRoleOperation.DropMember(ParseIdentifier());
+        }
+        else if (ParseKeywordSequence(Keyword.WITH, Keyword.NAME))
+        {
+            if (ConsumeToken<Equal>())
+            {
+                operation = new AlterRoleOperation.RenameRole(ParseIdentifier());
+            }
+            else
+            {
+                throw Expected("= after WITH NAME", PeekToken());
+            }
+        }
+
+        return new AlterRole(roleName, operation);
+    }
+
+    private Statement ParsePgAlterRole()
+    {
+        var roleName = ParseIdentifier();
+        ObjectName? inDatabase = null;
+        AlterRoleOperation operation;
+
+        if (ParseKeywordSequence(Keyword.IN, Keyword.DATABASE))
+        {
+            inDatabase = ParseObjectName();
+        }
+
+        if (ParseKeyword(Keyword.RENAME))
+        {
+            if (ParseKeyword(Keyword.TO))
+            {
+                operation = new AlterRoleOperation.RenameRole(ParseIdentifier());
+            }
+            else
+            {
+                throw Expected("TO after RENAME", PeekToken());
+            }
+        }
+        else if (ParseKeyword(Keyword.SET))
+        {
+            var configName = ParseObjectName();
+            // FROM CURRENT
+            if (ParseKeywordSequence(Keyword.FROM, Keyword.CURRENT))
+            {
+                operation = new AlterRoleOperation.Set(configName, new SetConfigValue.FromCurrent(), inDatabase);
+            }
+            // { TO | = } { value | DEFAULT }
+            else if (ConsumeToken<Equal>() || ParseKeyword(Keyword.TO))
+            {
+                if (ParseKeyword(Keyword.DEFAULT))
+                {
+                    operation = new AlterRoleOperation.Set(configName, new SetConfigValue.Default(), inDatabase);
+                }
+                else
+                {
+                    var expression = ParseExpr();
+
+                    operation = new AlterRoleOperation.Set(configName, new SetConfigValue.Value(expression), inDatabase);
+                }
+            }
+            else
+            {
+                throw Expected("'TO' or '=' or 'FROM CURRENT'", PeekToken());
+            }
+        }
+        else if (ParseKeyword(Keyword.RESET))
+        {
+            operation = ParseKeyword(Keyword.ALL)
+                ? new AlterRoleOperation.Reset(new ResetConfig.All(), inDatabase)
+                : new AlterRoleOperation.Reset(new ResetConfig.ConfigName(ParseObjectName()), inDatabase);
+        }
+        else
+        {
+            _ = ParseKeyword(Keyword.WITH);
+
+            var options = new Sequence<RoleOption>();
+
+            while (MaybeParse(ParsePgRoleOption) is { } parsed)
+            {
+                options.Add(parsed);
+            }
+
+            if (!options.Any())
+            {
+                throw Expected("option", PeekToken());
+            }
+
+            operation = new AlterRoleOperation.WithOptions(options);
+        }
+
+        return new AlterRole(roleName, operation);
+    }
+
+    private RoleOption ParsePgRoleOption()
+    {
+        var keywords = new[]
+        {
+            Keyword.BYPASSRLS,
+            Keyword.NOBYPASSRLS,
+            Keyword.CONNECTION,
+            Keyword.CREATEDB,
+            Keyword.NOCREATEDB,
+            Keyword.CREATEROLE,
+            Keyword.NOCREATEROLE,
+            Keyword.INHERIT,
+            Keyword.NOINHERIT,
+            Keyword.LOGIN,
+            Keyword.NOLOGIN,
+            Keyword.PASSWORD,
+            Keyword.REPLICATION,
+            Keyword.NOREPLICATION,
+            Keyword.SUPERUSER,
+            Keyword.NOSUPERUSER,
+            Keyword.VALID
+        };
+        var option = ParseOneOfKeywords(keywords);
+
+        return option switch
+        {
+            Keyword.BYPASSRLS => new RoleOption.BypassRls(true),
+            Keyword.NOBYPASSRLS => new RoleOption.BypassRls(false),
+            Keyword.CONNECTION => ParseAlterConnection(),
+            Keyword.CREATEDB => new RoleOption.CreateDb(true),
+            Keyword.NOCREATEDB => new RoleOption.CreateDb(false),
+            Keyword.CREATEROLE => new RoleOption.CreateRole(true),
+            Keyword.NOCREATEROLE => new RoleOption.CreateRole(false),
+            Keyword.INHERIT => new RoleOption.Inherit(true),
+            Keyword.NOINHERIT => new RoleOption.Inherit(false),
+            Keyword.LOGIN => new RoleOption.Login(true),
+            Keyword.NOLOGIN => new RoleOption.Login(false),
+            Keyword.PASSWORD => new RoleOption.PasswordOption(ParseAlterPassword()),
+            Keyword.REPLICATION => new RoleOption.Replication(true),
+            Keyword.NOREPLICATION => new RoleOption.Replication(false),
+            Keyword.SUPERUSER => new RoleOption.SuperUser(true),
+            Keyword.NOSUPERUSER => new RoleOption.SuperUser(false),
+            Keyword.VALID => ParseAlterValid(),
+            _ => throw Expected("option", PeekToken())
+        };
+
+        RoleOption ParseAlterConnection()
+        {
+            ExpectKeyword(Keyword.LIMIT);
+            return new RoleOption.ConnectionLimit(new LiteralValue(ParseNumberValue()));
+        }
+
+        Password ParseAlterPassword()
+        {
+            if (ParseKeyword(Keyword.NULL))
+            {
+                return new Password.NullPassword();
+            }
+
+            return new Password.ValidPassword(new LiteralValue(ParseValue()));
+        }
+
+        RoleOption ParseAlterValid()
+        {
+            ExpectKeyword(Keyword.UNTIL);
+            return new RoleOption.ValidUntil(new LiteralValue(ParseValue()));
+        }
+    }
+
     public ulong? ParseOptionalPrecision()
     {
         if (!ConsumeToken<LeftParen>())
@@ -5602,8 +5789,8 @@ public class Parser
             return op switch
             {
                 SetOperator.Union when ParseKeywordSequence(Keyword.BY, Keyword.NAME) => SetQuantifier.ByName,
-                SetOperator.Union when ParseKeyword(Keyword.ALL) => ParseKeywordSequence(Keyword.BY, Keyword.NAME) 
-                    ? SetQuantifier.AllByName 
+                SetOperator.Union when ParseKeyword(Keyword.ALL) => ParseKeywordSequence(Keyword.BY, Keyword.NAME)
+                    ? SetQuantifier.AllByName
                     : SetQuantifier.All,
                 SetOperator.Union when ParseKeyword(Keyword.DISTINCT) => SetQuantifier.Distinct,
                 SetOperator.Union => SetQuantifier.None,
