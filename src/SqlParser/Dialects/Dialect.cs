@@ -103,4 +103,9 @@ public abstract class Dialect
     /// True if the dialect supports 'group sets, rollup, or cube' expressions
     /// </summary>
     public virtual bool SupportsGroupByExpression => false;
+
+    /// <summary>
+    /// Returns true if the dialect supports `SUBSTRING(expr [FROM start] [FOR len])` expressions
+    /// </summary>
+    public virtual bool SupportsSubstringFromForExpr => true;
 }

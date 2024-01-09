@@ -1020,7 +1020,7 @@ public abstract record Expression : IWriteSql, IElement
     /// <param name="Expression">Expression</param>
     /// <param name="SubstringFrom">From expression</param>
     /// <param name="SubstringFor">For expression</param>
-    public record Substring(Expression Expression, Expression? SubstringFrom = null, Expression? SubstringFor = null) : Expression
+    public record Substring(Expression Expression, Expression? SubstringFrom = null, Expression? SubstringFor = null, bool Special = false) : Expression
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -1028,12 +1028,26 @@ public abstract record Expression : IWriteSql, IElement
 
             if (SubstringFrom != null)
             {
-                writer.WriteSql($" FROM {SubstringFrom}");
+                if (Special)
+                {
+                    writer.WriteSql($", {SubstringFrom}");
+                }
+                else
+                {
+                    writer.WriteSql($" FROM {SubstringFrom}");
+                }
             }
 
             if (SubstringFor != null)
             {
-                writer.WriteSql($" FOR {SubstringFor}");
+                if (Special)
+                {
+                    writer.WriteSql($", {SubstringFor}");
+                }
+                else
+                {
+                    writer.WriteSql($" FOR {SubstringFor}");
+                }
             }
 
             writer.WriteSql($")");

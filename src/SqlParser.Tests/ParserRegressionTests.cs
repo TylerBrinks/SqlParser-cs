@@ -41,7 +41,7 @@ namespace SqlParser.Tests
         public void Test_Query_Files(string sql)
         {
             var ast = new Parser().ParseSql(sql);
-
+            DefaultDialects = new[] { new GenericDialect() };
             if (ast.Count == 1)
             {
                 OneStatementParsesTo(sql, ast.ToSql());
@@ -49,9 +49,9 @@ namespace SqlParser.Tests
 
             Assert.NotNull(ast);
             _output.WriteLine(ast.ToSql());
-            _output.WriteLine(new string('-',50));
+            _output.WriteLine(new string('-', 50));
             _output.WriteLine(ast.ToString());
-            _output.WriteLine(new string('-',50));
+            _output.WriteLine(new string('-', 50));
             _output.WriteLine(JsonConvert.SerializeObject(ast));
         }
     }
@@ -79,7 +79,7 @@ namespace SqlParser.Tests
                 throw new ArgumentException($"Could not find file at path: {path}");
             }
 
-            return new List<object[]>{ new object[]{ File.ReadAllText(path) }};
+            return new List<object[]> { new object[] { File.ReadAllText(path) } };
         }
     }
 }

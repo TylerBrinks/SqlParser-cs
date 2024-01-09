@@ -661,19 +661,32 @@ public class Parser
             {
                 var expr = ParseExpr();
                 Expression? fromExpr = null;
-
-                if (ParseKeyword(Keyword.FROM) || ConsumeToken<Comma>())
-                {
-                    fromExpr = ParseExpr();
-                }
-
                 Expression? toExpr = null;
-                if (ParseKeyword(Keyword.FOR) || ConsumeToken<Comma>())
+                var supportsSubstring = _dialect.SupportsSubstringFromForExpr;
+                
+                if (supportsSubstring)
                 {
+                    // PARSE SUBSTRING (EXPR [FROM 1] [FOR 3])
+                    if (ParseKeyword(Keyword.FROM) || ConsumeToken<Comma>())
+                    {
+                        fromExpr = ParseExpr();
+                    }
+
+                    if (ParseKeyword(Keyword.FOR) || ConsumeToken<Comma>())
+                    {
+                        toExpr = ParseExpr();
+                    }
+                }
+                else
+                {
+                    // PARSE SUBSTRING(EXPR, start, length)
+                    ExpectToken<Comma>();
+                    fromExpr = ParseExpr();
+                    ExpectToken<Comma>();
                     toExpr = ParseExpr();
                 }
 
-                return new Substring(expr, fromExpr, toExpr);
+                return new Substring(expr, fromExpr, toExpr, !supportsSubstring);
             });
         }
 

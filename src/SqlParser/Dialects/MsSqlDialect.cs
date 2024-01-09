@@ -31,4 +31,6 @@ public class MsSqlDialect : Dialect
                    or Symbols.Num 
                    or Symbols.Underscore;
     }
+
+    public override bool SupportsSubstringFromForExpr => false;
 }

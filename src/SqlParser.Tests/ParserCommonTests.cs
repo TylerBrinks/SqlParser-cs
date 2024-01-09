@@ -1,8 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Text;
+﻿using System.Text;
 using SqlParser.Ast;
 using SqlParser.Dialects;
-using static SqlParser.Ast.CopyOption;
 using static SqlParser.Ast.DataType;
 using static SqlParser.Ast.Expression;
 using Action = SqlParser.Ast.Action;
@@ -3199,13 +3197,20 @@ namespace SqlParser.Tests
         [Fact]
         public void Parse_Substring()
         {
-            OneStatementParsesTo("SELECT SUBSTRING('1')", "SELECT SUBSTRING('1')");
+            var supported = AllDialects.Where(d => d is not MsSqlDialect).ToList();
+            var msSql = new [] {new MsSqlDialect()};
 
-            OneStatementParsesTo("SELECT SUBSTRING('1' FROM 1)", "SELECT SUBSTRING('1' FROM 1)");
+            DefaultDialects = supported;
+            OneStatementParsesTo("SELECT SUBSTRING('1')", "SELECT SUBSTRING('1')", supported);
 
-            OneStatementParsesTo("SELECT SUBSTRING('1' FROM 1 FOR 3)", "SELECT SUBSTRING('1' FROM 1 FOR 3)");
+            OneStatementParsesTo("SELECT SUBSTRING('1' FROM 1)", "SELECT SUBSTRING('1' FROM 1)", supported);
 
-            OneStatementParsesTo("SELECT SUBSTRING('1' FOR 3)", "SELECT SUBSTRING('1' FOR 3)");
+            OneStatementParsesTo("SELECT SUBSTRING('1' FROM 1 FOR 3)", "SELECT SUBSTRING('1' FROM 1 FOR 3)", supported);
+            
+            OneStatementParsesTo("SELECT SUBSTRING('1' FOR 3)", "SELECT SUBSTRING('1' FOR 3)", supported);
+
+            DefaultDialects = msSql;
+            OneStatementParsesTo("SELECT SUBSTRING('1', 1, 3)", "SELECT SUBSTRING('1', 1, 3)", msSql);
         }
 
         [Fact]
