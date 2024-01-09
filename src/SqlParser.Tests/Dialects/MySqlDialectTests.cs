@@ -762,5 +762,19 @@ namespace SqlParser.Tests.Dialects
 
             Assert.True(drop.Temporary);
         }
+
+        [Fact]
+        public void Parse_Create_Table_Comment()
+        {
+            const string canonical = "CREATE TABLE foo (bar INT) COMMENT 'baz'";
+            const string withEqual = "CREATE TABLE foo (bar INT) COMMENT = 'baz'";
+
+            foreach (var sql in new[] {canonical, withEqual})
+            {
+                var create = (Statement.CreateTable)OneStatementParsesTo(sql, canonical);
+                Assert.Equal("foo", create.Name);
+                Assert.Equal("baz", create.Comment);
+            }
+        }
     }
 }

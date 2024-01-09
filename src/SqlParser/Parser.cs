@@ -3519,6 +3519,18 @@ public class Parser
             throw Expected("identifier", token);
         });
 
+        var comment = ParseInit(ParseKeyword(Keyword.COMMENT), () =>
+        {
+            ConsumeToken<Equal>();
+            var next = NextToken();
+            if (next is SingleQuotedString str)
+            {
+                return str.Value;
+            }
+
+            throw Expected("Comment", PeekToken());
+        });
+
         var orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY), () =>
         {
             if (!ConsumeToken<LeftParen>())
@@ -3595,6 +3607,7 @@ public class Parser
             Like = like,
             CloneClause = clone,
             Engine = engine,
+            Comment = comment,
             OrderBy = orderBy,
             DefaultCharset = defaultCharset,
             Collation = collation,

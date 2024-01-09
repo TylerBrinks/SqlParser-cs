@@ -607,6 +607,7 @@ public abstract record Statement : IWriteSql, IElement
         [Visit(4)] public ObjectName? Like { get; init; }
         [Visit(5)] public ObjectName? CloneClause { get; init; }
         public string? Engine { get; init; }
+        public new string? Comment { get; init; }
         public Sequence<Ident>? OrderBy { get; init; }
         public string? DefaultCharset { get; init; }
         public string? Collation { get; init; }
@@ -748,6 +749,11 @@ public abstract record Statement : IWriteSql, IElement
             if (Engine != null)
             {
                 writer.WriteSql($" ENGINE={Engine}");
+            }
+
+            if (Comment != null)
+            {
+                writer.WriteSql($" COMMENT '{Comment}'");
             }
 
             if (OrderBy.SafeAny())
