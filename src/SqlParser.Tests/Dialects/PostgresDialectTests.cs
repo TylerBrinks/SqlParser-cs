@@ -1,5 +1,4 @@
-﻿using System.Data;
-using SqlParser.Ast;
+﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
