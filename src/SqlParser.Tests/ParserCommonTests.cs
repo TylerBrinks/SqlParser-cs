@@ -3715,6 +3715,8 @@ namespace SqlParser.Tests
             Assert.Equal(expected, createIndex.Columns!);
             Assert.True(createIndex.Unique);
             Assert.True(createIndex.IfNotExists);
+            Assert.False(createIndex.Concurrently);
+            Assert.Null(createIndex.Include);
         }
 
         [Fact]

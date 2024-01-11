@@ -1,4 +1,5 @@
-﻿using SqlParser.Ast;
+﻿using System.Runtime.CompilerServices;
+using SqlParser.Ast;
 using SqlParser.Dialects;
 using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
@@ -2023,6 +2024,26 @@ namespace SqlParser.Tests.Dialects
                     new ObjectName(new Ident[] {"database_name"})));
             Assert.Equal(expected, statement);
 
+        }
+
+        [Fact]
+        public void Parse_Create_Index()
+        {
+            const string sql = "CREATE INDEX IF NOT EXISTS my_index ON my_table(col1,col2)";
+
+            var createIndex = VerifiedStatement<Statement.CreateIndex>(sql, new[] {new PostgreSqlDialect()});
+
+            Assert.Equal("my_index", createIndex.Name);
+            Assert.Equal("my_table", createIndex.TableName);
+            Assert.Null(createIndex.Using);
+            Assert.False(createIndex.Unique);
+            Assert.True(createIndex.IfNotExists);
+            Assert.Equal(new Sequence<OrderByExpression>
+            {
+               new(new Identifier("col1")),
+               new(new Identifier("col2"))
+            }, createIndex.Columns);
+            Assert.Null(createIndex.Include);
         }
     }
 }

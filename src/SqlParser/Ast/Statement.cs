@@ -470,25 +470,69 @@ public abstract record Statement : IWriteSql, IElement
     /// <summary>
     /// Create Index statement
     /// </summary>
-    public record CreateIndex([property: Visit(0)] ObjectName Name, [property: Visit(1)] ObjectName TableName) : Statement, IIfNotExists
+    public record CreateIndex([property: Visit(0)] ObjectName? Name, [property: Visit(1)] ObjectName TableName) : Statement, IIfNotExists
     {
         public Ident? Using { get; init; }
         [Visit(2)] public Sequence<OrderByExpression>? Columns { get; init; }
         public bool Unique { get; init; }
         public bool IfNotExists { get; init; }
+        public bool Concurrently { get; init; }
+        public Sequence<Ident>? Include { get; init; }
+        public bool? NullsDistinct { get; init; }
+        public Expression? Predicate { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
             var unique = Unique ? "UNIQUE " : null;
             var ifNot = IfNotExists ? $"{AsIne.IfNotExistsText} " : null;
-            writer.WriteSql($"CREATE {unique}INDEX {ifNot}{Name} ON {TableName}");
+            var concurrently = Concurrently ? "CONCURRENTLY " : null;
+
+            writer.WriteSql($"CREATE {unique}INDEX {concurrently}{ifNot}");
+
+            if (Name != null)
+            {
+                writer.WriteSql($"{Name} ");
+            }
+
+            writer.WriteSql($"ON {TableName}");
 
             if (Using != null)
             {
-                writer.WriteSql($" USING {Using} ");
+                writer.WriteSql($" USING {Using}");
             }
 
-            writer.WriteSql($"({Columns})");
+            writer.Write("(");
+            writer.WriteDelimited(Columns, ",");
+            writer.Write(")");
+
+            if (Include.SafeAny())
+            {
+                writer.Write(" INCLUDE (");
+                writer.WriteDelimited(Include, ",");
+                writer.Write(")");
+            }
+
+            if (NullsDistinct.HasValue)
+            {
+                writer.Write(NullsDistinct.Value ? " NULLS DISTINCT" : " NULLS NOT DISTINCT");
+            }
+
+            if (Predicate != null)
+            {
+                writer.WriteSql($" WHERE {Predicate}");
+            }
+            
+            //if (Include.SafeAny())
+            //{
+            //    writer.WriteDelimited();
+            //}
+
+            //if (Using != null)
+            //{
+            //    writer.WriteSql($" USING {Using} ");
+            //}
+
+            //
         }
     }
     /// <summary>
@@ -617,6 +661,7 @@ public abstract record Statement : IWriteSql, IElement
         [Visit(4)] public ObjectName? Like { get; init; }
         [Visit(5)] public ObjectName? CloneClause { get; init; }
         public string? Engine { get; init; }
+        // ReSharper disable once MemberHidesStaticFromOuterClass
         public new string? Comment { get; init; }
         public Sequence<Ident>? OrderBy { get; init; }
         public string? DefaultCharset { get; init; }

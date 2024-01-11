@@ -10,6 +10,7 @@ using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
 using Select = SqlParser.Ast.Select;
 using System.Globalization;
+using System.Text.Json.Serialization;
 
 namespace SqlParser;
 
@@ -3382,12 +3383,39 @@ public class Parser
 
     public CreateIndex ParseCreateIndex(bool unique)
     {
+        var concurrently = ParseKeyword(Keyword.CONCURRENTLY);
         var ifNotExists = ParseIfNotExists();
-        var indexName = ParseObjectName();
-        ExpectKeyword(Keyword.ON);
+        ObjectName? indexName = null;
+
+        if (ifNotExists || !ParseKeyword(Keyword.ON))
+        {
+            indexName = ParseObjectName();
+            ExpectKeyword(Keyword.ON);
+        }
+
         var tableName = ParseObjectName();
         var @using = ParseInit(ParseKeyword(Keyword.USING), ParseIdentifier);
         var columns = ExpectParens(() => ParseCommaSeparated(ParseOrderByExpr));
+
+        Sequence<Ident>? include = null;
+        if (ParseKeyword(Keyword.INCLUDE))
+        {
+            include = ExpectParens(() => ParseCommaSeparated(ParseIdentifier));
+        }
+
+        bool? nullsDistinct = null;
+        if (ParseKeyword(Keyword.NULLS))
+        {
+            var not = ParseKeyword(Keyword.NOT);
+            ExpectKeyword(Keyword.DISTINCT);
+            nullsDistinct = !not;
+        }
+
+        Expression? predicate = null;
+        if (ParseKeyword(Keyword.WHERE))
+        {
+            predicate = ParseExpr();
+        }
 
         return new CreateIndex(indexName, tableName)
         {
@@ -3395,6 +3423,10 @@ public class Parser
             Columns = columns,
             Unique = unique,
             IfNotExists = ifNotExists,
+            Concurrently = concurrently,
+            Include = include,
+            NullsDistinct = nullsDistinct,
+            Predicate = predicate
         };
     }
 
