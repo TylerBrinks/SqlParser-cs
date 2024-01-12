@@ -10,7 +10,6 @@ using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
 using Select = SqlParser.Ast.Select;
 using System.Globalization;
-using System.Text.Json.Serialization;
 
 namespace SqlParser;
 

@@ -24,7 +24,7 @@ public record Table(string Name, string? SchemaName = null) : IWriteSql
 /// Table alias
 /// </summary>
 /// <param name="Name">Name identifier</param>
-public record TableAlias(Ident Name, Sequence<Ident>? Columns = null) : IWriteSql
+public record TableAlias(Ident Name, Sequence<Ident>? Columns = null) : IWriteSql, IElement
 {
     public void ToSql(SqlTextWriter writer)
     {

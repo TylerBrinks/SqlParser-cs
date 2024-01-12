@@ -16,15 +16,29 @@ public interface IElement
         {
             case TableFactor t:
             {
-                var flow = visitor.PreVisitRelation(t);
+                visitor.PreVisitTableFactor(t);
 
-                if (flow == ControlFlow.Break)
+                //if (t is TableFactor.Table table)
+                //{
+                //    visitor.PreVisitRelation(table.Name);
+                //    if (table.Alias != null)
+                //    {
+                //        IElement alias = table.Alias;
+                //        //alias.Visit(table.Name);
+                //        visitor.PostVisitRelation(table.Name);
+                //        alias.Visit(visitor);
+                //    }
+                //}
+
+                if (t is TableFactor.Table table)
                 {
-                    return flow;
+                    visitor.PreVisitRelation(table.Name);
+                    VisitChildren(this, visitor);
+                    visitor.PostVisitRelation(table.Name);
                 }
 
-                VisitChildren(this, visitor);
-                return visitor.PostVisitRelation(t);
+                visitor.PostVisitTableFactor(t);
+                return ControlFlow.Continue;
             }
 
             case Expression e:
@@ -136,12 +150,32 @@ public interface IElement
 
 public abstract class Visitor
 {
-    public virtual ControlFlow PreVisitRelation(TableFactor relation)
+    public virtual ControlFlow PreVisitQuery(Query query)
+    {
+        return ControlFlow.Continue;
+    }
+   
+    public virtual ControlFlow PostVisitQuery(Query query)
     {
         return ControlFlow.Continue;
     }
 
-    public virtual ControlFlow PostVisitRelation(TableFactor relation)
+    public virtual ControlFlow PreVisitTableFactor(TableFactor tableFactor)
+    {
+        return ControlFlow.Continue;
+    }
+
+    public virtual ControlFlow PostVisitTableFactor(TableFactor tableFactor)
+    {
+        return ControlFlow.Continue;
+    }
+
+    public virtual ControlFlow PreVisitRelation(ObjectName relation)
+    {
+        return ControlFlow.Continue;
+    }
+
+    public virtual ControlFlow PostVisitRelation(ObjectName relation)
     {
         return ControlFlow.Continue;
     }
@@ -166,13 +200,4 @@ public abstract class Visitor
         return ControlFlow.Continue;
     }
 
-    //public virtual ControlFlow PreVisitTableFactor(Statement statement)
-    //{
-    //    return ControlFlow.Continue;
-    //}
-
-    //public virtual ControlFlow PostVisitTableFactor(Statement statement)
-    //{
-    //    return ControlFlow.Continue;
-    //}
 }
