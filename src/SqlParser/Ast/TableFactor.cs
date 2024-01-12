@@ -1,4 +1,7 @@
-﻿namespace SqlParser.Ast;
+﻿using System.ComponentModel;
+using System;
+
+namespace SqlParser.Ast;
 
 /// <summary>
 /// A table name or a parenthesized subquery with an optional alias
@@ -103,6 +106,9 @@ public abstract record TableFactor : IWriteSql, IElement
         /// MSSQL-specific `WITH (...)` hints such as NOLOCK.
         [Visit(3)] public Sequence<Expression>? WithHints { get; init; }
 
+        /// Optional version qualifier to facilitate table time-travel, as supported by BigQuery and MSSQL.
+        public TableVersion? Version { get; init; }
+
         public override void ToSql(SqlTextWriter writer)
         {
             writer.WriteSql($"{Name}");
@@ -120,6 +126,11 @@ public abstract record TableFactor : IWriteSql, IElement
             if (WithHints.SafeAny())
             {
                 writer.WriteSql($" WITH ({WithHints})");
+            }
+
+            if (Version!= null)
+            {
+                writer.WriteSql($"{Version}");
             }
         }
     }

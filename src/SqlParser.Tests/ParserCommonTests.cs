@@ -3708,7 +3708,7 @@ namespace SqlParser.Tests
                 new(new Identifier("age"),false)
             };
 
-            var createIndex = VerifiedStatement<Statement.CreateIndex>("CREATE UNIQUE INDEX IF NOT EXISTS idx_name ON test(name, age DESC)");
+            var createIndex = VerifiedStatement<Statement.CreateIndex>("CREATE UNIQUE INDEX IF NOT EXISTS idx_name ON test(name,age DESC)");
 
             Assert.Equal("idx_name", createIndex.Name);
             Assert.Equal("test", createIndex.TableName);
@@ -3728,7 +3728,7 @@ namespace SqlParser.Tests
                 new(new Identifier("age"), false)
             };
 
-            var createIndex = VerifiedStatement<Statement.CreateIndex>("CREATE UNIQUE INDEX IF NOT EXISTS idx_name ON test USING btree (name, age DESC)");
+            var createIndex = VerifiedStatement<Statement.CreateIndex>("CREATE UNIQUE INDEX IF NOT EXISTS idx_name ON test USING btree(name,age DESC)");
 
             Assert.Equal("idx_name", createIndex.Name);
             Assert.Equal("test", createIndex.TableName);

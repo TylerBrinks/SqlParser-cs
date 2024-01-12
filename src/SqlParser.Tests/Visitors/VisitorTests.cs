@@ -59,8 +59,6 @@ namespace SqlParser.Tests.Visitors
             return ControlFlow.Continue;
         }
 
-
-
         public override ControlFlow PreVisitStatement(Statement statement)
         {
             Visited.Add($"PRE Relation: {statement.ToSql()}");
@@ -76,6 +74,17 @@ namespace SqlParser.Tests.Visitors
             Visited.Add($"PRE Statement: {relation.AsTable().Name}");
             return ControlFlow.Continue;
         }
+
+        //public override ControlFlow PreVisitTableFactor(TableFactor relation)
+        //{
+        //    Visited.Add($"PRE Table Factor: {relation.AsTable().Name}");
+        //    return base.PreVisitTableFactor(statement);
+        //}
+
+        //public override ControlFlow PostVisitTableFactor(TableFactor relation)
+        //{
+        //    return base.PostVisitTableFactor(statement);
+        //}
     }
 
 }

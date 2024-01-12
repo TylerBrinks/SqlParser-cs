@@ -1,5 +1,6 @@
 ﻿using SqlParser.Ast;
 using SqlParser.Dialects;
+using static SqlParser.Ast.CopyOption;
 using static SqlParser.Ast.Expression;
 // ReSharper disable StringLiteralTypo
 
@@ -304,6 +305,30 @@ namespace SqlParser.Tests.Dialects
             {
                 VerifiedOnlySelect(sql);
             }
+        }
+
+        [Fact]
+        public void Parse_Table_Time_Travel()
+        {
+            var dialect = new[] { new BigQueryDialect() };
+            var version = "2023-08-18 23:08:18";
+            var sql = $"SELECT 1 FROM t1 FOR SYSTEM_TIME AS OF '{version}'";
+            var select = VerifiedOnlySelect(sql, dialect);
+
+            var from = select.From;
+
+            var expected = new Sequence<TableWithJoins>
+            {
+                new (new TableFactor.Table("t1")
+                {
+                    Version = new TableVersion.ForSystemTimeAsOf(new LiteralValue(new Value.SingleQuotedString(version)))
+                })
+            };
+
+            Assert.Equal(expected, from);
+
+            sql = "SELECT 1 FROM t1 FOR SYSTEM TIME AS OF 'some_timestamp'";
+            Assert.Throws<ParserException>(() => ParseSqlStatements(sql, dialect));
         }
     }
 }

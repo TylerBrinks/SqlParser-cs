@@ -6495,6 +6495,9 @@ public class Parser
         }
 
         var name = ParseObjectName();
+        // Parse potential version qualifier
+        var version = ParseTableVersion();
+
         // Postgres, MSSQL: table-valued functions:
         var args = ParseInit(ConsumeToken<LeftParen>(), ParseOptionalArgs);
 
@@ -6523,8 +6526,20 @@ public class Parser
         {
             Alias = optionalAlias,
             Args = args,
-            WithHints = withHints
+            WithHints = withHints,
+            Version = version
         };
+    }
+
+    public TableVersion? ParseTableVersion()
+    {
+        if (_dialect is BigQueryDialect or GenericDialect && ParseKeywordSequence(Keyword.FOR,Keyword.SYSTEM_TIME, Keyword.AS, Keyword.OF))
+        {
+            var expression = ParseExpr();
+            return new TableVersion.ForSystemTimeAsOf(expression);
+        }
+
+        return null;
     }
 
     public TableFactor ParseDerivedTableFactor(IsLateral lateral)

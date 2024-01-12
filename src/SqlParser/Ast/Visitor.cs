@@ -165,4 +165,14 @@ public abstract class Visitor
     {
         return ControlFlow.Continue;
     }
+
+    //public virtual ControlFlow PreVisitTableFactor(Statement statement)
+    //{
+    //    return ControlFlow.Continue;
+    //}
+
+    //public virtual ControlFlow PostVisitTableFactor(Statement statement)
+    //{
+    //    return ControlFlow.Continue;
+    //}
 }
