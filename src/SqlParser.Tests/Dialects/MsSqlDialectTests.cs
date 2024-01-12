@@ -202,5 +202,21 @@ namespace SqlParser.Tests.Dialects
 
             Assert.Equal(expected, create);
         }
+
+        [Fact]
+        public void Parse_Table_Name_In_Square_Brackets()
+        {
+            var select = VerifiedOnlySelect("SELECT [a column] FROM [a schema].[a table]");
+
+            var table = (TableFactor.Table) select.From.Single().Relation;
+
+            Assert.Equal(new ObjectName(new []
+            {
+                new Ident("a schema", '['),
+                new Ident("a table", '['),
+            } ), table.Name);
+
+            Assert.Equal(new Identifier(new Ident("a column", '[')), select.Projection.First().AsExpr());
+        }
     }
 }
