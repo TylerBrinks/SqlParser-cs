@@ -3564,6 +3564,21 @@ public class Parser
             throw Expected("Comment", PeekToken());
         });
 
+        int? autoIncrementOffset = null;
+        
+        if(ParseKeyword(Keyword.AUTO_INCREMENT))
+        {
+            ConsumeToken<Equal>();
+            var next = NextToken();
+            if (next is Number number)
+            {
+                if (int.TryParse(number.Value, out var increment))
+                {
+                    autoIncrementOffset = increment;
+                }
+            }
+        }
+
         var orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY), () =>
         {
             if (!ConsumeToken<LeftParen>())
@@ -3646,7 +3661,8 @@ public class Parser
             Collation = collation,
             OnCommit = onCommit,
             OnCluster = onCluster,
-            Strict = strict
+            Strict = strict,
+            AutoIncrementOffset = autoIncrementOffset
         };
     }
 

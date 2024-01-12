@@ -1,7 +1,7 @@
-﻿using System.Data;
-using SqlParser.Ast;
+﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
+using static SqlParser.Ast.Action;
 using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
 
@@ -232,7 +232,7 @@ namespace SqlParser.Tests.Dialects
         public void Parse_Escaped_Quote_Identifiers_With_Escape()
         {
             var query = VerifiedStatement<Statement.Select>("SELECT `quoted `` identifier`", unescape:true);
-            var body = new SetExpression.SelectExpression(new Select(new []
+            var body = new SetExpression.SelectExpression(new Ast.Select(new []
             {
                 new SelectItem.UnnamedExpression(new Identifier(new Ident("quoted ` identifier", Symbols.Backtick)))
             }));
@@ -245,7 +245,7 @@ namespace SqlParser.Tests.Dialects
         public void Parse_Escaped_Quote_Identifiers_No_Escape()
         {
             var query = VerifiedStatement<Statement.Select>("SELECT `quoted `` identifier`");
-            var body = new SetExpression.SelectExpression(new Select(new []
+            var body = new SetExpression.SelectExpression(new Ast.Select(new []
             {
                 new SelectItem.UnnamedExpression(new Identifier(new Ident("quoted `` identifier", Symbols.Backtick)))
             }));
@@ -261,7 +261,7 @@ namespace SqlParser.Tests.Dialects
 
             var statement = VerifiedStatement(sql, new[] { new MySqlDialect() });
 
-            var body = new SetExpression.SelectExpression(new Select(new() 
+            var body = new SetExpression.SelectExpression(new Ast.Select(new() 
             {
                 new SelectItem.UnnamedExpression(new Identifier(new Ident("``quoted identifier``", '`')))
             }));
@@ -531,7 +531,7 @@ namespace SqlParser.Tests.Dialects
             var query = OneStatementParsesTo<Statement.Select>(
                 "SELECT DISTINCT SUBSTRING(description, 0, 1) FROM test",
                 "SELECT DISTINCT SUBSTRING(description FROM 0 FOR 1) FROM test");
-            var body = new SetExpression.SelectExpression(new Select(new []
+            var body = new SetExpression.SelectExpression(new Ast.Select(new []
             {
                 new SelectItem.UnnamedExpression(new Substring(
                     new Identifier("description"),
@@ -796,6 +796,20 @@ namespace SqlParser.Tests.Dialects
             statement = VerifiedStatement(sql, dialect);
             expected = new Statement.AlterRole("role_name", new AlterRoleOperation.DropMember("old_member"));
             Assert.Equal(expected, statement);
+        }
+
+        [Fact]
+        public void Parse_Create_Table_Auto_Increment_Offset()
+        {
+            var canonical = "CREATE TABLE foo (bar INT NOT NULL AUTO_INCREMENT) ENGINE=InnoDB AUTO_INCREMENT 123";
+            var withEqual = "CREATE TABLE foo(bar INT NOT NULL AUTO_INCREMENT) ENGINE = InnoDB AUTO_INCREMENT = 123";
+
+            foreach (var sql in new[] {canonical, withEqual})
+            {
+                var create = (Statement.CreateTable) OneStatementParsesTo(sql, canonical);
+
+                Assert.Equal(123, create.AutoIncrementOffset!.Value);
+            }
         }
     }
 }

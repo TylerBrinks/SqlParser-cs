@@ -664,6 +664,7 @@ public abstract record Statement : IWriteSql, IElement
         // ReSharper disable once MemberHidesStaticFromOuterClass
         public new string? Comment { get; init; }
         public Sequence<Ident>? OrderBy { get; init; }
+        public int? AutoIncrementOffset { get; init; }
         public string? DefaultCharset { get; init; }
         public string? Collation { get; init; }
         public OnCommit OnCommit { get; init; }
@@ -809,6 +810,11 @@ public abstract record Statement : IWriteSql, IElement
             if (Comment != null)
             {
                 writer.WriteSql($" COMMENT '{Comment}'");
+            }
+
+            if (AutoIncrementOffset != null)
+            {
+                writer.Write($" AUTO_INCREMENT {AutoIncrementOffset.Value}");
             }
 
             if (OrderBy.SafeAny())
