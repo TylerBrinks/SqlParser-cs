@@ -858,12 +858,10 @@ namespace SqlParser.Tests
             var select = VerifiedOnlySelect("SELECT a = ANY(b)");
 
             var expected = new SelectItem.UnnamedExpression(
-                new BinaryOp(
+                new AnyOp(
                     new Identifier("a"),
                     BinaryOperator.Eq,
-                    new AnyOp(new Identifier("b"))
-                )
-            );
+                    new Identifier("b")));
 
             Assert.Equal(expected, select.Projection.Single());
         }
@@ -874,11 +872,10 @@ namespace SqlParser.Tests
             var select = VerifiedOnlySelect("SELECT a = ALL(b)");
 
             var expected = new SelectItem.UnnamedExpression(
-                new BinaryOp(
+                new AllOp(
                     new Identifier("a"),
-                   BinaryOperator.Eq,
-                    new AllOp(new Identifier("b"))
-                )
+                    BinaryOperator.Eq,
+                    new Identifier("b"))
             );
 
             Assert.Equal(expected, select.Projection.Single());

@@ -1578,17 +1578,27 @@ public class Parser
             {
                 var right = ExpectParens(() => ParseSubExpression(precedence));
 
-                right = keyword switch
+                if (regularBinaryOperator != BinaryOperator.Gt && 
+                    regularBinaryOperator != BinaryOperator.Lt &&
+                    regularBinaryOperator != BinaryOperator.GtEq && 
+                    regularBinaryOperator != BinaryOperator.LtEq && 
+                    regularBinaryOperator != BinaryOperator.Eq && 
+                    regularBinaryOperator != BinaryOperator.NotEq)
                 {
-                    Keyword.ALL => new AllOp(right),
-                    Keyword.ANY => new AnyOp(right),
+                    throw Expected($"one of [=, >, <, =>, =<, !=] as comparison operator, found: {regularBinaryOperator}");
+                }
+
+                return keyword switch
+                {
+                    Keyword.ALL => new AllOp(expr, regularBinaryOperator, right),
+                    Keyword.ANY => new AnyOp(expr, regularBinaryOperator, right),
                     _ => right
                 };
 
-                return new BinaryOp(expr, regularBinaryOperator, right)
-                {
-                    PgOptions = pgOptions
-                };
+                //return new BinaryOp(expr, regularBinaryOperator, right)
+                //{
+                //    PgOptions = pgOptions
+                //};
             }
 
             return new BinaryOp(expr, regularBinaryOperator, ParseSubExpression(precedence))

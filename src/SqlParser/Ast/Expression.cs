@@ -45,23 +45,27 @@ public abstract record Expression : IWriteSql, IElement
     /// <summary>
     /// ALL operation e.g. `1 ALL (1)` or `foo > ALL(bar)`, It will be wrapped in the right side of BinaryExpr
     /// </summary>
-    /// <param name="Expression">Expression</param>
-    public record AllOp(Expression Expression) : Expression
+    /// <param name="Left">Expression</param>
+    /// <param name="CompareOp">Operator</param>
+    /// <param name="Right">Expression</param>
+    public record AllOp(Expression Left, BinaryOperator CompareOp, Expression Right) : Expression
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"ALL({Expression})");
+            writer.WriteSql($"{Left} {CompareOp} ALL({Right})");
         }
     }
     /// <summary>
     /// Any operation e.g. `1 ANY (1)` or `foo > ANY(bar)`, It will be wrapped in the right side of BinaryExpr
     /// </summary>
-    /// <param name="Expression">Expression</param>
-    public record AnyOp(Expression Expression) : Expression
+    /// <param name="Left">Expression</param>
+    /// <param name="CompareOp">Operator</param>
+    /// <param name="Right">Expression</param>
+    public record AnyOp(Expression Left, BinaryOperator CompareOp, Expression Right) : Expression
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"ANY({Expression})");
+            writer.WriteSql($"{Left} {CompareOp} ANY({Right})");
         }
     }
     /// <summary>
