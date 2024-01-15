@@ -139,7 +139,7 @@ namespace SqlParser.Tests.Dialects
             DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
             VerifiedStatement("SET sql_mode = CONCAT(@@sql_mode, ',STRICT_TRANS_TABLES')");
 
-            var expected = new Statement.SetVariable(true, false, "autocommit", new []
+            var expected = new Statement.SetVariable(true, false, "autocommit", new[]
             {
                 new LiteralValue(Number("1"))
             });
@@ -153,8 +153,8 @@ namespace SqlParser.Tests.Dialects
             var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (bar INT PRIMARY KEY AUTO_INCREMENT)");
 
             Assert.Equal("foo", create.Name);
-            Assert.Equal(new ColumnDef[]{ 
-                new("bar", new DataType.Int(), 
+            Assert.Equal(new ColumnDef[]{
+                new("bar", new DataType.Int(),
                 Options: new ColumnOptionDef[]
                 {
                     new (new ColumnOption.Unique(true)),
@@ -205,7 +205,7 @@ namespace SqlParser.Tests.Dialects
             var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (s TEXT CHARACTER SET utf8mb4 COMMENT 'comment')");
 
             Assert.Equal("foo", create.Name);
-            Assert.Equal(new ColumnDef[] { new("s", new DataType.Text(), 
+            Assert.Equal(new ColumnDef[] { new("s", new DataType.Text(),
                 Options: new ColumnOptionDef[]
                 {
                     new(new ColumnOption.CharacterSet("utf8mb4")),
@@ -231,8 +231,8 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Escaped_Quote_Identifiers_With_Escape()
         {
-            var query = VerifiedStatement<Statement.Select>("SELECT `quoted `` identifier`", unescape:true);
-            var body = new SetExpression.SelectExpression(new Ast.Select(new []
+            var query = VerifiedStatement<Statement.Select>("SELECT `quoted `` identifier`", unescape: true);
+            var body = new SetExpression.SelectExpression(new Ast.Select(new[]
             {
                 new SelectItem.UnnamedExpression(new Identifier(new Ident("quoted ` identifier", Symbols.Backtick)))
             }));
@@ -245,7 +245,7 @@ namespace SqlParser.Tests.Dialects
         public void Parse_Escaped_Quote_Identifiers_No_Escape()
         {
             var query = VerifiedStatement<Statement.Select>("SELECT `quoted `` identifier`");
-            var body = new SetExpression.SelectExpression(new Ast.Select(new []
+            var body = new SetExpression.SelectExpression(new Ast.Select(new[]
             {
                 new SelectItem.UnnamedExpression(new Identifier(new Ident("quoted `` identifier", Symbols.Backtick)))
             }));
@@ -261,7 +261,7 @@ namespace SqlParser.Tests.Dialects
 
             var statement = VerifiedStatement(sql, new[] { new MySqlDialect() });
 
-            var body = new SetExpression.SelectExpression(new Ast.Select(new() 
+            var body = new SetExpression.SelectExpression(new Ast.Select(new()
             {
                 new SelectItem.UnnamedExpression(new Identifier(new Ident("``quoted identifier``", '`')))
             }));
@@ -291,7 +291,7 @@ namespace SqlParser.Tests.Dialects
                 var statement = OneStatementParsesTo(sql, "", unescape: true);
                 var query = (Statement.Select)statement;
                 var body = (SetExpression.SelectExpression)query.Query.Body;
-                
+
                 Assert.Equal(new LiteralValue(new Value.SingleQuotedString(quoted)), body.Select.Projection.Single().AsExpr());
             }
         }
@@ -396,11 +396,11 @@ namespace SqlParser.Tests.Dialects
 
             var rows = new Sequence<Expression>[] { new()
             {
-                new LiteralValue(new Value.SingleQuotedString("accounting_manager")), 
-                new LiteralValue(new Value.SingleQuotedString("Some description about the group")), 
-                new LiteralValue(new Value.Boolean(true)), 
-                new LiteralValue(new Value.Boolean(true)), 
-                new LiteralValue(new Value.Boolean(true)), 
+                new LiteralValue(new Value.SingleQuotedString("accounting_manager")),
+                new LiteralValue(new Value.SingleQuotedString("Some description about the group")),
+                new LiteralValue(new Value.Boolean(true)),
+                new LiteralValue(new Value.Boolean(true)),
+                new LiteralValue(new Value.Boolean(true)),
                 new LiteralValue(new Value.Boolean(true))
             } };
 
@@ -512,7 +512,7 @@ namespace SqlParser.Tests.Dialects
             var alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE orders CHANGE COLUMN description desc TEXT NOT NULL");
 
             var operation = new AlterTableOperation.ChangeColumn("description", "desc", new DataType.Text(),
-                new []
+                new[]
                 {
                     new ColumnOption.NotNull()
                 });
@@ -531,7 +531,7 @@ namespace SqlParser.Tests.Dialects
             var query = OneStatementParsesTo<Statement.Select>(
                 "SELECT DISTINCT SUBSTRING(description, 0, 1) FROM test",
                 "SELECT DISTINCT SUBSTRING(description FROM 0 FOR 1) FROM test");
-            var body = new SetExpression.SelectExpression(new Ast.Select(new []
+            var body = new SetExpression.SelectExpression(new Ast.Select(new[]
             {
                 new SelectItem.UnnamedExpression(new Substring(
                     new Identifier("description"),
@@ -603,7 +603,7 @@ namespace SqlParser.Tests.Dialects
             set = VerifiedStatement<Statement.SetNames>("SET NAMES utf8mb4 COLLATE bogus");
             Assert.Equal("utf8mb4", set.CharsetName);
             Assert.Equal("bogus", set.CollationName);
-            
+
             set = VerifiedStatement<Statement.SetNames>("set names utf8mb4 collate bogus");
             Assert.Equal("utf8mb4", set.CharsetName);
 
@@ -677,7 +677,7 @@ namespace SqlParser.Tests.Dialects
         public void Parse_Create_Table_With_Special_Definition()
         {
             DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
-          
+
             VerifiedStatement("CREATE TABLE tb (id INT, SPATIAL (id))");
             VerifiedStatement("CREATE TABLE tb (id INT, SPATIAL INDEX (id))");
             VerifiedStatement("CREATE TABLE tb (id INT, SPATIAL KEY (id))");
@@ -691,7 +691,7 @@ namespace SqlParser.Tests.Dialects
         public void Parse_Fulltext_Expression()
         {
             DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
-            
+
             VerifiedStatement("SELECT * FROM tb WHERE MATCH (c1) AGAINST ('string')");
             VerifiedStatement("SELECT * FROM tb WHERE MATCH (c1) AGAINST ('string' IN NATURAL LANGUAGE MODE)");
             VerifiedStatement("SELECT * FROM tb WHERE MATCH (c1) AGAINST ('string' IN NATURAL LANGUAGE MODE WITH QUERY EXPANSION)");
@@ -706,7 +706,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Create_Table_With_Fulltext_Definition_Should_Not_Accept_Constraint_Name()
         {
-            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() }; 
+            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
 
             Assert.Throws<ParserException>(() => VerifiedStatement("CREATE TABLE tb (c1 INT, CONSTRAINT cons FULLTEXT (c1))"));
         }
@@ -727,7 +727,7 @@ namespace SqlParser.Tests.Dialects
             {
                 new SelectItem.UnnamedExpression(new IntroducedString("_latin1", new Value.HexStringLiteral("4D7953514C")))
             };
-           
+
             Assert.Equal(projection, ((SetExpression.SelectExpression)query.Query.Body).Select.Projection);
         }
 
@@ -765,12 +765,46 @@ namespace SqlParser.Tests.Dialects
         }
 
         [Fact]
+        public void Parse_Create_Table_Unique_Key()
+        {
+            const string sql = "CREATE TABLE foo (id INT PRIMARY KEY AUTO_INCREMENT, bar INT NOT NULL, UNIQUE KEY bar_key (bar))";
+            const string canonical = "CREATE TABLE foo (id INT PRIMARY KEY AUTO_INCREMENT, bar INT NOT NULL, CONSTRAINT bar_key UNIQUE (bar))";
+
+            var create = (Statement.CreateTable)OneStatementParsesTo(sql, canonical, new[] { new MySqlDialect() });
+
+            var constraints = new Sequence<TableConstraint>
+            {
+                new TableConstraint.Unique(["bar"])
+                {
+                    Name = "bar_key"
+                }
+            };
+
+            Assert.Equal("foo", create.Name);
+            Assert.Equal(constraints, create.Constraints);
+
+            var columns = new Sequence<ColumnDef>
+            {
+                new ("id", new DataType.Int(), Options: new Sequence<ColumnOptionDef>
+                {
+                    new (new ColumnOption.Unique(true)),
+                    new (new ColumnOption.DialectSpecific(new Sequence<Token>{new Word("AUTO_INCREMENT") }))
+                }),
+                new ("bar", new DataType.Int(), Options: new Sequence<ColumnOptionDef>
+                {
+                    new (new ColumnOption.NotNull())
+                })
+            };
+            Assert.Equal(columns, create.Columns);
+        }
+
+        [Fact]
         public void Parse_Create_Table_Comment()
         {
             const string canonical = "CREATE TABLE foo (bar INT) COMMENT 'baz'";
             const string withEqual = "CREATE TABLE foo (bar INT) COMMENT = 'baz'";
 
-            foreach (var sql in new[] {canonical, withEqual})
+            foreach (var sql in new[] { canonical, withEqual })
             {
                 var create = (Statement.CreateTable)OneStatementParsesTo(sql, canonical);
                 Assert.Equal("foo", create.Name);
@@ -782,7 +816,7 @@ namespace SqlParser.Tests.Dialects
         public void Parse_Alter_Role()
         {
             var sql = "ALTER ROLE old_name WITH NAME = new_name";
-            var dialect = new[] {new MsSqlDialect()};
+            var dialect = new[] { new MsSqlDialect() };
             var alter = ParseSqlStatements(sql, dialect);
             var expected = new Statement.AlterRole("old_name", new AlterRoleOperation.RenameRole("new_name"));
             Assert.Equal(expected, alter.First());
@@ -804,9 +838,9 @@ namespace SqlParser.Tests.Dialects
             var canonical = "CREATE TABLE foo (bar INT NOT NULL AUTO_INCREMENT) ENGINE=InnoDB AUTO_INCREMENT 123";
             var withEqual = "CREATE TABLE foo(bar INT NOT NULL AUTO_INCREMENT) ENGINE = InnoDB AUTO_INCREMENT = 123";
 
-            foreach (var sql in new[] {canonical, withEqual})
+            foreach (var sql in new[] { canonical, withEqual })
             {
-                var create = (Statement.CreateTable) OneStatementParsesTo(sql, canonical);
+                var create = (Statement.CreateTable)OneStatementParsesTo(sql, canonical);
 
                 Assert.Equal(123, create.AutoIncrementOffset!.Value);
             }

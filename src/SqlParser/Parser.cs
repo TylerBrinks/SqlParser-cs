@@ -3960,15 +3960,15 @@ public class Parser
         TableConstraint ParsePrimary(Word word)
         {
             var isPrimary = word.Keyword == Keyword.PRIMARY;
-            if (isPrimary)
-            {
-                ExpectKeyword(Keyword.KEY);
-            }
+            ParseKeyword(Keyword.KEY);
+
+            // Optional constraint name
+            var identName = MaybeParse(ParseIdentifier) ?? name;
 
             var columns = ParseParenthesizedColumnList(IsOptional.Mandatory, false);
             return new TableConstraint.Unique(columns)
             {
-                Name = name,
+                Name = identName,
                 IsPrimaryKey = isPrimary,
             };
         }
