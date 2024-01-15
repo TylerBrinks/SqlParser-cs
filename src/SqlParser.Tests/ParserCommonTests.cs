@@ -130,10 +130,7 @@ namespace SqlParser.Tests
                 {
                     new(new TableFactor.Table("t1"))
                 },
-                GroupBy = new[]
-                {
-                    new Identifier("id")
-                }
+                GroupBy = new GroupByExpression.Expressions(new Sequence<Expression> { new Identifier("id") })
             });
             var subQuery = new Query(body);
             var derived = new TableFactor.Derived(subQuery)
@@ -1063,11 +1060,11 @@ namespace SqlParser.Tests
         {
             var select = VerifiedOnlySelect("SELECT id, fname, lname FROM customer GROUP BY lname, fname");
 
-            var expected = new Identifier[]
+            var expected = new GroupByExpression.Expressions(new Identifier[]
             {
                 new ("lname"),
                 new ("fname")
-            };
+            });
 
             Assert.Equal(expected, select.GroupBy!);
             OneStatementParsesTo(
@@ -1087,7 +1084,7 @@ namespace SqlParser.Tests
 
             var select = VerifiedOnlySelect("SELECT brand, size, sum(sales) FROM items_sold GROUP BY size, GROUPING SETS ((brand), (size), ())", dialects);
 
-            var expected = new Expression[]
+            var expected = new GroupByExpression.Expressions(new Sequence<Expression>
             {
                 new Identifier("size"),
                 new GroupingSets(new Sequence<Expression>[]
@@ -1095,8 +1092,8 @@ namespace SqlParser.Tests
                     new(){ new Identifier("brand")},
                     new(){ new Identifier("size")},
                     new()
-            })
-            };
+                })
+            });
 
             Assert.Equal(expected, select.GroupBy!);
         }
@@ -1112,7 +1109,7 @@ namespace SqlParser.Tests
 
             var select = VerifiedOnlySelect("SELECT brand, size, sum(sales) FROM items_sold GROUP BY size, ROLLUP (brand, size)", dialects);
 
-            var expected = new Expression[]
+            var expected = new GroupByExpression.Expressions(new Sequence<Expression>
             {
                 new Identifier("size"),
                 new Rollup(new Sequence<Expression>[]
@@ -1120,7 +1117,7 @@ namespace SqlParser.Tests
                     new(){ new Identifier("brand")},
                     new(){ new Identifier("size")}
                 })
-            };
+            });
 
             Assert.Equal(expected, select.GroupBy!);
         }
@@ -1136,7 +1133,7 @@ namespace SqlParser.Tests
 
             var select = VerifiedOnlySelect("SELECT brand, size, sum(sales) FROM items_sold GROUP BY size, CUBE (brand, size)", dialects);
 
-            var expected = new Expression[]
+            var expected = new GroupByExpression.Expressions(new Sequence<Expression>
             {
                 new Identifier("size"),
                 new Cube(new Sequence<Expression>[]
@@ -1144,7 +1141,7 @@ namespace SqlParser.Tests
                     new(){ new Identifier("brand")},
                     new(){ new Identifier("size")}
                 })
-            };
+            });
 
             Assert.Equal(expected, select.GroupBy!);
         }
@@ -3203,7 +3200,7 @@ namespace SqlParser.Tests
         public void Parse_Substring()
         {
             var supported = AllDialects.Where(d => d is not MsSqlDialect).ToList();
-            var msSql = new [] {new MsSqlDialect()};
+            var msSql = new[] { new MsSqlDialect() };
 
             DefaultDialects = supported;
             OneStatementParsesTo("SELECT SUBSTRING('1')", "SELECT SUBSTRING('1')", supported);
@@ -3211,7 +3208,7 @@ namespace SqlParser.Tests
             OneStatementParsesTo("SELECT SUBSTRING('1' FROM 1)", "SELECT SUBSTRING('1' FROM 1)", supported);
 
             OneStatementParsesTo("SELECT SUBSTRING('1' FROM 1 FOR 3)", "SELECT SUBSTRING('1' FROM 1 FOR 3)", supported);
-            
+
             OneStatementParsesTo("SELECT SUBSTRING('1' FOR 3)", "SELECT SUBSTRING('1' FOR 3)", supported);
 
             DefaultDialects = msSql;
@@ -4622,7 +4619,7 @@ namespace SqlParser.Tests
                     );
                     """;
 
-            var statement = (Statement.CreateTable)OneStatementParsesTo(sql, "", new Dialect[] {new GenericDialect(), new PostgreSqlDialect()});
+            var statement = (Statement.CreateTable)OneStatementParsesTo(sql, "", new Dialect[] { new GenericDialect(), new PostgreSqlDialect() });
 
             var expectedColumns = new Sequence<ColumnDef>
             {

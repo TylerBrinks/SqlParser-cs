@@ -6122,8 +6122,20 @@ public class Parser
 
         var selection = ParseInit(ParseKeyword(Keyword.WHERE), ParseExpr);
 
-        var groupBy = ParseInit(ParseKeywordSequence(Keyword.GROUP, Keyword.BY), () => ParseCommaSeparated(ParseGroupByExpr));
+        GroupByExpression? groupBy = null;
 
+        if (ParseKeywordSequence(Keyword.GROUP, Keyword.BY))
+        {
+            if (ParseKeyword(Keyword.ALL))
+            {
+                groupBy = new GroupByExpression.All();
+            }
+            else
+            {
+                groupBy = new GroupByExpression.Expressions(ParseCommaSeparated(ParseGroupByExpr));
+            }
+        }
+       
         var clusterBy = ParseInit(ParseKeywordSequence(Keyword.CLUSTER, Keyword.BY), () => ParseCommaSeparated(ParseExpr));
 
         var distributeBy = ParseInit(ParseKeywordSequence(Keyword.DISTRIBUTE, Keyword.BY), () => ParseCommaSeparated(ParseExpr));

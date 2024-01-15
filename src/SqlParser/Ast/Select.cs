@@ -14,7 +14,8 @@ public record Select([Visit(1)] Sequence<SelectItem> Projection) : IWriteSql, IE
     [Visit(3)] public Sequence<TableWithJoins>? From { get; init; }
     [Visit(4)] public Sequence<LateralView>? LateralViews { get; init; }
     [Visit(5)] public Expression? Selection { get; init; }
-    [Visit(6)] public Sequence<Expression>? GroupBy { get; init; }
+    //[Visit(6)] public Sequence<Expression>? GroupBy { get; init; }
+    [Visit(6)] public GroupByExpression? GroupBy { get; init; }
     [Visit(7)] public Sequence<Expression>? ClusterBy { get; init; }
     [Visit(8)] public Sequence<Expression>? DistributeBy { get; init; }
     [Visit(9)] public Sequence<Expression>? SortBy { get; init; }
@@ -63,7 +64,7 @@ public record Select([Visit(1)] Sequence<SelectItem> Projection) : IWriteSql, IE
 
         if (GroupBy != null)
         {
-            writer.WriteSql($" GROUP BY {GroupBy}");
+            writer.WriteSql($" {GroupBy}");
         }
 
         if (ClusterBy != null)
