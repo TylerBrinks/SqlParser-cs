@@ -10,6 +10,7 @@ using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
 using Select = SqlParser.Ast.Select;
 using System.Globalization;
+using static SqlParser.Ast.AlterTableOperation;
 
 namespace SqlParser;
 
@@ -1578,11 +1579,11 @@ public class Parser
             {
                 var right = ExpectParens(() => ParseSubExpression(precedence));
 
-                if (regularBinaryOperator != BinaryOperator.Gt && 
+                if (regularBinaryOperator != BinaryOperator.Gt &&
                     regularBinaryOperator != BinaryOperator.Lt &&
-                    regularBinaryOperator != BinaryOperator.GtEq && 
-                    regularBinaryOperator != BinaryOperator.LtEq && 
-                    regularBinaryOperator != BinaryOperator.Eq && 
+                    regularBinaryOperator != BinaryOperator.GtEq &&
+                    regularBinaryOperator != BinaryOperator.LtEq &&
+                    regularBinaryOperator != BinaryOperator.Eq &&
                     regularBinaryOperator != BinaryOperator.NotEq)
                 {
                     throw Expected($"one of [=, >, <, =>, =<, !=] as comparison operator, found: {regularBinaryOperator}");
@@ -3574,8 +3575,8 @@ public class Parser
         });
 
         int? autoIncrementOffset = null;
-        
-        if(ParseKeyword(Keyword.AUTO_INCREMENT))
+
+        if (ParseKeyword(Keyword.AUTO_INCREMENT))
         {
             ConsumeToken<Equal>();
             var next = NextToken();
@@ -4124,168 +4125,11 @@ public class Parser
 
             case Keyword.TABLE:
                 {
-                    _ = ParseKeyword(Keyword.ONLY);
+                    var ifExists = ParseIfExists();
+                    var only = ParseKeyword(Keyword.ONLY);
                     var tableName = ParseObjectName();
-                    AlterTableOperation operation = null!;
-
-                    if (ParseKeyword(Keyword.ADD))
-                    {
-                        var constraint = ParseOptionalTableConstraint();
-                        if (constraint != null)
-                        {
-                            operation = new AlterTableOperation.AddConstraint(constraint);
-                        }
-                        else
-                        {
-                            var ifNotExists = ParseIfNotExists();
-                            if (ParseKeywordSequence(Keyword.PARTITION))
-                            {
-                                var partitions = ExpectParens(() => ParseCommaSeparated(ParseExpr));
-                                operation = new AlterTableOperation.AddPartitions(ifNotExists, partitions);
-                            }
-                            else
-                            {
-                                var columnKeyword = ParseKeyword(Keyword.COLUMN);
-
-                                var ifNotExistsInner = false;
-                                if (_dialect is PostgreSqlDialect or BigQueryDialect or DuckDbDialect or GenericDialect)
-                                {
-                                    ifNotExistsInner = ParseIfNotExists() || ifNotExists;
-                                }
-
-                                var columnDef = ParseColumnDef();
-                                operation = new AlterTableOperation.AddColumn(columnKeyword, ifNotExistsInner, columnDef);
-                            }
-                        }
-                    }
-                    else if (ParseKeyword(Keyword.RENAME))
-                    {
-                        if (_dialect is PostgreSqlDialect && ParseKeyword(Keyword.CONSTRAINT))
-                        {
-                            var oldName = ParseIdentifier();
-                            ExpectKeyword(Keyword.TO);
-
-                            var newName = ParseIdentifier();
-                            operation = new AlterTableOperation.RenameConstraint(oldName, newName);
-                        }
-                        else if (ParseKeyword(Keyword.TO))
-                        {
-                            var newName = ParseObjectName();
-                            operation = new AlterTableOperation.RenameTable(newName);
-                        }
-                        else
-                        {
-                            ParseKeyword(Keyword.COLUMN);
-                            var oldColumnName = ParseIdentifier();
-                            ExpectKeyword(Keyword.TO);
-                            var newColumnName = ParseIdentifier();
-                            operation = new AlterTableOperation.RenameColumn(oldColumnName, newColumnName);
-                        }
-                    }
-                    else if (ParseKeyword(Keyword.DROP))
-                    {
-                        if (ParseKeywordSequence(Keyword.IF, Keyword.EXISTS, Keyword.PARTITION))
-                        {
-                            var partitions = ExpectParens(() => ParseCommaSeparated(ParseExpr));
-                            operation = new AlterTableOperation.DropPartitions(partitions, true);
-                        }
-                        else if (ParseKeyword(Keyword.PARTITION))
-                        {
-                            var partitions = ExpectParens(() => ParseCommaSeparated(ParseExpr));
-                            operation = new AlterTableOperation.DropPartitions(partitions, false);
-                        }
-                        else if (ParseKeyword(Keyword.CONSTRAINT))
-                        {
-                            var ifExists = ParseIfExists();
-                            var name = ParseIdentifier();
-                            var cascade = ParseKeyword(Keyword.CASCADE);
-                            operation = new AlterTableOperation.DropConstraint(name, ifExists, cascade);
-                        }
-                        else if (ParseKeywordSequence(Keyword.PRIMARY, Keyword.KEY) && _dialect is MySqlDialect or GenericDialect)
-                        {
-                            operation = new AlterTableOperation.DropPrimaryKey();
-                        }
-                        else
-                        {
-                            ParseKeyword(Keyword.COLUMN);
-                            var ifExists = ParseIfExists();
-                            var columnName = ParseIdentifier();
-                            var cascade = ParseKeyword(Keyword.CASCADE);
-                            operation = new AlterTableOperation.DropColumn(columnName, ifExists, cascade);
-                        }
-                    }
-                    else if (ParseKeyword(Keyword.PARTITION))
-                    {
-                        var before = ExpectParens(() => ParseCommaSeparated(ParseExpr));
-                        ExpectKeyword(Keyword.RENAME);
-                        ExpectKeywords(Keyword.TO, Keyword.PARTITION);
-
-                        var renames = ExpectParens(() => ParseCommaSeparated(ParseExpr));
-                        operation = new AlterTableOperation.RenamePartitions(before, renames);
-                    }
-                    else if (ParseKeyword(Keyword.CHANGE))
-                    {
-                        ParseKeyword(Keyword.COLUMN);
-                        var oldName = ParseIdentifier();
-                        var newName = ParseIdentifier();
-                        var dataType = ParseDataType();
-                        var options = new Sequence<ColumnOption>();
-
-                        while (ParseOptionalColumnOption() is { } option)
-                        {
-                            options.Add(option);
-                        }
-
-                        operation = new AlterTableOperation.ChangeColumn(oldName, newName, dataType, options);
-                    }
-                    else if (ParseKeyword(Keyword.ALTER))
-                    {
-                        ParseKeyword(Keyword.COLUMN);
-                        var columnName = ParseIdentifier();
-                        var isPostgresql = _dialect is PostgreSqlDialect;
-                        AlterColumnOperation op;
-
-                        if (ParseKeywordSequence(Keyword.SET, Keyword.NOT, Keyword.NULL))
-                        {
-                            op = new AlterColumnOperation.SetNotNull();
-                        }
-                        else if (ParseKeywordSequence(Keyword.DROP, Keyword.NOT, Keyword.NULL))
-                        {
-                            op = new AlterColumnOperation.DropNotNull();
-                        }
-                        else if (ParseKeywordSequence(Keyword.SET, Keyword.DEFAULT))
-                        {
-                            op = new AlterColumnOperation.SetDefault(ParseExpr());
-                        }
-                        else if (ParseKeywordSequence(Keyword.DROP, Keyword.DEFAULT))
-                        {
-                            op = new AlterColumnOperation.DropDefault();
-                        }
-                        else if (ParseKeywordSequence(Keyword.SET, Keyword.DATA, Keyword.TYPE) || (isPostgresql && ParseKeyword(Keyword.TYPE)))
-                        {
-                            var dataType = ParseDataType();
-                            var @using = ParseInit(isPostgresql && ParseKeyword(Keyword.USING), ParseExpr);
-                            op = new AlterColumnOperation.SetDataType(dataType) { Using = @using };
-                        }
-                        else
-                        {
-                            throw Expected("SET/DROP NOT NULL, SET DEFAULT, SET DATA TYPE after ALTER COLUMN", PeekToken());
-                        }
-
-                        operation = new AlterTableOperation.AlterColumn(columnName, op);
-                    }
-                    else if (ParseKeyword(Keyword.SWAP))
-                    {
-                        ExpectKeyword(Keyword.WITH);
-                        var name = ParseObjectName();
-                        operation = new AlterTableOperation.SwapWith(name);
-                    }
-                    else
-                    {
-                        ThrowExpected("ADD, RENAME, PARTITION, SWAP or DROP after ALTER TABLE", PeekToken());
-                    }
-
-                    return new AlterTable(tableName, operation);
+                    var operations = ParseCommaSeparated(ParseAlterTableOperation);
+                    return new AlterTable(tableName, ifExists, only, operations);
                 }
 
             case Keyword.INDEX:
@@ -4320,6 +4164,352 @@ public class Parser
             default:
                 throw new ParserException("ParseAlter");
         }
+    }
+
+    //private AlterTableOperation ParseAlterTableOperation()
+    //{
+    //    AlterTableOperation operation = null!;
+
+    //    if (ParseKeyword(Keyword.ADD))
+    //    {
+    //        var constraint = ParseOptionalTableConstraint();
+    //        if (constraint != null)
+    //        {
+    //            operation = new AddConstraint(constraint);
+    //        }
+    //        else
+    //        {
+    //            var ifNotExists = ParseIfNotExists();
+    //            if (ParseKeywordSequence(Keyword.PARTITION))
+    //            {
+    //                var partitions = ExpectParens(() => ParseCommaSeparated(ParseExpr));
+    //                operation = new AddPartitions(ifNotExists, partitions);
+    //            }
+    //            else
+    //            {
+    //                var columnKeyword = ParseKeyword(Keyword.COLUMN);
+
+    //                var ifNotExistsInner = false;
+    //                if (_dialect is PostgreSqlDialect or BigQueryDialect or DuckDbDialect or GenericDialect)
+    //                {
+    //                    ifNotExistsInner = ParseIfNotExists() || ifNotExists;
+    //                }
+
+    //                var columnDef = ParseColumnDef();
+    //                operation = new AddColumn(columnKeyword, ifNotExistsInner, columnDef);
+    //            }
+    //        }
+    //    }
+    //    else if (ParseKeyword(Keyword.RENAME))
+    //    {
+    //        if (_dialect is PostgreSqlDialect && ParseKeyword(Keyword.CONSTRAINT))
+    //        {
+    //            var oldName = ParseIdentifier();
+    //            ExpectKeyword(Keyword.TO);
+
+    //            var newName = ParseIdentifier();
+    //            operation = new RenameConstraint(oldName, newName);
+    //        }
+    //        else if (ParseKeyword(Keyword.TO))
+    //        {
+    //            var newName = ParseObjectName();
+    //            operation = new RenameTable(newName);
+    //        }
+    //        else
+    //        {
+    //            ParseKeyword(Keyword.COLUMN);
+    //            var oldColumnName = ParseIdentifier();
+    //            ExpectKeyword(Keyword.TO);
+    //            var newColumnName = ParseIdentifier();
+    //            operation = new RenameColumn(oldColumnName, newColumnName);
+    //        }
+    //    }
+    //    else if (ParseKeyword(Keyword.DROP))
+    //    {
+    //        if (ParseKeywordSequence(Keyword.IF, Keyword.EXISTS, Keyword.PARTITION))
+    //        {
+    //            var partitions = ExpectParens(() => ParseCommaSeparated(ParseExpr));
+    //            operation = new DropPartitions(partitions, true);
+    //        }
+    //        else if (ParseKeyword(Keyword.PARTITION))
+    //        {
+    //            var partitions = ExpectParens(() => ParseCommaSeparated(ParseExpr));
+    //            operation = new DropPartitions(partitions, false);
+    //        }
+    //        else if (ParseKeyword(Keyword.CONSTRAINT))
+    //        {
+    //            var ifExists = ParseIfExists();
+    //            var name = ParseIdentifier();
+    //            var cascade = ParseKeyword(Keyword.CASCADE);
+    //            operation = new DropConstraint(name, ifExists, cascade);
+    //        }
+    //        else if (ParseKeywordSequence(Keyword.PRIMARY, Keyword.KEY) && _dialect is MySqlDialect or GenericDialect)
+    //        {
+    //            operation = new DropPrimaryKey();
+    //        }
+    //        else
+    //        {
+    //            ParseKeyword(Keyword.COLUMN);
+    //            var ifExists = ParseIfExists();
+    //            var columnName = ParseIdentifier();
+    //            var cascade = ParseKeyword(Keyword.CASCADE);
+    //            operation = new DropColumn(columnName, ifExists, cascade);
+    //        }
+    //    }
+    //    else if (ParseKeyword(Keyword.PARTITION))
+    //    {
+    //        var before = ExpectParens(() => ParseCommaSeparated(ParseExpr));
+    //        ExpectKeyword(Keyword.RENAME);
+    //        ExpectKeywords(Keyword.TO, Keyword.PARTITION);
+
+    //        var renames = ExpectParens(() => ParseCommaSeparated(ParseExpr));
+    //        operation = new RenamePartitions(before, renames);
+    //    }
+    //    else if (ParseKeyword(Keyword.CHANGE))
+    //    {
+    //        ParseKeyword(Keyword.COLUMN);
+    //        var oldName = ParseIdentifier();
+    //        var newName = ParseIdentifier();
+    //        var dataType = ParseDataType();
+    //        var options = new Sequence<ColumnOption>();
+
+    //        while (ParseOptionalColumnOption() is { } option)
+    //        {
+    //            options.Add(option);
+    //        }
+
+    //        operation = new ChangeColumn(oldName, newName, dataType, options);
+    //    }
+    //    else if (ParseKeyword(Keyword.ALTER))
+    //    {
+    //        ParseKeyword(Keyword.COLUMN);
+    //        var columnName = ParseIdentifier();
+    //        var isPostgresql = _dialect is PostgreSqlDialect;
+    //        AlterColumnOperation op;
+
+    //        if (ParseKeywordSequence(Keyword.SET, Keyword.NOT, Keyword.NULL))
+    //        {
+    //            op = new AlterColumnOperation.SetNotNull();
+    //        }
+    //        else if (ParseKeywordSequence(Keyword.DROP, Keyword.NOT, Keyword.NULL))
+    //        {
+    //            op = new AlterColumnOperation.DropNotNull();
+    //        }
+    //        else if (ParseKeywordSequence(Keyword.SET, Keyword.DEFAULT))
+    //        {
+    //            op = new AlterColumnOperation.SetDefault(ParseExpr());
+    //        }
+    //        else if (ParseKeywordSequence(Keyword.DROP, Keyword.DEFAULT))
+    //        {
+    //            op = new AlterColumnOperation.DropDefault();
+    //        }
+    //        else if (ParseKeywordSequence(Keyword.SET, Keyword.DATA, Keyword.TYPE) || (isPostgresql && ParseKeyword(Keyword.TYPE)))
+    //        {
+    //            var dataType = ParseDataType();
+    //            var @using = ParseInit(isPostgresql && ParseKeyword(Keyword.USING), ParseExpr);
+    //            op = new AlterColumnOperation.SetDataType(dataType) { Using = @using };
+    //        }
+    //        else
+    //        {
+    //            throw Expected("SET/DROP NOT NULL, SET DEFAULT, SET DATA TYPE after ALTER COLUMN", PeekToken());
+    //        }
+
+    //        operation = new AlterColumn(columnName, op);
+    //    }
+    //    else if (ParseKeyword(Keyword.SWAP))
+    //    {
+    //        ExpectKeyword(Keyword.WITH);
+    //        var name = ParseObjectName();
+    //        operation = new AlterTableOperation.SwapWith(name);
+    //    }
+    //    else
+    //    {
+    //        ThrowExpected("ADD, RENAME, PARTITION, SWAP or DROP after ALTER TABLE", PeekToken());
+    //    }
+
+    //    return operation;
+    //}
+
+    private AlterTableOperation ParseAlterTableOperation()
+    {
+        AlterTableOperation operation;
+
+        if (ParseKeyword(Keyword.ADD))
+        {
+            var constraint = ParseOptionalTableConstraint();
+            if (constraint != null)
+            {
+                operation = new AddConstraint(constraint);
+            }
+            else
+            {
+                var ifNotExists = ParseIfNotExists();
+
+                var newPartitions = new Sequence<Partition>();
+
+                while (true)
+                {
+                    if (ParseKeyword(Keyword.PARTITION))
+                    {
+                        var partition = ExpectParens(() => ParseCommaSeparated(ParseExpr));
+                        newPartitions.Add(new Partition(partition));
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                if (newPartitions.Any())
+                {
+                    return new AddPartitions(ifNotExists, newPartitions);
+                }
+
+                var columnKeyword = ParseKeyword(Keyword.COLUMN);
+
+                var ine = false;
+
+                if (_dialect is PostgreSqlDialect or BigQueryDialect or DuckDbDialect or GenericDialect)
+                {
+                    ine = ParseIfNotExists() || ifNotExists;
+                }
+
+                var columnDef = ParseColumnDef();
+                return new AddColumn(columnKeyword, ine, columnDef);
+            }
+        }
+        else if (ParseKeyword(Keyword.RENAME))
+        {
+            if (_dialect is PostgreSqlDialect && ParseKeyword(Keyword.CONSTRAINT))
+            {
+                var oldName = ParseIdentifier();
+                ExpectKeyword(Keyword.TO);
+                var newName = ParseIdentifier();
+                operation = new RenameConstraint(oldName, newName);
+            }
+            else if (ParseKeyword(Keyword.TO))
+            {
+                operation = new RenameTable(ParseObjectName());
+            }
+            else
+            {
+                ParseKeyword(Keyword.COLUMN);
+                var oldColumnName = ParseIdentifier();
+                ExpectKeyword(Keyword.TO);
+                var newColumnName = ParseIdentifier();
+                operation = new RenameColumn(oldColumnName, newColumnName);
+            }
+        }
+        else if (ParseKeyword(Keyword.DROP))
+        {
+            if (ParseKeywordSequence(Keyword.IF, Keyword.EXISTS, Keyword.PARTITION))
+            {
+                var partitions = ExpectParens(() => ParseCommaSeparated(ParseExpr));
+                operation = new DropPartitions(partitions, true);
+            }
+            else if (ParseKeyword(Keyword.PARTITION))
+            {
+                var partitions = ExpectParens(() => ParseCommaSeparated(ParseExpr));
+                operation = new DropPartitions(partitions, false);
+            }
+            else if (ParseKeyword(Keyword.CONSTRAINT))
+            {
+                var ifExists = ParseIfExists();
+                var name = ParseIdentifier();
+                var cascasde = ParseKeyword(Keyword.CASCADE);
+                operation = new DropConstraint(name, ifExists, cascasde);
+            }
+            else if (ParseKeywordSequence(Keyword.PRIMARY, Keyword.KEY) && _dialect is MySqlDialect or GenericDialect)
+            {
+                operation = new DropPrimaryKey();
+            }
+            else
+            {
+                ParseKeyword(Keyword.COLUMN);
+                var ifExists = ParseIfExists();
+                var columnName = ParseIdentifier();
+                var cascade = ParseKeyword(Keyword.CASCADE);
+                operation = new DropColumn(columnName, ifExists, cascade);
+            }
+        }
+        else if (ParseKeyword(Keyword.PARTITION))
+        {
+            var before = ExpectParens(() => ParseCommaSeparated(ParseExpr));
+            ExpectKeyword(Keyword.RENAME);
+            ExpectKeywords(Keyword.TO, Keyword.PARTITION);
+            var renames = ExpectParens(() => ParseCommaSeparated(ParseExpr));
+            operation = new RenamePartitions(before, renames);
+        }
+        else if (ParseKeyword(Keyword.CHANGE))
+        {
+            ParseKeyword(Keyword.COLUMN);
+            var oldName = ParseIdentifier();
+            var newName = ParseIdentifier();
+            var dataType = ParseDataType();
+            var options = new Sequence<ColumnOption>();
+
+            while (ParseOptionalColumnOption() is { } option)
+            {
+                options.Add(option);
+            }
+
+            operation = new ChangeColumn(oldName, newName, dataType, options);
+        }
+        else if (ParseKeyword(Keyword.ALTER))
+        {
+            ParseKeyword(Keyword.COLUMN);
+            var columnName = ParseIdentifier();
+            var isPostgres = _dialect is PostgreSqlDialect;
+
+            AlterColumnOperation? op;
+
+            if (ParseKeywordSequence(Keyword.SET, Keyword.NOT, Keyword.NULL))
+            {
+                op = new AlterColumnOperation.SetNotNull();
+            }
+            else if (ParseKeywordSequence(Keyword.DROP, Keyword.NOT, Keyword.NULL))
+            {
+                op = new AlterColumnOperation.DropNotNull();
+            }
+            else if (ParseKeywordSequence(Keyword.SET, Keyword.DEFAULT))
+            {
+                op = new AlterColumnOperation.SetDefault(ParseExpr());
+            }
+            else if (ParseKeywordSequence(Keyword.DROP, Keyword.DEFAULT))
+            {
+                op = new AlterColumnOperation.DropDefault();
+            }
+            else if (
+                ParseKeywordSequence(Keyword.SET, Keyword.DATA, Keyword.TYPE) ||
+                (isPostgres && ParseKeyword(Keyword.TYPE)))
+            {
+                var dataType = ParseDataType();
+                Expression? @using = null;
+                if (isPostgres && ParseKeyword(Keyword.USING))
+                {
+                    @using = ParseExpr();
+                }
+
+                op = new AlterColumnOperation.SetDataType(dataType, @using);
+            }
+            else
+            {
+                throw Expected("SET/DROP NOT NULL, SET DEFAULT, SET DATA TYPE after ALTER COLUMN", PeekToken());
+            }
+
+            operation = new AlterColumn(columnName, op);
+        }
+        else if (ParseKeyword(Keyword.SWAP))
+        {
+            ExpectKeyword(Keyword.WITH);
+            operation = new SwapWith(ParseObjectName());
+        }
+        else
+        {
+            throw Expected("ADD, RENAME, PARTITION, SWAP or DROP after ALTER TABLE", PeekToken());
+        }
+
+        return operation;
     }
 
     public Copy ParseCopy()
@@ -6542,7 +6732,7 @@ public class Parser
 
     public TableVersion? ParseTableVersion()
     {
-        if (_dialect is BigQueryDialect or GenericDialect && ParseKeywordSequence(Keyword.FOR,Keyword.SYSTEM_TIME, Keyword.AS, Keyword.OF))
+        if (_dialect is BigQueryDialect or GenericDialect && ParseKeywordSequence(Keyword.FOR, Keyword.SYSTEM_TIME, Keyword.AS, Keyword.OF))
         {
             var expression = ParseExpr();
             return new TableVersion.ForSystemTimeAsOf(expression);

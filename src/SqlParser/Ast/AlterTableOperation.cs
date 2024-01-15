@@ -138,12 +138,15 @@ public abstract record AlterTableOperation : IWriteSql
     /// </summary>
     /// <param name="IfNotExists"></param>
     /// <param name="NewPartitions"></param>
-    public record AddPartitions(bool IfNotExists, Sequence<Expression> NewPartitions) : AlterTableOperation, IIfNotExists, IElement
+    public record AddPartitions(bool IfNotExists, Sequence<Partition> NewPartitions) : AlterTableOperation, IIfNotExists, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
             var ifNot = IfNotExists ? $" {IIfNotExists.IfNotExistsPhrase}" : null;
-            writer.WriteSql($"ADD{ifNot} PARTITION ({NewPartitions})");
+
+            //writer.WriteSql($"ADD{ifNot} PARTITION ({NewPartitions})");
+            writer.WriteSql($"ADD{ifNot} ");
+            writer.WriteDelimited(NewPartitions, " ");
         }
     }
     /// <summary>

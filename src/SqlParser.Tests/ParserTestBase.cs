@@ -172,4 +172,20 @@ public class ParserTestBase
     {
         return new Value.Number(value);
     }
+
+
+    public static AlterTableOperation AlterTableOpWithName(Statement statement, string expectedName)
+    {
+        var alter = (Statement.AlterTable)statement;
+
+        Assert.Equal(expectedName, alter.Name);
+        Assert.False(alter.IfExists);
+        Assert.False(alter.Only);
+        return alter.Operations.First();
+    }
+
+    public static AlterTableOperation AlterTableOp(Statement statement)
+    {
+        return AlterTableOpWithName(statement, "tab");
+    }
 }

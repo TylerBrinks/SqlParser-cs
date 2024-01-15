@@ -560,7 +560,7 @@ namespace SqlParser.Tests.Dialects
         {
             var alter = VerifiedStatement<Statement.AlterTable>(
                 "ALTER TABLE tab RENAME CONSTRAINT old_name TO new_name");
-            var op = (AlterTableOperation.RenameConstraint)alter.Operation;
+            var op = (AlterTableOperation.RenameConstraint)alter.Operations.First();
 
             Assert.Equal("tab", alter.Name);
             Assert.Equal("old_name", op.OldName);
@@ -576,7 +576,7 @@ namespace SqlParser.Tests.Dialects
 
             var alter = VerifiedStatement<Statement.AlterTable>(
                 "ALTER TABLE tab ALTER COLUMN is_active SET DATA TYPE TEXT USING 'text'");
-            var op = (AlterTableOperation.AlterColumn)alter.Operation;
+            var op = (AlterTableOperation.AlterColumn)alter.Operations.First();
             var @using = new LiteralValue(new Value.SingleQuotedString("text"));
 
             Assert.Equal("tab", alter.Name);

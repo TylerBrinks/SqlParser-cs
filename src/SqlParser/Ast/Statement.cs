@@ -1,6 +1,7 @@
 ﻿// ReSharper disable StringLiteralTypo
 // ReSharper disable CommentTypo
 // ReSharper disable UnusedMember
+
 namespace SqlParser.Ast;
 
 public abstract record Statement : IWriteSql, IElement
@@ -21,12 +22,24 @@ public abstract record Statement : IWriteSql, IElement
     /// Alter table statement
     /// </summary>
     /// <param name="Name">Object name</param>
-    /// <param name="Operation">Table operation</param>
-    public record AlterTable(ObjectName Name, AlterTableOperation Operation) : Statement
+    /// <param name="Operations">Table operations</param>
+    public record AlterTable(ObjectName Name, bool IfExists, bool Only, Sequence<AlterTableOperation> Operations) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"ALTER TABLE {Name} {Operation}");
+            writer.Write("ALTER TABLE ");
+
+            if(IfExists)
+            {
+                writer.Write("IF EXISTS ");
+            }
+            if(Only)
+            {
+                writer.Write("ONLY ");
+            }
+
+            writer.WriteSql($"{Name} ");
+            writer.WriteDelimited(Operations, ", ");
         }
     }
     /// <summary>

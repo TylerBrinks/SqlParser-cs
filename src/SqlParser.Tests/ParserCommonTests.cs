@@ -1849,7 +1849,7 @@ namespace SqlParser.Tests
                 "ALTER TABLE tab ADD COLUMN foo TEXT;",
                 "ALTER TABLE tab ADD COLUMN foo TEXT");
 
-            var addColumn = (AlterTableOperation.AddColumn)alter.Operation;
+            var addColumn = (AlterTableOperation.AddColumn)alter.Operations.First();
 
             Assert.Equal("tab", alter.Name);
             Assert.True(addColumn.ColumnKeyword);
@@ -1858,12 +1858,12 @@ namespace SqlParser.Tests
             Assert.IsType<Text>(addColumn.ColumnDef.DataType);
 
             alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE tab RENAME TO new_tab");
-            var alterColumn = (AlterTableOperation.RenameTable)alter.Operation;
+            var alterColumn = (AlterTableOperation.RenameTable)alter.Operations.First();
             Assert.Equal("tab", alter.Name);
             Assert.Equal("new_tab", alterColumn.Name);
 
             alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE tab RENAME COLUMN foo TO new_foo");
-            var renameColumn = (AlterTableOperation.RenameColumn)alter.Operation;
+            var renameColumn = (AlterTableOperation.RenameColumn)alter.Operations.First();
 
             Assert.Equal("tab", alter.Name);
             Assert.Equal("foo", renameColumn.OldColumnName);
@@ -1884,12 +1884,12 @@ namespace SqlParser.Tests
         public void Parse_Alter_Table_Add_Column()
         {
             var alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE tab ADD foo TEXT");
-            var op = (AlterTableOperation.AddColumn)alter.Operation;
+            var op = (AlterTableOperation.AddColumn)alter.Operations.First();
 
             Assert.False(op.ColumnKeyword);
 
             alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE tab ADD COLUMN foo TEXT");
-            op = (AlterTableOperation.AddColumn)alter.Operation;
+            op = (AlterTableOperation.AddColumn)alter.Operations.First();
             Assert.True(op.ColumnKeyword);
         }
 
@@ -1905,17 +1905,17 @@ namespace SqlParser.Tests
             };
 
             var alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE tab ADD IF NOT EXISTS foo TEXT", dialects);
-            var op = (AlterTableOperation.AddColumn)alter.Operation;
+            var op = (AlterTableOperation.AddColumn)alter.Operations.First();
             Assert.True(op.IfNotExists);
 
             alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE tab ADD COLUMN IF NOT EXISTS foo TEXT", dialects);
-            op = (AlterTableOperation.AddColumn)alter.Operation;
+            op = (AlterTableOperation.AddColumn)alter.Operations.First();
             Assert.True(op.ColumnKeyword);
             Assert.True(op.IfNotExists);
         }
 
         [Fact]
-        public void Parse_Alter_Table_Constraint()
+        public void Parse_Alter_Table_Constraints()
         {
             Test("CONSTRAINT address_pkey PRIMARY KEY (address_id)");
             Test("CONSTRAINT uk_task UNIQUE (report_date, task_id)");
@@ -1929,10 +1929,17 @@ namespace SqlParser.Tests
             void Test(string constrain)
             {
                 var sql = $"ALTER TABLE tab ADD {constrain}";
-                var alter = VerifiedStatement<Statement.AlterTable>(sql);
-                Assert.Equal("tab", alter.Name);
-                Assert.Equal(sql, alter.ToSql());
-                VerifiedStatement($"CREATE TABLE foo (id INT, {constrain})");
+
+                var alterTable = AlterTableOp(VerifiedStatement(sql));
+
+                if (alterTable is AlterTableOperation.AddConstraint addConstraint)
+                {
+                    Assert.Equal(constrain, addConstraint.TableConstraint.ToSql());
+                }
+                else
+                {
+                    VerifiedStatement($"CREATE TABLE foo (id INT, {constrain})");
+                }
             }
         }
 
@@ -1940,8 +1947,9 @@ namespace SqlParser.Tests
         public void Parse_Alter_Table_Drop_Column()
         {
             var alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE tab DROP COLUMN IF EXISTS is_active CASCADE");
-            var constraint = (AlterTableOperation.DropColumn)alter.Operation;
+            var constraint = (AlterTableOperation.DropColumn)alter.Operations.First();
             Assert.Equal("tab", alter.Name);
+            Assert.Equal("is_active", constraint.Name);
             Assert.True(constraint.IfExists);
             Assert.True(constraint.Cascade);
 
@@ -1958,7 +1966,7 @@ namespace SqlParser.Tests
         public void Parse_Alter_Table_Alter_Column()
         {
             var alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE tab ALTER COLUMN is_active SET NOT NULL");
-            var op = (AlterTableOperation.AlterColumn)alter.Operation;
+            var op = (AlterTableOperation.AlterColumn)alter.Operations.First();
 
             Assert.Equal("tab", alter.Name);
             Assert.Equal("is_active", op.ColumnName);
@@ -1969,7 +1977,7 @@ namespace SqlParser.Tests
                 "ALTER TABLE tab ALTER COLUMN is_active DROP NOT NULL");
 
             alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE tab ALTER COLUMN is_active SET DEFAULT false");
-            op = (AlterTableOperation.AlterColumn)alter.Operation;
+            op = (AlterTableOperation.AlterColumn)alter.Operations.First();
 
             Assert.Equal("tab", alter.Name);
             Assert.Equal("is_active", op.ColumnName);
@@ -1977,7 +1985,7 @@ namespace SqlParser.Tests
 
 
             alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE tab ALTER COLUMN is_active DROP DEFAULT");
-            op = (AlterTableOperation.AlterColumn)alter.Operation;
+            op = (AlterTableOperation.AlterColumn)alter.Operations.First();
 
             Assert.Equal("tab", alter.Name);
             Assert.Equal("is_active", op.ColumnName);
@@ -1988,7 +1996,7 @@ namespace SqlParser.Tests
         public void Parse_Alter_Table_Alter_Column_Type()
         {
             var alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE tab ALTER COLUMN is_active SET DATA TYPE TEXT");
-            var op = (AlterTableOperation.AlterColumn)alter.Operation;
+            var op = (AlterTableOperation.AlterColumn)alter.Operations.First();
 
             Assert.Equal("tab", alter.Name);
             Assert.Equal("is_active", op.ColumnName);
@@ -2005,7 +2013,7 @@ namespace SqlParser.Tests
         public void Parse_Alter_Table_Drop_Constraint()
         {
             var alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE tab DROP CONSTRAINT constraint_name CASCADE");
-            var op = (AlterTableOperation.DropConstraint)alter.Operation;
+            var op = (AlterTableOperation.DropConstraint)alter.Operations.First();
 
             Assert.Equal("tab", alter.Name);
             Assert.Equal("constraint_name", op.Name);
@@ -2014,7 +2022,7 @@ namespace SqlParser.Tests
 
 
             alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE tab DROP CONSTRAINT IF EXISTS constraint_name");
-            op = (AlterTableOperation.DropConstraint)alter.Operation;
+            op = (AlterTableOperation.DropConstraint)alter.Operations.First();
 
             Assert.Equal("tab", alter.Name);
             Assert.Equal("constraint_name", op.Name);

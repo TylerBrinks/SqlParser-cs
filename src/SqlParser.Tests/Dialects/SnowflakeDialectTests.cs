@@ -345,7 +345,7 @@ namespace SqlParser.Tests.Dialects
             var alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE tab1 SWAP WITH tab2");
 
             Assert.Equal("tab1", alter.Name);
-            Assert.Equal("tab2", ((AlterTableOperation.SwapWith)alter.Operation).Name);
+            Assert.Equal("tab2", ((AlterTableOperation.SwapWith)alter.Operations.First()).Name);
         }
 
         [Fact]

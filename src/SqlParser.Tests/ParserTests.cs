@@ -1,7 +1,6 @@
 ﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
-using System.Globalization;
 using DataType = SqlParser.Ast.DataType;
 
 // ReSharper disable StringLiteralTypo
@@ -261,5 +260,40 @@ namespace SqlParser.Tests
             var ex = Assert.Throws<ParserException>(() => new Parser().ParseSql("EXPLAIN EXPLAIN SELECT 1", new GenericDialect()));
             Assert.Equal("Explain must be root of the plan.", ex.Message);
         }
+
+        [Fact]
+        public void Parse_Alter_Table()
+        {
+            var sql = "ALTER TABLE tab ADD COLUMN foo TEXT;";
+            
+            var addColumn = (AlterTableOperation.AddColumn)AlterTableOp(OneStatementParsesTo(sql, "ALTER TABLE tab ADD COLUMN foo TEXT"));
+
+            Assert.True(addColumn.ColumnKeyword);
+            Assert.False(addColumn.IfNotExists);
+            Assert.Equal("foo", addColumn.ColumnDef.Name);
+            Assert.Equal("TEXT", addColumn.ColumnDef.DataType.ToSql());
+
+            sql = "ALTER TABLE tab RENAME TO new_tab";
+            var renameTable = (AlterTableOperation.RenameTable) AlterTableOp(VerifiedStatement(sql));
+            Assert.Equal("new_tab", renameTable.Name);
+            
+            sql = "ALTER TABLE tab RENAME COLUMN foo TO new_foo";
+            var renameColumn = (AlterTableOperation.RenameColumn)AlterTableOp(VerifiedStatement(sql));
+            Assert.Equal("foo", renameColumn.OldColumnName);
+            Assert.Equal("new_foo", renameColumn.NewColumnName);
+        }
+
+        [Fact]
+        public void Parse_Alter_Table_Add_Column()
+        {
+            var sql = "ALTER TABLE tab ADD foo TEXT";
+            var addColumn = (AlterTableOperation.AddColumn) AlterTableOp(VerifiedStatement(sql));
+            Assert.False(addColumn.ColumnKeyword);
+
+            sql = "ALTER TABLE tab ADD COLUMN foo TEXT";
+            addColumn = (AlterTableOperation.AddColumn)AlterTableOp(VerifiedStatement(sql));
+            Assert.True(addColumn.ColumnKeyword);
+        }
     }
 }
+

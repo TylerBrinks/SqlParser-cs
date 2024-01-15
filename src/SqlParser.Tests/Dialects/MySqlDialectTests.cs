@@ -518,11 +518,11 @@ namespace SqlParser.Tests.Dialects
                 });
 
             Assert.Equal("orders", alter.Name);
-            Assert.Equal(operation, alter.Operation);
+            Assert.Equal(operation, alter.Operations.First());
 
             alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE orders CHANGE COLUMN description desc TEXT NOT NULL");
             Assert.Equal("orders", alter.Name);
-            Assert.Equal(operation, alter.Operation);
+            Assert.Equal(operation, alter.Operations.First());
         }
 
         [Fact]
