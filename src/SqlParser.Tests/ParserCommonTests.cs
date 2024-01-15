@@ -4634,5 +4634,19 @@ namespace SqlParser.Tests
             Assert.Equal("public.datatype_aliases", statement.Name);
             Assert.Equal(expectedColumns, statement.Columns);
         }
+
+        [Fact]
+        public void Parse_Select_Group_By_All()
+        {
+            var sql = "SELECT id, fname, lname, SUM(order) FROM customer GROUP BY ALL";
+            var select = VerifiedOnlySelect(sql);
+
+            Assert.Equal(new GroupByExpression.All(), select.GroupBy);
+
+            OneStatementParsesTo(
+                "SELECT id, fname, lname, SUM(order) FROM customer GROUP BY ALL",
+                "SELECT id, fname, lname, SUM(order) FROM customer GROUP BY ALL"
+            );
+        }
     }
 }
