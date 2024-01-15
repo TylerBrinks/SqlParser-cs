@@ -6688,7 +6688,7 @@ public class Parser
             throw Expected("join table", PeekToken());
         }
 
-        if (_dialect is BigQueryDialect or GenericDialect && ParseKeyword(Keyword.UNNEST))
+        if (_dialect is BigQueryDialect or PostgreSqlDialect or GenericDialect && ParseKeyword(Keyword.UNNEST))
         {
             //var expr = ExpectParens(ParseExpr);
             var expressions = ExpectParens(() => ParseCommaSeparated(ParseExpr));

@@ -2033,7 +2033,7 @@ namespace SqlParser.Tests.Dialects
 
             var createIndex = VerifiedStatement<Statement.CreateIndex>(sql, new[] {new PostgreSqlDialect()});
 
-            Assert.Equal("my_index", createIndex.Name);
+            Assert.Equal("my_index", createIndex.Name!);
             Assert.Equal("my_table", createIndex.TableName);
             Assert.Null(createIndex.Using);
             Assert.False(createIndex.Unique);
@@ -2044,6 +2044,30 @@ namespace SqlParser.Tests.Dialects
                new(new Identifier("col2"))
             }, createIndex.Columns);
             Assert.Null(createIndex.Include);
+        }
+
+        [Fact]
+        public void Parse_Join_Constraint_Unnest_Alias()
+        {
+            var select = VerifiedOnlySelect("SELECT * FROM t1 JOIN UNNEST(t1.a) AS f ON c1 = c2");
+            var joins = select.From!.Single().Joins;
+
+            var expected = new Join[]
+            {
+                new (new TableFactor.UnNest(new Sequence<Expression>{ new CompoundIdentifier(new Ident[]{"t1","a"}) })
+                    {
+                        Alias = new TableAlias("f"),
+                    },
+                    new JoinOperator.Inner(new JoinConstraint.On(
+                        new BinaryOp(
+                            new Identifier("c1"),
+                            BinaryOperator.Eq,
+                            new Identifier("c2")
+                        )))
+                )
+            };
+
+            Assert.Equal(expected, joins!);
         }
     }
 }
