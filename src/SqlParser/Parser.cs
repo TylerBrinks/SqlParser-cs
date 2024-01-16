@@ -5844,6 +5844,7 @@ public class Parser
         Offset? offset = null;
         Ast.Fetch? fetch = null;
         Sequence<LockClause>? locks = null;
+        Sequence<Expression>? limitBy = null;
 
         if (!ParseKeyword(Keyword.INSERT))
         {
@@ -5867,13 +5868,18 @@ public class Parser
                     offset = ParseOffset();
                 }
 
-                if (_dialect is GenericDialect or MySqlDialect && limit != null && offset == null && ConsumeToken<Comma>())
+                if (_dialect is GenericDialect or MySqlDialect or ClickHouseDialect && limit != null && offset == null && ConsumeToken<Comma>())
                 {
                     // MySQL style LIMIT x,y => LIMIT y OFFSET x.
                     // Check <https://dev.mysql.com/doc/refman/8.0/en/select.html> for more details.
                     offset = new Offset(limit, OffsetRows.None);
                     limit = ParseExpr();
                 }
+            }
+
+            if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.BY))
+            {
+                limitBy =ParseCommaSeparated(ParseExpr);
             }
 
             if (ParseKeyword(Keyword.FETCH))
@@ -5894,7 +5900,8 @@ public class Parser
                 Limit = limit,
                 Offset = offset,
                 Fetch = fetch,
-                Locks = locks
+                Locks = locks,
+                LimitBy = limitBy
             });
         }
 

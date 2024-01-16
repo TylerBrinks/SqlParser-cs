@@ -179,5 +179,13 @@ namespace SqlParser.Tests.Dialects
                 "SELECT foo FROM bar WHERE buz = 'buz'"
             );
         }
+
+        [Fact]
+        public void Parse_Limit_By()
+        {
+            var dialects = new Dialect[] {new ClickHouseDialect(), new GenericDialect()};
+            VerifiedStatement("SELECT * FROM default.last_asset_runs_mv ORDER BY created_at DESC LIMIT 1 BY asset", dialects);
+            VerifiedStatement("SELECT * FROM default.last_asset_runs_mv ORDER BY created_at DESC LIMIT 1 BY asset, toStartOfDay(created_at)", dialects);
+        }
     }
 }

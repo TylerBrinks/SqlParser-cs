@@ -12,6 +12,8 @@ public record Query([Visit(1)] SetExpression Body) : IWriteSql, IElement
     [Visit(4)] public Offset? Offset { get; init; }
     [Visit(5)] public Fetch? Fetch { get; init; }
     [Visit(6)] public Sequence<LockClause>? Locks { get; init; }
+    [Visit(7)] public Sequence<Expression>? LimitBy { get; init; }
+
 
     public static implicit operator Query(Statement.Select select)
     {
@@ -45,6 +47,12 @@ public record Query([Visit(1)] SetExpression Body) : IWriteSql, IElement
         if (Offset != null)
         {
             writer.WriteSql($" {Offset}");
+        }
+
+        if (LimitBy.SafeAny())
+        {
+            writer.Write(" BY ");
+            writer.WriteDelimited(LimitBy, ", ");
         }
 
         if (Fetch != null)
