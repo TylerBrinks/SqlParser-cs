@@ -1091,7 +1091,11 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
-
+    /// <summary>
+    /// CREATE TYPE
+    /// </summary>
+    /// <param name="Name">Name</param>
+    /// <param name="Representation">Representation</param>
     public record CreateType(ObjectName Name, UserDefinedTypeRepresentation Representation) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
@@ -1284,7 +1288,14 @@ public abstract record Statement : IWriteSql, IElement
     /// <param name="Using">Using</param>
     /// <param name="Selection">Selection expression</param>
     /// <param name="Returning">Select items to return</param>
-    public record Delete(Sequence<ObjectName>? Tables, Sequence<TableWithJoins> From, TableFactor? Using = null, Expression? Selection = null, Sequence<SelectItem>? Returning = null) : Statement
+    public record Delete(
+        Sequence<ObjectName>? Tables, 
+        Sequence<TableWithJoins> From,
+        Sequence<OrderByExpression>? OrderBy = null,
+        TableFactor? Using = null,
+        Expression? Selection = null, 
+        Sequence<SelectItem>? Returning = null,
+        Expression? Limit = null) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -1311,6 +1322,17 @@ public abstract record Statement : IWriteSql, IElement
             if (Returning != null)
             {
                 writer.WriteSql($" RETURNING {Returning}");
+            }
+
+            if (OrderBy.SafeAny())
+            {
+                writer.Write(" ORDER BY ");
+                writer.WriteDelimited(OrderBy, ", ");
+            }
+
+            if (Limit != null)
+            {
+                writer.WriteSql($" LIMIT {Limit}");
             }
         }
     }

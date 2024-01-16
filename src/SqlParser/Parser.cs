@@ -5724,8 +5724,10 @@ public class Parser
 
         var selection = ParseInit(ParseKeyword(Keyword.WHERE), ParseExpr);
         var returning = ParseInit(ParseKeyword(Keyword.RETURNING), () => ParseCommaSeparated(ParseSelectItem));
+        var orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY), () => ParseCommaSeparated(ParseOrderByExpr));
+        var limit = ParseInit(ParseKeyword(Keyword.LIMIT), ParseLimit);
 
-        return new Delete(tables, from, @using, selection, returning);
+        return new Delete(tables, from, orderBy, @using, selection, returning, limit);
     }
     /// <summary>
     /// KILL[CONNECTION | QUERY | MUTATION] processlist_id

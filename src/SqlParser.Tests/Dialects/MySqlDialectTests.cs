@@ -901,5 +901,35 @@ namespace SqlParser.Tests.Dialects
             var expected = new Statement.AttachDatabase("test", new LiteralValue(new Value.SingleQuotedString("test.db")), true);
             Assert.Equal(expected, statement);
         }
+
+        [Fact]
+        public void Parse_Delete_With_Order_By()
+        {
+            const string sql = "DELETE FROM customers ORDER BY id DESC";
+            var delete = VerifiedStatement(sql);
+
+            var expected = new Statement.Delete(null,
+                new Sequence<TableWithJoins>{new (new TableFactor.Table("customers"))},
+                
+                OrderBy: new Sequence<OrderByExpression>
+                {
+                    new (new Identifier("id"), Asc:false)
+                }
+            );
+
+            Assert.Equal(expected, delete);
+        }
+
+        [Fact]
+        public void Parse_Delete_With_Limit()
+        {
+            const string sql = "DELETE FROM customers LIMIT 100";
+            var delete = VerifiedStatement(sql);
+            var expected = new Statement.Delete(null,
+                new Sequence<TableWithJoins> { new(new TableFactor.Table("customers")) },
+                Limit: new LiteralValue(new Value.Number("100"))
+            );
+            Assert.Equal(expected, delete);
+        }
     }
 }
