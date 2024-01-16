@@ -1288,6 +1288,8 @@ namespace SqlParser.Tests
             VerifiedStatement("SELECT EXTRACT(MONTH FROM d)");
             VerifiedStatement("SELECT EXTRACT(WEEK FROM d)");
             VerifiedStatement("SELECT EXTRACT(DAY FROM d)");
+            VerifiedStatement("SELECT EXTRACT(DAYOFWEEK FROM d)");
+            VerifiedStatement("SELECT EXTRACT(DAYOFYEAR FROM d)");
             VerifiedStatement("SELECT EXTRACT(DATE FROM d)");
             VerifiedStatement("SELECT EXTRACT(HOUR FROM d)");
             VerifiedStatement("SELECT EXTRACT(MINUTE FROM d)");
@@ -1301,6 +1303,7 @@ namespace SqlParser.Tests
             VerifiedStatement("SELECT EXTRACT(DOY FROM d)");
             VerifiedStatement("SELECT EXTRACT(EPOCH FROM d)");
             VerifiedStatement("SELECT EXTRACT(ISODOW FROM d)");
+            VerifiedStatement("SELECT EXTRACT(ISOWEEK FROM d)");
             VerifiedStatement("SELECT EXTRACT(ISOYEAR FROM d)");
             VerifiedStatement("SELECT EXTRACT(JULIAN FROM d)");
             VerifiedStatement("SELECT EXTRACT(MICROSECOND FROM d)");
@@ -1313,6 +1316,7 @@ namespace SqlParser.Tests
             VerifiedStatement("SELECT EXTRACT(TIMEZONE FROM d)");
             VerifiedStatement("SELECT EXTRACT(TIMEZONE_HOUR FROM d)");
             VerifiedStatement("SELECT EXTRACT(TIMEZONE_MINUTE FROM d)");
+            VerifiedStatement("SELECT EXTRACT(TIME FROM d)");
 
             var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT EXTRACT(JIFFY FROM d)"));
 
