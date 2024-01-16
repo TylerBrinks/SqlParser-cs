@@ -725,9 +725,16 @@ public ref struct Tokenizer
     private Token TokenizeEqual()
     {
         _state.Next();
-        return _state.Peek() == Symbols.GreaterThan
-            ? TokenizeSingleCharacter(new RightArrow())
-            : new Equal();
+        var next = _state.Peek();
+        return next switch
+        {
+            Symbols.GreaterThan => TokenizeSingleCharacter(new RightArrow()),
+            Symbols.Equal => TokenizeSingleCharacter(new DoubleEqual()),
+            _ => new Equal()
+        };
+        //return _state.Peek() == Symbols.GreaterThan
+        //    ? TokenizeSingleCharacter(new RightArrow())
+        //    : new Equal();
     }
 
     private Token TokenizeExclamation()

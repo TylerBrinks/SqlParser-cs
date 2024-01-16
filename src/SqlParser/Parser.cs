@@ -365,9 +365,14 @@ public class Parser
 
         switch (nextToken)
         {
-            case Word word when PeekTokenIs<Period>():
+            case Word or SingleQuotedString when PeekTokenIs<Period>():
                 {
-                    var idParts = new Sequence<Ident> { word.ToIdent() };
+                    var ident = nextToken switch
+                    {
+                        Word w => w.ToIdent(),
+                        SingleQuotedString s => new Ident(s.Value, Symbols.SingleQuote)
+                    };
+                    var idParts = new Sequence<Ident> { ident };
 
                     while (ConsumeToken<Period>())
                     {
@@ -1063,7 +1068,8 @@ public class Parser
             Word { Keyword: Keyword.ARRAY_AGG } => ParseArrayAggregateExpression(),
             Word { Keyword: Keyword.NOT } => ParseNot(),
             Word { Keyword: Keyword.MATCH } when _dialect is MySqlDialect or GenericDialect => ParseMatchAgainst(),
-
+            //  TODO  STRUCT bigquery literal
+            //  
             // Here `word` is a word, check if it's a part of a multi-part
             // identifier, a function call, or a simple identifier
             Word word => ParseMultipart(word),
@@ -1541,6 +1547,7 @@ public class Parser
         var regularBinaryOperator = token switch
         {
             Spaceship => BinaryOperator.Spaceship,
+            DoubleEqual => BinaryOperator.Eq,
             Equal => BinaryOperator.Eq,
             NotEqual => BinaryOperator.NotEq,
             GreaterThan => BinaryOperator.Gt,
@@ -1910,7 +1917,7 @@ public class Parser
                 or NotEqual
                 or GreaterThan
                 or GreaterThanOrEqual
-                //or DoubleEqual - unused in the original implementation
+                or DoubleEqual
                 or Tilde
                 or TildeAsterisk
                 or ExclamationMarkTilde
@@ -6135,7 +6142,7 @@ public class Parser
                 groupBy = new GroupByExpression.Expressions(ParseCommaSeparated(ParseGroupByExpr));
             }
         }
-       
+
         var clusterBy = ParseInit(ParseKeywordSequence(Keyword.CLUSTER, Keyword.BY), () => ParseCommaSeparated(ParseExpr));
 
         var distributeBy = ParseInit(ParseKeywordSequence(Keyword.DISTRIBUTE, Keyword.BY), () => ParseCommaSeparated(ParseExpr));

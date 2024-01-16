@@ -294,6 +294,12 @@ namespace SqlParser.Tests
             addColumn = (AlterTableOperation.AddColumn)AlterTableOp(VerifiedStatement(sql));
             Assert.True(addColumn.ColumnKeyword);
         }
+
+        [Fact]
+        public void Parse_Double_Equality_Operator()
+        {
+            OneStatementParsesTo("SELECT a==b FROM t", "SELECT a = b FROM t", new Dialect[]{new SQLiteDialect(), new GenericDialect()});
+        }
     }
 }
 
