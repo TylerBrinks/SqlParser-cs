@@ -3716,7 +3716,7 @@ namespace SqlParser.Tests
 
             var createIndex = VerifiedStatement<Statement.CreateIndex>("CREATE UNIQUE INDEX IF NOT EXISTS idx_name ON test(name,age DESC)");
 
-            Assert.Equal("idx_name", createIndex.Name);
+            Assert.Equal("idx_name", createIndex.Name!);
             Assert.Equal("test", createIndex.TableName);
             Assert.Equal(expected, createIndex.Columns!);
             Assert.True(createIndex.Unique);
@@ -4495,7 +4495,11 @@ namespace SqlParser.Tests
                     new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new CompoundIdentifier(new Ident[]{"a","amount"})))
                 }
             };
-            var expected = new TableFactor.Pivot("monthly_sales", fn, new Ident[] { "a", "MONTH" }, new Value[]
+            var table = new TableFactor.Table("monthly_sales")
+            {
+                Alias = new TableAlias("a")
+            };
+            var expected = new TableFactor.Pivot(table, fn, new Ident[] { "a", "MONTH" }, new Value[]
             {
                 new Value.SingleQuotedString("JAN"),
                 new Value.SingleQuotedString("FEB"),
@@ -4503,11 +4507,36 @@ namespace SqlParser.Tests
                 new Value.SingleQuotedString("APR")
             })
             {
-                Alias = new TableAlias("a"),
                 PivotAlias = new TableAlias("p", new Ident[] { "c", "d" })
             };
+            
             Assert.Equal(expected, relation);
             Assert.Equal(sql.Replace("\r", "").Replace("\n", ""), VerifiedStatement(sql).ToSql());
+        }
+
+        [Fact]
+        public void Parse_Unpivot_Table()
+        {
+            const string sql = """
+                               SELECT * FROM sales AS s 
+                               UNPIVOT(quantity FOR quarter IN (Q1, Q2, Q3, Q4)) AS u (product, quarter, quantity)
+                               """;
+
+            var statement = VerifiedOnlySelect(sql);
+            var from = statement.From![0];
+            var relation = from.Relation;
+
+            var table = new TableFactor.Table("sales")
+            {
+                Alias = new TableAlias("s")
+            };
+            var expected = new TableFactor.Unpivot(table, "quantity", "quarter", new Sequence<Ident>{"Q1", "Q2", "Q3", "Q4"})
+            {
+                PivotAlias = new TableAlias("u", new Sequence<Ident>{ "product", "quarter", "quantity" })
+            };
+
+
+            Assert.Equal(expected, relation);
         }
 
         [Fact]
@@ -4598,7 +4627,7 @@ namespace SqlParser.Tests
             {
                 var select = VerifiedOnlySelect($"SELECT a {symbol} b", dialects);
 
-                var expected = new SelectItem.UnnamedExpression(new Expression.JsonAccess(
+                var expected = new SelectItem.UnnamedExpression(new JsonAccess(
                     new Identifier("a"),
                     op,
                     new Identifier("b")

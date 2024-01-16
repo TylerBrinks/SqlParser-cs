@@ -6654,8 +6654,7 @@ public class Parser
             {
                 return result;
             }
-
-
+            
             // A parsing error from `parse_derived_table_factor` indicates that the '(' we've
             // recently consumed does not start a derived table (cases 1, 2, or 4).
             // `maybe_parse` will ignore such an error and rewind to be after the opening '('.
@@ -6708,6 +6707,7 @@ public class Parser
                             or TableFactor.UnNest
                             or TableFactor.TableFunction
                             or TableFactor.Pivot
+                            or TableFactor.Unpivot
                             or TableFactor.NestedJoin:
 
                             if (tableAndJoins.Relation.Alias != null)
@@ -6753,10 +6753,10 @@ public class Parser
 
         var optionalAlias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
 
-        if (ParseKeyword(Keyword.PIVOT))
-        {
-            return ParsePivotTableFactor(name, optionalAlias);
-        }
+        //if (ParseKeyword(Keyword.PIVOT))
+        //{
+        //    return ParsePivotTableFactor(name, optionalAlias);
+        //}
 
         Sequence<Expression>? withHints = null;
         if (ParseKeyword(Keyword.WITH))
@@ -6772,13 +6772,26 @@ public class Parser
             }
         }
 
-        return new TableFactor.Table(name)
+        TableFactor table = new TableFactor.Table(name)
         {
             Alias = optionalAlias,
             Args = args,
             WithHints = withHints,
             Version = version
         };
+
+        Keyword kwd;
+        while ((kwd = ParseOneOfKeywords(Keyword.PIVOT, Keyword.UNPIVOT)) != Keyword.undefined)
+        {
+            table = kwd switch
+            {
+                Keyword.PIVOT => ParsePivotTableFactor(table),
+                Keyword.UNPIVOT => ParseUnpivotTableFactor(table),
+                _ => throw Expected("PIVOT or UNPIVOT", PeekToken())
+            };
+        }
+
+        return table;
     }
 
     public TableVersion? ParseTableVersion()
@@ -6804,35 +6817,56 @@ public class Parser
         };
     }
 
-    private TableFactor ParsePivotTableFactor(ObjectName name, TableAlias? tableAlias)
+    private TableFactor ParsePivotTableFactor(TableFactor table, TableAlias? tableAlias = null)
     {
-        ExpectLeftParen();
-        var token = NextToken();
-
-        var functionName = token switch
+        var pivot = ExpectParens(() =>
         {
-            Word w => w.Value,
-            _ => throw Expected("an aggregate function name", PeekToken())
-        };
+            var token = NextToken();
 
-        var function = ParseFunction(new ObjectName(functionName));
-        ExpectKeyword(Keyword.FOR);
+            var functionName = token switch
+            {
+                Word w => w.Value,
+                _ => throw Expected("an aggregate function name", PeekToken())
+            };
 
-        var valueColumn = ParseObjectName().Values;
-        ExpectKeyword(Keyword.IN);
-        ExpectLeftParen();
-        var pivotValues = ParseCommaSeparated(ParseValue);
+            var function = ParseFunction(new ObjectName(functionName));
+            ExpectKeyword(Keyword.FOR);
 
-        ExpectRightParen();
-        ExpectRightParen();
+            var valueColumn = ParseObjectName().Values;
+            ExpectKeyword(Keyword.IN);
+
+            var pivotValues = ExpectParens(() => ParseCommaSeparated(ParseValue));
+
+            return new TableFactor.Pivot(table, function, valueColumn, pivotValues)
+            {
+                Alias = tableAlias,
+            };
+        });
 
         var alias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
+        pivot.PivotAlias = alias;
+        return pivot;
+    }
 
-        return new TableFactor.Pivot(name, function, valueColumn, pivotValues)
+    private TableFactor ParseUnpivotTableFactor(TableFactor table)
+    {
+        var unpivot = ExpectParens(() =>
         {
-            Alias = tableAlias,
-            PivotAlias = alias
-        };
+            var value = ParseIdentifier();
+            ExpectKeyword(Keyword.FOR);
+
+            var name = ParseIdentifier();
+            ExpectKeyword(Keyword.IN);
+
+            var columns = ParseParenthesizedColumnList(IsOptional.Mandatory, false);
+
+            return new TableFactor.Unpivot(table, value, name, columns);
+        });
+        var alias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
+        
+        unpivot.PivotAlias = alias;
+        
+        return unpivot;
     }
 
     public JoinConstraint ParseJoinConstraint(bool natural)

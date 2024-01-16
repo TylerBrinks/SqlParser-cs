@@ -1,7 +1,4 @@
-﻿using System.ComponentModel;
-using System;
-
-namespace SqlParser.Ast;
+﻿namespace SqlParser.Ast;
 
 /// <summary>
 /// A table name or a parenthesized subquery with an optional alias
@@ -60,27 +57,38 @@ public abstract record TableFactor : IWriteSql, IElement
     /// Pivot table factor
     /// </summary>
     public record Pivot(
-        [property: Visit(0)] ObjectName Name,
+        [property: Visit(0)] TableFactor TableFactor,
         [property: Visit(2)] Expression AggregateFunction,
         Sequence<Ident> ValueColumns,
         Sequence<Value> PivotValues) : TableFactor
     {
-        public TableAlias? PivotAlias { get; init; }
+        public TableAlias? PivotAlias { get; set; }
 
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"{Name}");
-
-            if (Alias != null)
-            {
-                writer.WriteSql($" AS {Alias}");
-            }
-
             var cols = new Expression.CompoundIdentifier(ValueColumns);
-            writer.WriteSql($" PIVOT({AggregateFunction} FOR {cols} IN (");
+           
+            writer.WriteSql($"{TableFactor} PIVOT({AggregateFunction} FOR {cols} IN (");
+            writer.WriteDelimited(PivotValues, ", ");
+            writer.Write("))");
 
-            writer.WriteSql($"{PivotValues}");
+            if (PivotAlias != null)
+            {
+                writer.WriteSql($" AS {PivotAlias}");
+            }
+        }
+    }
+    /// <summary>
+    /// Unpivot table factor
+    /// </summary>
+    public record Unpivot(TableFactor TableFactor, Ident Value, Ident Name, Sequence<Ident> Columns) : TableFactor
+    {
+        public TableAlias? PivotAlias { get; set; }
 
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{TableFactor} UNPIVOT({Value} FOR {Name} IN (");
+            writer.WriteDelimited(Columns, ", ");
             writer.Write("))");
 
             if (PivotAlias != null)
