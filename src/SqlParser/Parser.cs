@@ -5326,6 +5326,13 @@ public class Parser
             }
         }
 
+        if (_dialect is BigQueryDialect && idents.Any(i => i.Value.Contains(Symbols.Dot)))
+        {
+            idents = idents.SelectMany(i => i.Value.Split(Symbols.Dot)
+                    .Select(part => i with {Value = part}))
+                .ToSequence();
+        }
+
         return new ObjectName(idents);
     }
     /// <summary>

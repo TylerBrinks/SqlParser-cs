@@ -1,6 +1,5 @@
 ﻿using SqlParser.Ast;
 using SqlParser.Dialects;
-using static SqlParser.Ast.CopyOption;
 using static SqlParser.Ast.Expression;
 // ReSharper disable StringLiteralTypo
 
@@ -63,10 +62,60 @@ namespace SqlParser.Tests.Dialects
             Assert.Throws<ParserException>(() => VerifiedStatement("SELECT 1 FROM abc5!.dataField"));
             Test("`GROUP`.dataField", new Ident[] { new("GROUP", '`'), "dataField" });
             Test("abc5.GROUP", new Ident[] { "abc5", "GROUP" });
-
-            void Test(string ident, Sequence<Ident> names)
+            Test("`foo.bar.baz`", new []
             {
-                var select = VerifiedOnlySelect($"SELECT 1 FROM {ident}");
+                new Ident("foo", Symbols.Backtick),
+                new Ident("bar", Symbols.Backtick),
+                new Ident("baz", Symbols.Backtick),
+            }, "`foo`.`bar`.`baz`");
+
+            Test("`foo.bar`.`baz`", new[]
+            {
+                new Ident("foo", Symbols.Backtick),
+                new Ident("bar", Symbols.Backtick),
+                new Ident("baz", Symbols.Backtick),
+            }, "`foo`.`bar`.`baz`");
+
+            Test("`foo`.`bar.baz`", new[]
+            {
+                new Ident("foo", Symbols.Backtick),
+                new Ident("bar", Symbols.Backtick),
+                new Ident("baz", Symbols.Backtick),
+            }, "`foo`.`bar`.`baz`");
+
+            Test("`foo`.`bar`.`baz`", new[]
+            {
+                new Ident("foo", Symbols.Backtick),
+                new Ident("bar", Symbols.Backtick),
+                new Ident("baz", Symbols.Backtick),
+            }, "`foo`.`bar`.`baz`");
+
+            Test("`5abc.dataField`", new[]
+            {
+                new Ident("5abc", Symbols.Backtick),
+                new Ident("dataField", Symbols.Backtick),
+            }, "`5abc`.`dataField`");
+
+            Test("`_5abc.da-sh-es`", new[]
+            {
+                new Ident("_5abc", Symbols.Backtick),
+                new Ident("da-sh-es", Symbols.Backtick),
+            }, "`_5abc`.`da-sh-es`");
+
+            // Parses a table identifier ident and verifies that re-serializing the
+            // parsed identifier produces the original ident string.
+            //
+            // In some cases, re-serializing the result of the parsed ident is not
+            // expected to produce the original ident string. canonical is provided
+            // instead as the canonical representation of the identifier for comparison.
+            // For example, re-serializing the result of ident `foo.bar` produces
+            // the equivalent canonical representation `foo`.`bar`
+            void Test(string ident, Sequence<Ident> names, string? canonical = null)
+            {
+                var select = canonical != null 
+                    ? VerifiedOnlySelectWithCanonical($"SELECT 1 FROM {ident}", $"SELECT 1 FROM {canonical}") 
+                    : VerifiedOnlySelect($"SELECT 1 FROM {ident}");
+
                 var expected = new TableWithJoins[]
                 {
                     new (new TableFactor.Table(new ObjectName(names)))

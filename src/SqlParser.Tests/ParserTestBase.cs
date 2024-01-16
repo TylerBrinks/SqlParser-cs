@@ -65,6 +65,12 @@ public class ParserTestBase
         return expr.Select;
     }
 
+    public Select VerifiedOnlySelectWithCanonical(string sql, string canonical)
+    {
+        var query = OneStatementParsesTo(sql, canonical).AsQuery();
+        return query!.Body.AsSelect();
+    }
+
     public Expression VerifiedExpr(string sql)
     {
         return VerifiedExpr(sql, Dialects);
