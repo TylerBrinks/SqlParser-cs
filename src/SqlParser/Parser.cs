@@ -189,6 +189,7 @@ public class Parser
             Keyword.ANALYZE => ParseAnalyze(),
             Keyword.SELECT or Keyword.WITH or Keyword.VALUES => ParseQuery(true),
             Keyword.TRUNCATE => ParseTruncate(),
+            Keyword.ATTACH => ParseAttachDatabase(),
             Keyword.MSCK => ParseMsck(),
             Keyword.CREATE => ParseCreate(),
             Keyword.CACHE => ParseCacheTable(),
@@ -293,6 +294,16 @@ public class Parser
         return new Truncate(tableName, partitions, table);
     }
 
+    public Statement ParseAttachDatabase()
+    {
+        var database = ParseKeyword(Keyword.DATABASE);
+        var databaseFileName = ParseExpr();
+        ExpectKeyword(Keyword.AS);
+        var schemaName = ParseIdentifier();
+       
+        return new AttachDatabase(schemaName, databaseFileName, database);
+    }
+
     public Statement ParseAnalyze()
     {
         ExpectKeyword(Keyword.TABLE);
@@ -370,7 +381,8 @@ public class Parser
                     var ident = nextToken switch
                     {
                         Word w => w.ToIdent(),
-                        SingleQuotedString s => new Ident(s.Value, Symbols.SingleQuote)
+                        SingleQuotedString s => new Ident(s.Value, Symbols.SingleQuote),
+                        _ => throw Expected("identifier or quoted string", PeekToken())
                     };
                     var idParts = new Sequence<Ident> { ident };
 

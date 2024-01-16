@@ -159,6 +159,20 @@ public abstract record Statement : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// ATTACH DATABASE 'path/to/file' AS alias (SQLite-specific)
+    /// </summary>
+    /// <param name="SchemaName">Schema name</param>
+    /// <param name="DatabaseFileName">Database file name</param>
+    /// <param name="Database">True if database; otherwise false</param>
+    public record AttachDatabase(Ident SchemaName, Expression DatabaseFileName, bool Database) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            var keyword = Database ? "DATABASE " : "";
+            writer.WriteSql($"ATTACH {keyword}{DatabaseFileName} AS {SchemaName}");
+        }
+    }
+    /// <summary>
     /// Cache statement
     /// See Spark SQL docs for more details.
     /// <see href="https://docs.databricks.com/spark/latest/spark-sql/language-manual/sql-ref-syntax-aux-cache-cache-table.html"/>

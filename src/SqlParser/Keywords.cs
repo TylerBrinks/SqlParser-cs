@@ -144,6 +144,7 @@ public enum Keyword
     ASYMMETRIC,
     AT,
     ATOMIC,
+    ATTACH,
     AUTHORIZATION,
     AUTO_INCREMENT,
     AUTOINCREMENT,

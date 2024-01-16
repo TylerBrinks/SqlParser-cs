@@ -1,7 +1,6 @@
 ﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
-using static SqlParser.Ast.Action;
 using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
 
@@ -37,20 +36,26 @@ namespace SqlParser.Tests.Dialects
             DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
 
             var tableName = new ObjectName("mytable");
-            Assert.Equal(new Statement.ShowColumns(false, false, tableName), VerifiedStatement("SHOW COLUMNS FROM mytable"));
+            Assert.Equal(new Statement.ShowColumns(false, false, tableName),
+                VerifiedStatement("SHOW COLUMNS FROM mytable"));
 
             tableName = new ObjectName(new Ident[] { "mydb", "mytable" });
-            Assert.Equal(new Statement.ShowColumns(false, false, tableName), VerifiedStatement("SHOW COLUMNS FROM mydb.mytable"));
+            Assert.Equal(new Statement.ShowColumns(false, false, tableName),
+                VerifiedStatement("SHOW COLUMNS FROM mydb.mytable"));
 
             tableName = new ObjectName("mytable");
-            Assert.Equal(new Statement.ShowColumns(true, false, tableName), VerifiedStatement("SHOW EXTENDED COLUMNS FROM mytable"));
-            Assert.Equal(new Statement.ShowColumns(false, true, tableName), VerifiedStatement("SHOW FULL COLUMNS FROM mytable"));
+            Assert.Equal(new Statement.ShowColumns(true, false, tableName),
+                VerifiedStatement("SHOW EXTENDED COLUMNS FROM mytable"));
+            Assert.Equal(new Statement.ShowColumns(false, true, tableName),
+                VerifiedStatement("SHOW FULL COLUMNS FROM mytable"));
 
             var filter = new ShowStatementFilter.Like("pattern");
-            Assert.Equal(new Statement.ShowColumns(false, false, tableName, filter), VerifiedStatement("SHOW COLUMNS FROM mytable LIKE 'pattern'"));
+            Assert.Equal(new Statement.ShowColumns(false, false, tableName, filter),
+                VerifiedStatement("SHOW COLUMNS FROM mytable LIKE 'pattern'"));
 
             var where = new ShowStatementFilter.Where(VerifiedExpr("1 = 2"));
-            Assert.Equal(new Statement.ShowColumns(false, false, tableName, where), VerifiedStatement("SHOW COLUMNS FROM mytable WHERE 1 = 2"));
+            Assert.Equal(new Statement.ShowColumns(false, false, tableName, where),
+                VerifiedStatement("SHOW COLUMNS FROM mytable WHERE 1 = 2"));
 
             OneStatementParsesTo("SHOW FIELDS FROM mytable", "SHOW COLUMNS FROM mytable");
             OneStatementParsesTo("SHOW COLUMNS IN mytable", "SHOW COLUMNS FROM mytable");
@@ -121,8 +126,10 @@ namespace SqlParser.Tests.Dialects
             DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
 
             Assert.Equal(new Statement.ShowCollation(), VerifiedStatement("SHOW COLLATION"));
-            Assert.Equal(new Statement.ShowCollation(new ShowStatementFilter.Like("pattern")), VerifiedStatement("SHOW COLLATION LIKE 'pattern'"));
-            Assert.Equal(new Statement.ShowCollation(new ShowStatementFilter.Where(VerifiedExpr("1 = 2"))), VerifiedStatement("SHOW COLLATION WHERE 1 = 2"));
+            Assert.Equal(new Statement.ShowCollation(new ShowStatementFilter.Like("pattern")),
+                VerifiedStatement("SHOW COLLATION LIKE 'pattern'"));
+            Assert.Equal(new Statement.ShowCollation(new ShowStatementFilter.Where(VerifiedExpr("1 = 2"))),
+                VerifiedStatement("SHOW COLLATION WHERE 1 = 2"));
         }
 
         [Fact]
@@ -150,40 +157,48 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Create_Table_Auto_Increment()
         {
-            var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (bar INT PRIMARY KEY AUTO_INCREMENT)");
+            var create =
+                VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (bar INT PRIMARY KEY AUTO_INCREMENT)");
 
             Assert.Equal("foo", create.Name);
-            Assert.Equal(new ColumnDef[]{
+            Assert.Equal(new ColumnDef[]
+            {
                 new("bar", new DataType.Int(),
-                Options: new ColumnOptionDef[]
-                {
-                    new (new ColumnOption.Unique(true)),
-                    new (new ColumnOption.DialectSpecific(new []{new Word("AUTO_INCREMENT") }))
+                    Options: new ColumnOptionDef[]
+                    {
+                        new(new ColumnOption.Unique(true)),
+                        new(new ColumnOption.DialectSpecific(new[] {new Word("AUTO_INCREMENT")}))
 
-                })}, create.Columns);
+                    })
+            }, create.Columns);
         }
 
         [Fact]
         public void Parse_Create_Table_Set_Enum()
         {
-            var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (bar SET('a', 'b'), baz ENUM('a', 'b'))");
+            var create =
+                VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (bar SET('a', 'b'), baz ENUM('a', 'b'))");
 
             Assert.Equal("foo", create.Name);
-            Assert.Equal(new ColumnDef[]{
-                new("bar", new DataType.Set(new []{"a","b"})),
-                new("baz", new DataType.Enum(new []{"a","b"}))
+            Assert.Equal(new ColumnDef[]
+            {
+                new("bar", new DataType.Set(new[] {"a", "b"})),
+                new("baz", new DataType.Enum(new[] {"a", "b"}))
             }, create.Columns);
         }
 
         [Fact]
         public void Parse_Create_Table_Engine_Default_Charset()
         {
-            var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (id INT(11)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3");
+            var create =
+                VerifiedStatement<Statement.CreateTable>(
+                    "CREATE TABLE foo (id INT(11)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3");
 
             Assert.Equal("foo", create.Name);
             Assert.Equal("InnoDB", create.Engine);
             Assert.Equal("utf8mb3", create.DefaultCharset);
-            Assert.Equal(new ColumnDef[]{
+            Assert.Equal(new ColumnDef[]
+            {
                 new("id", new DataType.Int(11))
 
             }, create.Columns);
@@ -192,7 +207,8 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Create_Table_Collate()
         {
-            var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (id INT(11)) COLLATE=utf8mb4_0900_ai_ci");
+            var create =
+                VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (id INT(11)) COLLATE=utf8mb4_0900_ai_ci");
 
             Assert.Equal("foo", create.Name);
             Assert.Equal("utf8mb4_0900_ai_ci", create.Collation);
@@ -202,15 +218,19 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Create_Table_Comment_Character_Set()
         {
-            var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (s TEXT CHARACTER SET utf8mb4 COMMENT 'comment')");
+            var create =
+                VerifiedStatement<Statement.CreateTable>(
+                    "CREATE TABLE foo (s TEXT CHARACTER SET utf8mb4 COMMENT 'comment')");
 
             Assert.Equal("foo", create.Name);
-            Assert.Equal(new ColumnDef[] { new("s", new DataType.Text(),
-                Options: new ColumnOptionDef[]
-                {
-                    new(new ColumnOption.CharacterSet("utf8mb4")),
-                    new(new ColumnOption.Comment("comment"))
-                })
+            Assert.Equal(new ColumnDef[]
+            {
+                new("s", new DataType.Text(),
+                    Options: new ColumnOptionDef[]
+                    {
+                        new(new ColumnOption.CharacterSet("utf8mb4")),
+                        new(new ColumnOption.Comment("comment"))
+                    })
             }, create.Columns);
         }
 
@@ -220,10 +240,11 @@ namespace SqlParser.Tests.Dialects
             var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE `PRIMARY` (`BEGIN` INT PRIMARY KEY)");
 
             Assert.Equal("`PRIMARY`", create.Name);
-            Assert.Equal(new ColumnDef[]{
-                new(new Ident("BEGIN", Symbols.Backtick), new DataType.Int(), Options:new ColumnOptionDef[]
+            Assert.Equal(new ColumnDef[]
+            {
+                new(new Ident("BEGIN", Symbols.Backtick), new DataType.Int(), Options: new ColumnOptionDef[]
                 {
-                    new (new ColumnOption.Unique(true))
+                    new(new ColumnOption.Unique(true))
                 })
             }, create.Columns);
         }
@@ -292,14 +313,16 @@ namespace SqlParser.Tests.Dialects
                 var query = (Statement.Select)statement;
                 var body = (SetExpression.SelectExpression)query.Query.Body;
 
-                Assert.Equal(new LiteralValue(new Value.SingleQuotedString(quoted)), body.Select.Projection.Single().AsExpr());
+                Assert.Equal(new LiteralValue(new Value.SingleQuotedString(quoted)),
+                    body.Select.Projection.Single().AsExpr());
             }
         }
 
         [Fact]
         public void Parse_Create_Table_With_Minimum_Display_Width()
         {
-            const string sql = "CREATE TABLE foo (bar_tinyint TINYINT(3), bar_smallint SMALLINT(5), bar_mediumint MEDIUMINT(6), bar_int INT(11), bar_bigint BIGINT(20))";
+            const string sql =
+                "CREATE TABLE foo (bar_tinyint TINYINT(3), bar_smallint SMALLINT(5), bar_mediumint MEDIUMINT(6), bar_int INT(11), bar_bigint BIGINT(20))";
             var create = VerifiedStatement<Statement.CreateTable>(sql);
 
             var expected = new ColumnDef[]
@@ -318,7 +341,8 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Create_Table_Unsigned()
         {
-            const string sql = "CREATE TABLE foo (bar_tinyint TINYINT(3) UNSIGNED, bar_smallint SMALLINT(5) UNSIGNED, bar_mediumint MEDIUMINT(13) UNSIGNED, bar_int INT(11) UNSIGNED, bar_bigint BIGINT(20) UNSIGNED)";
+            const string sql =
+                "CREATE TABLE foo (bar_tinyint TINYINT(3) UNSIGNED, bar_smallint SMALLINT(5) UNSIGNED, bar_mediumint MEDIUMINT(13) UNSIGNED, bar_int INT(11) UNSIGNED, bar_bigint BIGINT(20) UNSIGNED)";
             var create = VerifiedStatement<Statement.CreateTable>(sql);
 
             var expected = new ColumnDef[]
@@ -337,7 +361,8 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Simple_Insert()
         {
-            const string sql = "INSERT INTO tasks (title, priority) VALUES ('Test Some Inserts', 1), ('Test Entry 2', 2), ('Test Entry 3', 3)";
+            const string sql =
+                "INSERT INTO tasks (title, priority) VALUES ('Test Some Inserts', 1), ('Test Entry 2', 2), ('Test Entry 3', 3)";
             var insert = VerifiedStatement<Statement.Insert>(sql);
             var body = new SetExpression.ValuesExpression(new Values(new Sequence<Expression>[]
             {
@@ -376,75 +401,85 @@ namespace SqlParser.Tests.Dialects
 
             Assert.Equal("tb", insert.Name);
             Assert.Equal(new Statement.Select(
-                new Query(new SetExpression.ValuesExpression(new Values(new Sequence<Expression>[]
-                {
-                    new (),
-                    new ()
-                }))))
+                    new Query(new SetExpression.ValuesExpression(new Values(new Sequence<Expression>[]
+                    {
+                        new(),
+                        new()
+                    }))))
                 , insert.Source);
         }
 
         [Fact]
         public void Parse_Insert_With_On_Duplicate_Update()
         {
-            const string sql = "INSERT INTO permission_groups (name, description, perm_create, perm_read, perm_update, perm_delete) VALUES ('accounting_manager', 'Some description about the group', true, true, true, true) ON DUPLICATE KEY UPDATE description = VALUES(description), perm_create = VALUES(perm_create), perm_read = VALUES(perm_read), perm_update = VALUES(perm_update), perm_delete = VALUES(perm_delete)";
+            const string sql =
+                "INSERT INTO permission_groups (name, description, perm_create, perm_read, perm_update, perm_delete) VALUES ('accounting_manager', 'Some description about the group', true, true, true, true) ON DUPLICATE KEY UPDATE description = VALUES(description), perm_create = VALUES(perm_create), perm_read = VALUES(perm_read), perm_update = VALUES(perm_update), perm_delete = VALUES(perm_delete)";
 
             var insert = VerifiedStatement<Statement.Insert>(sql);
 
             Assert.Equal("permission_groups", insert.Name);
-            Assert.Equal(new Ident[] { "name", "description", "perm_create", "perm_read", "perm_update", "perm_delete" }, insert.Columns!);
+            Assert.Equal(new Ident[] { "name", "description", "perm_create", "perm_read", "perm_update", "perm_delete" },
+                insert.Columns!);
 
-            var rows = new Sequence<Expression>[] { new()
+            var rows = new Sequence<Expression>[]
             {
-                new LiteralValue(new Value.SingleQuotedString("accounting_manager")),
-                new LiteralValue(new Value.SingleQuotedString("Some description about the group")),
-                new LiteralValue(new Value.Boolean(true)),
-                new LiteralValue(new Value.Boolean(true)),
-                new LiteralValue(new Value.Boolean(true)),
-                new LiteralValue(new Value.Boolean(true))
-            } };
+                new()
+                {
+                    new LiteralValue(new Value.SingleQuotedString("accounting_manager")),
+                    new LiteralValue(new Value.SingleQuotedString("Some description about the group")),
+                    new LiteralValue(new Value.Boolean(true)),
+                    new LiteralValue(new Value.Boolean(true)),
+                    new LiteralValue(new Value.Boolean(true)),
+                    new LiteralValue(new Value.Boolean(true))
+                }
+            };
 
             Assert.Equal(new Query(new SetExpression.ValuesExpression(new Values(rows))), (Query)insert.Source);
 
             var update = new OnInsert.DuplicateKeyUpdate(new Statement.Assignment[]
             {
-                new (new Ident[]{"description"}, new Function("VALUES")
+                new(new Ident[] {"description"}, new Function("VALUES")
                 {
                     Args = new FunctionArg[]
                     {
-                        new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("description")))
+                        new FunctionArg.Unnamed(
+                            new FunctionArgExpression.FunctionExpression(new Identifier("description")))
                     }
                 }),
 
-                new (new Ident[] { "perm_create" }, new Function("VALUES")
+                new(new Ident[] {"perm_create"}, new Function("VALUES")
                 {
                     Args = new FunctionArg[]
                     {
-                        new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("perm_create")))
+                        new FunctionArg.Unnamed(
+                            new FunctionArgExpression.FunctionExpression(new Identifier("perm_create")))
                     }
                 }),
 
-                new (new Ident[] { "perm_read" }, new Function("VALUES")
+                new(new Ident[] {"perm_read"}, new Function("VALUES")
                 {
                     Args = new FunctionArg[]
                     {
-                        new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("perm_read")))
+                        new FunctionArg.Unnamed(
+                            new FunctionArgExpression.FunctionExpression(new Identifier("perm_read")))
                     }
                 }),
 
-                new (new Ident[] { "perm_update" }, new Function("VALUES")
+                new(new Ident[] {"perm_update"}, new Function("VALUES")
                 {
                     Args = new FunctionArg[]
                     {
-                        new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("perm_update")))
+                        new FunctionArg.Unnamed(
+                            new FunctionArgExpression.FunctionExpression(new Identifier("perm_update")))
                     }
                 }),
 
-                new (new Ident[] { "perm_delete" }, new Function("VALUES")
+                new(new Ident[] {"perm_delete"}, new Function("VALUES")
                 {
                     Args = new FunctionArg[]
                     {
-                        new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("perm_delete")))
+                        new FunctionArg.Unnamed(
+                            new FunctionArgExpression.FunctionExpression(new Identifier("perm_delete")))
                     }
                 })
             });
@@ -455,7 +490,8 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Update_With_Joins()
         {
-            const string sql = "UPDATE orders AS o JOIN customers AS c ON o.customer_id = c.id SET o.completed = true WHERE c.firstname = 'Peter'";
+            const string sql =
+                "UPDATE orders AS o JOIN customers AS c ON o.customer_id = c.id SET o.completed = true WHERE c.firstname = 'Peter'";
 
             var update = VerifiedStatement<Statement.Update>(sql);
 
@@ -466,15 +502,15 @@ namespace SqlParser.Tests.Dialects
             {
                 Joins = new Join[]
                 {
-                    new (new TableFactor.Table("customers")
+                    new(new TableFactor.Table("customers")
                     {
                         Alias = new TableAlias("c")
                     })
                     {
                         JoinOperator = new JoinOperator.Inner(new JoinConstraint.On(new BinaryOp(
-                            new CompoundIdentifier(new Ident[]{"o", "customer_id"}),
-                           BinaryOperator.Eq,
-                            new CompoundIdentifier(new Ident[]{"c","id"})
+                            new CompoundIdentifier(new Ident[] {"o", "customer_id"}),
+                            BinaryOperator.Eq,
+                            new CompoundIdentifier(new Ident[] {"c", "id"})
                         )))
                     }
                 }
@@ -482,12 +518,12 @@ namespace SqlParser.Tests.Dialects
 
             var assignments = new Statement.Assignment[]
             {
-                new (new Ident[]{"o", "completed"}, new LiteralValue(new Value.Boolean(true)))
+                new(new Ident[] {"o", "completed"}, new LiteralValue(new Value.Boolean(true)))
             };
 
             var op = new BinaryOp(
                 new CompoundIdentifier(new Ident[] { "c", "firstname" }),
-               BinaryOperator.Eq,
+                BinaryOperator.Eq,
                 new LiteralValue(new Value.SingleQuotedString("Peter"))
             );
 
@@ -509,7 +545,8 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Alter_Table_Change_Column()
         {
-            var alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE orders CHANGE COLUMN description desc TEXT NOT NULL");
+            var alter = VerifiedStatement<Statement.AlterTable>(
+                "ALTER TABLE orders CHANGE COLUMN description desc TEXT NOT NULL");
 
             var operation = new AlterTableOperation.ChangeColumn("description", "desc", new DataType.Text(),
                 new[]
@@ -520,7 +557,8 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal("orders", alter.Name);
             Assert.Equal(operation, alter.Operations.First());
 
-            alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE orders CHANGE COLUMN description desc TEXT NOT NULL");
+            alter = VerifiedStatement<Statement.AlterTable>(
+                "ALTER TABLE orders CHANGE COLUMN description desc TEXT NOT NULL");
             Assert.Equal("orders", alter.Name);
             Assert.Equal(operation, alter.Operations.First());
         }
@@ -579,16 +617,18 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Public_Table_Column_Option_On_Update()
         {
-            var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (`modification_time` DATETIME ON UPDATE CURRENT_TIMESTAMP())");
+            var create =
+                VerifiedStatement<Statement.CreateTable>(
+                    "CREATE TABLE foo (`modification_time` DATETIME ON UPDATE CURRENT_TIMESTAMP())");
             Assert.Equal("foo", create.Name);
 
             Assert.Equal(new ColumnDef[]
             {
-                new (new Ident("modification_time", Symbols.Backtick),new DataType.Datetime(),
-                Options:new ColumnOptionDef[]
-                {
-                    new (Option:new ColumnOption.OnUpdate(new Function("CURRENT_TIMESTAMP")))
-                })
+                new(new Ident("modification_time", Symbols.Backtick), new DataType.Datetime(),
+                    Options: new ColumnOptionDef[]
+                    {
+                        new(Option: new ColumnOption.OnUpdate(new Function("CURRENT_TIMESTAMP")))
+                    })
             }, create.Columns);
         }
 
@@ -694,13 +734,15 @@ namespace SqlParser.Tests.Dialects
 
             VerifiedStatement("SELECT * FROM tb WHERE MATCH (c1) AGAINST ('string')");
             VerifiedStatement("SELECT * FROM tb WHERE MATCH (c1) AGAINST ('string' IN NATURAL LANGUAGE MODE)");
-            VerifiedStatement("SELECT * FROM tb WHERE MATCH (c1) AGAINST ('string' IN NATURAL LANGUAGE MODE WITH QUERY EXPANSION)");
+            VerifiedStatement(
+                "SELECT * FROM tb WHERE MATCH (c1) AGAINST ('string' IN NATURAL LANGUAGE MODE WITH QUERY EXPANSION)");
             VerifiedStatement("SELECT * FROM tb WHERE MATCH (c1) AGAINST ('string' IN BOOLEAN MODE)");
             VerifiedStatement("SELECT * FROM tb WHERE MATCH (c1) AGAINST ('string' WITH QUERY EXPANSION)");
             VerifiedStatement("SELECT * FROM tb WHERE MATCH (c1, c2, c3) AGAINST ('string')");
             VerifiedStatement("SELECT * FROM tb WHERE MATCH (c1) AGAINST (123)");
             VerifiedStatement("SELECT * FROM tb WHERE MATCH (c1) AGAINST (NULL)");
-            VerifiedStatement("SELECT COUNT(IF(MATCH (title, body) AGAINST ('database' IN NATURAL LANGUAGE MODE), 1, NULL)) AS count FROM articles");
+            VerifiedStatement(
+                "SELECT COUNT(IF(MATCH (title, body) AGAINST ('database' IN NATURAL LANGUAGE MODE), 1, NULL)) AS count FROM articles");
         }
 
         [Fact]
@@ -708,14 +750,16 @@ namespace SqlParser.Tests.Dialects
         {
             DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
 
-            Assert.Throws<ParserException>(() => VerifiedStatement("CREATE TABLE tb (c1 INT, CONSTRAINT cons FULLTEXT (c1))"));
+            Assert.Throws<ParserException>(() =>
+                VerifiedStatement("CREATE TABLE tb (c1 INT, CONSTRAINT cons FULLTEXT (c1))"));
         }
 
         [Fact]
         public void Parse_Values()
         {
             VerifiedStatement("VALUES ROW(1, true, 'a')");
-            VerifiedStatement("SELECT a, c FROM (VALUES ROW(1, true, 'a'), ROW(2, false, 'b'), ROW(3, false, 'c')) AS t (a, b, c)");
+            VerifiedStatement(
+                "SELECT a, c FROM (VALUES ROW(1, true, 'a'), ROW(2, false, 'b'), ROW(3, false, 'c')) AS t (a, b, c)");
         }
 
         [Fact]
@@ -725,7 +769,8 @@ namespace SqlParser.Tests.Dialects
 
             var projection = new SelectItem[]
             {
-                new SelectItem.UnnamedExpression(new IntroducedString("_latin1", new Value.HexStringLiteral("4D7953514C")))
+                new SelectItem.UnnamedExpression(new IntroducedString("_latin1",
+                    new Value.HexStringLiteral("4D7953514C")))
             };
 
             Assert.Equal(projection, ((SetExpression.SelectExpression)query.Query.Body).Select.Projection);
@@ -767,17 +812,16 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Create_Table_Unique_Key()
         {
-            const string sql = "CREATE TABLE foo (id INT PRIMARY KEY AUTO_INCREMENT, bar INT NOT NULL, UNIQUE KEY bar_key (bar))";
-            const string canonical = "CREATE TABLE foo (id INT PRIMARY KEY AUTO_INCREMENT, bar INT NOT NULL, CONSTRAINT bar_key UNIQUE (bar))";
+            const string sql =
+                "CREATE TABLE foo (id INT PRIMARY KEY AUTO_INCREMENT, bar INT NOT NULL, UNIQUE KEY bar_key (bar))";
+            const string canonical =
+                "CREATE TABLE foo (id INT PRIMARY KEY AUTO_INCREMENT, bar INT NOT NULL, CONSTRAINT bar_key UNIQUE (bar))";
 
             var create = (Statement.CreateTable)OneStatementParsesTo(sql, canonical, new[] { new MySqlDialect() });
 
             var constraints = new Sequence<TableConstraint>
             {
-                new TableConstraint.Unique(["bar"])
-                {
-                    Name = "bar_key"
-                }
+                new TableConstraint.Unique(["bar"]){ Name = "bar_key" }
             };
 
             Assert.Equal("foo", create.Name);
@@ -785,14 +829,14 @@ namespace SqlParser.Tests.Dialects
 
             var columns = new Sequence<ColumnDef>
             {
-                new ("id", new DataType.Int(), Options: new Sequence<ColumnOptionDef>
+                new("id", new DataType.Int(), Options: new Sequence<ColumnOptionDef>
                 {
-                    new (new ColumnOption.Unique(true)),
-                    new (new ColumnOption.DialectSpecific(new Sequence<Token>{new Word("AUTO_INCREMENT") }))
+                    new(new ColumnOption.Unique(true)),
+                    new(new ColumnOption.DialectSpecific(new Sequence<Token> {new Word("AUTO_INCREMENT")}))
                 }),
-                new ("bar", new DataType.Int(), Options: new Sequence<ColumnOptionDef>
+                new("bar", new DataType.Int(), Options: new Sequence<ColumnOptionDef>
                 {
-                    new (new ColumnOption.NotNull())
+                    new(new ColumnOption.NotNull())
                 })
             };
             Assert.Equal(columns, create.Columns);
@@ -835,8 +879,8 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Create_Table_Auto_Increment_Offset()
         {
-            var canonical = "CREATE TABLE foo (bar INT NOT NULL AUTO_INCREMENT) ENGINE=InnoDB AUTO_INCREMENT 123";
-            var withEqual = "CREATE TABLE foo(bar INT NOT NULL AUTO_INCREMENT) ENGINE = InnoDB AUTO_INCREMENT = 123";
+            const string canonical = "CREATE TABLE foo (bar INT NOT NULL AUTO_INCREMENT) ENGINE=InnoDB AUTO_INCREMENT 123";
+            const string withEqual = "CREATE TABLE foo(bar INT NOT NULL AUTO_INCREMENT) ENGINE = InnoDB AUTO_INCREMENT = 123";
 
             foreach (var sql in new[] { canonical, withEqual })
             {
@@ -844,6 +888,18 @@ namespace SqlParser.Tests.Dialects
 
                 Assert.Equal(123, create.AutoIncrementOffset!.Value);
             }
+        }
+
+        [Fact]
+        public void Parse_Attach_Database()
+        {
+            const string sql = "ATTACH DATABASE 'test.db' AS test";
+            var statement = VerifiedStatement(sql);
+
+            Assert.Equal(sql, statement.ToSql());
+
+            var expected = new Statement.AttachDatabase("test", new LiteralValue(new Value.SingleQuotedString("test.db")), true);
+            Assert.Equal(expected, statement);
         }
     }
 }
