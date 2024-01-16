@@ -589,5 +589,23 @@ namespace SqlParser.Tests
             Assert.True(tokens[5] is Word{Value:"c \"\"\"\"", QuoteStyle: Symbols.DoubleQuote });
             Assert.True(tokens[6] is Whitespace{WhitespaceKind:WhitespaceKind.Space});
         }
+
+        [Fact]
+        public void Tokenize_Clickhouse_Double_Equal()
+        {
+            var dialect = new ClickHouseDialect();
+            var tokens = new Tokenizer().Tokenize("SELECT foo=='1'", dialect);
+            
+            var expected = new Sequence<Token>
+            {
+                new Word("SELECT"),
+                new Whitespace(WhitespaceKind.Space),
+                new Word("foo"),
+                new DoubleEqual(),
+                new SingleQuotedString("1")
+            };
+
+            Assert.Equal(expected, tokens);
+        }
     }
 }

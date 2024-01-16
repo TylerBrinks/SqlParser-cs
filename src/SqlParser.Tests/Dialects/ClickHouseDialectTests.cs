@@ -170,5 +170,14 @@ namespace SqlParser.Tests.Dialects
 
             VerifiedStatement("CREATE TABLE \"x\" (\"a\" \"int\") ENGINE=MergeTree ORDER BY (\"x\") AS SELECT * FROM \"t\" WHERE true");
         }
+
+        [Fact]
+        public void Parse_Double_Equal()
+        {
+            OneStatementParsesTo(
+                "SELECT foo FROM bar WHERE buz == 'buz'",
+                "SELECT foo FROM bar WHERE buz = 'buz'"
+            );
+        }
     }
 }
