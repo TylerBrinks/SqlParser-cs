@@ -4702,5 +4702,11 @@ namespace SqlParser.Tests
                 "SELECT id, fname, lname, SUM(order) FROM customer GROUP BY ALL"
             );
         }
+
+        [Fact]
+        public void Parse_Create_Table_Collate()
+        {
+            VerifiedStatement("CREATE TABLE tbl (foo INT, bar TEXT COLLATE \"de_DE\")", new Dialect[]{ new PostgreSqlDialect(), new GenericDialect() });
+        }
     }
 }

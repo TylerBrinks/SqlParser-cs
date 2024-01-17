@@ -13,6 +13,11 @@ public record ColumnDef(Ident Name, DataType DataType, ObjectName? Collation = n
     {
         writer.WriteSql($"{Name} {DataType}");
 
+        if (Collation != null)
+        {
+            writer.WriteSql($" COLLATE {Collation}");
+        }
+
         if (Options != null)
         {
             foreach (var option in Options)
