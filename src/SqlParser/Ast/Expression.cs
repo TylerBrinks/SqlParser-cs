@@ -16,7 +16,7 @@ public abstract record Expression : IWriteSql, IElement
     /// </summary>
     /// <param name="Expression">Expression</param>
     /// <param name="DataType">Data type</param>
-    public abstract record CastBase(Expression Expression, DataType DataType) : Expression
+    public abstract record CastBase(Expression Expression, DataType DataType, CastFormat? Format) : Expression
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -27,7 +27,15 @@ public abstract record Expression : IWriteSql, IElement
                 TryCast => "TRY_CAST",
                 _ => string.Empty
             };
-            writer.WriteSql($"{cast}({Expression} AS {DataType})");
+
+            writer.WriteSql($"{cast}({Expression} AS {DataType}");
+
+            if (Format != null)
+            {
+                writer.WriteSql($" FORMAT {Format}");
+            }
+
+            writer.Write(")");
         }
     }
     /// <summary>
@@ -250,7 +258,7 @@ public abstract record Expression : IWriteSql, IElement
     /// <summary>
     /// CAST an expression to a different data type e.g. `CAST(foo AS VARCHAR(123))`
     /// </summary>
-    public record Cast(Expression Expression, DataType DataType) : CastBase(Expression, DataType);
+    public record Cast(Expression Expression, DataType DataType, CastFormat? Format = null) : CastBase(Expression, DataType, Format);
     /// <summary>
     /// CEIL(Expression [TO DateTimeField])
     /// </summary>
@@ -994,7 +1002,7 @@ public abstract record Expression : IWriteSql, IElement
     /// </summary>
     /// <param name="Expression">Expression</param>
     /// <param name="DataType"></param>
-    public record SafeCast(Expression Expression, DataType DataType) : CastBase(Expression, DataType);
+    public record SafeCast(Expression Expression, DataType DataType, CastFormat? Format = null) : CastBase(Expression, DataType, Format);
     /// <summary>
     /// SimilarTo regex
     /// </summary>
@@ -1128,7 +1136,7 @@ public abstract record Expression : IWriteSql, IElement
     /// </summary>
     /// <param name="Expression">Expression</param>
     /// <param name="DataType">Cast data type</param>
-    public record TryCast(Expression Expression, DataType DataType) : CastBase(Expression, DataType);
+    public record TryCast(Expression Expression, DataType DataType, CastFormat? Format = null) : CastBase(Expression, DataType, Format);
     /// <summary>
     /// ROW / TUPLE a single value, such as `SELECT (1, 2)`
     /// </summary>

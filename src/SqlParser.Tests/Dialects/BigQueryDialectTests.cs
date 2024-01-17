@@ -174,6 +174,37 @@ namespace SqlParser.Tests.Dialects
         }
 
         [Fact]
+        public void Parse_Cast_Date_Format()
+        {
+            VerifiedOnlySelect("SELECT CAST(date_valid_from AS DATE FORMAT 'YYYY-MM-DD') AS date_valid_from FROM foo");
+        }
+
+
+        [Fact]
+        public void Parse_Cast_Time_Format()
+        {
+            VerifiedOnlySelect("SELECT CAST(TIME '21:30:00' AS STRING FORMAT 'PM') AS date_time_to_string");
+        }
+
+        [Fact]
+        public void Parse_Cast_Timestamp_Format_Tz()
+        {
+            VerifiedOnlySelect("SELECT CAST(TIMESTAMP '2008-12-25 00:00:00+00:00' AS STRING FORMAT 'TZH' AT TIME ZONE 'Asia/Kolkata') AS date_time_to_string");
+        }
+
+        [Fact]
+        public void Parse_Cast_String_To_Bytes_Format()
+        {
+            VerifiedOnlySelect("SELECT CAST('Hello' AS BYTES FORMAT 'ASCII') AS string_to_bytes");
+        }
+
+        [Fact]
+        public void Parse_Cast_Bytes_To_String_Format()
+        {
+            VerifiedOnlySelect("SELECT CAST(B'\\x48\\x65\\x6c\\x6c\\x6f' AS STRING FORMAT 'ASCII') AS bytes_to_string");
+        }
+
+        [Fact]
         public void Parse_Like()
         {
             Test(true);

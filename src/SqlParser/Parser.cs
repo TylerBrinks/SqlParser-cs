@@ -599,25 +599,43 @@ public class Parser
             };
         }
 
-        Expression ParseCastExpression(Func<Expression, DataType, Expression> create)
+        CastFormat? ParseOptionalCastFormat()
+        {
+            if (ParseKeyword(Keyword.FORMAT))
+            {
+                var value = ParseValue();
+
+                if (ParseKeywordSequence(Keyword.AT, Keyword.TIME, Keyword.ZONE))
+                {
+                    return new CastFormat.ValueAtTimeZone(value, ParseValue());
+                }
+                
+                return new CastFormat.Value(value);
+            }
+           
+            return null;
+        }
+
+        Expression ParseCastExpression(Func<Expression, DataType, CastFormat?, Expression> create)
         {
             return ExpectParens(() =>
             {
                 var expr = ParseExpr();
                 ExpectKeyword(Keyword.AS);
                 var dataType = ParseDataType();
-                return create(expr, dataType);
+                var format = ParseOptionalCastFormat();
+                return create(expr, dataType, format);
             });
         }
 
         Expression ParseTryCastExpr()
         {
-            return ParseCastExpression((expr, dataType) => new TryCast(expr, dataType));
+            return ParseCastExpression((expr, dataType, format) => new TryCast(expr, dataType, format));
         }
 
         Expression ParseSafeCastExpr()
         {
-            return ParseCastExpression((expr, dataType) => new SafeCast(expr, dataType));
+            return ParseCastExpression((expr, dataType, format) => new SafeCast(expr, dataType, format));
         }
 
         // Parse a SQL EXISTS expression e.g. `WHERE EXISTS(SELECT ...)`.
@@ -1065,7 +1083,7 @@ public class Parser
                 => ParseTimeFunctions(new ObjectName(word.ToIdent())),
 
             Word { Keyword: Keyword.CASE } => ParseCaseExpr(),
-            Word { Keyword: Keyword.CAST } => ParseCastExpression((expr, dataType) => new Cast(expr, dataType)), // ParseCastExpr(),
+            Word { Keyword: Keyword.CAST } => ParseCastExpression((expr, dataType, format) => new Cast(expr, dataType, format)),
             Word { Keyword: Keyword.TRY_CAST } => ParseTryCastExpr(),
             Word { Keyword: Keyword.SAFE_CAST } => ParseSafeCastExpr(),
             Word { Keyword: Keyword.EXISTS } => ParseExistsExpr(false),
@@ -1902,7 +1920,7 @@ public class Parser
     /// <returns></returns>
     public Expression ParsePgCast(Expression expr)
     {
-        return new Cast(expr, ParseDataType());
+        return new Cast(expr, ParseDataType(), null);
     }
     /// <summary>
     /// Get the precedence of the next token
