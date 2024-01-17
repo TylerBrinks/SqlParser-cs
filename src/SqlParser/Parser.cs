@@ -3012,6 +3012,9 @@ public class Parser
         ExpectKeyword(Keyword.AS);
         var query = ParseQuery();
 
+        var withNoBinding = _dialect is RedshiftDialect or GenericDialect &&
+                          ParseKeywordSequence(Keyword.WITH, Keyword.NO, Keyword.SCHEMA, Keyword.BINDING);
+
         return new CreateView(name, query)
         {
             Columns = columns,
@@ -3019,7 +3022,8 @@ public class Parser
             ClusterBy = clusterBy,
             //Query = query,
             Materialized = materialized,
-            OrReplace = orReplace
+            OrReplace = orReplace,
+            WithNoSchemaBinding = withNoBinding
         };
     }
 

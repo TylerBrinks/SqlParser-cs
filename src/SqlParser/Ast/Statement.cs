@@ -896,6 +896,7 @@ public abstract record Statement : IWriteSql, IElement
         public Sequence<Ident>? Columns { get; init; }
         [Visit(2)] public Sequence<SqlOption>? WithOptions { get; init; }
         public Sequence<Ident>? ClusterBy { get; init; }
+        public bool WithNoSchemaBinding { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
@@ -920,6 +921,11 @@ public abstract record Statement : IWriteSql, IElement
 
             writer.Write(" AS ");
             Query.ToSql(writer);
+
+            if (WithNoSchemaBinding)
+            {
+                writer.Write(" WITH NO SCHEMA BINDING");
+            }
         }
     }
     /// <summary>

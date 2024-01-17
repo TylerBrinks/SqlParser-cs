@@ -159,6 +159,7 @@ public enum Keyword
     BIGINT,
     BIGNUMERIC,
     BINARY,
+    BINDING,
     BLOB,
     BOOL,
     BOOLEAN,

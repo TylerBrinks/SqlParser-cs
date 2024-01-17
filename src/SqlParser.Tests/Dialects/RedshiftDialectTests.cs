@@ -140,5 +140,12 @@ namespace SqlParser.Tests.Dialects
             var expected = new SelectItem.UnnamedExpression(new Identifier("#_of_values"));
             Assert.Equal(expected, select.Projection[0]);
         }
+
+        [Fact]
+        public void Test_Create_View_With_No_Schema_Binding()
+        {
+            VerifiedStatement("CREATE VIEW myevent AS SELECT eventname FROM event WITH NO SCHEMA BINDING",
+                new Dialect[]{new RedshiftDialect(), new GenericDialect()});
+        }
     }
 }

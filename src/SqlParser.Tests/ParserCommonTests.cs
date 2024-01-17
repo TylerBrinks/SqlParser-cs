@@ -3332,6 +3332,20 @@ namespace SqlParser.Tests
             Assert.Equal("SELECT foo FROM bar", create.Query.Query.ToSql());
             Assert.False(create.Materialized);
             Assert.False(create.OrReplace);
+            Assert.False(create.WithNoSchemaBinding);
+        }
+
+        [Fact]
+        public void Parse_Create_View_With_Columns()
+        {
+            var create = VerifiedStatement<Statement.CreateView>("CREATE VIEW v (has, cols) AS SELECT 1, 2");
+
+            Assert.Equal("v", create.Name);
+            Assert.Equal(new Sequence<Ident>{"has", "cols"}, create.Columns);
+            Assert.Equal("SELECT 1, 2", create.Query.Query.ToSql());
+            Assert.False(create.Materialized);
+            Assert.False(create.OrReplace);
+            Assert.False(create.WithNoSchemaBinding);
         }
 
         [Fact]
@@ -3347,22 +3361,6 @@ namespace SqlParser.Tests
         }
 
         [Fact]
-        public void Parse_Create_View_With_Columns()
-        {
-            var create = VerifiedStatement<Statement.CreateView>("CREATE VIEW v (has, cols) AS SELECT 1, 2");
-            var expected = new Ident[]
-            {
-               "has",
-               "cols"
-            };
-            Assert.Equal("v", create.Name);
-            Assert.False(create.Materialized);
-            Assert.False(create.OrReplace);
-            Assert.Equal(expected, create.Columns!);
-            Assert.Equal("SELECT 1, 2", create.Query.Query.ToSql());
-        }
-
-        [Fact]
         public void Parse_Create_Or_Replace_View()
         {
             var create = VerifiedStatement<Statement.CreateView>("CREATE OR REPLACE VIEW v AS SELECT 1");
@@ -3370,6 +3368,7 @@ namespace SqlParser.Tests
             Assert.False(create.Materialized);
             Assert.True(create.OrReplace);
             Assert.Equal("SELECT 1", create.Query.Query.ToSql());
+            Assert.False(create.WithNoSchemaBinding);
         }
 
         [Fact]
@@ -3380,6 +3379,7 @@ namespace SqlParser.Tests
             Assert.True(create.Materialized);
             Assert.True(create.OrReplace);
             Assert.Equal("SELECT 1", create.Query.Query.ToSql());
+            Assert.False(create.WithNoSchemaBinding);
         }
 
         [Fact]
@@ -3390,6 +3390,7 @@ namespace SqlParser.Tests
             Assert.True(create.Materialized);
             Assert.False(create.OrReplace);
             Assert.Equal("SELECT foo FROM bar", create.Query.Query.ToSql());
+            Assert.False(create.WithNoSchemaBinding);
         }
 
         [Fact]
@@ -3401,6 +3402,7 @@ namespace SqlParser.Tests
             Assert.False(create.OrReplace);
             Assert.Equal(new Ident[] { "foo" }, create.ClusterBy!);
             Assert.Equal("SELECT foo FROM bar", create.Query.Query.ToSql());
+            Assert.False(create.WithNoSchemaBinding);
         }
 
         [Fact]
