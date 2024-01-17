@@ -583,9 +583,9 @@ namespace SqlParser.Tests.Dialects
             
             var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
 
-            Assert.True(copy!.FileFormat!.Any(o => o is {Name: "COMPRESSION", OptionType: DataLoadingOptionType.Enum, Value: "AUTO"}));
-            Assert.True(copy!.FileFormat!.Any(o => o is {Name: "BINARY_FORMAT", OptionType: DataLoadingOptionType.Enum, Value: "HEX"}));
-            Assert.True(copy!.FileFormat!.Any(o => o is {Name: "ESCAPE", OptionType: DataLoadingOptionType.String, Value: "\\"}));
+            Assert.Contains(copy!.FileFormat!, o => o is {Name: "COMPRESSION", OptionType: DataLoadingOptionType.Enum, Value: "AUTO"});
+            Assert.Contains(copy!.FileFormat!, o => o is {Name: "BINARY_FORMAT", OptionType: DataLoadingOptionType.Enum, Value: "HEX"});
+            Assert.Contains(copy!.FileFormat!, o => o is {Name: "ESCAPE", OptionType: DataLoadingOptionType.String, Value: "\\"});
         }
 
         [Fact]
@@ -601,8 +601,8 @@ namespace SqlParser.Tests.Dialects
 
             var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
 
-            Assert.True(copy!.CopyOptions!.Any(o => o is { Name: "ON_ERROR", OptionType: DataLoadingOptionType.Enum, Value: "CONTINUE" }));
-            Assert.True(copy!.CopyOptions!.Any(o => o is { Name: "FORCE", OptionType: DataLoadingOptionType.Boolean, Value: "TRUE" }));
+            Assert.Contains(copy!.CopyOptions!, o => o is { Name: "ON_ERROR", OptionType: DataLoadingOptionType.Enum, Value: "CONTINUE" });
+            Assert.Contains(copy!.CopyOptions!, o => o is { Name: "FORCE", OptionType: DataLoadingOptionType.Boolean, Value: "TRUE" });
         }
 
         [Fact]
