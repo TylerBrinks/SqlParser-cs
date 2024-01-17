@@ -379,5 +379,29 @@ namespace SqlParser.Tests.Dialects
             sql = "SELECT 1 FROM t1 FOR SYSTEM TIME AS OF 'some_timestamp'";
             Assert.Throws<ParserException>(() => ParseSqlStatements(sql, dialect));
         }
+
+        [Fact]
+        public void Test_BigQuery_Trim()
+        {
+            var sql = """
+                      SELECT customer_id, TRIM(item_price_id, '"', "a") AS item_price_id FROM models_staging.subscriptions
+                      """;
+
+            VerifiedStatement(sql);
+
+            sql = "SELECT TRIM('xyz', 'a')";
+
+            var select = VerifiedOnlySelect(sql, new[] {new BigQueryDialect()});
+            var expected = new Trim(new LiteralValue(new Value.SingleQuotedString("xyz")),
+                TrimWhereField.None,
+                TrimCharacters: new Sequence<Expression>
+                {
+                    new LiteralValue(new Value.SingleQuotedString("a"))
+                });
+            
+            Assert.Equal(expected, select.Projection.First().AsExpr());
+
+            Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT TRIM('xyz' 'a')", new[] { new BigQueryDialect() }));
+        }
     }
 }

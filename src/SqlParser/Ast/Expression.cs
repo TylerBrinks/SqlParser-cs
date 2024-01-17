@@ -1086,7 +1086,7 @@ public abstract record Expression : IWriteSql, IElement
     /// <param name="Expression">Expression</param>
     /// <param name="TrimWhere">Trim where field</param>
     /// <param name="TrimWhat">What to trip expression</param>
-    public record Trim(Expression Expression, TrimWhereField TrimWhere, Expression? TrimWhat = null) : Expression
+    public record Trim(Expression Expression, TrimWhereField TrimWhere, Expression? TrimWhat = null, Sequence<Expression>? TrimCharacters = null) : Expression
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -1105,6 +1105,12 @@ public abstract record Expression : IWriteSql, IElement
             else
             {
                 writer.WriteSql($"{Expression}");
+            }
+
+            if (TrimCharacters.SafeAny())
+            {
+                writer.Write(", ");
+                writer.WriteDelimited(TrimCharacters, ", ");
             }
 
             writer.Write(")");

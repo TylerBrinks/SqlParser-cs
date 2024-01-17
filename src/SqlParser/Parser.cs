@@ -735,7 +735,7 @@ public class Parser
             return ExpectParens(() =>
             {
                 var trimWhere = TrimWhereField.None;
-
+                Sequence<Expression>? trimCharacters = null;
                 if (PeekToken() is Word { Keyword: Keyword.BOTH or Keyword.LEADING or Keyword.TRAILING })
                 {
                     trimWhere = ParseTrimWhere();
@@ -749,8 +749,12 @@ public class Parser
                     trimWhat = expr;
                     expr = ParseExpr();
                 }
+                else if (ConsumeToken<Comma>() && _dialect is SnowflakeDialect or BigQueryDialect or GenericDialect)
+                {
+                    trimCharacters = ParseCommaSeparated(ParseExpr);
+                }
 
-                return new Trim(expr, trimWhere, trimWhat);
+                return new Trim(expr, trimWhere, trimWhat, trimCharacters);
             });
         }
 

@@ -1,5 +1,4 @@
-﻿using System.Data;
-using SqlParser.Ast;
+﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
 using static SqlParser.Ast.Expression;
@@ -626,6 +625,30 @@ namespace SqlParser.Tests.Dialects
                 
                 Assert.Equal(objectName, copy.Into);
             }
+        }
+
+        [Fact]
+        public void Test_BigQuery_Trim()
+        {
+            var sql = """
+                      SELECT customer_id, TRIM(sub_items.value:item_price_id, '"', "a") AS item_price_id FROM models_staging.subscriptions
+                      """;
+
+            Assert.Equal(sql, VerifiedStatement(sql).ToSql());
+
+            sql = "SELECT TRIM('xyz', 'a')";
+
+            var select = VerifiedOnlySelect(sql, new[] { new SnowflakeDialect() });
+            var expected = new Trim(new LiteralValue(new Value.SingleQuotedString("xyz")),
+                TrimWhereField.None,
+                TrimCharacters: new Sequence<Expression>
+                {
+                    new LiteralValue(new Value.SingleQuotedString("a"))
+                });
+
+            Assert.Equal(expected, select.Projection.First().AsExpr());
+
+            Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT TRIM('xyz' 'a')", new[] { new BigQueryDialect() }));
         }
     }
 }
