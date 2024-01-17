@@ -2425,6 +2425,7 @@ public class Parser
         var orAlter = ParseKeywordSequence(Keyword.OR, Keyword.ALTER);
         var local = ParseOneOfKeywords(Keyword.LOCAL) != Keyword.undefined;
         var parsedGlobal = ParseOneOfKeywords(Keyword.GLOBAL) != Keyword.undefined;
+        var transient = ParseOneOfKeywords(Keyword.TRANSIENT) != Keyword.undefined;
         bool? global = null;
 
         if (parsedGlobal)
@@ -2436,7 +2437,6 @@ public class Parser
             global = false;
         }
 
-        var transient = ParseOneOfKeywords(Keyword.TRANSIENT) != Keyword.undefined;
         var temporary = ParseOneOfKeywords(Keyword.TEMP, Keyword.TEMPORARY) != Keyword.undefined;
 
         if (ParseKeyword(Keyword.TABLE))
@@ -2447,7 +2447,7 @@ public class Parser
         if (ParseKeyword(Keyword.MATERIALIZED) || ParseKeyword(Keyword.VIEW))
         {
             PrevToken();
-            return ParseCreateView(orReplace);
+            return ParseCreateView(orReplace, temporary);
         }
 
         if (ParseKeyword(Keyword.EXTERNAL))
@@ -2995,10 +2995,13 @@ public class Parser
         };
     }
 
-    public CreateView ParseCreateView(bool orReplace)
+    public CreateView ParseCreateView(bool orReplace, bool temporary)
     {
         var materialized = ParseKeyword(Keyword.MATERIALIZED);
         ExpectKeyword(Keyword.VIEW);
+
+        var ifNotExists = _dialect is SQLiteDialect or GenericDialect && ParseIfNotExists();
+
         var name = ParseObjectName();
         var columns = ParseParenthesizedColumnList(IsOptional.Optional, false);
         var withOptions = ParseOptions(Keyword.WITH);
@@ -3020,10 +3023,11 @@ public class Parser
             Columns = columns,
             WithOptions = withOptions,
             ClusterBy = clusterBy,
-            //Query = query,
             Materialized = materialized,
             OrReplace = orReplace,
-            WithNoSchemaBinding = withNoBinding
+            WithNoSchemaBinding = withNoBinding,
+            IfNotExists = ifNotExists,
+            Temporary = temporary
         };
     }
 

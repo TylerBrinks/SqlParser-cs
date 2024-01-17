@@ -146,5 +146,20 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal("Fruits", create.Name);
             Assert.True(create.Strict);
         }
+
+        [Fact]
+        public void Parse_Create_View_Temporary_If_Not_Exists()
+        {
+            var create = VerifiedStatement<Statement.CreateView>("CREATE TEMPORARY VIEW IF NOT EXISTS myschema.myview AS SELECT foo FROM bar");
+
+            Assert.Equal("myschema.myview", create.Name);
+            Assert.Equal(new Sequence<Ident>(), create.Columns);
+            Assert.Equal("SELECT foo FROM bar", create.Query.Query.ToSql());
+            Assert.False(create.Materialized);
+            Assert.False(create.OrReplace);
+            Assert.False(create.WithNoSchemaBinding);
+            Assert.True(create.IfNotExists);
+            Assert.True(create.Temporary);
+        }
     }
 }

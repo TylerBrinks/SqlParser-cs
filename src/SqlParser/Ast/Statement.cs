@@ -29,11 +29,11 @@ public abstract record Statement : IWriteSql, IElement
         {
             writer.Write("ALTER TABLE ");
 
-            if(IfExists)
+            if (IfExists)
             {
                 writer.Write("IF EXISTS ");
             }
-            if(Only)
+            if (Only)
             {
                 writer.Write("ONLY ");
             }
@@ -548,7 +548,7 @@ public abstract record Statement : IWriteSql, IElement
             {
                 writer.WriteSql($" WHERE {Predicate}");
             }
-            
+
             //if (Include.SafeAny())
             //{
             //    writer.WriteDelimited();
@@ -885,11 +885,13 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
+
     /// <summary>
     /// Create View statement
     /// </summary>
     /// <param name="Name">Object name</param>
-    public record CreateView([property: Visit(0)] ObjectName Name, [property: Visit(1)] Select Query) : Statement
+    public record CreateView([property: Visit(0)] ObjectName Name, [property: Visit(1)] Select Query) : Statement,
+        IIfNotExists
     {
         public bool OrReplace { get; init; }
         public bool Materialized { get; init; }
@@ -897,12 +899,18 @@ public abstract record Statement : IWriteSql, IElement
         [Visit(2)] public Sequence<SqlOption>? WithOptions { get; init; }
         public Sequence<Ident>? ClusterBy { get; init; }
         public bool WithNoSchemaBinding { get; init; }
+        public bool IfNotExists { get; init; }
+        public bool Temporary { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
             var orReplace = OrReplace ? "OR REPLACE " : null;
             var materialized = Materialized ? "MATERIALIZED " : null;
-            writer.WriteSql($"CREATE {orReplace}{materialized}VIEW {Name}");
+            var temporary = Temporary ? "TEMPORARY " : null;
+            var ifNotExists = IfNotExists ? "IF NOT EXISTS " : null;
+
+            writer.WriteSql($"CREATE {orReplace}{materialized}{temporary}VIEW {ifNotExists}{Name}");
+           
 
             if (WithOptions.SafeAny())
             {
@@ -1295,11 +1303,11 @@ public abstract record Statement : IWriteSql, IElement
     /// <param name="Selection">Selection expression</param>
     /// <param name="Returning">Select items to return</param>
     public record Delete(
-        Sequence<ObjectName>? Tables, 
+        Sequence<ObjectName>? Tables,
         Sequence<TableWithJoins> From,
         Sequence<OrderByExpression>? OrderBy = null,
         TableFactor? Using = null,
-        Expression? Selection = null, 
+        Expression? Selection = null,
         Sequence<SelectItem>? Returning = null,
         Expression? Limit = null) : Statement
     {

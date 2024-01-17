@@ -3333,6 +3333,8 @@ namespace SqlParser.Tests
             Assert.False(create.Materialized);
             Assert.False(create.OrReplace);
             Assert.False(create.WithNoSchemaBinding);
+            Assert.False(create.IfNotExists);
+            Assert.False(create.Temporary);
         }
 
         [Fact]
@@ -3346,6 +3348,8 @@ namespace SqlParser.Tests
             Assert.False(create.Materialized);
             Assert.False(create.OrReplace);
             Assert.False(create.WithNoSchemaBinding);
+            Assert.False(create.IfNotExists);
+            Assert.False(create.Temporary);
         }
 
         [Fact]
@@ -3369,6 +3373,21 @@ namespace SqlParser.Tests
             Assert.True(create.OrReplace);
             Assert.Equal("SELECT 1", create.Query.Query.ToSql());
             Assert.False(create.WithNoSchemaBinding);
+        }
+
+        [Fact]
+        public void Parse_Create_View_Temporary()
+        {
+            var create = VerifiedStatement<Statement.CreateView>("CREATE TEMPORARY VIEW myschema.myview AS SELECT foo FROM bar");
+
+            Assert.Equal("myschema.myview", create.Name);
+            Assert.Equal(new Sequence<Ident>(), create.Columns);
+            Assert.Equal("SELECT foo FROM bar", create.Query.Query.ToSql());
+            Assert.False(create.Materialized);
+            Assert.False(create.OrReplace);
+            Assert.False(create.WithNoSchemaBinding);
+            Assert.False(create.IfNotExists);
+            Assert.True(create.Temporary);
         }
 
         [Fact]
