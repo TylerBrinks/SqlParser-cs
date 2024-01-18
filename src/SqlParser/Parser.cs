@@ -7331,7 +7331,7 @@ public class Parser
         }
 
         ExceptSelectItem? optExcept = null;
-        if (_dialect is GenericDialect or BigQueryDialect)
+        if (_dialect is GenericDialect or BigQueryDialect or ClickHouseDialect)
         {
             optExcept = ParseOptionalSelectItemExcept();
         }
@@ -7343,7 +7343,7 @@ public class Parser
         }
 
         ReplaceSelectItem? optReplace = null;
-        if (_dialect is GenericDialect or BigQueryDialect)
+        if (_dialect is GenericDialect or BigQueryDialect or ClickHouseDialect)
         {
             optReplace = ParseOptionalSelectItemReplace();
         }
@@ -7395,15 +7395,27 @@ public class Parser
             return null;
         }
 
-        var idents = ParseParenthesizedColumnList(IsOptional.Mandatory, false);
+        ExceptSelectItem optionalExcept;
 
-        if (!idents.Any())
+        if (PeekToken() is LeftParen)
         {
-            throw Expected("at least one column should be parsed by the expect clause", PeekToken());
+            var idents = ParseParenthesizedColumnList(IsOptional.Mandatory, false);
+
+            if (!idents.Any())
+            {
+                throw Expected("at least one column should be parsed by the expect clause", PeekToken());
+            }
+
+            optionalExcept = new ExceptSelectItem(idents.First(), idents.Skip(1).ToSequence());
+        }
+        else
+        {
+            var ident = ParseIdentifier();
+
+            optionalExcept = new ExceptSelectItem(ident, new Sequence<Ident>());
         }
 
-        return new ExceptSelectItem(idents.First(), idents.Skip(1).ToSequence());
-
+        return optionalExcept;
     }
 
     public RenameSelectItem? ParseOptionalSelectItemRename()

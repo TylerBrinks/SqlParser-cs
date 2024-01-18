@@ -187,5 +187,26 @@ namespace SqlParser.Tests.Dialects
             VerifiedStatement("SELECT * FROM default.last_asset_runs_mv ORDER BY created_at DESC LIMIT 1 BY asset", dialects);
             VerifiedStatement("SELECT * FROM default.last_asset_runs_mv ORDER BY created_at DESC LIMIT 1 BY asset, toStartOfDay(created_at)", dialects);
         }
+
+        [Fact]
+        public void Parse_Select_Star_Except()
+        {
+            VerifiedStatement("SELECT * EXCEPT (prev_status) FROM anomalies");
+        }
+
+        [Fact]
+        public void Parse_Select_Star_Except_No_Parens()
+        {
+            OneStatementParsesTo(
+                "SELECT * EXCEPT prev_status FROM anomalies",
+                "SELECT * EXCEPT (prev_status) FROM anomalies"
+            );
+        }
+
+        [Fact]
+        public void Parse_Select_Star_Replace()
+        {
+            VerifiedStatement("SELECT * REPLACE (i + 1 AS i) FROM columns_transformers");
+        }
     }
 }
