@@ -948,5 +948,38 @@ namespace SqlParser.Tests.Dialects
                 VerifiedOnlySelect(sql, dialects);
             }
         }
+
+        [Fact]
+        public void Parse_Ignore_Insert()
+        {
+            const string sql = "INSERT IGNORE INTO tasks (title, priority) VALUES ('Test Some Inserts', 1)";
+
+            var dialects = new Dialect[] {new MySqlDialect(), new GenericDialect()};
+
+            var insert = VerifiedStatement(sql, dialects);
+
+            var query = new Query(new SetExpression.ValuesExpression(new Values(new Sequence<Sequence<Expression>>
+            {
+                new ()
+                {
+                    new LiteralValue(new Value.SingleQuotedString("Test Some Inserts")),
+                    new LiteralValue(new Value.Number("1"))
+                }
+            })));
+
+            var expected = new Statement.Insert("tasks", new Statement.Select(query))
+            {
+                Ignore = true,
+                Into = true,
+                AfterColumns = new Sequence<Ident>(),
+                Columns = new Sequence<Ident>
+                {
+                    "title",
+                    "priority"
+                }
+            };
+
+            Assert.Equal(expected, insert);
+        }
     }
 }

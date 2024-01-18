@@ -1485,6 +1485,8 @@ public abstract record Statement : IWriteSql, IElement
     {
         /// Only for Sqlite
         public SqliteOnConflict Or { get; init; }
+        /// Only for MySql
+        public bool Ignore { get; init; }
         /// INTO - optional keyword
         public bool Into { get; init; }
         /// COLUMNS
@@ -1512,7 +1514,8 @@ public abstract record Statement : IWriteSql, IElement
                 var over = Overwrite ? " OVERWRITE" : null;
                 var into = Into ? " INTO" : null;
                 var table = Table ? " TABLE" : null;
-                writer.Write($"INSERT{over}{into}{table} {Name} ");
+                var ignore = Ignore ? " IGNORE" : null;
+                writer.Write($"INSERT{ignore}{over}{into}{table} {Name} ");
             }
 
             if (Columns.SafeAny())

@@ -7086,6 +7086,7 @@ public class Parser
             ParseKeywordSequence(Keyword.REPLACE) ? SqliteOnConflict.Replace :
             SqliteOnConflict.None;
 
+        var ignore = _dialect is MySqlDialect or GenericDialect && ParseKeyword(Keyword.IGNORE);
         var action = ParseOneOfKeywords(Keyword.INTO, Keyword.OVERWRITE);
         var into = action == Keyword.INTO;
         var overwrite = action == Keyword.OVERWRITE;
@@ -7161,6 +7162,7 @@ public class Parser
         return new Insert(tableName, source)
         {
             Or = orConflict,
+            Ignore = ignore,
             Into = into,
             Overwrite = overwrite,
             Partitioned = partitioned,
