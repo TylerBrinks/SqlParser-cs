@@ -932,8 +932,6 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal(expected, delete);
         }
 
-
-
         [Fact]
         public void Parse_Rlike_And_Regexp()
         {

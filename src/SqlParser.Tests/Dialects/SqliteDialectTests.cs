@@ -161,5 +161,26 @@ namespace SqlParser.Tests.Dialects
             Assert.True(create.IfNotExists);
             Assert.True(create.Temporary);
         }
+
+        [Fact]
+        public void Parse_Window_Function_With_Filter()
+        {
+            var functioNames = new[] { "row_number", "rank", "max", "count", "user_defined_function" };
+
+            foreach (var fn in functioNames)
+            {
+                var sql = $"SELECT {fn}(x) FILTER (WHERE y) OVER () FROM t";
+
+                var select = VerifiedOnlySelect(sql);
+                Assert.Equal(sql, select.ToSql());
+                var expected = new SelectItem.UnnamedExpression(new Function(fn)
+                {
+                    Over = new WindowType.WindowSpecType(new WindowSpec()),
+                    Filter = new Identifier("y"),
+                    Args = [new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("x")))]
+                });
+                Assert.Equal(expected, select.Projection.First());
+            }
+        }
     }
 }

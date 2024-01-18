@@ -49,4 +49,9 @@ public class SQLiteDialect : Dialect
         parser.PrevToken();
         return parser.ParseInsert();
     }
+
+    public override bool SupportsFilterDuringAggregation()
+    {
+        return true;
+    }
 }

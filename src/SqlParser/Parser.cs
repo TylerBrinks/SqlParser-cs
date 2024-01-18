@@ -1152,6 +1152,19 @@ public class Parser
         ExpectLeftParen();
         var distinct = ParseAllOrDistinct() != null;
         var (args, orderBy) = ParseOptionalArgsWithOrderBy();
+
+        Expression? filter = null;
+        if (_dialect.SupportsFilterDuringAggregation() &&
+            ParseKeyword(Keyword.FILTER) &&
+            ConsumeToken<LeftParen>() &&
+            ParseKeyword(Keyword.WHERE))
+        {
+            var filterExpression = ParseExpr();
+            ExpectToken<RightParen>();
+            filter = filterExpression;
+        }
+
+
         WindowType? over = null;
 
         if (ParseKeyword(Keyword.OVER))
@@ -1170,6 +1183,7 @@ public class Parser
         return new Function(name)
         {
             Args = args.Any() ? args : null,
+            Filter = filter,
             Over = over,
             Distinct = distinct,
             Special = false,
@@ -6128,17 +6142,6 @@ public class Parser
                 SetOperator.Except or SetOperator.Intersect => SetQuantifier.None,
                 _ => SetQuantifier.None
             };
-
-            //return op switch
-            //{
-            //    SetOperator.Union when ParseKeyword(Keyword.ALL) => SetQuantifier.All,
-            //    SetOperator.Union when ParseKeyword(Keyword.DISTINCT) => SetQuantifier.Distinct,
-            //    SetOperator.Union => SetQuantifier.None,
-            //    SetOperator.Except or SetOperator.Intersect when ParseKeyword(Keyword.ALL) => SetQuantifier.All,
-            //    SetOperator.Except or SetOperator.Intersect when ParseKeyword(Keyword.DISTINCT) => SetQuantifier.Distinct,
-            //    SetOperator.Except or SetOperator.Intersect => SetQuantifier.None,
-            //    _ => SetQuantifier.None
-            //};
         }
     }
 

@@ -434,6 +434,10 @@ public abstract record Expression : IWriteSql, IElement
         /// </summary>
         public Sequence<FunctionArg>? Args { get; internal set; }
         /// <summary>
+        /// e.g. `x > 5` in `COUNT(x) FILTER (WHERE x > 5)`
+        /// </summary>
+        public Expression? Filter { get; init; }
+        /// <summary>
         /// Window spec
         /// </summary>
         public WindowType? Over { get; init; }
@@ -472,6 +476,11 @@ public abstract record Expression : IWriteSql, IElement
                 }
 
                 writer.Write(")");
+
+                if (Filter != null)
+                {
+                    writer.WriteSql($" FILTER (WHERE {Filter})");
+                }
 
                 if (Over != null)
                 {
