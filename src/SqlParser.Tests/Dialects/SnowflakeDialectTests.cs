@@ -650,5 +650,22 @@ namespace SqlParser.Tests.Dialects
 
             Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT TRIM('xyz' 'a')", new[] { new BigQueryDialect() }));
         }
+
+        [Fact]
+        public void Parse_Subquery_Function_Argument()
+        {
+            // Snowflake allows passing an unparenthesized subquery as the single argument to a function.
+            OneStatementParsesTo("SELECT parse_json(SELECT '{}')", "SELECT parse_json((SELECT '{}'))");
+
+            // Subqueries that begin with WITH work too.
+            OneStatementParsesTo(
+                "SELECT parse_json(WITH q AS (SELECT '{}' AS foo) SELECT foo FROM q)",
+                "SELECT parse_json((WITH q AS (SELECT '{}' AS foo) SELECT foo FROM q))"
+            );
+
+            // Commas are parsed as part of the subquery, not additional arguments to
+            // the function.
+            OneStatementParsesTo("SELECT func(SELECT 1, 2)", "SELECT func((SELECT 1, 2))");
+        }
     }
 }

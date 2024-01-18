@@ -300,7 +300,7 @@ public class Parser
         var databaseFileName = ParseExpr();
         ExpectKeyword(Keyword.AS);
         var schemaName = ParseIdentifier();
-       
+
         return new AttachDatabase(schemaName, databaseFileName, database);
     }
 
@@ -609,10 +609,10 @@ public class Parser
                 {
                     return new CastFormat.ValueAtTimeZone(value, ParseValue());
                 }
-                
+
                 return new CastFormat.Value(value);
             }
-           
+
             return null;
         }
 
@@ -1705,13 +1705,13 @@ public class Parser
 
                         throw new ParserException($"No infix parser for token {token}");
                     }
-                case Keyword.NOT or 
-                    Keyword.IN or 
-                    Keyword.BETWEEN or 
-                    Keyword.LIKE or 
-                    Keyword.ILIKE or 
+                case Keyword.NOT or
+                    Keyword.IN or
+                    Keyword.BETWEEN or
+                    Keyword.LIKE or
+                    Keyword.ILIKE or
                     Keyword.SIMILAR or
-                    Keyword.REGEXP or 
+                    Keyword.REGEXP or
                     Keyword.RLIKE:
                     {
                         PrevToken();
@@ -1932,7 +1932,7 @@ public class Parser
     /// <returns></returns>
     public Expression ParsePgCast(Expression expr)
     {
-        return new Cast(expr, ParseDataType(), null);
+        return new Cast(expr, ParseDataType());
     }
     /// <summary>
     /// Get the precedence of the next token
@@ -5371,7 +5371,7 @@ public class Parser
         if (_dialect is BigQueryDialect && idents.Any(i => i.Value.Contains(Symbols.Dot)))
         {
             idents = idents.SelectMany(i => i.Value.Split(Symbols.Dot)
-                    .Select(part => i with {Value = part}))
+                    .Select(part => i with { Value = part }))
                 .ToSequence();
         }
 
@@ -5921,7 +5921,7 @@ public class Parser
 
             if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.BY))
             {
-                limitBy =ParseCommaSeparated(ParseExpr);
+                limitBy = ParseCommaSeparated(ParseExpr);
             }
 
             if (ParseKeyword(Keyword.FETCH))
@@ -6697,7 +6697,7 @@ public class Parser
             {
                 return result;
             }
-            
+
             // A parsing error from `parse_derived_table_factor` indicates that the '(' we've
             // recently consumed does not start a derived table (cases 1, 2, or 4).
             // `maybe_parse` will ignore such an error and rewind to be after the opening '('.
@@ -6906,9 +6906,9 @@ public class Parser
             return new TableFactor.Unpivot(table, value, name, columns);
         });
         var alias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
-        
+
         unpivot.PivotAlias = alias;
-        
+
         return unpivot;
     }
 
@@ -7238,6 +7238,21 @@ public class Parser
         if (ConsumeToken<RightParen>())
         {
             return (new Sequence<FunctionArg>(), orderBy);
+        }
+
+        // Snowflake permits a subquery to be passed as an argument without
+        // an enclosing set of parens if it's the only argument.
+        if (_dialect is SnowflakeDialect && ParseOneOfKeywords(Keyword.WITH, Keyword.SELECT) != Keyword.undefined)
+        {
+            PrevToken();
+            var subquery = ParseQuery();
+            ExpectToken<RightParen>();
+
+            var subqueryArgs = new Sequence<FunctionArg>
+            {
+                new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Subquery(subquery)))
+            };
+            return (subqueryArgs, null);
         }
 
         var args = ParseCommaSeparated(ParseFunctionArgs);
