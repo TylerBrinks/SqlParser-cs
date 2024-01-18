@@ -161,6 +161,14 @@ namespace SqlParser.Tests.Dialects
                 new LiteralValue(new Value.UnQuotedString("location"))
             ));
             Assert.Equal(expected, select.Projection[0]);
+
+            select = VerifiedOnlySelect("SELECT a:date FROM t");
+            expected = new SelectItem.UnnamedExpression(new JsonAccess(
+                new Identifier("a"),
+                JsonOperator.Colon,
+                new LiteralValue(new Value.UnQuotedString("date"))
+            ));
+            Assert.Equal(expected, select.Projection[0]);
         }
 
         [Fact]

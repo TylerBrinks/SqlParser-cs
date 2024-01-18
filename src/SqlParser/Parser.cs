@@ -4870,8 +4870,12 @@ public class Parser
                     Keyword.undefined when w.QuoteStyle == Symbols.DoubleQuote => new Value.DoubleQuotedString(w.Value),
                     Keyword.undefined when w.QuoteStyle == Symbols.SingleQuote => new Value.SingleQuotedString(w.Value),
                     Keyword.undefined when w.QuoteStyle != null => throw Expected("a value", PeekToken()),
+                    
                     // Case when Snowflake Semi-structured data like key:value
-                    Keyword.undefined or Keyword.LOCATION or Keyword.TYPE when _dialect is SnowflakeDialect or GenericDialect => new Value.UnQuotedString(w.Value),
+                    Keyword.undefined or Keyword.LOCATION or Keyword.TYPE or Keyword.DATE 
+                        when _dialect is SnowflakeDialect or GenericDialect 
+                            => new Value.UnQuotedString(w.Value),
+
                     _ => throw Expected("a concrete value", PeekToken())
                 };
 
