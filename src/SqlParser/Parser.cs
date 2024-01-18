@@ -224,6 +224,7 @@ public class Parser
             Keyword.EXECUTE => ParseExecute(),
             Keyword.PREPARE => ParsePrepare(),
             Keyword.MERGE => ParseMerge(),
+            Keyword.PRAGMA => ParsePragma(),
 
             _ => throw Expected("a SQL statement", PeekToken())
         };
@@ -7766,6 +7767,24 @@ public class Parser
         var on = ParseExpr();
         var clauses = ParseMergeClauses();
         return new Merge(into, table, source, on, clauses);
+    }
+
+    public Statement ParsePragma()
+    {
+        var name = ParseObjectName();
+        if (ConsumeToken<LeftParen>())
+        {
+            var value = ParseNumberValue();
+            ExpectRightParen();
+            return new Pragma(name, value, false);
+        }
+
+        if (ConsumeToken<Equal>())
+        {
+            return new Pragma(name, ParseNumberValue(), true);
+        }
+
+        return new Pragma(name, null, false);
     }
     /// <summary>
     /// CREATE [ { TEMPORARY | TEMP } ] SEQUENCE [ IF NOT EXISTS ] sequence_name

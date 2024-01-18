@@ -1598,6 +1598,26 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
+
+    public record Pragma(ObjectName Name, Value? Value, bool IsEqual) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"PRAGMA {Name}");
+            if (Value != null)
+            {
+                if (IsEqual)
+                {
+                    writer.WriteSql($" = {Value}");
+                }
+                else
+                {
+                    writer.WriteSql($"({Value})");
+
+                }
+            }
+        }
+    }
     /// <summary>
     ///Prepare statement
     /// <example>

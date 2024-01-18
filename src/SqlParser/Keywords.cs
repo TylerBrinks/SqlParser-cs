@@ -512,6 +512,7 @@ public enum Keyword
     POSITION,
     POSITION_REGEX,
     POWER,
+    PRAGMA, 
     PRECEDES,
     PRECEDING,
     PRECISION,

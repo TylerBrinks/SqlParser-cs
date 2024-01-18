@@ -1,4 +1,5 @@
-﻿using SqlParser.Ast;
+﻿using System.Data;
+using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
 using static SqlParser.Ast.Expression;
@@ -181,6 +182,36 @@ namespace SqlParser.Tests.Dialects
                 });
                 Assert.Equal(expected, select.Projection.First());
             }
+        }
+
+        [Fact]
+        public void Parse_Pragma_No_Value()
+        {
+            const string sql = "PRAGMA cache_size";
+
+            var pragma = VerifiedStatement(sql, new Dialect[]{new SQLiteDialect(), new GenericDialect()});
+            var expected = new Statement.Pragma("cache_size", null, false);
+            Assert.Equal(expected, pragma);
+        }
+
+        [Fact]
+        public void Parse_Pragma_Eq_Style()
+        {
+            const string sql = "PRAGMA cache_size = 10";
+
+            var pragma = VerifiedStatement(sql, new Dialect[] { new SQLiteDialect(), new GenericDialect() });
+            var expected = new Statement.Pragma("cache_size", new Value.Number("10"), true);
+            Assert.Equal(expected, pragma);
+        }
+
+        [Fact]
+        public void Parse_Pragma_Function_Style()
+        {
+            const string sql = "PRAGMA cache_size(10)";
+
+            var pragma = VerifiedStatement(sql, new Dialect[] { new SQLiteDialect(), new GenericDialect() });
+            var expected = new Statement.Pragma("cache_size", new Value.Number("10"), false);
+            Assert.Equal(expected, pragma);
         }
     }
 }
