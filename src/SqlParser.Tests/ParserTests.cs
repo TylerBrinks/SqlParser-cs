@@ -301,12 +301,12 @@ namespace SqlParser.Tests
             OneStatementParsesTo("SELECT a==b FROM t", "SELECT a = b FROM t", new Dialect[]{new SQLiteDialect(), new GenericDialect()});
         }
 
-        //[Fact]
-        //public void Parse_Optional_Cast_Format()
-        //{
-        //    var parser = new Parser();
-        //    _ = parser.ParseSql("select a from tbl where b = 123.45");
-        //}
+        [Fact]
+        public void Parse_Optional_Cast_Format()
+        {
+            var parser = new Parser();
+            _ = parser.ParseSql("select a from tbl where b = 123.45");
+        } 
     }
 }
 

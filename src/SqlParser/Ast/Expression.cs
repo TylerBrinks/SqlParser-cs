@@ -954,6 +954,23 @@ public abstract record Expression : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// MySql RLike regex or REGEXP regex
+    /// </summary>
+    /// <param name="Negated">True if nexted</param>
+    /// <param name="Expression">Expression</param>
+    /// <param name="Pattern">Expression pattern</param>
+    /// <param name="RegularExpression">Regular expression</param>
+    public record RLike(bool Negated, Expression Expression, Expression Pattern, bool RegularExpression) : Expression
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            var negated = Negated ? "NOT " : null;
+            var regexp = RegularExpression ? "REGEXP" : "RLIKE";
+
+            writer.WriteSql($"{Expression} {negated}{regexp} {Pattern}");
+        }
+    }
+    /// <summary>
     /// Rollup expression
     /// <example>
     /// <c>

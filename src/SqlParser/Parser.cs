@@ -1705,11 +1705,23 @@ public class Parser
 
                         throw new ParserException($"No infix parser for token {token}");
                     }
-                case Keyword.NOT or Keyword.IN or Keyword.BETWEEN or Keyword.LIKE or Keyword.ILIKE or Keyword.SIMILAR:
+                case Keyword.NOT or 
+                    Keyword.IN or 
+                    Keyword.BETWEEN or 
+                    Keyword.LIKE or 
+                    Keyword.ILIKE or 
+                    Keyword.SIMILAR or
+                    Keyword.REGEXP or 
+                    Keyword.RLIKE:
                     {
                         PrevToken();
                         var negated = ParseKeyword(Keyword.NOT);
-
+                        var regexp = ParseKeyword(Keyword.REGEXP);
+                        var rlike = ParseKeyword(Keyword.RLIKE);
+                        if (regexp || rlike)
+                        {
+                            return new RLike(negated, expr, ParseSubExpression(LikePrecedence), regexp);
+                        }
                         if (ParseKeyword(Keyword.IN))
                         {
                             return ParseIn(expr, negated);
@@ -1946,7 +1958,7 @@ public class Parser
             Word { Keyword: Keyword.NOT } => GetNotPrecedence(),
             Word { Keyword: Keyword.IS } => IsPrecedence,
             Word { Keyword: Keyword.IN or Keyword.BETWEEN or Keyword.OPERATOR } => BetweenPrecedence,
-            Word { Keyword: Keyword.LIKE or Keyword.ILIKE or Keyword.SIMILAR } => LikePrecedence,
+            Word { Keyword: Keyword.LIKE or Keyword.ILIKE or Keyword.SIMILAR or Keyword.REGEXP or Keyword.RLIKE } => LikePrecedence,
             Word { Keyword: Keyword.DIV } => MulDivModOpPrecedence,
 
             Equal
@@ -2022,7 +2034,7 @@ public class Parser
             return PeekNthToken(1) switch
             {
                 Word { Keyword: Keyword.IN or Keyword.BETWEEN } => BetweenPrecedence,
-                Word { Keyword: Keyword.LIKE or Keyword.ILIKE or Keyword.SIMILAR } => LikePrecedence,
+                Word { Keyword: Keyword.LIKE or Keyword.ILIKE or Keyword.SIMILAR or Keyword.REGEXP or Keyword.RLIKE } => LikePrecedence,
                 _ => 0
             };
         }

@@ -931,5 +931,24 @@ namespace SqlParser.Tests.Dialects
             );
             Assert.Equal(expected, delete);
         }
+
+
+
+        [Fact]
+        public void Parse_Rlike_And_Regexp()
+        {
+            var queries = new[]{
+                    "SELECT 1 WHERE 'a' RLIKE '^a$'",
+                    "SELECT 1 WHERE 'a' REGEXP '^a$'",
+                    "SELECT 1 WHERE 'a' NOT RLIKE '^a$'",
+                    "SELECT 1 WHERE 'a' NOT REGEXP '^a$'",
+                };
+
+            var dialects = new Dialect[] {new MySqlDialect(), new GenericDialect()};
+            foreach (var sql in queries)
+            {
+                VerifiedOnlySelect(sql, dialects);
+            }
+        }
     }
 }
