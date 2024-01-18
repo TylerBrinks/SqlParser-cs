@@ -557,6 +557,7 @@ public enum Keyword
     REPLACE,
     REPLICATION,
     RESET,
+    RESPECT,
     RESTRICT,
     RESULT,
     RETURN,

@@ -1174,6 +1174,19 @@ public class Parser
             filter = filterExpression;
         }
 
+        NullTreatment? nullTreatment = null;
+        var nullKeyword = ParseOneOfKeywords(Keyword.RESPECT, Keyword.IGNORE);
+        if (nullKeyword != Keyword.undefined)
+        {
+            ExpectKeyword(Keyword.NULLS);
+
+            nullTreatment = nullKeyword switch
+            {
+                Keyword.RESPECT => new NullTreatment.RespectNulls(),
+                Keyword.IGNORE => new NullTreatment.IgnoreNulls(),
+                _ => null
+            };
+        }
 
         WindowType? over = null;
 
@@ -1197,7 +1210,8 @@ public class Parser
             Over = over,
             Distinct = distinct,
             Special = false,
-            OrderBy = orderBy
+            OrderBy = orderBy,
+            NullTreatment = nullTreatment
         };
     }
 

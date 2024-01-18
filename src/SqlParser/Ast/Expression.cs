@@ -438,6 +438,10 @@ public abstract record Expression : IWriteSql, IElement
         /// </summary>
         public Expression? Filter { get; init; }
         /// <summary>
+        /// e.g. `x > 5` in `COUNT(x) FILTER (WHERE x > 5)`
+        /// </summary>
+        public NullTreatment? NullTreatment { get; init; }
+        /// <summary>
         /// Window spec
         /// </summary>
         public WindowType? Over { get; init; }
@@ -480,6 +484,11 @@ public abstract record Expression : IWriteSql, IElement
                 if (Filter != null)
                 {
                     writer.WriteSql($" FILTER (WHERE {Filter})");
+                }
+
+                if (NullTreatment != null)
+                {
+                    writer.WriteSql($" {NullTreatment}");
                 }
 
                 if (Over != null)

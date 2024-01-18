@@ -337,7 +337,6 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
-
     /// <summary>
     /// COPPY INTO statement
     /// See https://docs.snowflake.com/en/sql-reference/sql/copy-into-table
@@ -885,7 +884,6 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
-
     /// <summary>
     /// Create View statement
     /// </summary>

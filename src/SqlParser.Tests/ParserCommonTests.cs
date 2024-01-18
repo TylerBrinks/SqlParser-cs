@@ -4708,5 +4708,52 @@ namespace SqlParser.Tests
         {
             VerifiedStatement("CREATE TABLE tbl (foo INT, bar TEXT COLLATE \"de_DE\")", new Dialect[]{ new PostgreSqlDialect(), new GenericDialect() });
         }
+
+        [Fact]
+        public void Parse_Window_Rank_Function()
+        {
+            var dialects = new Dialect[]
+            {
+                new GenericDialect(),
+                new PostgreSqlDialect(),
+                new MsSqlDialect(),
+                new AnsiDialect(),
+                new HiveDialect(),
+                new SnowflakeDialect()
+            };
+
+            var queries = new[]
+            {
+                "SELECT column1, column2, FIRST_VALUE(column2) OVER (PARTITION BY column1 ORDER BY column2 NULLS LAST) AS column2_first FROM t1",
+                "SELECT column1, column2, FIRST_VALUE(column2) OVER (ORDER BY column2 NULLS LAST) AS column2_first FROM t1",
+                "SELECT col_1, col_2, LAG(col_2) OVER (ORDER BY col_1) FROM t1",
+                "SELECT LAG(col_2, 1, 0) OVER (ORDER BY col_1) FROM t1",
+                "SELECT LAG(col_2, 1, 0) OVER (PARTITION BY col_3 ORDER BY col_1)"
+            };
+
+            foreach (var sql in queries)
+            {
+                VerifiedStatement(sql, dialects);
+            }
+
+            var nullDialects = new Dialect[]
+            {
+                new MsSqlDialect(),
+                new SnowflakeDialect()
+            };
+
+            queries = new[]
+            {
+                "SELECT column1, column2, FIRST_VALUE(column2) IGNORE NULLS OVER (PARTITION BY column1 ORDER BY column2 NULLS LAST) AS column2_first FROM t1",
+                "SELECT column1, column2, FIRST_VALUE(column2) RESPECT NULLS OVER (PARTITION BY column1 ORDER BY column2 NULLS LAST) AS column2_first FROM t1",
+                "SELECT LAG(col_2, 1, 0) IGNORE NULLS OVER (ORDER BY col_1) FROM t1",
+                "SELECT LAG(col_2, 1, 0) RESPECT NULLS OVER (ORDER BY col_1) FROM t1"
+            };
+
+            foreach (var sql in queries)
+            {
+                VerifiedStatement(sql, nullDialects);
+            }
+        }
     }
 }
