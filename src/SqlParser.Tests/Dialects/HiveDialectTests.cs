@@ -358,5 +358,12 @@ namespace SqlParser.Tests.Dialects
         {
             VerifiedStatement("DESCRIBE namespace.`table`", new Dialect[] { new HiveDialect(), new GenericDialect() });
         }
+
+        [Fact]
+        public void Test_Add_Multiple_Partitions()
+        {
+            const string sql = "ALTER TABLE db.table ADD IF NOT EXISTS PARTITION (`a` = 'asdf', `b` = 2) PARTITION (`a` = 'asdh', `b` = 3)";
+            VerifiedStatement(sql);
+        }
     }
 }

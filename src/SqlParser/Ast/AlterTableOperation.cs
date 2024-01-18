@@ -144,7 +144,6 @@ public abstract record AlterTableOperation : IWriteSql
         {
             var ifNot = IfNotExists ? $" {IIfNotExists.IfNotExistsPhrase}" : null;
 
-            //writer.WriteSql($"ADD{ifNot} PARTITION ({NewPartitions})");
             writer.WriteSql($"ADD{ifNot} ");
             writer.WriteDelimited(NewPartitions, " ");
         }
