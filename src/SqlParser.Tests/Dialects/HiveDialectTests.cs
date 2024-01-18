@@ -9,7 +9,7 @@ namespace SqlParser.Tests.Dialects
     {
         public HiveDialectTests()
         {
-            DefaultDialects = new[] {new HiveDialect()};
+            DefaultDialects = new[] { new HiveDialect() };
         }
 
         [Fact]
@@ -17,7 +17,6 @@ namespace SqlParser.Tests.Dialects
         {
             VerifiedOnlySelect("SELECT 'single', \"double\"");
             VerifiedStatement("CREATE TABLE IF NOT EXISTS db.table (a BIGINT, b STRING, c TIMESTAMP) PARTITIONED BY (d STRING, e TIMESTAMP) STORED AS ORC LOCATION 's3://...' TBLPROPERTIES (\"prop\" = \"2\", \"asdf\" = '1234', 'asdf' = \"1234\", \"asdf\" = 2)");
-            //VerifiedStatement("CREATE TABLE IF NOT EXISTS db.table (a BIGINT, b STRING, c TIMESTAMP) PARTITIONED BY (d STRING, e TIMESTAMP) STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.orc.OrcInputFormat' OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat' LOCATION 's3://...'");
         }
 
         [Fact]
@@ -203,8 +202,8 @@ namespace SqlParser.Tests.Dialects
             var variable = VerifiedStatement<Statement.SetVariable>("SET hive.tez.java.opts = -Xmx4g");
 
             var expected = new Statement.SetVariable(false, false,
-                new ObjectName(new List<Ident> {"hive", "tez", "java", "opts"}),
-                new []
+                new ObjectName(new List<Ident> { "hive", "tez", "java", "opts" }),
+                new[]
                 {
                     new UnaryOp(new Identifier("Xmx4g"), UnaryOperator.Minus)
                 });
@@ -234,7 +233,7 @@ namespace SqlParser.Tests.Dialects
                 ParseSqlStatements("CREATE TEMPORARY FUNCTION mydb.myfunc AS 'org.random.class.Name' USING JAR"));
             Assert.Equal("Expected literal string, found EOF", ex.Message);
 
-            DefaultDialects = new[] {new GenericDialect()};
+            DefaultDialects = new[] { new GenericDialect() };
 
             ex = Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
             Assert.Equal("Expected an object type after CREATE, found FUNCTION, Line: 1, Col: 18", ex.Message);
@@ -278,9 +277,9 @@ namespace SqlParser.Tests.Dialects
                 VerifiedOnlySelect(
                     "SELECT \"alias\".\"bar baz\", \"myfun\"(), \"simple id\" AS \"column alias\" FROM \"a table\" AS \"alias\"");
 
-            var table = (TableFactor.Table) select.From!.Single().Relation!;
+            var table = (TableFactor.Table)select.From!.Single().Relation!;
 
-            Assert.Equal(new Ident[] {new("a table", Symbols.DoubleQuote)}, table.Name.Values);
+            Assert.Equal(new Ident[] { new("a table", Symbols.DoubleQuote) }, table.Name.Values);
             Assert.Equal(new Ident("alias", Symbols.DoubleQuote), table.Alias!.Name);
             Assert.Equal(3, select.Projection.Count);
 
@@ -294,7 +293,7 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal(new Function(new ObjectName(new Ident("myfun", Symbols.DoubleQuote))),
                 select.Projection[1].AsExpr());
 
-            var withAlias = (SelectItem.ExpressionWithAlias) select.Projection[2];
+            var withAlias = (SelectItem.ExpressionWithAlias)select.Projection[2];
             Assert.Equal(new Identifier(new Ident("simple id", Symbols.DoubleQuote)), withAlias.Expression);
             Assert.Equal(new Ident("column alias", Symbols.DoubleQuote), withAlias.Alias);
             VerifiedStatement("CREATE TABLE \"foo\" (\"bar\" \"int\")");
@@ -352,6 +351,12 @@ namespace SqlParser.Tests.Dialects
                 var isNull = new IsNull(new SimilarTo(new Identifier("name"), negated, new LiteralValue(new Value.SingleQuotedString("%a")), Symbols.Backslash));
                 Assert.Equal(isNull, select.Selection);
             }
+        }
+
+        [Fact]
+        public void Parse_Describe()
+        {
+            VerifiedStatement("DESCRIBE namespace.`table`", new Dialect[] { new HiveDialect(), new GenericDialect() });
         }
     }
 }
