@@ -345,6 +345,7 @@ public enum SetQuantifier
     All,
     Distinct,
     ByName,
+    DistinctByName,
     AllByName,
     None
 }

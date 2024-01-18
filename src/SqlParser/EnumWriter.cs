@@ -66,6 +66,7 @@ public static class EnumWriter
 
             SetQuantifier.ByName => "BY NAME",
             SetQuantifier.AllByName => "ALL BY NAME",
+            SetQuantifier.DistinctByName => "DISTINCT BY NAME",
 
             NonBlock.SkipLocked => "SKIP LOCKED",
 

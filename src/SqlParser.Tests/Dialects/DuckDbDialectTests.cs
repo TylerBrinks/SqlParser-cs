@@ -17,7 +17,7 @@ public class DuckDbDialectTests : ParserTestBase
         var select = VerifiedOnlySelect("SELECT * EXCLUDE (col_a) FROM data");
         SelectItem expected = new SelectItem.Wildcard(new WildcardAdditionalOptions
         {
-            ExcludeOption = new ExcludeSelectItem.Multiple(new Sequence<Ident>{"col_a"})
+            ExcludeOption = new ExcludeSelectItem.Multiple(new Sequence<Ident> { "col_a" })
         });
         Assert.Equal(expected, select.Projection[0]);
 
@@ -31,7 +31,7 @@ public class DuckDbDialectTests : ParserTestBase
         select = VerifiedOnlySelect("SELECT * EXCLUDE (department_id, employee_id) FROM employee_table");
         expected = new SelectItem.Wildcard(new WildcardAdditionalOptions
         {
-            ExcludeOption = new ExcludeSelectItem.Multiple(new Sequence<Ident> {"department_id", "employee_id"})
+            ExcludeOption = new ExcludeSelectItem.Multiple(new Sequence<Ident> { "department_id", "employee_id" })
         });
         Assert.Equal(expected, select.Projection[0]);
     }
@@ -39,15 +39,15 @@ public class DuckDbDialectTests : ParserTestBase
     [Fact]
     public void Parse_Div_Infix()
     {
-        VerifiedStatement("SELECT 5 / 2", new Dialect[] {new DuckDbDialect(), new GenericDialect()});
+        VerifiedStatement("SELECT 5 / 2", new Dialect[] { new DuckDbDialect(), new GenericDialect() });
     }
 
     [Fact]
     public void Create_Macro()
     {
         var macro = VerifiedStatement("CREATE MACRO schema.add(a, b) AS a + b");
-        var expected = new Statement.CreateMacro(false, false, new ObjectName(new Ident[] {"schema", "add"}),
-            new Sequence<MacroArg> { new ("a"), new ("b") },
+        var expected = new Statement.CreateMacro(false, false, new ObjectName(new Ident[] { "schema", "add" }),
+            new Sequence<MacroArg> { new("a"), new("b") },
             new MacroDefinition.MacroExpression(new Expression.BinaryOp(
                 new Expression.Identifier("a"),
                 BinaryOperator.Plus,
@@ -84,7 +84,7 @@ public class DuckDbDialectTests : ParserTestBase
         var macro = (Statement.CreateMacro)VerifiedStatement(sql);
 
         var subquery = VerifiedQuery(query);
-        var expected = new Statement.CreateMacro(true, true, new ObjectName(new Ident[] {"dynamic_table"}),
+        var expected = new Statement.CreateMacro(true, true, new ObjectName(new Ident[] { "dynamic_table" }),
             new Sequence<MacroArg>
             {
                 new("col1_value"),
@@ -98,39 +98,48 @@ public class DuckDbDialectTests : ParserTestBase
     [Fact]
     public void Select_Union_By_Name()
     {
-        var select = VerifiedQuery("SELECT * FROM capitals UNION BY NAME SELECT * FROM weather");
+        //var select = VerifiedQuery("SELECT * FROM capitals UNION BY NAME SELECT * FROM weather");
+        var queries = new Dictionary<SetQuantifier, string>
+        {
+            { SetQuantifier.ByName, "SELECT * FROM capitals UNION BY NAME SELECT * FROM weather" },
+            { SetQuantifier.AllByName,"SELECT * FROM capitals UNION ALL BY NAME SELECT * FROM weather" },
+            { SetQuantifier.DistinctByName,"SELECT * FROM capitals UNION DISTINCT BY NAME SELECT * FROM weather" }
+        };
 
-        var left = new SelectExpression(new Select(new Sequence<SelectItem>
+        foreach (var sql in queries)
         {
-            new SelectItem.Wildcard(new WildcardAdditionalOptions())
-        })
-        {
-            From = new Sequence<TableWithJoins>
+            var select = VerifiedQuery(sql.Value, new[] { new DuckDbDialect() });
+
+            var left = new SelectExpression(new Select(new Sequence<SelectItem>
+            {
+                new SelectItem.Wildcard(new WildcardAdditionalOptions())
+            })
+            {
+                From = new Sequence<TableWithJoins>
             {
                 new(new TableFactor.Table("capitals"))
             }
-        });
-        var right = new SelectExpression(new Select(new Sequence<SelectItem>
-        {
-            new SelectItem.Wildcard(new WildcardAdditionalOptions())
-        })
-        {
-            From = new Sequence<TableWithJoins>
+            });
+            var right = new SelectExpression(new Select(new Sequence<SelectItem>
             {
-                new(new TableFactor.Table("weather"))
-            }
-        });
+                new SelectItem.Wildcard(new WildcardAdditionalOptions())
+            })
+            {
+                From = new Sequence<TableWithJoins>
+                {
+                    new(new TableFactor.Table("weather"))
+                }
+            });
 
-        SetExpression expected = new SetOperation(left, SetOperator.Union, right, SetQuantifier.ByName);
+            SetExpression expected = new SetOperation(left, SetOperator.Union, right, sql.Key);
 
-        Assert.Equal(expected, select.Body);
-
-        select = VerifiedQuery("SELECT * FROM capitals UNION ALL BY NAME SELECT * FROM weather");
-        expected = new SetOperation(left, SetOperator.Union, right, SetQuantifier.ByName)
-        {
-            SetQuantifier = SetQuantifier.AllByName
-        };
-
-        Assert.Equal(expected, select.Body);
+            Assert.Equal(expected, select.Body);
+        }
+        //select = VerifiedQuery("SELECT * FROM capitals UNION ALL BY NAME SELECT * FROM weather");
+        //expected = new SetOperation(left, SetOperator.Union, right, SetQuantifier.ByName)
+        //{
+        //    SetQuantifier = SetQuantifier.AllByName
+        //};
+        //Assert.Equal(expected, select.Body);
     }
 }

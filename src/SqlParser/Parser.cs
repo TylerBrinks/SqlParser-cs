@@ -6116,6 +6116,7 @@ public class Parser
         {
             return op switch
             {
+                SetOperator.Union when ParseKeywordSequence(Keyword.DISTINCT, Keyword.BY, Keyword.NAME) => SetQuantifier.DistinctByName,
                 SetOperator.Union when ParseKeywordSequence(Keyword.BY, Keyword.NAME) => SetQuantifier.ByName,
                 SetOperator.Union when ParseKeyword(Keyword.ALL) => ParseKeywordSequence(Keyword.BY, Keyword.NAME)
                     ? SetQuantifier.AllByName
