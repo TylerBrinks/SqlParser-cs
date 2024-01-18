@@ -671,7 +671,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Position_Not_Function_Columns()
         {
-            VerifiedStatement("SELECT position FROM tbl1 WHERE position NOT IN ('first', 'last')");
+            VerifiedStatement("SELECT position FROM tbl1 WHERE position NOT IN ('first', 'last')", new Dialect[]{new SnowflakeDialect(), new GenericDialect()});
         }
     }
 }
