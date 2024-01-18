@@ -667,5 +667,11 @@ namespace SqlParser.Tests.Dialects
             // the function.
             OneStatementParsesTo("SELECT func(SELECT 1, 2)", "SELECT func((SELECT 1, 2))");
         }
+
+        [Fact]
+        public void Parse_Position_Not_Function_Columns()
+        {
+            VerifiedStatement("SELECT position FROM tbl1 WHERE position NOT IN ('first', 'last')");
+        }
     }
 }

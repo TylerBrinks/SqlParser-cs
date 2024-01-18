@@ -1090,7 +1090,7 @@ public class Parser
             Word { Keyword: Keyword.EXTRACT } => ParseExtractExpr(),
             Word { Keyword: Keyword.CEIL } => ParseCeilFloorExpr(true),
             Word { Keyword: Keyword.FLOOR } => ParseCeilFloorExpr(false),
-            Word { Keyword: Keyword.POSITION } => ParsePositionExpr(),
+            Word { Keyword: Keyword.POSITION } when PeekToken() is LeftParen => ParsePositionExpr(),
             Word { Keyword: Keyword.SUBSTRING } => ParseSubstringExpr(),
             Word { Keyword: Keyword.OVERLAY } => ParseOverlayExpr(),
             Word { Keyword: Keyword.TRIM } => ParseTrimExpr(),
