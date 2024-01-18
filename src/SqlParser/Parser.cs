@@ -396,9 +396,13 @@ public class Parser
                                 idParts.Add(w.ToIdent());
                                 break;
 
-                            case Multiply:
+                            case SingleQuotedString s:
+                                idParts.Add(new Ident(s.Value, QuoteStyle: Symbols.SingleQuote));
+                                break;
 
+                            case Multiply:
                                 return new WildcardExpression.QualifiedWildcard(new ObjectName(idParts));
+
                             default:
                                 throw Expected("an identifier or a '*' after '.'");
                         }
@@ -994,13 +998,18 @@ public class Parser
                 var idParts = new Sequence<Ident> { word.ToIdent() };
                 while (ConsumeToken<Period>())
                 {
-                    if (NextToken() is Word w)
+                    switch (NextToken())
                     {
-                        idParts.Add(w.ToIdent());
-                    }
-                    else
-                    {
-                        throw Expected("an identifier or a '*' after '.'", PeekToken());
+                        case Word w:
+                            idParts.Add(w.ToIdent());
+                            break;
+
+                        case SingleQuotedString s:
+                            idParts.Add(new Ident(s.Value, Symbols.SingleQuote));
+                            break;
+
+                        default:
+                            throw Expected("an identifier or a '*' after '.'", PeekToken());
                     }
                 }
 

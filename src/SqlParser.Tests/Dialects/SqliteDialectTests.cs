@@ -213,5 +213,11 @@ namespace SqlParser.Tests.Dialects
             var expected = new Statement.Pragma("cache_size", new Value.Number("10"), false);
             Assert.Equal(expected, pragma);
         }
+
+        [Fact]
+        public void Parse_Single_Quoted_Identified()
+        {
+            VerifiedOnlySelect("SELECT 't'.*, t.'x' FROM 't'");
+        }
     }
 }
