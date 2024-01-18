@@ -1,5 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using SqlParser.Ast;
+﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
@@ -2068,6 +2067,13 @@ namespace SqlParser.Tests.Dialects
             };
 
             Assert.Equal(expected, joins!);
+        }
+
+        [Fact]
+        public void Parse_Select_Regexp_As_Column_Name()
+        {
+            var dialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            VerifiedOnlySelect("SELECT REGEXP.REGEXP AS REGEXP FROM REGEXP AS REGEXP WHERE REGEXP.REGEXP", dialects);
         }
     }
 }
