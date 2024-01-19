@@ -607,5 +607,18 @@ namespace SqlParser.Tests
 
             Assert.Equal(expected, tokens);
         }
+
+        [Fact]
+        public void Tokenize_Snowflake_Div()
+        {
+            var tokens = new Tokenizer().Tokenize("field/1000", new SnowflakeDialect());
+            var expected = new Sequence<Token>
+            {
+                new Word("field"),
+                new Divide(),
+                new Number("1000")
+            };
+            Assert.Equal(expected, tokens);
+        }
     }
 }
