@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Text;
+﻿using System.Text;
 using SqlParser.Ast;
 using SqlParser.Dialects;
 using static SqlParser.Ast.DataType;
@@ -4776,6 +4775,58 @@ namespace SqlParser.Tests
             {
                 VerifiedStatement(sql, nullDialects);
             }
+        }
+
+        [Fact]
+        public void Parse_Binary_Operators_Without_Whitespace()
+        {
+            OneStatementParsesTo("SELECT field+1000 FROM tbl1", "SELECT field + 1000 FROM tbl1");
+            OneStatementParsesTo(
+                "SELECT tbl1.field+tbl2.field FROM tbl1 JOIN tbl2 ON tbl1.id = tbl2.entity_id",
+                "SELECT tbl1.field + tbl2.field FROM tbl1 JOIN tbl2 ON tbl1.id = tbl2.entity_id");
+
+            OneStatementParsesTo(
+                "SELECT field-1000 FROM tbl1",
+                "SELECT field - 1000 FROM tbl1");
+
+            OneStatementParsesTo(
+                "SELECT tbl1.field-tbl2.field FROM tbl1 JOIN tbl2 ON tbl1.id = tbl2.entity_id",
+                "SELECT tbl1.field - tbl2.field FROM tbl1 JOIN tbl2 ON tbl1.id = tbl2.entity_id");
+
+            OneStatementParsesTo(
+                "SELECT field*1000 FROM tbl1",
+                "SELECT field * 1000 FROM tbl1");
+
+            OneStatementParsesTo(
+                "SELECT tbl1.field*tbl2.field FROM tbl1 JOIN tbl2 ON tbl1.id = tbl2.entity_id",
+                "SELECT tbl1.field * tbl2.field FROM tbl1 JOIN tbl2 ON tbl1.id = tbl2.entity_id"
+            );
+
+            // x / y
+            OneStatementParsesTo(
+                "SELECT field/1000 FROM tbl1",
+                "SELECT field / 1000 FROM tbl1"
+        
+            );
+
+            OneStatementParsesTo(
+                "SELECT tbl1.field/tbl2.field FROM tbl1 JOIN tbl2 ON tbl1.id = tbl2.entity_id",
+                "SELECT tbl1.field / tbl2.field FROM tbl1 JOIN tbl2 ON tbl1.id = tbl2.entity_id"
+        
+            );
+
+            // x % y
+            OneStatementParsesTo(
+                "SELECT field%1000 FROM tbl1",
+                "SELECT field % 1000 FROM tbl1"
+        
+            );
+
+            OneStatementParsesTo(
+                "SELECT tbl1.field%tbl2.field FROM tbl1 JOIN tbl2 ON tbl1.id = tbl2.entity_id",
+                "SELECT tbl1.field % tbl2.field FROM tbl1 JOIN tbl2 ON tbl1.id = tbl2.entity_id"
+        
+            );
         }
     }
 }

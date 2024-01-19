@@ -52,7 +52,6 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Table_Identifiers()
         {
-            Test("da-sh-es", new Ident[] { "da-sh-es" });
             Test("`spa ce`", new Ident[] { new("spa ce", '`') });
             Test("`!@#$%^&*()-=_+`", new Ident[] { new("!@#$%^&*()-=_+", '`') });
             Test("_5abc.dataField", new Ident[] { "_5abc", "dataField" });

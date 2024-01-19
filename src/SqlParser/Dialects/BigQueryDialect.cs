@@ -23,7 +23,7 @@ public class BigQueryDialect : Dialect
     /// <returns>True if an identifier part; otherwise false</returns>
     public override bool IsIdentifierPart(char character)
     {
-        return character.IsAlphaNumeric() || character is Symbols.Underscore or Symbols.Minus;
+        return character.IsAlphaNumeric() || character is Symbols.Underscore;// or Symbols.Minus;
     }
     /// <summary>
     /// Checks if a character is a
