@@ -1,4 +1,5 @@
-﻿using SqlParser.Ast;
+﻿using System.ComponentModel.DataAnnotations;
+using SqlParser.Ast;
 using SqlParser.Dialects;
 using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
@@ -1214,7 +1215,14 @@ namespace SqlParser.Tests.Dialects
                                 )
                             }, true)
                         )
-                        , new DataType.Array(new DataType.Array(new DataType.Int())))
+                        ,
+                        new DataType.Array(
+                            new ArrayElementTypeDef.SquareBracket(
+                                new DataType.Array(
+                                    new ArrayElementTypeDef.SquareBracket(
+                                        new DataType.Int()))))
+                    )
+                //new DataType.Array(new DataType.Array(new DataType.Int())))
                 ),
                 new[]
                 {

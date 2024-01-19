@@ -130,7 +130,7 @@ namespace SqlParser.Tests.Dialects
         public void Parse_Array()
         {
             var select = VerifiedOnlySelect("SELECT CAST(a AS ARRAY) FROM customer");
-            Assert.Equal(new Cast(new Identifier("a"), new DataType.Array(new DataType.None())), select.Projection.Single().AsExpr());
+            Assert.Equal(new Cast(new Identifier("a"), new DataType.Array(new ArrayElementTypeDef.None())), select.Projection.Single().AsExpr());
         }
 
         [Fact]

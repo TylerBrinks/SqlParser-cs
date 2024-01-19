@@ -434,5 +434,112 @@ namespace SqlParser.Tests.Dialects
 
             Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT TRIM('xyz' 'a')", new[] { new BigQueryDialect() }));
         }
+
+        [Fact]
+        public void Parse_Nested_Data_Type()
+        {
+            var sql = "CREATE TABLE table (x STRUCT<a ARRAY<INT64>, b BYTES(42)>, y ARRAY<STRUCT<INT64>>)";
+
+            var create = (Statement.CreateTable )OneStatementParsesTo(sql, sql, new []{new BigQueryDialect()});
+
+            var columns = new Sequence<ColumnDef>
+            {
+                new ("x", new DataType.Struct(new Sequence<StructField>
+                {
+                    new (new DataType.Array(new ArrayElementTypeDef.AngleBracket(new DataType.Int64())), "a"),
+                    new(new DataType.Bytes(42), "b")
+                })),
+                new("y", new DataType.Array(new ArrayElementTypeDef.AngleBracket(new DataType.Struct(new Sequence<StructField>
+                {
+                    new (new DataType.Int64())
+                }))))
+            };
+            var expected = new Statement.CreateTable("table", columns);
+            Assert.Equal(expected, create);
+        }
+
+        [Fact]
+        public void Parse_Invalid_Brackets()
+        {
+            var sql = "SELECT STRUCT<INT64>>(NULL)";
+            Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
+
+            sql = "SELECT STRUCT<STRUCT<INT64>>>(NULL)";
+            Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
+
+            sql = "CREATE TABLE table (x STRUCT<STRUCT<INT64>>>)";
+            Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
+        }
+
+        [Fact]
+        public void Parse_Tuple_Struct_Literal()
+        {
+            var sql = "SELECT (1, 2, 3), (1, 1.0, '123', true)";
+            var select = VerifiedOnlySelect(sql);
+
+            var expected = new Expression.Tuple(new Sequence<Expression>
+            {
+                new LiteralValue(new Value.Number("1")),
+                new LiteralValue(new Value.Number("2")),
+                new LiteralValue(new Value.Number("3")),
+            });
+            Assert.Equal(expected, select.Projection.First().AsExpr());
+
+            expected = new Expression.Tuple(new Sequence<Expression>
+            {
+                new LiteralValue(new Value.Number("1")),
+                new LiteralValue(new Value.Number("1.0")),
+                new LiteralValue(new Value.SingleQuotedString("123")),
+                new LiteralValue(new Value.Boolean(true)),
+            });
+
+            Assert.Equal(expected, select.Projection.Skip(1).First().AsExpr());
+        }
+
+        [Fact]
+        public void Parse_Typeless_Struct_Syntax()
+        {
+            var sql = "SELECT STRUCT(1, 2, 3), STRUCT('abc'), STRUCT(1, t.str_col), STRUCT(1 AS a, 'abc' AS b), STRUCT(str_col AS abc)";
+            var select = VerifiedOnlySelect(sql);
+
+            Expression expected = new Struct(new Sequence<Expression>
+            {
+                new LiteralValue(new Value.Number("1")),
+                new LiteralValue(new Value.Number("2")),
+                new LiteralValue(new Value.Number("3"))
+            }, new Sequence<StructField>());
+            Assert.Equal(expected, select.Projection.First().AsExpr());
+
+            expected = new Struct(new Sequence<Expression>
+            {
+                new LiteralValue(new Value.SingleQuotedString("abc")),
+            }, new Sequence<StructField>());
+            Assert.Equal(expected, select.Projection.Skip(1).First().AsExpr());
+
+            expected = new Struct(new Sequence<Expression>
+            {
+                new LiteralValue(new Value.Number("1")),
+                new CompoundIdentifier(new Sequence<Ident> {"t", "str_col"})
+            }, new Sequence<StructField>());
+            Assert.Equal(expected, select.Projection.Skip(2).First().AsExpr());
+
+            expected = new Struct(new Sequence<Expression>
+            {
+               new Named(new LiteralValue(new Value.Number("1")), "a"),
+               new Named(new LiteralValue(new Value.SingleQuotedString("abc")), "b")
+            }, new Sequence<StructField>());
+            Assert.Equal(expected, select.Projection.Skip(3).First().AsExpr());
+
+            expected = new Struct(new Sequence<Expression>
+            {
+               new Named(new Identifier("str_col"), "abc")
+            }, new Sequence<StructField>());
+            Assert.Equal(expected, select.Projection.Skip(4).First().AsExpr());
+        }
+
+        public void Parse_Typed_Struct_Syntax()
+        {
+
+        }
     }
 }

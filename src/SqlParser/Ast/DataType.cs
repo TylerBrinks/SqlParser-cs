@@ -1,4 +1,6 @@
-﻿namespace SqlParser.Ast;
+﻿using System;
+
+namespace SqlParser.Ast;
 
 /// <summary>
 /// SQL data types
@@ -73,22 +75,28 @@ public abstract record DataType : IWriteSql
             }
         }
     }
-   
+
     /// <summary>
     /// Array data type
     /// </summary>
     /// <param name="DataType"></param>
-    public record Array(DataType DataType) : DataType
+    public record Array(ArrayElementTypeDef DataType) : DataType
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            if (DataType is not None)
+            switch (DataType)
             {
-                writer.WriteSql($"{DataType}[]");
-            }
-            else
-            {
-                writer.Write("ARRAY");
+                case ArrayElementTypeDef.None:
+                    writer.Write("ARRAY");
+                    break;
+
+                case ArrayElementTypeDef.SquareBracket:
+                    writer.WriteSql($"{DataType}[]");
+                    break;
+
+                case ArrayElementTypeDef.AngleBracket:
+                    writer.WriteSql($"ARRAY<{DataType}>");
+                    break;
             }
         }
     }
@@ -171,6 +179,18 @@ public abstract record DataType : IWriteSql
         {
             // ReSharper disable once StringLiteralTypo
             writer.Write("BYTEA");
+        }
+    }
+
+    /// Variable-length binary data with optional length.
+    ///
+    /// [bigquery]: https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#bytes_type
+    public record Bytes(ulong? Length) : LengthDataType(Length)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            //writer.Write("BYTES");
+            FormatTypeWithOptionalLength(writer, "BYTES", Length);
         }
     }
     /// <summary>
@@ -381,7 +401,7 @@ public abstract record DataType : IWriteSql
     {
         public override void ToSql(SqlTextWriter writer)
         {
-           writer.Write("FLOAT4");
+            writer.Write("FLOAT4");
         }
     }
     /// <summary>
@@ -392,6 +412,16 @@ public abstract record DataType : IWriteSql
         public override void ToSql(SqlTextWriter writer)
         {
             writer.Write("FLOAT8");
+        }
+    }
+    /// <summary>
+    /// FLOAT64
+    /// </summary>
+    public record Float64 : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("FLOAT64");
         }
     }
     /// <summary>
@@ -464,6 +494,16 @@ public abstract record DataType : IWriteSql
             FormatTypeWithOptionalLength(writer, "INT8", Length);
         }
     }
+    /// Integer type in [bigquery]
+    ///
+    /// [bigquery]: https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#integer_types
+    public record Int64 : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("INT64");
+        }
+    }
     /// <summary>
     /// Join data type
     /// </summary>
@@ -474,7 +514,7 @@ public abstract record DataType : IWriteSql
             writer.Write("JSON");
         }
     }
-   
+
     /// <summary>
     /// MySQL medium integer ([1]) with optional display width e.g. MEDIUMINT or MEDIUMINT(5)
     ///
@@ -571,11 +611,29 @@ public abstract record DataType : IWriteSql
     /// <summary>
     /// String data type
     /// </summary>
-    public record StringType : DataType
+    public record StringType(ulong? Length = null) : LengthDataType(Length)
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.Write("STRING");
+            FormatTypeWithOptionalLength(writer, "STRING", Length);
+        }
+    }
+    /// Struct
+    ///
+    /// Bive: https://docs.cloudera.com/cdw-runtime/cloud/impala-sql-reference/topics/impala-struct.html
+    /// BigQuery: https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#struct_type
+    public record Struct(Sequence<StructField> Fields) : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("STRUCT");
+
+            if (Fields.SafeAny())
+            {
+                writer.Write("<");
+                writer.WriteDelimited(Fields, ", ");
+                writer.Write(">");
+            }
         }
     }
     /// <summary>

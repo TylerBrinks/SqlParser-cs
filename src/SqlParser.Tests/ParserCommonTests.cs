@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text;
 using SqlParser.Ast;
 using SqlParser.Dialects;
 using static SqlParser.Ast.DataType;
@@ -1527,30 +1528,51 @@ namespace SqlParser.Tests
         public void Parse_Create_Table_Hive_Array()
         {
             // Parsing [] type arrays does not work in MsSql since [ is used in IsDelimitedIdentifierStart
-            var dialects = new List<Dialect> {
-                new PostgreSqlDialect(),
-                new HiveDialect ()
+            var dialects = new List<(Dialect Dialect, bool AngleBracketSyntax)> {
+                (new PostgreSqlDialect(), false),
+                (new HiveDialect (), true)
             };
 
-            var create = OneStatementParsesTo<Statement.CreateTable>(
-                "CREATE TABLE IF NOT EXISTS something (name int, val array<int>)",
-                "CREATE TABLE IF NOT EXISTS something (name INT, val INT[])",
-                dialects
-            );
+            //var create = OneStatementParsesTo<Statement.CreateTable>(
+            //    "CREATE TABLE IF NOT EXISTS something (name int, val array<int>)",
+            //    "CREATE TABLE IF NOT EXISTS something (name INT, val INT[])",
+            //    dialects.Select(d => d.Dialect)
+            //);
 
-            var columns = new ColumnDef[]
+
+            foreach (var (dialect, angleBracketSyntax) in dialects)
             {
-                new (new Ident("name"), new Int()),
-                new (new Ident("val"), new DataType.Array(new Int()))
+                var syntax = angleBracketSyntax ? "ARRAY<INT>" : "INT[]";
+                var sql = $"CREATE TABLE IF NOT EXISTS something (name INT, val {syntax})";
+
+                var create = (Statement.CreateTable)OneStatementParsesTo(sql, sql, new[] {dialect});
+
+                ArrayElementTypeDef expected = new ArrayElementTypeDef.SquareBracket(new Int());
+                if (angleBracketSyntax)
+                {
+                    expected = new ArrayElementTypeDef.AngleBracket(new Int());
+                }
+
+
+                var columns = new ColumnDef[]
+                {
+                    new(new Ident("name"), new Int()),
+                    new(new Ident("val"), new DataType.Array(expected))
+                };
+
+                Assert.True(create.IfNotExists);
+                Assert.Equal((ObjectName) "something", create.Name);
+                Assert.Equal(columns, create.Columns);
+            }
+
+            var testDialects = new Dialect[]
+            {
+                new PostgreSqlDialect(),
+                new HiveDialect(),
+                new MySqlDialect()
             };
 
-            Assert.True(create.IfNotExists);
-            Assert.Equal((ObjectName)"something", create.Name);
-            Assert.Equal(columns, create.Columns);
-
-            dialects.Add(new MsSqlDialect());
-
-            var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE TABLE IF NOT EXISTS something (name int, val array<int)", dialects));
+            var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE TABLE IF NOT EXISTS something (name int, val array<int)", testDialects));
             Assert.Equal("Expected >, found ), Line: 1, Col: 62", ex.Message);
         }
 

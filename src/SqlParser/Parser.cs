@@ -990,6 +990,26 @@ public class Parser
             return new MatchAgainst(columns, match, optSearchModifier);
         }
 
+        Expression ParseStruct()
+        {
+            PrevToken();
+            return ParseBigQueryStructLiteral();
+        }
+
+        Expression ParseBigQueryStructLiteral()
+        {
+            var (fields, trailingBracket) = ParseStructTypeDef(ParseBigQueryStructFieldDef);
+
+            if (trailingBracket)
+            {
+                throw new ParserException("Unmatched > in STRUCT literal", PeekToken().Location);
+            }
+
+            var values = ExpectParens(() => ParseCommaSeparated(() => ParseStructFieldExpression(fields.Any())));
+
+            return new Struct(values, fields);
+        }
+
         Expression ParseMultipart(Word word)
         {
             var tkn = PeekToken();
@@ -1112,7 +1132,7 @@ public class Parser
             Word { Keyword: Keyword.ARRAY_AGG } => ParseArrayAggregateExpression(),
             Word { Keyword: Keyword.NOT } => ParseNot(),
             Word { Keyword: Keyword.MATCH } when _dialect is MySqlDialect or GenericDialect => ParseMatchAgainst(),
-            //  TODO  STRUCT bigquery literal
+            Word { Keyword: Keyword.STRUCT } when _dialect is BigQueryDialect or GenericDialect => ParseStruct(),
             //  
             // Here `word` is a word, check if it's a part of a multi-part
             // identifier, a function call, or a simple identifier
@@ -1155,6 +1175,102 @@ public class Parser
         }
 
         return expr;
+    }
+    /// <summary>
+    /// Parse an expression value for a bigquery struct
+    /// </summary>
+    public (StructField, bool) ParseBigQueryStructFieldDef()
+    {
+        var next = PeekToken();
+        var isAnonymous = false;
+        if (next is Word w)
+        {
+            isAnonymous = System.Array.IndexOf(Keywords.All, w.Value.ToUpperInvariant()) > -1;
+        }
+
+        var fieldName = isAnonymous
+            ? null
+            : ParseIdentifier();
+
+        var (fieldType, trailingBracket) = ParseDataTypeHelper();
+
+        return (new StructField(fieldType, fieldName), trailingBracket);
+    }
+
+    public (Sequence<StructField> Fields, bool MatchingTrailingBracket) ParseStructTypeDef(Func<(StructField, bool)> elementParser)
+    {
+        var startToken = PeekToken();
+        ExpectKeyword(Keyword.STRUCT);
+
+        if (PeekToken() is not LessThan)
+        {
+            return (new Sequence<StructField>(), false);
+        }
+
+        NextToken();
+
+        var fieldDefs = new Sequence<StructField>();
+        bool trailingBracket;
+
+        while (true)
+        {
+            (var field, trailingBracket) = elementParser();
+
+            fieldDefs.Add(field);
+            if (!ConsumeToken<Comma>())
+            {
+                break;
+            }
+
+            // Angle brackets are balanced so we only expect the trailing `>>` after
+            // we've matched all field types for the current struct.
+            // e.g. this is invalid syntax `STRUCT<STRUCT<INT>>>, INT>(NULL)`
+            if (trailingBracket)
+            {
+                throw new ParserException("unmatched > in STRUCT definition", startToken.Location);
+            }
+        }
+
+        return (fieldDefs, ExpectClosingAngleBracket(trailingBracket));
+    }
+
+    public Expression ParseStructFieldExpression(bool typedSyntax)
+    {
+        var expression = ParseExpr();
+        if (ParseKeyword(Keyword.AS))
+        {
+            if (typedSyntax)
+            {
+                PrevToken();
+                throw new ParserException("Typed syntax does not allow AS", PeekToken().Location);
+            }
+
+            var fieldName = ParseIdentifier();
+            return new Named(expression, fieldName);
+        }
+
+        return expression;
+    }
+
+    private bool ExpectClosingAngleBracket(bool trailingBracket)
+    {
+        if (trailingBracket)
+        {
+            return false;
+        }
+
+        var next = PeekToken();
+        switch (next)
+        {
+            case GreaterThan:
+                NextToken();
+                return false;
+            case ShiftRight:
+                NextToken();
+                return true;
+            default:
+                throw Expected(">", next);
+        }
     }
 
     public Expression ParseFunction(ObjectName name)
@@ -3850,6 +3966,10 @@ public class Parser
                 options ??= new Sequence<ColumnOptionDef>();
                 options.Add(new ColumnOptionDef(opt));
             }
+            else if (_dialect is MySqlDialect or GenericDialect && ParseKeyword(Keyword.COLLATE))
+            {
+                collation = ParseObjectName();
+            }
             else
             {
                 break;
@@ -4870,10 +4990,10 @@ public class Parser
                     Keyword.undefined when w.QuoteStyle == Symbols.DoubleQuote => new Value.DoubleQuotedString(w.Value),
                     Keyword.undefined when w.QuoteStyle == Symbols.SingleQuote => new Value.SingleQuotedString(w.Value),
                     Keyword.undefined when w.QuoteStyle != null => throw Expected("a value", PeekToken()),
-                    
+
                     // Case when Snowflake Semi-structured data like key:value
-                    Keyword.undefined or Keyword.LOCATION or Keyword.TYPE or Keyword.DATE 
-                        when _dialect is SnowflakeDialect or GenericDialect 
+                    Keyword.undefined or Keyword.LOCATION or Keyword.TYPE or Keyword.DATE
+                        when _dialect is SnowflakeDialect or GenericDialect
                             => new Value.UnQuotedString(w.Value),
 
                     _ => throw Expected("a concrete value", PeekToken())
@@ -4937,7 +5057,7 @@ public class Parser
                 Number n => new Ident(n.Value),
                 _ => throw Expected("placeholder", nextToken)
             };
-            
+
             var placeholder = tok + ident.Value;
             return new Value.Placeholder(placeholder);
         }
@@ -5066,13 +5186,28 @@ public class Parser
             _ => throw Expected("literal string, number, or function", token)
         };
     }
+
+
+    public DataType ParseDataType()
+    {
+        var (dataType, trailingBracket) = ParseDataTypeHelper();
+
+        if (trailingBracket)
+        {
+            throw new ParserException($"Unmatched > after parsing data type {dataType}", PeekToken().Location);
+        }
+
+        return dataType;
+    }
+
     /// <summary>
     /// Parse a SQL data type (in the context of a CREATE TABLE statement for example)
     /// </summary>
     /// <returns></returns>
-    public DataType ParseDataType()
+    public (DataType, bool) ParseDataTypeHelper()
     {
         var token = NextToken();
+        var trailingBracket = false;
 
         var data = token switch
         {
@@ -5081,6 +5216,7 @@ public class Parser
             Word { Keyword: Keyword.FLOAT } => new DataType.Float(ParseOptionalPrecision()),
             Word { Keyword: Keyword.REAL } => new DataType.Real(),
             Word { Keyword: Keyword.FLOAT4 } => new DataType.Float4(),
+            Word { Keyword: Keyword.FLOAT64 } => new DataType.Float64(),
             Word { Keyword: Keyword.FLOAT8 } => new DataType.Float8(),
             Word { Keyword: Keyword.DOUBLE } => ParseDouble(),
             Word { Keyword: Keyword.TINYINT } => ParseTinyInt(),
@@ -5089,6 +5225,7 @@ public class Parser
             Word { Keyword: Keyword.MEDIUMINT } => ParseMediumInt(),
             Word { Keyword: Keyword.INT } => ParseInt(),
             Word { Keyword: Keyword.INT4 } => ParseInt4(),
+            Word { Keyword: Keyword.INT64 } =>new DataType.Int64(),
 
             Word { Keyword: Keyword.INTEGER } => ParseInteger(),
             Word { Keyword: Keyword.BIGINT } => ParseBigInt(),
@@ -5102,6 +5239,7 @@ public class Parser
             Word { Keyword: Keyword.BINARY } => new DataType.Binary(ParseOptionalPrecision()),
             Word { Keyword: Keyword.VARBINARY } => new DataType.Varbinary(ParseOptionalPrecision()),
             Word { Keyword: Keyword.BLOB } => new DataType.Blob(ParseOptionalPrecision()),
+            Word { Keyword: Keyword.BYTES } => new DataType.Bytes(ParseOptionalPrecision()),
             Word { Keyword: Keyword.UUID } => new DataType.Uuid(),
             Word { Keyword: Keyword.DATE } => new DataType.Date(),
             Word { Keyword: Keyword.DATETIME } => new DataType.Datetime(ParseOptionalPrecision()),
@@ -5126,6 +5264,7 @@ public class Parser
             Word { Keyword: Keyword.ENUM } => new DataType.Enum(ParseStringValue()),
             Word { Keyword: Keyword.SET } => new DataType.Set(ParseStringValue()),
             Word { Keyword: Keyword.ARRAY } => ParseArray(),
+            Word { Keyword: Keyword.STRUCT } when _dialect is BigQueryDialect => ParseStruct(),
             _ => ParseUnmatched()
         };
 
@@ -5134,10 +5273,10 @@ public class Parser
         while (ConsumeToken<LeftBracket>())
         {
             ExpectToken<RightBracket>();
-            data = new DataType.Array(data);
+            data = new DataType.Array(new ArrayElementTypeDef.SquareBracket(data));
         }
 
-        return data;
+        return (data, trailingBracket);
 
         #region Data Type Parsers
 
@@ -5272,13 +5411,21 @@ public class Parser
         {
             if (_dialect is SnowflakeDialect)
             {
-                return new DataType.Array(new DataType.None());
+                return new DataType.Array(new ArrayElementTypeDef.None());
             }
 
             ExpectToken<LessThan>();
-            var insideType = ParseDataType();
-            ExpectToken<GreaterThan>();
-            return new DataType.Array(insideType);
+            var (insideType, trailing) = ParseDataTypeHelper();
+            trailingBracket = ExpectClosingAngleBracket(trailing);
+            //ExpectToken<GreaterThan>();
+            return new DataType.Array(new ArrayElementTypeDef.AngleBracket(insideType));
+        }
+
+        DataType ParseStruct()
+        {
+            PrevToken();
+            (var fieldDefs, trailingBracket) = ParseStructTypeDef(ParseBigQueryStructFieldDef);
+            return new DataType.Struct(fieldDefs);
         }
 
         DataType ParseUnmatched()

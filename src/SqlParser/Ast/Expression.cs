@@ -1,4 +1,7 @@
-﻿namespace SqlParser.Ast;
+﻿using static SqlParser.Ast.WildcardExpression;
+using System.ComponentModel;
+
+namespace SqlParser.Ast;
 
 // ReSharper disable CommentTypo
 
@@ -912,6 +915,17 @@ public abstract record Expression : IWriteSql, IElement
             }
         }
     }
+
+    /// <summary>
+    /// BigQuery specific: A named expression in a typeless struct
+    /// </summary>
+    public record Named(Expression Expression, Ident Name) : Expression
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{Expression} AS {Name}");
+        }
+    }
     /// <summary>
     /// Nested expression
     /// <example>
@@ -1053,6 +1067,30 @@ public abstract record Expression : IWriteSql, IElement
             else
             {
                 writer.WriteSql($"{Expression} {AsNegated.NegatedText}SIMILAR TO {Pattern}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// BigQuery specific Struct literal expression
+    /// </summary>
+    public record Struct(Sequence<Expression> Values, Sequence<StructField> Fields) : Expression
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            if(Fields.SafeAny())
+            {
+                writer.Write("STRUCT<");
+                writer.WriteDelimited(Fields, ", ");
+                writer.Write(">("); 
+                writer.WriteDelimited(Values, ", ");
+                writer.Write(")");
+            }
+            else
+            {
+                writer.Write("STRUCT(");
+                writer.WriteDelimited(Values, ", ");
+                writer.Write(")");
             }
         }
     }
