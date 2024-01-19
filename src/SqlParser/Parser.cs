@@ -4913,15 +4913,33 @@ public class Parser
                 return new Value.Placeholder(p.Value);
 
             case Colon c:
-                var colonIdent = ParseIdentifier();
-                return new Value.Placeholder(c.Character + colonIdent.Value);
+                //var colonIdent = ParseIdentifier();
+                //return new Value.Placeholder(c.Character + colonIdent.Value);
+                return ParsePlaceholder(c);
 
             case AtSign a:
-                var atIdent = ParseIdentifier();
-                return new Value.Placeholder(a.Character + atIdent.Value);
+                //var atIdent = ParseIdentifier();
+                //return new Value.Placeholder(a.Character + atIdent.Value);
+                return ParsePlaceholder(a);
 
             default:
                 throw Expected("a value", PeekToken());
+        }
+
+        Value ParsePlaceholder(Token tok)
+        {
+            // Not calling self.parse_identifier()? because only in placeholder we want to check numbers as idfentifies
+            // This because snowflake allows numbers as placeholders
+            var nextToken = NextToken();
+            var ident = nextToken switch
+            {
+                Word w => w.ToIdent(),
+                Number n => new Ident(n.Value),
+                _ => throw Expected("placeholder", nextToken)
+            };
+            
+            var placeholder = tok + ident.Value;
+            return new Value.Placeholder(placeholder);
         }
     }
 

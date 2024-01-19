@@ -681,5 +681,15 @@ namespace SqlParser.Tests.Dialects
         {
             VerifiedStatement("SELECT position FROM tbl1 WHERE position NOT IN ('first', 'last')", new Dialect[]{new SnowflakeDialect(), new GenericDialect()});
         }
+
+        [Fact]
+        public void Test_Number_Placeholder()
+        {
+            var sql = "SELECT :1";
+            var select = VerifiedOnlySelect(sql);
+            Assert.Equal(new LiteralValue(new Value.Placeholder(":1")), select.Projection.Single().AsExpr());
+
+            Assert.Throws<ParserException>(() => ParseSqlStatements("alter role 1 with name = 'foo'"));
+        }
     }
 }
