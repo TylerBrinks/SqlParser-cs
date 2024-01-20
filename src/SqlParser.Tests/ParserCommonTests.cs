@@ -3577,8 +3577,8 @@ namespace SqlParser.Tests
             Test(false);
             Test(true);
 
-            var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT * FROM customer LEFT JOIN LATERAL generate_series(1, customer.id)"));
-            Assert.Equal("Expected sub-query after LATERAL, found generate_series, Line: 1, Col: 42", ex.Message);
+            var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT * FROM LATERAL UNNEST ([10,20,30]) as numbers WITH OFFSET;"));
+            Assert.Equal("Expected end of statement, found WITH, Line: 1, Col: 54", ex.Message);
 
             ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT * FROM a LEFT JOIN LATERAL (b CROSS JOIN c)"));
             Assert.Equal("Expected SELECT, VALUES, or a subquery in the query body, found b, Line: 1, Col: 36", ex.Message);
@@ -3601,6 +3601,37 @@ namespace SqlParser.Tests
                     Assert.Equal("SELECT * FROM order WHERE order.customer = customer.id LIMIT 3", derived.SubQuery.ToSql());
                 }
             }
+        }
+
+        [Fact]
+        public void Test_Function()
+        {
+            var sql = "SELECT * FROM customer LEFT JOIN LATERAL generate_series(1, customer.id)";
+            var select = VerifiedOnlySelect(sql);
+
+            var expected = new Select(new Sequence<SelectItem>
+            {
+                new SelectItem.Wildcard(new WildcardAdditionalOptions())
+            })
+            {
+                From = new Sequence<TableWithJoins>
+                {
+                    new (new TableFactor.Table("customer"))
+                    {
+                        Joins = new Sequence<Join>
+                        {
+                            new (new TableFactor.Function(true, "generate_series", new Sequence<FunctionArg>
+                            {
+                                new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.Number("1")))),
+                                new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new CompoundIdentifier(
+                                    new Sequence<Ident>{ "customer", "id" }))),
+                            }), new JoinOperator.LeftOuter(new JoinConstraint.None()))
+                        }
+                    }
+                }
+            };
+
+            Assert.Equal(expected, select);
         }
 
         [Fact]

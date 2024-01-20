@@ -31,6 +31,27 @@ public abstract record TableFactor : IWriteSql, IElement
             }
         }
     }
+
+    public record Function(bool Lateral, ObjectName Name, Sequence<FunctionArg> Args) : TableFactor
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            if (Lateral)
+            {
+                writer.Write("LATERAL ");
+            }
+
+            writer.WriteSql($"{Name}");
+            writer.Write("(");
+            writer.WriteDelimited(Args, ", ");
+            writer.Write(")");
+
+            if (Alias != null)
+            {
+                writer.WriteSql($" AS {Alias}");
+            }
+        }
+    }
     /// <summary>
     /// Represents a parenthesized table factor. The SQL spec only allows a
     /// join expression ((foo JOIN bar [ JOIN baz ... ])) to be nested,
@@ -67,7 +88,7 @@ public abstract record TableFactor : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             var cols = new Expression.CompoundIdentifier(ValueColumns);
-           
+
             writer.WriteSql($"{TableFactor} PIVOT({AggregateFunction} FOR {cols} IN (");
             writer.WriteDelimited(PivotValues, ", ");
             writer.Write("))");
@@ -136,7 +157,7 @@ public abstract record TableFactor : IWriteSql, IElement
                 writer.WriteSql($" WITH ({WithHints})");
             }
 
-            if (Version!= null)
+            if (Version != null)
             {
                 writer.WriteSql($"{Version}");
             }

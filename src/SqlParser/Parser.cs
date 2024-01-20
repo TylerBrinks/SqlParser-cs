@@ -6845,12 +6845,16 @@ public class Parser
     {
         if (ParseKeyword(Keyword.LATERAL))
         {
-            if (!ConsumeToken<LeftParen>())
+            if (ConsumeToken<LeftParen>())
             {
-                throw Expected("sub-query after LATERAL", PeekToken());
+                return ParseDerivedTableFactor(IsLateral.Lateral);
             }
 
-            return ParseDerivedTableFactor(IsLateral.Lateral);
+            var fnName = ParseObjectName();
+            ExpectLeftParen();
+            var fnArgs = ParseOptionalArgs();
+            var alias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
+            return new TableFactor.Function(true, fnName, fnArgs){ Alias = alias };
         }
 
         if (ParseKeyword(Keyword.TABLE))
@@ -6943,6 +6947,7 @@ public class Parser
                     {
                         case TableFactor.Derived
                             or TableFactor.Table
+                            or TableFactor.Function
                             or TableFactor.UnNest
                             or TableFactor.TableFunction
                             or TableFactor.Pivot

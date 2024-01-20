@@ -691,5 +691,12 @@ namespace SqlParser.Tests.Dialects
 
             Assert.Throws<ParserException>(() => ParseSqlStatements("alter role 1 with name = 'foo'"));
         }
+
+        [Fact]
+        public void Parse_Lateral_Flatten()
+        {
+            VerifiedOnlySelect("SELECT * FROM TABLE(FLATTEN(input => parse_json('{\"a\":1, \b\":[77,88]}'), outer => true)) AS f");
+            VerifiedOnlySelect("SELECT emp.employee_ID, emp.last_name, index, value AS project_name FROM employees AS emp, LATERAL FLATTEN(INPUT => emp.project_names) AS proj_names");
+        }
     }
 }
