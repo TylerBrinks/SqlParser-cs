@@ -227,7 +227,7 @@ namespace SqlParser.Tests.Dialects
             var sql = "SELECT * FROM t1 WHERE a IN ()";
             var select = VerifiedOnlySelect(sql);
 
-            var inList = (InList)select.Selection;
+            var inList = (InList)select.Selection!;
 
             Assert.Empty(inList.List);
 

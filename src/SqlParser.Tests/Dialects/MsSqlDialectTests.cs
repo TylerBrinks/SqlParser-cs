@@ -195,7 +195,7 @@ namespace SqlParser.Tests.Dialects
             var parameters = new Sequence<ProcedureParam>
             {
                 new ("@foo", new DataType.Int()),
-                new ("@bar", new DataType.Varchar(new CharacterLength(256))),
+                new ("@bar", new DataType.Varchar(new CharacterLength.IntegerLength(256))),
             };
 
             var expected = new Statement.CreateProcedure(true, "test", parameters, new Sequence<Statement>{query});
@@ -208,7 +208,7 @@ namespace SqlParser.Tests.Dialects
         {
             var select = VerifiedOnlySelect("SELECT [a column] FROM [a schema].[a table]");
 
-            var table = (TableFactor.Table) select.From.Single().Relation;
+            var table = (TableFactor.Table)select.From!.Single().Relation!;
 
             Assert.Equal(new ObjectName(new []
             {
@@ -217,6 +217,12 @@ namespace SqlParser.Tests.Dialects
             } ), table.Name);
 
             Assert.Equal(new Identifier(new Ident("a column", '[')), select.Projection.First().AsExpr());
+        }
+
+        [Fact]
+        public void Parse_Cast_Varchar_Max()
+        {
+            VerifiedExpr("CAST('foo' AS VARCHAR(MAX))", new Dialect[]{new MsSqlDialect(), new GenericDialect()});
         }
     }
 }

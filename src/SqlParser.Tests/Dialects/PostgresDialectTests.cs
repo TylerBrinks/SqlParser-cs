@@ -426,13 +426,13 @@ namespace SqlParser.Tests.Dialects
                     new(new ColumnOption.NotNull())
                 }),
 
-                new("first_name", new DataType.CharacterVarying(new CharacterLength(45)),
+                new("first_name", new DataType.CharacterVarying(new CharacterLength.IntegerLength(45)),
                     Options: new ColumnOptionDef[]
                     {
                         new(new ColumnOption.NotNull())
                     }),
 
-                new("last_name", new DataType.CharacterVarying(new CharacterLength(45)),
+                new("last_name", new DataType.CharacterVarying(new CharacterLength.IntegerLength(45)),
                     new ObjectName(new Ident("es_ES", Symbols.DoubleQuote)),
                     new ColumnOptionDef[]
                     {
@@ -440,7 +440,7 @@ namespace SqlParser.Tests.Dialects
                     }
                 ),
 
-                new("email", new DataType.CharacterVarying(new CharacterLength(50))),
+                new("email", new DataType.CharacterVarying(new CharacterLength.IntegerLength(50))),
 
                 new("address_id", new DataType.SmallInt(), Options: new ColumnOptionDef[]
                 {

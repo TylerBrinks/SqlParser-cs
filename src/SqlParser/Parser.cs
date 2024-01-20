@@ -5893,6 +5893,11 @@ public class Parser
 
     public CharacterLength ParseCharacterLength()
     {
+        if (ParseKeyword(Keyword.MAX))
+        {
+            return new CharacterLength.Max();
+        }
+
         var length = ParseLiteralUnit();
         var unit = CharLengthUnit.None;
         if (ParseKeyword(Keyword.CHARACTERS))
@@ -5905,7 +5910,7 @@ public class Parser
             unit = CharLengthUnit.Octets;
         }
 
-        return new CharacterLength(length, unit);
+        return new CharacterLength.IntegerLength(length, unit);
     }
 
     public (ulong?, ulong?) ParseOptionalPrecisionScale()

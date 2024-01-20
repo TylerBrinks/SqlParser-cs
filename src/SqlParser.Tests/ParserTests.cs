@@ -90,20 +90,20 @@ namespace SqlParser.Tests
             DefaultDialects = new Dialect[] { new GenericDialect(), new AnsiDialect() };
 
             TestDataType("CHARACTER", new DataType.Character());
-            TestDataType("CHARACTER(20)", new DataType.Character(new CharacterLength(20)));
-            TestDataType("CHARACTER(20 CHARACTERS)", new DataType.Character(new CharacterLength(20, CharLengthUnit.Characters)));
-            TestDataType("CHARACTER(20 OCTETS)", new DataType.Character(new CharacterLength(20, CharLengthUnit.Octets)));
+            TestDataType("CHARACTER(20)", new DataType.Character(new CharacterLength.IntegerLength(20)));
+            TestDataType("CHARACTER(20 CHARACTERS)", new DataType.Character(new CharacterLength.IntegerLength(20, CharLengthUnit.Characters)));
+            TestDataType("CHARACTER(20 OCTETS)", new DataType.Character(new CharacterLength.IntegerLength(20, CharLengthUnit.Octets)));
             TestDataType("CHAR", new DataType.Char());
-            TestDataType("CHAR(20)", new DataType.Char(new CharacterLength(20)));
-            TestDataType("CHAR(20 CHARACTERS)", new DataType.Char(new CharacterLength(20, CharLengthUnit.Characters)));
-            TestDataType("CHAR(20 OCTETS)", new DataType.Char(new CharacterLength(20, CharLengthUnit.Octets)));
+            TestDataType("CHAR(20)", new DataType.Char(new CharacterLength.IntegerLength(20)));
+            TestDataType("CHAR(20 CHARACTERS)", new DataType.Char(new CharacterLength.IntegerLength(20, CharLengthUnit.Characters)));
+            TestDataType("CHAR(20 OCTETS)", new DataType.Char(new CharacterLength.IntegerLength(20, CharLengthUnit.Octets)));
 
-            TestDataType("CHARACTER VARYING(20)", new DataType.CharacterVarying(new CharacterLength(20)));
-            TestDataType("CHARACTER VARYING(20 CHARACTERS)", new DataType.CharacterVarying(new CharacterLength(20, CharLengthUnit.Characters)));
-            TestDataType("CHARACTER VARYING(20 OCTETS)", new DataType.CharacterVarying(new CharacterLength(20, CharLengthUnit.Octets)));
-            TestDataType("CHAR VARYING(20)", new DataType.CharVarying(new CharacterLength(20)));
-            TestDataType("CHAR VARYING(20 CHARACTERS)", new DataType.CharVarying(new CharacterLength(20, CharLengthUnit.Characters)));
-            TestDataType("CHAR VARYING(20 OCTETS)", new DataType.CharVarying(new CharacterLength(20, CharLengthUnit.Octets)));
+            TestDataType("CHARACTER VARYING(20)", new DataType.CharacterVarying(new CharacterLength.IntegerLength(20)));
+            TestDataType("CHARACTER VARYING(20 CHARACTERS)", new DataType.CharacterVarying(new CharacterLength.IntegerLength(20, CharLengthUnit.Characters)));
+            TestDataType("CHARACTER VARYING(20 OCTETS)", new DataType.CharacterVarying(new CharacterLength.IntegerLength(20, CharLengthUnit.Octets)));
+            TestDataType("CHAR VARYING(20)", new DataType.CharVarying(new CharacterLength.IntegerLength(20)));
+            TestDataType("CHAR VARYING(20 CHARACTERS)", new DataType.CharVarying(new CharacterLength.IntegerLength(20, CharLengthUnit.Characters)));
+            TestDataType("CHAR VARYING(20 OCTETS)", new DataType.CharVarying(new CharacterLength.IntegerLength(20, CharLengthUnit.Octets)));
         }
 
         [Fact]
@@ -306,7 +306,7 @@ namespace SqlParser.Tests
         {
             var parser = new Parser();
             _ = parser.ParseSql("select a from tbl where b = 123.45");
-        } 
+        }
     }
 }
 

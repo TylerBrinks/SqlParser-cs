@@ -1462,7 +1462,7 @@ namespace SqlParser.Tests
 
             var columns = new ColumnDef[]
             {
-                new("name", new Varchar(new CharacterLength(100)),Options:new ColumnOptionDef[]{new (new ColumnOption.NotNull())}),
+                new("name", new Varchar(new CharacterLength.IntegerLength(100)),Options:new ColumnOptionDef[]{new (new ColumnOption.NotNull())}),
                 new("lat", new DataType.Double(), Options:new ColumnOptionDef[]{new(Option: new ColumnOption.Null())}),
                 new("lng", new DataType.Double()),
                 new("constrained", new Int(), Options:new ColumnOptionDef[]
@@ -1793,7 +1793,7 @@ namespace SqlParser.Tests
 
             var columns = new ColumnDef[]
             {
-                new ("name", new Varchar(new CharacterLength(100)), Options:new ColumnOptionDef[]
+                new ("name", new Varchar(new CharacterLength.IntegerLength(100)), Options:new ColumnOptionDef[]
                 {
                     new (Option:new ColumnOption.NotNull())
                 }),
@@ -1822,7 +1822,7 @@ namespace SqlParser.Tests
 
             var columns = new ColumnDef[]
             {
-                new("name", new Varchar(new CharacterLength(100)), Options:new Sequence<ColumnOptionDef>
+                new("name", new Varchar(new CharacterLength.IntegerLength(100)), Options:new Sequence<ColumnOptionDef>
                 {
                     new (Option:new ColumnOption.NotNull())
                 }),
@@ -1848,7 +1848,7 @@ namespace SqlParser.Tests
 
             var columns = new ColumnDef[]
             {
-                new ("name", new Varchar(new CharacterLength(100)), Options:new ColumnOptionDef[]
+                new ("name", new Varchar(new CharacterLength.IntegerLength(100)), Options:new ColumnOptionDef[]
                 {
                     new (Option:new ColumnOption.NotNull())
                 }),

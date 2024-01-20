@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace SqlParser.Ast;
+﻿namespace SqlParser.Ast;
 
 /// <summary>
 /// SQL data types
@@ -12,6 +10,12 @@ public abstract record DataType : IWriteSql
     /// </summary>
     public abstract record CharacterLengthDataType(CharacterLength? CharacterLength) : DataType
     {
+        protected CharacterLength? CharLength = CharacterLength;
+
+        protected ulong? IntegerLength => CharLength is CharacterLength.IntegerLength length 
+            ? length.Length 
+            : null;
+
         protected void FormatCharacterStringType(SqlTextWriter writer, string sqlType, ulong? length)
         {
             writer.Write(sqlType);
@@ -200,7 +204,8 @@ public abstract record DataType : IWriteSql
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            FormatCharacterStringType(writer, "CHAR", CharacterLength?.Length);
+            
+            FormatCharacterStringType(writer, "CHAR", IntegerLength);
         }
     }
     /// <summary>
@@ -210,7 +215,7 @@ public abstract record DataType : IWriteSql
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            FormatCharacterStringType(writer, "CHARACTER", CharacterLength?.Length);
+            FormatCharacterStringType(writer, "CHARACTER", IntegerLength);
         }
     }
     /// <summary>
@@ -235,7 +240,7 @@ public abstract record DataType : IWriteSql
         {
             if (CharacterLength != null)
             {
-                FormatCharacterStringType(writer, "CHARACTER VARYING", CharacterLength.Length);
+                FormatCharacterStringType(writer, "CHARACTER VARYING", IntegerLength);
             }
         }
     }
@@ -261,7 +266,7 @@ public abstract record DataType : IWriteSql
         {
             if (CharacterLength != null)
             {
-                FormatCharacterStringType(writer, "CHAR VARYING", CharacterLength.Length);
+                FormatCharacterStringType(writer, "CHAR VARYING", IntegerLength);
             }
         }
     }
@@ -805,7 +810,7 @@ public abstract record DataType : IWriteSql
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            FormatCharacterStringType(writer, "VARCHAR", CharacterLength?.Length);
+            FormatCharacterStringType(writer, "VARCHAR", IntegerLength);
         }
     }
 
