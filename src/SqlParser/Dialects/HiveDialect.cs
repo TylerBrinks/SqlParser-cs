@@ -23,8 +23,5 @@ public class HiveDialect : Dialect
                character is Symbols.Underscore or Symbols.Dollar or Symbols.CurlyBracketOpen or Symbols.CurlyBracketClose;
     }
 
-    public override bool SupportsFilterDuringAggregation()
-    {
-        return true;
-    }
+    public override bool SupportsFilterDuringAggregation => true;
 }

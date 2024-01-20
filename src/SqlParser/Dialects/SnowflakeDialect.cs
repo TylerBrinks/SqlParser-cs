@@ -20,15 +20,8 @@ public class SnowflakeDialect : Dialect
         return character.IsAlphaNumeric() || character is Symbols.Dollar or Symbols.Underscore;
     }
 
-    public override bool SupportsFilterDuringAggregation()
-    {
-        return true;
-    }
-
-    public override bool SupportsWithinAfterArrayAggregation()
-    {
-        return true;
-    }
+    public override bool SupportsFilterDuringAggregation => true;
+    public override bool SupportsWithinAfterArrayAggregation => true;
 
     public override Statement? ParseStatement(Parser parser)
     {

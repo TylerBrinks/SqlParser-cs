@@ -23,14 +23,10 @@ public class PostgreSqlDialect : Dialect
 
     public override bool IsIdentifierPart(char character)
     {
-        //return character.IsAlphaNumeric() || character is Symbols.Dollar or Symbols.Underscore;
         return char.IsLetterOrDigit(character) || character is Symbols.Dollar or Symbols.Underscore;
     }
 
-    public override bool SupportsFilterDuringAggregation()
-    {
-        return true;
-    }
+    public override bool SupportsFilterDuringAggregation => true;
 
     public override Statement? ParseStatement(Parser parser)
     {

@@ -1,4 +1,5 @@
-﻿using System.Data;
+﻿using System.Collections.Generic;
+using System.Data;
 using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
@@ -189,7 +190,7 @@ namespace SqlParser.Tests.Dialects
         {
             const string sql = "PRAGMA cache_size";
 
-            var pragma = VerifiedStatement(sql, new Dialect[]{new SQLiteDialect(), new GenericDialect()});
+            var pragma = VerifiedStatement(sql, new Dialect[] { new SQLiteDialect(), new GenericDialect() });
             var expected = new Statement.Pragma("cache_size", null, false);
             Assert.Equal(expected, pragma);
         }
@@ -218,6 +219,31 @@ namespace SqlParser.Tests.Dialects
         public void Parse_Single_Quoted_Identified()
         {
             VerifiedOnlySelect("SELECT 't'.*, t.'x' FROM 't'");
+        }
+
+        [Fact]
+        public void Parse_Where_In_Empty_List()
+        {
+            var sql = "SELECT * FROM t1 WHERE a IN ()";
+            var select = VerifiedOnlySelect(sql);
+
+            var inList = (InList)select.Selection;
+
+            Assert.Empty(inList.List);
+
+            OneStatementParsesTo(
+                "SELECT * FROM t1 WHERE a IN (,)",
+                "SELECT * FROM t1 WHERE a IN ()",
+                dialects: new[] { new SQLiteDialect() },
+                options: new ParserOptions { TrailingCommas = true }
+            );
+        }
+
+        [Fact]
+        public void Invalid_Empty_List()
+        {
+            Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT * FROM t1 WHERE a IN (,,)",
+                new[] {new SQLiteDialect()}, options: new ParserOptions {TrailingCommas = true}));
         }
     }
 }

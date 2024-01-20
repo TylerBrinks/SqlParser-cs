@@ -50,8 +50,7 @@ public class SQLiteDialect : Dialect
         return parser.ParseInsert();
     }
 
-    public override bool SupportsFilterDuringAggregation()
-    {
-        return true;
-    }
+    public override bool SupportsFilterDuringAggregation => true;
+
+    public override bool SupportsInEmptyList => true;
 }

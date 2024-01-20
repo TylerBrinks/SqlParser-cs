@@ -41,25 +41,6 @@ public abstract class Dialect
         return true;
     }
     /// <summary>
-    /// True if the dialect supports filtering during aggregation
-    /// </summary>
-    /// <returns>True if supported; otherwise false.</returns>
-    public virtual bool SupportsFilterDuringAggregation()
-    {
-        return false;
-    }
-    /// <summary>
-    /// Returns true if the dialect supports `ARRAY_AGG() [WITHIN GROUP (ORDER BY)]` expressions.
-    /// Otherwise, the dialect should expect an `ORDER BY` without the `WITHIN GROUP` clause, e.g. [`ANSI`]
-    ///
-    /// <see href="https://jakewheat.github.io/sql-overview/sql-2016-foundation-grammar.html#array-aggregate-function"/>
-    /// </summary>
-    /// <returns>True if supported; otherwise false</returns>
-    public virtual bool SupportsWithinAfterArrayAggregation()
-    {
-        return false;
-    }
-    /// <summary>
     /// Allow dialect implementations to override statement parsing
     /// </summary>
     /// <param name="parser">Parser instance</param>
@@ -81,13 +62,12 @@ public abstract class Dialect
     /// Dialect-specific infix parser override
     /// </summary>
     /// <param name="parser">Parser instance</param>
-    /// <param name="Expression">Expression</param>
+    /// <param name="expression">Expression</param>
     /// <param name="precedence">Token precedence</param>
     /// <returns>Parsed Expression</returns>
-    public virtual Expression? ParseInfix(Parser parser, Expression Expression, int precedence)
+    public virtual Expression? ParseInfix(Parser parser, Expression expression, int precedence)
     {
         return null;
-
     }
     /// <summary>
     /// Allow dialect implementations to override parser token precedence
@@ -98,6 +78,24 @@ public abstract class Dialect
     {
         return null;
     }
+
+    /// <summary>
+    /// True if the dialect supports filtering during aggregation
+    /// </summary>
+    /// <returns>True if supported; otherwise false.</returns>
+    public virtual bool SupportsFilterDuringAggregation => false;
+    /// <summary>
+    /// Returns true if the dialect supports `ARRAY_AGG() [WITHIN GROUP (ORDER BY)]` expressions.
+    /// Otherwise, the dialect should expect an `ORDER BY` without the `WITHIN GROUP` clause, e.g. [`ANSI`]
+    ///
+    /// <see href="https://jakewheat.github.io/sql-overview/sql-2016-foundation-grammar.html#array-aggregate-function"/>
+    /// </summary>
+    /// <returns>True if supported; otherwise false</returns>
+    public virtual bool SupportsWithinAfterArrayAggregation => false;
+    /// <summary>
+    /// True if the dialect supports `(NOT) in ()`                                
+    /// </summary>
+    public virtual bool SupportsInEmptyList => false;
 
     /// <summary>
     /// True if the dialect supports 'group sets, rollup, or cube' expressions

@@ -908,7 +908,7 @@ public class Parser
             var expr = ParseExpr();
             // ANSI SQL and BigQuery define ORDER BY inside function.
 
-            if (!_dialect.SupportsWithinAfterArrayAggregation())
+            if (!_dialect.SupportsWithinAfterArrayAggregation)
             {
                 var orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY), () => ParseCommaSeparated(ParseOrderByExpr));
 
@@ -1280,7 +1280,7 @@ public class Parser
         var (args, orderBy) = ParseOptionalArgsWithOrderBy();
 
         Expression? filter = null;
-        if (_dialect.SupportsFilterDuringAggregation() &&
+        if (_dialect.SupportsFilterDuringAggregation &&
             ParseKeyword(Keyword.FILTER) &&
             ConsumeToken<LeftParen>() &&
             ParseKeyword(Keyword.WHERE))
@@ -2059,6 +2059,11 @@ public class Parser
         {
             if (!ParseKeyword(Keyword.SELECT) && !ParseKeyword(Keyword.WITH))
             {
+                if (_dialect.SupportsInEmptyList)
+                {
+                    return new InList(expr, ParseCommaSeparatedEmpty(ParseExpr), negated);
+                }
+
                 return new InList(expr, ParseCommaSeparated(ParseExpr), negated);
             }
 
@@ -2512,6 +2517,28 @@ public class Parser
 
         return values;
     }
+    /// <summary>
+    /// Parse a comma-separated list of 0+ items accepted by type T
+    /// </summary>
+    /// <typeparam name="T">Type of item to parse</typeparam>
+    /// <param name="action">Parse action</param>
+    /// <returns>List of T instances</returns>
+    public Sequence<T> ParseCommaSeparatedEmpty<T>(Func<T> action)
+    {
+        if (PeekToken() is RightParen)
+        {
+            return new Sequence<T>();
+        }
+
+        if (_options.TrailingCommas && PeekNthToken(0) is Comma && PeekNthToken(1) is RightParen)
+        {
+            ConsumeToken<Comma>();
+            return new Sequence<T>();
+        }
+
+        return ParseCommaSeparated(action);
+    }
+
     /// <summary>
     /// Run a parser method reverting back to the current position if unsuccessful.
     /// 
@@ -7480,7 +7507,7 @@ public class Parser
 
         Expression GetExpression(Expression expr)
         {
-            if (_dialect.SupportsFilterDuringAggregation() && ParseKeyword(Keyword.FILTER))
+            if (_dialect.SupportsFilterDuringAggregation && ParseKeyword(Keyword.FILTER))
             {
                 var i = _index - 1;
                 if (ConsumeToken<LeftParen>() && ParseKeyword(Keyword.WHERE))

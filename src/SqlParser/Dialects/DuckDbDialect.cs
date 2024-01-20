@@ -31,12 +31,10 @@ public class DuckDbDialect : Dialect
     {
         return IsIdentifierStart(character) || character.IsDigit() || character == Symbols.Dollar;
     }
+
     /// <summary>
     /// Suports filter during aggregation is always true
     /// </summary>
     /// <returns>True</returns>
-    public override bool SupportsFilterDuringAggregation()
-    {
-        return true;
-    }
+    public override bool SupportsFilterDuringAggregation => true;
 }

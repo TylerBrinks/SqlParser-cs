@@ -29,39 +29,39 @@ public class ParserTestBase
         return VerifiedQuery(sql, AllDialects, preserveFormatting);
     }
 
-    public Query VerifiedQuery(string sql, IEnumerable<Dialect> dialects, bool preserveFormatting = false, bool unescape = false)
+    public Query VerifiedQuery(string sql, IEnumerable<Dialect> dialects, bool preserveFormatting = false, bool unescape = false, ParserOptions? options = null)
     {
-        return VerifiedStatement(sql, dialects, preserveFormatting, unescape).AsQuery()!;
+        return VerifiedStatement(sql, dialects, preserveFormatting, unescape, options).AsQuery()!;
     }
 
-    public Statement VerifiedStatement(string sql, bool preserveFormatting = false, bool unescape = false)
+    public Statement VerifiedStatement(string sql, bool preserveFormatting = false, bool unescape = false, ParserOptions? options = null)
     {
-        return VerifiedStatement(sql, Dialects, preserveFormatting, unescape);
+        return VerifiedStatement(sql, Dialects, preserveFormatting, unescape, options);
     }
 
-    public Statement VerifiedStatement(string sql, IEnumerable<Dialect> dialects, bool preserveFormatting = false, bool unescape = false)
+    public Statement VerifiedStatement(string sql, IEnumerable<Dialect> dialects, bool preserveFormatting = false, bool unescape = false, ParserOptions? options = null)
     {
-        return OneStatementParsesTo(sql, sql, dialects, preserveFormatting, unescape);
+        return OneStatementParsesTo(sql, sql, dialects, preserveFormatting, unescape, options);
     }
 
-    public T VerifiedStatement<T>(string sql, bool preserveFormatting = false, bool unescape = false) where T : class
+    public T VerifiedStatement<T>(string sql, bool preserveFormatting = false, bool unescape = false, ParserOptions? options = null) where T : class
     {
-        return VerifiedStatement<T>(sql, Dialects, preserveFormatting, unescape);
+        return VerifiedStatement<T>(sql, Dialects, preserveFormatting, unescape, options);
     }
 
-    public T VerifiedStatement<T>(string sql, IEnumerable<Dialect> dialects, bool preserveFormatting = false, bool unescape = false) where T : class
+    public T VerifiedStatement<T>(string sql, IEnumerable<Dialect> dialects, bool preserveFormatting = false, bool unescape = false, ParserOptions? options = null) where T : class
     {
-        return (VerifiedStatement(sql, dialects, unescape, unescape) as T)!;
+        return (VerifiedStatement(sql, dialects, unescape, unescape, options) as T)!;
     }
 
-    public Select VerifiedOnlySelect(string sql, bool preserveFormatting = false, bool unescape = false)
+    public Select VerifiedOnlySelect(string sql, bool preserveFormatting = false, bool unescape = false, ParserOptions? options = null)
     {
-        return VerifiedOnlySelect(sql, Dialects, preserveFormatting, unescape);
+        return VerifiedOnlySelect(sql, Dialects, preserveFormatting, unescape, options);
     }
 
-    public Select VerifiedOnlySelect(string sql, IEnumerable<Dialect> dialects, bool preserveFormatting = false, bool unescape = false)
+    public Select VerifiedOnlySelect(string sql, IEnumerable<Dialect> dialects, bool preserveFormatting = false, bool unescape = false, ParserOptions? options = null)
     {
-        var expr = (SetExpression.SelectExpression)VerifiedQuery(sql, dialects, preserveFormatting, unescape).Body;
+        var expr = (SetExpression.SelectExpression)VerifiedQuery(sql, dialects, preserveFormatting, unescape, options).Body;
         return expr.Select;
     }
 
@@ -91,15 +91,15 @@ public class ParserTestBase
         return (T)OneStatementParsesTo(sql, canonical, dialects, preserveFormatting);
     }
 
-    public Statement OneStatementParsesTo(string sql, string canonical, bool preserveFormatting = false, bool unescape = false)
+    public Statement OneStatementParsesTo(string sql, string canonical, bool preserveFormatting = false, bool unescape = false, ParserOptions? options = null)
     {
-        return OneStatementParsesTo(sql, canonical, Dialects, preserveFormatting, unescape);
+        return OneStatementParsesTo(sql, canonical, Dialects, preserveFormatting, unescape, options);
     }
 
-    public Statement OneStatementParsesTo(string sql, string canonical, IEnumerable<Dialect> dialects, bool preserveFormatting = false, bool unescape = false)
+    public Statement OneStatementParsesTo(string sql, string canonical, IEnumerable<Dialect> dialects, bool preserveFormatting = false, bool unescape = false, ParserOptions? options = null)
     {
         var enumerable = dialects.ToList();
-        var statements = ParseSqlStatements(sql, enumerable, unescape);
+        var statements = ParseSqlStatements(sql, enumerable, unescape, options);
         Assert.Single(statements);
 
         if (!string.IsNullOrEmpty(canonical) && sql != canonical)
@@ -126,7 +126,7 @@ public class ParserTestBase
         return onlyStatement!;
     }
 
-    public Sequence<Statement?> ParseSqlStatements(string sql, bool unescape = false)
+    public Sequence<Statement?> ParseSqlStatements(string sql, bool unescape = false, ParserOptions? options = null)
     {
         return ParseSqlStatements(sql, Dialects);
     }
@@ -136,9 +136,9 @@ public class ParserTestBase
     // additionally asserts that parsing `sql` results in the same parse
     // tree as parsing `canonical`, and that serializing it back to string
     // results in the `canonical` representation.
-    public Sequence<Statement?> ParseSqlStatements(string sql, IEnumerable<Dialect> dialects, bool unescape = false)
+    public Sequence<Statement?> ParseSqlStatements(string sql, IEnumerable<Dialect> dialects, bool unescape = false, ParserOptions? options = null)
     {
-        var options = new ParserOptions { Unescape = unescape };
+        options ??= new ParserOptions { Unescape = unescape };
         return OneOfIdenticalResults(dialect => new Parser().ParseSql(sql, dialect, options), dialects)!;
     }
 
