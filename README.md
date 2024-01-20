@@ -143,6 +143,7 @@ SQL at every level of the syntax tree hierarchy.
 -  ANSI SQL dialect
 -  BigQuery SQL dialect
 -  ClickHouse SQL dialect
+-  DuckDb SQL dialect
 -  Hive SQL dialect
 -  MS SQL dialect
 -  My SQL dialect

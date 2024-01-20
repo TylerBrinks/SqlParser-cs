@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Diagnostics.Tracing;
+using System.Text.RegularExpressions;
 using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
@@ -5252,7 +5253,7 @@ public class Parser
             Word { Keyword: Keyword.MEDIUMINT } => ParseMediumInt(),
             Word { Keyword: Keyword.INT } => ParseInt(),
             Word { Keyword: Keyword.INT4 } => ParseInt4(),
-            Word { Keyword: Keyword.INT64 } =>new DataType.Int64(),
+            Word { Keyword: Keyword.INT64 } => new DataType.Int64(),
 
             Word { Keyword: Keyword.INTEGER } => ParseInteger(),
             Word { Keyword: Keyword.BIGINT } => ParseBigInt(),
@@ -6126,6 +6127,7 @@ public class Parser
         Ast.Fetch? fetch = null;
         Sequence<LockClause>? locks = null;
         Sequence<Expression>? limitBy = null;
+        ForClause? forClause = null;
 
         if (!ParseKeyword(Keyword.INSERT))
         {
@@ -6170,6 +6172,13 @@ public class Parser
 
             while (ParseKeyword(Keyword.FOR))
             {
+                var parsedForClause = ParseForClause();
+                if (parsedForClause != null)
+                {
+                    forClause = parsedForClause;
+                    break;
+                }
+
                 locks ??= new Sequence<LockClause>();
                 locks.Add(ParseLock());
             }
@@ -6182,7 +6191,8 @@ public class Parser
                 Offset = offset,
                 Fetch = fetch,
                 Locks = locks,
-                LimitBy = limitBy
+                LimitBy = limitBy,
+                ForClause = forClause
             });
         }
 
@@ -6190,7 +6200,7 @@ public class Parser
 
         return new Statement.Select(new Query(new SetExpression.Insert(insert))
         {
-            With = with,
+            With = with
         });
 
         Offset ParseOffset()
@@ -6215,14 +6225,14 @@ public class Parser
             var lockType = LockType.None;
             var nonBlock = NonBlock.None;
 
-            if (ParseKeyword(Keyword.UPDATE))
+            var lockFn = ExpectOneOfKeywords(Keyword.UPDATE, Keyword.SHARE);
+
+            lockType = lockFn switch
             {
-                lockType = LockType.Update;
-            }
-            else if (ParseKeyword(Keyword.SHARE))
-            {
-                lockType = LockType.Share;
-            }
+                Keyword.UPDATE => LockType.Update,
+                Keyword.SHARE => LockType.Share,
+                _ => lockType
+            };
 
             var name = ParseInit(ParseKeyword(Keyword.OF), ParseObjectName);
 
@@ -6236,6 +6246,26 @@ public class Parser
             }
 
             return new LockClause(lockType, nonBlock, name);
+        }
+
+        ForClause? ParseForClause()
+        {
+            if (ParseKeyword(Keyword.XML))
+            {
+                return ParseForXml();
+            }
+
+            if (ParseKeyword(Keyword.JSON))
+            {
+                return ParseForJson();
+            }
+
+            if (ParseKeyword(Keyword.BROWSE))
+            {
+                return new ForClause.Browse();
+            }
+
+            return null;
         }
     }
 
@@ -6273,7 +6303,113 @@ public class Parser
 
         return cte;
     }
+    /// <summary>
+    /// Parse a `FOR JSON` clause
+    /// </summary>
+    public ForClause ParseForJson()
+    {
+        ForJson forJson;
 
+        if (ParseKeyword(Keyword.AUTO))
+        {
+            forJson = new ForJson.Auto();
+        }
+        else if (ParseKeyword(Keyword.PATH))
+        {
+            forJson = new ForJson.Path();
+        }
+        else
+        {
+            throw Expected("FOR JSON [AUTO | PATH ]", PeekToken());
+        }
+
+        string? root = null;
+        var includeNullValues = false;
+        var withoutArrayWrapper = false;
+
+        while (PeekToken() is Comma)
+        {
+            NextToken();
+            if (ParseKeyword(Keyword.ROOT))
+            {
+                root = ExpectParens(ParseLiteralString);
+            }
+            else if (ParseKeyword(Keyword.INCLUDE_NULL_VALUES))
+            {
+                includeNullValues = true;
+            }
+            else if (ParseKeyword(Keyword.WITHOUT_ARRAY_WRAPPER))
+            {
+                withoutArrayWrapper = true;
+            }
+        }
+
+        return new ForClause.Json(forJson, root, includeNullValues, withoutArrayWrapper);
+    }
+    /// <summary>
+    /// Parse a `FOR XML` clause
+    /// </summary>
+    public ForClause ParseForXml()
+    {
+        ForXml forXml;
+
+        if (ParseKeyword(Keyword.RAW))
+        {
+            string? elementName = null;
+            if (PeekToken() is LeftParen)
+            {
+                elementName = ExpectParens(ParseLiteralString);
+            }
+
+            forXml = new ForXml.Raw(elementName);
+        }
+        else if (ParseKeyword(Keyword.AUTO))
+        {
+            forXml = new ForXml.Auto();
+        }
+        else if (ParseKeyword(Keyword.EXPLICIT))
+        {
+            forXml = new ForXml.Explicit();
+        }
+        else if (ParseKeyword(Keyword.PATH))
+        {
+            var elementName = ExpectParens(ParseLiteralString);
+            forXml = new ForXml.Path(elementName);
+        }
+        else
+        {
+            throw Expected("FOR XML [RAW | AUTO | EXPLICIT | PATH ]", PeekToken());
+        }
+
+        var elements = false;
+        var binaryBase64 = false;
+        string? root = null;
+        var type = false;
+
+        while (PeekToken() is Comma)
+        {
+            NextToken();
+            if (ParseKeyword(Keyword.ELEMENTS))
+            {
+                elements = true;
+            }
+            else if (ParseKeyword(Keyword.BINARY))
+            {
+                ExpectKeyword(Keyword.BASE64);
+                binaryBase64 = true;
+            }
+            else if (ParseKeyword(Keyword.ROOT))
+            {
+                root = ExpectParens(ParseLiteralString);
+            }
+            else if (ParseKeyword(Keyword.TYPE))
+            {
+                type = true;
+            }
+        }
+
+        return new ForClause.Xml(forXml, elements, binaryBase64, root, type);
+    }
     /// <summary>
     ///  /// Parse a "query body", which is an expression with roughly the
     /// following grammar:
@@ -6886,7 +7022,7 @@ public class Parser
             ExpectLeftParen();
             var fnArgs = ParseOptionalArgs();
             var alias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
-            return new TableFactor.Function(true, fnName, fnArgs){ Alias = alias };
+            return new TableFactor.Function(true, fnName, fnArgs) { Alias = alias };
         }
 
         if (ParseKeyword(Keyword.TABLE))

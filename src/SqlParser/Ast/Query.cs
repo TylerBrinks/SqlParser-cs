@@ -13,7 +13,7 @@ public record Query([Visit(1)] SetExpression Body) : IWriteSql, IElement
     [Visit(5)] public Fetch? Fetch { get; init; }
     [Visit(6)] public Sequence<LockClause>? Locks { get; init; }
     [Visit(7)] public Sequence<Expression>? LimitBy { get; init; }
-
+    [Visit(8)] public ForClause? ForClause { get; init; }
 
     public static implicit operator Query(Statement.Select select)
     {
@@ -63,6 +63,11 @@ public record Query([Visit(1)] SetExpression Body) : IWriteSql, IElement
         if (Locks != null && Locks.Any())
         {
             writer.WriteSql($" {Locks.ToSqlDelimited(Symbols.Space.ToString())}");
+        }
+
+        if (ForClause != null)
+        {
+            writer.WriteSql($" {ForClause}");
         }
     }
 }

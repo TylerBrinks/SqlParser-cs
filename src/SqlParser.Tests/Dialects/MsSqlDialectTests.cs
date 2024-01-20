@@ -224,5 +224,43 @@ namespace SqlParser.Tests.Dialects
         {
             VerifiedExpr("CAST('foo' AS VARCHAR(MAX))", new Dialect[]{new MsSqlDialect(), new GenericDialect()});
         }
+
+        [Fact]
+        public void Parse_For_Clause()
+        {
+            var dialects = new Dialect[] {new MsSqlDialect(), new GenericDialect()};
+            VerifiedStatement("SELECT a FROM t FOR JSON PATH", dialects);
+            VerifiedStatement("SELECT b FROM t FOR JSON AUTO", dialects);
+            VerifiedStatement("SELECT c FROM t FOR JSON AUTO, WITHOUT_ARRAY_WRAPPER", dialects);
+            VerifiedStatement("SELECT 1 FROM t FOR JSON PATH, ROOT('x'), INCLUDE_NULL_VALUES", dialects);
+            VerifiedStatement("SELECT 2 FROM t FOR XML AUTO", dialects);
+            VerifiedStatement("SELECT 3 FROM t FOR XML AUTO, TYPE, ELEMENTS", dialects);
+            VerifiedStatement("SELECT * FROM t WHERE x FOR XML AUTO, ELEMENTS", dialects);
+            VerifiedStatement("SELECT x FROM t ORDER BY y FOR XML AUTO, ELEMENTS", dialects);
+            VerifiedStatement("SELECT y FROM t FOR XML PATH('x'), ROOT('y'), ELEMENTS", dialects);
+            VerifiedStatement("SELECT z FROM t FOR XML EXPLICIT, BINARY BASE64", dialects);
+            VerifiedStatement("SELECT * FROM t FOR XML RAW('x')", dialects);
+            VerifiedStatement("SELECT * FROM t FOR BROWSE", dialects);
+        }
+
+        [Fact]
+        public void Dont_Parse_Trailing_For()
+        {
+            new []{ new MsSqlDialect() }.RunParserMethod("SELECT * FROM foo FOR", parser =>
+            {
+                Assert.Throws<ParserException>(() => parser.ParseQuery());
+            });
+        }
+
+        [Fact]
+        public void Parse_For_Json_Expect_Ast()
+        {
+            var query = VerifiedQuery("SELECT * FROM t FOR JSON PATH, ROOT('root')");
+
+            var expected = new ForClause.Json(new ForJson.Path(), "root", false, false);
+            
+            Assert.Equal(expected, query.ForClause);
+        }
+
     }
 }
