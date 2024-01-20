@@ -698,5 +698,11 @@ namespace SqlParser.Tests.Dialects
             VerifiedOnlySelect("SELECT * FROM TABLE(FLATTEN(input => parse_json('{\"a\":1, \b\":[77,88]}'), outer => true)) AS f");
             VerifiedOnlySelect("SELECT emp.employee_ID, emp.last_name, index, value AS project_name FROM employees AS emp, LATERAL FLATTEN(INPUT => emp.project_names) AS proj_names");
         }
+
+        [Fact]
+        public void Parse_Pivot_Of_Table_Factor_Derived()
+        {
+            VerifiedStatement("SELECT * FROM (SELECT place_id, weekday, open FROM times AS p) PIVOT(max(open) FOR weekday IN (0, 1, 2, 3, 4, 5, 6)) AS p (place_id, open_sun, open_mon, open_tue, open_wed, open_thu, open_fri, open_sat)");
+        }
     }
 }

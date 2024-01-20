@@ -7063,6 +7063,17 @@ public class Parser
 
             if (parsed)
             {
+                Keyword kw;
+                while ((kw = ParseOneOfKeywords(Keyword.PIVOT, Keyword.UNPIVOT)) != Keyword.undefined)
+                {
+                    result = kw switch
+                    {
+                        Keyword.PIVOT => ParsePivotTableFactor(result),
+                        Keyword.UNPIVOT => ParseUnpivotTableFactor(result),
+                        _ => throw new ParserException("Unable to parse Pivot table factor", PeekToken().Location)
+                    };
+                }
+
                 return result;
             }
 
