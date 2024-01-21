@@ -987,5 +987,19 @@ namespace SqlParser.Tests.Dialects
 
             Assert.Equal(expected, insert);
         }
+
+        [Fact]
+        public void Parse_Convert_Using()
+        {
+            // CONVERT(expr USING transcoding_name)
+            VerifiedOnlySelect("SELECT CONVERT('x' USING latin1)");
+            VerifiedOnlySelect("SELECT CONVERT(my_column USING utf8mb4) FROM my_table");
+
+            // CONVERT(expr, type)
+            VerifiedOnlySelect("SELECT CONVERT('abc', CHAR(60))");
+            VerifiedOnlySelect("SELECT CONVERT(123.456, DECIMAL(5,2))");
+            // with a type + a charset
+            VerifiedOnlySelect("SELECT CONVERT('test', CHAR CHARACTER SET utf8mb4)");
+        }
     }
 }

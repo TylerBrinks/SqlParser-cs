@@ -33,4 +33,6 @@ public class MsSqlDialect : Dialect
     }
 
     public override bool SupportsSubstringFromForExpr => false;
+
+    public override bool ConvertTypeBeforeValue => true;
 }

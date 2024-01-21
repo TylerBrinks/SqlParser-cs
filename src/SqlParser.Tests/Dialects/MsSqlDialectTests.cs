@@ -262,5 +262,12 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal(expected, query.ForClause);
         }
 
+        [Fact]
+        public void Parse_Convert()
+        {
+            VerifiedExpr("CONVERT(VARCHAR(MAX), 'foo')");
+            VerifiedExpr("CONVERT(VARCHAR(10), 'foo')");
+            VerifiedExpr("CONVERT(DECIMAL(10,5), 12.55)");
+        }
     }
 }

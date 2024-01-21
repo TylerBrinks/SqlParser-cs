@@ -42,4 +42,6 @@ public class RedshiftDialect : Dialect
 
         return false;
     }
+
+    public override bool ConvertTypeBeforeValue => true;
 }

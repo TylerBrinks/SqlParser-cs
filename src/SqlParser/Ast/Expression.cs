@@ -333,6 +333,42 @@ public abstract record Expression : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// CONVERT a value to a different data type or character encoding `CONVERT(foo USING utf8mb4)`
+    /// </summary>
+    public record Convert(Expression Expression, DataType? DataType, ObjectName? CharacterSet, bool TargetBeforeValue) : Expression
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("CONVERT(");
+
+            if (DataType != null)
+            {
+                if (CharacterSet != null)
+                {
+                    writer.WriteSql($"{Expression}, {DataType} CHARACTER SET {CharacterSet}");
+                }
+                else if (TargetBeforeValue)
+                {
+                    writer.WriteSql($"{DataType}, {Expression}");
+                }
+                else
+                {
+                    writer.WriteSql($"{Expression}, {DataType}");
+                }
+            }
+            else if (CharacterSet != null)
+            {
+                writer.WriteSql($"{Expression} USING {CharacterSet}");
+            }
+            else
+            {
+                writer.WriteSql($"{Expression}");
+            }
+
+            writer.Write(")");
+        }
+    }
+    /// <summary>
     /// CUBE expresion.
     /// </summary>
     /// <param name="Sets">Sets</param>
@@ -1078,11 +1114,11 @@ public abstract record Expression : IWriteSql, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            if(Fields.SafeAny())
+            if (Fields.SafeAny())
             {
                 writer.Write("STRUCT<");
                 writer.WriteDelimited(Fields, ", ");
-                writer.Write(">("); 
+                writer.Write(">(");
                 writer.WriteDelimited(Values, ", ");
                 writer.Write(")");
             }

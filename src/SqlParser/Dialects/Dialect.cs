@@ -106,4 +106,9 @@ public abstract class Dialect
     /// Returns true if the dialect supports `SUBSTRING(expr [FROM start] [FOR len])` expressions
     /// </summary>
     public virtual bool SupportsSubstringFromForExpr => true;
+    /// <summary>
+    /// Returns true if the dialect has a CONVERT function which accepts a type first
+    /// and an expression second, e.g. `CONVERT(varchar, 1)`
+    /// </summary>
+    public virtual bool ConvertTypeBeforeValue => false;
 }

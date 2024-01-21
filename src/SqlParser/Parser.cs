@@ -605,6 +605,47 @@ public class Parser
             };
         }
 
+        Expression ParseConvertExpr()
+        {
+            Expression expr;
+            DataType? dataType = null;
+            ObjectName? charset = null;
+
+            if (_dialect.ConvertTypeBeforeValue)
+            {
+                return ExpectParens(() =>
+                {
+                    dataType = ParseDataType();
+                    ExpectToken<Comma>();
+                    expr = ParseExpr();
+                    return new Expression.Convert(expr, null, charset, false);
+
+                });
+            }
+
+            ExpectLeftParen();
+            expr = ParseExpr();
+
+            if (ParseKeyword(Keyword.USING))
+            {
+                charset = ParseObjectName();
+                ExpectRightParen();
+
+                return new Expression.Convert(expr, null, charset, false);
+            }
+
+            ExpectToken<Comma>();
+
+            dataType = ParseDataType();
+            if (ParseKeywordSequence(Keyword.CHARACTER, Keyword.SET))
+            {
+                charset = ParseObjectName();
+            }
+            ExpectRightParen();
+
+            return new Expression.Convert(expr, dataType, charset, false);
+        }
+
         CastFormat? ParseOptionalCastFormat()
         {
             if (ParseKeyword(Keyword.FORMAT))
@@ -1114,6 +1155,7 @@ public class Parser
                 => ParseTimeFunctions(new ObjectName(word.ToIdent())),
 
             Word { Keyword: Keyword.CASE } => ParseCaseExpr(),
+            Word { Keyword: Keyword.CONVERT } => ParseConvertExpr(),
             Word { Keyword: Keyword.CAST } => ParseCastExpression((expr, dataType, format) => new Cast(expr, dataType, format)),
             Word { Keyword: Keyword.TRY_CAST } => ParseTryCastExpr(),
             Word { Keyword: Keyword.SAFE_CAST } => ParseSafeCastExpr(),
