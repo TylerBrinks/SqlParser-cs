@@ -6755,6 +6755,8 @@ public class Parser
     {
         var extended = ParseKeyword(Keyword.EXTENDED);
         var full = ParseKeyword(Keyword.FULL);
+        var session = ParseKeyword(Keyword.SESSION);
+        var global = ParseKeyword(Keyword.GLOBAL);
 
         if (ParseOneOfKeywords(Keyword.COLUMNS, Keyword.FIELDS) != Keyword.undefined)
         {
@@ -6786,7 +6788,7 @@ public class Parser
 
         if (ParseKeyword(Keyword.VARIABLES) && _dialect is MySqlDialect or GenericDialect)
         {
-            return new ShowVariables(ParseShowStatementFilter());
+            return new ShowVariables(ParseShowStatementFilter(), global, session);
         }
 
         return new ShowVariable(ParseIdentifiers());

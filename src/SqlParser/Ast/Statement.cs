@@ -1905,11 +1905,22 @@ public abstract record Statement : IWriteSql, IElement
     /// SHOW VARIABLES
     /// </summary>
     /// <param name="Filter">Show statement filter</param>
-    public record ShowVariables(ShowStatementFilter? Filter = null) : Statement
+    public record ShowVariables(ShowStatementFilter? Filter, bool Global, bool Session) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.Write("SHOW VARIABLES");
+            writer.Write("SHOW");
+
+            if (Global)
+            {
+                writer.Write(" GLOBAL");
+            }
+            if (Session)
+            {
+                writer.Write(" SESSION");
+            }
+
+            writer.Write(" VARIABLES");
 
             if (Filter != null)
             {

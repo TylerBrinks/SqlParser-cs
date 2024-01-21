@@ -597,6 +597,12 @@ namespace SqlParser.Tests.Dialects
             VerifiedStatement("SHOW VARIABLES");
             VerifiedStatement("SHOW VARIABLES LIKE 'admin%'");
             VerifiedStatement("SHOW VARIABLES WHERE value = '3306'");
+            VerifiedStatement("SHOW GLOBAL VARIABLES");
+            VerifiedStatement("SHOW GLOBAL VARIABLES LIKE 'admin%'");
+            VerifiedStatement("SHOW GLOBAL VARIABLES WHERE value = '3306'");
+            VerifiedStatement("SHOW SESSION VARIABLES");
+            VerifiedStatement("SHOW SESSION VARIABLES LIKE 'admin%'");
+            VerifiedStatement("SHOW GLOBAL VARIABLES WHERE value = '3306'");
         }
 
         [Fact]
