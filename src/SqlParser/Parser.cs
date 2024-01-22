@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.Tracing;
+﻿using System.Data;
+using System.Diagnostics.Tracing;
 using System.Text.RegularExpressions;
 using SqlParser.Ast;
 using SqlParser.Dialects;
@@ -136,7 +137,7 @@ public class Parser
                 break;
             }
 
-            if (next is Word { Keyword: Keyword.END })
+            if (next is Word { Keyword: Keyword.END } && expectingStatementDelimiter)
             {
                 break;
             }
@@ -216,6 +217,9 @@ public class Parser
             // standard `START TRANSACTION` statement. It is supported
             // by at least PostgreSQL and MySQL.
             Keyword.BEGIN => ParseBegin(),
+            // `END` is a nonstandard but common alias for the standard 
+            // `COMMIT TRANSACTION` statement. It is supported by PostgreSQL.
+            Keyword.END => ParseEnd(),
             Keyword.SAVEPOINT => new Savepoint(ParseIdentifier()),
             Keyword.RELEASE => ParseRelease(),
             Keyword.COMMIT => new Commit(ParseCommitRollbackChain()),
@@ -8058,6 +8062,11 @@ public class Parser
     {
         _ = ParseOneOfKeywords(Keyword.TRANSACTION, Keyword.WORK);
         return new StartTransaction(ParseTransactionModes(), true);
+    }
+
+    public Statement ParseEnd()
+    {
+        return new Commit(ParseCommitRollbackChain());
     }
 
     public Sequence<TransactionMode>? ParseTransactionModes()

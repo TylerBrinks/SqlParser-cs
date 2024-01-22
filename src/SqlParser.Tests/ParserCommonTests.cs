@@ -4899,11 +4899,22 @@ namespace SqlParser.Tests
             insert = (Statement.Insert)VerifiedStatement("INSERT INTO test_table DEFAULT VALUES ON CONFLICT DO NOTHING");
             Assert.NotNull(insert.On);
             
-            
             Assert.Throws<ParserException>(() => ParseSqlStatements("INSERT INTO test_table (test_col) DEFAULT VALUES"));
             Assert.Throws<ParserException>(() => ParseSqlStatements("INSERT INTO test_table DEFAULT VALUES (some_column)"));
             Assert.Throws<ParserException>(() => ParseSqlStatements("INSERT INTO test_table DEFAULT VALUES PARTITION (some_column)"));
             Assert.Throws<ParserException>(() => ParseSqlStatements("INSERT INTO test_table DEFAULT VALUES (1)"));
+        }
+
+        [Fact]
+        public void Parse_End()
+        {
+            OneStatementParsesTo("END AND NO CHAIN", "COMMIT");
+            OneStatementParsesTo("END WORK AND NO CHAIN", "COMMIT");
+            OneStatementParsesTo("END TRANSACTION AND NO CHAIN", "COMMIT");
+            OneStatementParsesTo("END WORK AND CHAIN", "COMMIT AND CHAIN");
+            OneStatementParsesTo("END TRANSACTION AND CHAIN", "COMMIT AND CHAIN");
+            OneStatementParsesTo("END WORK", "COMMIT");
+            OneStatementParsesTo("END TRANSACTION", "COMMIT");
         }
     }
 }
