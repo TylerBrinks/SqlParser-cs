@@ -203,6 +203,12 @@ public enum GeneratedAs
     ExpStored
 }
 
+public enum GeneratedExpressionMode
+{
+    Virtual, 
+    Sorted
+}
+
 public enum IndexType
 {
     None,

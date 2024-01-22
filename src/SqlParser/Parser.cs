@@ -4194,12 +4194,32 @@ public class Parser
         {
             try
             {
-                ExpectLeftParen();
-                var expr = ParseExpr();
-                ExpectRightParen();
-                ParseKeyword(Keyword.STORED);
+                //ExpectLeftParen();
+                var expr = ExpectParens(ParseExpr);
+                //ExpectRightParen();
+                GeneratedAs genAs;
+                GeneratedExpressionMode? expressionMode = null;
 
-                return new ColumnOption.Generated(GeneratedAs.ExpStored, GenerationExpr: expr);
+                if (ParseKeyword(Keyword.STORED))
+                {
+                    genAs = GeneratedAs.ExpStored;
+                    expressionMode = GeneratedExpressionMode.Sorted;
+                }
+                else if (_dialect is PostgreSqlDialect)
+                {
+                    throw Expected("SORTED", PeekToken());
+                }
+                else if (ParseKeyword(Keyword.VIRTUAL))
+                {
+                    genAs = GeneratedAs.Always;
+                    expressionMode = GeneratedExpressionMode.Virtual;
+                }
+                else
+                {
+                    genAs = GeneratedAs.Always;
+                }
+
+                return new ColumnOption.Generated(genAs, GenerationExpr: expr, GenerationExpressionMode: expressionMode);
             }
             catch (ParserException)
             {
@@ -6819,7 +6839,7 @@ public class Parser
         {
             return null;
         }
-        
+
         ParseKeyword(Keyword.SAVEPOINT);
         return ParseIdentifier();
     }
@@ -7569,7 +7589,7 @@ public class Parser
             afterColumns = ParseParenthesizedColumnList(IsOptional.Optional, false);
             source = ParseQuery();
         }
-        
+
         var on = ParseOn();
 
         var returning = ParseInit(ParseKeyword(Keyword.RETURNING), () => ParseCommaSeparated(ParseSelectItem));

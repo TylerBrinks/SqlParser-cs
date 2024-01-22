@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Data;
-using SqlParser.Ast;
+﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
 using static SqlParser.Ast.Expression;
@@ -244,6 +242,14 @@ namespace SqlParser.Tests.Dialects
         {
             Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT * FROM t1 WHERE a IN (,,)",
                 new[] {new SQLiteDialect()}, options: new ParserOptions {TrailingCommas = true}));
+        }
+
+        [Fact]
+        public void Parse_Create_Table_Gencol()
+        {
+            VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2))");
+            VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2) VIRTUAL)");
+            VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2) STORED)");
         }
     }
 }

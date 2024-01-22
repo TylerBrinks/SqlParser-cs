@@ -1001,5 +1001,13 @@ namespace SqlParser.Tests.Dialects
             // with a type + a charset
             VerifiedOnlySelect("SELECT CONVERT('test', CHAR CHARACTER SET utf8mb4)");
         }
+
+        [Fact]
+        public void Parse_Create_Table_Gencol()
+        {
+            VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2))");
+            VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2) VIRTUAL)");
+            VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2) STORED)");
+        }
     }
 }
