@@ -2,6 +2,8 @@
 // ReSharper disable CommentTypo
 // ReSharper disable UnusedMember
 
+using static SqlParser.Ast.Statement;
+
 namespace SqlParser.Ast;
 
 public abstract record Statement : IWriteSql, IElement
@@ -1656,6 +1658,14 @@ public abstract record Statement : IWriteSql, IElement
             Query.ToSql(writer);
         }
     }
+
+    public record ReleaseSavepoint(Ident Name) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"RELEASE SAVEPOINT {Name}");
+        }
+    }
     /// <summary>
     /// Revoke statement
     /// </summary>
@@ -1684,12 +1694,17 @@ public abstract record Statement : IWriteSql, IElement
     /// Rollback statement
     /// </summary>
     /// <param name="Chain">True if chaining</param>
-    public record Rollback(bool Chain) : Statement
+    public record Rollback(bool Chain, Ident? SavePoint = null) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
             var chain = Chain ? " AND CHAIN" : null;
             writer.Write($"ROLLBACK{chain}");
+
+            if (SavePoint != null)
+            {
+                writer.WriteSql($" TO SAVEPOINT {SavePoint}");
+            }
         }
     }
     /// <summary>

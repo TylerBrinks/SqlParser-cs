@@ -11,6 +11,7 @@ using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
 using Select = SqlParser.Ast.Select;
 using System.Globalization;
+using System.Resources;
 using static SqlParser.Ast.AlterTableOperation;
 
 namespace SqlParser;
@@ -216,8 +217,9 @@ public class Parser
             // by at least PostgreSQL and MySQL.
             Keyword.BEGIN => ParseBegin(),
             Keyword.SAVEPOINT => new Savepoint(ParseIdentifier()),
+            Keyword.RELEASE => ParseRelease(),
             Keyword.COMMIT => new Commit(ParseCommitRollbackChain()),
-            Keyword.ROLLBACK => new Rollback(ParseCommitRollbackChain()),
+            Keyword.ROLLBACK => ParseRollback(),
             Keyword.ASSERT => ParseAssert(),
             // `PREPARE`, `EXECUTE` and `DEALLOCATE` are Postgres-specific
             // syntax. They are used for Postgres prepared statement.
@@ -6791,6 +6793,31 @@ public class Parser
             default:
                 throw Expected("equal sign or TO", PeekToken());
         }
+    }
+
+    public Statement ParseRelease()
+    {
+        ParseKeyword(Keyword.SAVEPOINT);
+        var name = ParseIdentifier();
+        return new ReleaseSavepoint(name);
+    }
+
+    public Statement ParseRollback()
+    {
+        var chain = ParseCommitRollbackChain();
+        var savepoint = ParseRollbackSavepoint();
+        return new Rollback(chain, savepoint);
+    }
+
+    public Ident? ParseRollbackSavepoint()
+    {
+        if (!ParseKeyword(Keyword.TO))
+        {
+            return null;
+        }
+        
+        ParseKeyword(Keyword.SAVEPOINT);
+        return ParseIdentifier();
     }
 
     public Statement ParseShow()

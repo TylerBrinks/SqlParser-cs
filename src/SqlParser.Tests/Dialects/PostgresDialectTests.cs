@@ -1277,13 +1277,6 @@ namespace SqlParser.Tests.Dialects
         }
 
         [Fact]
-        public void Test_Savepoint()
-        {
-            var savepoint = VerifiedStatement<Statement.Savepoint>("SAVEPOINT test1");
-            Assert.Equal(new Statement.Savepoint("test1"), savepoint);
-        }
-
-        [Fact]
         public void Test_Json()
         {
             DefaultDialects = new[] {new PostgreSqlDialect()};

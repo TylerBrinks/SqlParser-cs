@@ -3758,6 +3758,12 @@ namespace SqlParser.Tests
             commit = VerifiedStatement<Statement.Rollback>("ROLLBACK AND CHAIN");
             Assert.Equal(new Statement.Rollback(true), commit);
 
+            commit = VerifiedStatement<Statement.Rollback>("ROLLBACK TO SAVEPOINT test1");
+            Assert.Equal(new Statement.Rollback(false, "test1"), commit);
+
+            commit = VerifiedStatement<Statement.Rollback>("ROLLBACK AND CHAIN TO SAVEPOINT test1");
+            Assert.Equal(new Statement.Rollback(true, "test1"), commit);
+
             OneStatementParsesTo("ROLLBACK AND NO CHAIN", "ROLLBACK");
             OneStatementParsesTo("ROLLBACK WORK AND NO CHAIN", "ROLLBACK");
             OneStatementParsesTo("ROLLBACK TRANSACTION AND NO CHAIN", "ROLLBACK");
@@ -3765,6 +3771,8 @@ namespace SqlParser.Tests
             OneStatementParsesTo("ROLLBACK TRANSACTION AND CHAIN", "ROLLBACK AND CHAIN");
             OneStatementParsesTo("ROLLBACK WORK", "ROLLBACK");
             OneStatementParsesTo("ROLLBACK TRANSACTION", "ROLLBACK");
+            OneStatementParsesTo("ROLLBACK TO test1", "ROLLBACK TO SAVEPOINT test1");
+            OneStatementParsesTo("ROLLBACK AND CHAIN TO test1", "ROLLBACK AND CHAIN TO SAVEPOINT test1");
         }
 
         [Fact]
@@ -4858,6 +4866,24 @@ namespace SqlParser.Tests
                 "SELECT tbl1.field % tbl2.field FROM tbl1 JOIN tbl2 ON tbl1.id = tbl2.entity_id"
         
             );
+        }
+
+        [Fact]
+        public void Test_Savepoint()
+        {
+            var release = (Statement.Savepoint) VerifiedStatement("SAVEPOINT test1");
+
+            var expected = new Statement.Savepoint("test1");
+            Assert.Equal(expected, release);
+        }
+
+        [Fact]
+        public void Test_Release_Savepoint()
+        {
+            var release = (Statement.ReleaseSavepoint)VerifiedStatement("RELEASE SAVEPOINT test1");
+
+            var expected = new Statement.ReleaseSavepoint("test1");
+            Assert.Equal(expected, release);
         }
     }
 }
