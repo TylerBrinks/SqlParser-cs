@@ -910,7 +910,7 @@ public abstract record Statement : IWriteSql, IElement
             var ifNotExists = IfNotExists ? "IF NOT EXISTS " : null;
 
             writer.WriteSql($"CREATE {orReplace}{materialized}{temporary}VIEW {ifNotExists}{Name}");
-           
+
 
             if (WithOptions.SafeAny())
             {
@@ -1481,7 +1481,7 @@ public abstract record Statement : IWriteSql, IElement
     /// </summary>
     /// <param name="Name">Object name</param>
     /// <param name="Source">Source query</param>
-    public record Insert([property: Visit(0)] ObjectName Name, [property: Visit(1)] Select Source) : Statement
+    public record Insert([property: Visit(0)] ObjectName Name, [property: Visit(1)] Select? Source) : Statement
     {
         /// Only for Sqlite
         public SqliteOnConflict Or { get; init; }
@@ -1533,7 +1533,14 @@ public abstract record Statement : IWriteSql, IElement
                 writer.WriteSql($"({AfterColumns}) ");
             }
 
-            Source.ToSql(writer);
+            if (Source != null)
+            {
+                Source.ToSql(writer);
+            }
+            else if (!Columns.SafeAny())
+            {
+                writer.Write("DEFAULT VALUES");
+            }
 
             On?.ToSql(writer);
 

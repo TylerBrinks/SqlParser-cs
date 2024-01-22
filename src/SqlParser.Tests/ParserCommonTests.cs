@@ -1544,7 +1544,7 @@ namespace SqlParser.Tests
                 var syntax = angleBracketSyntax ? "ARRAY<INT>" : "INT[]";
                 var sql = $"CREATE TABLE IF NOT EXISTS something (name INT, val {syntax})";
 
-                var create = (Statement.CreateTable)OneStatementParsesTo(sql, sql, new[] {dialect});
+                var create = (Statement.CreateTable)OneStatementParsesTo(sql, sql, new[] { dialect });
 
                 ArrayElementTypeDef expected = new ArrayElementTypeDef.SquareBracket(new Int());
                 if (angleBracketSyntax)
@@ -1560,7 +1560,7 @@ namespace SqlParser.Tests
                 };
 
                 Assert.True(create.IfNotExists);
-                Assert.Equal((ObjectName) "something", create.Name);
+                Assert.Equal((ObjectName)"something", create.Name);
                 Assert.Equal(columns, create.Columns);
             }
 
@@ -3364,7 +3364,7 @@ namespace SqlParser.Tests
             var create = VerifiedStatement<Statement.CreateView>("CREATE VIEW v (has, cols) AS SELECT 1, 2");
 
             Assert.Equal("v", create.Name);
-            Assert.Equal(new Sequence<Ident>{"has", "cols"}, create.Columns);
+            Assert.Equal(new Sequence<Ident> { "has", "cols" }, create.Columns);
             Assert.Equal("SELECT 1, 2", create.Query.Query.ToSql());
             Assert.False(create.Materialized);
             Assert.False(create.OrReplace);
@@ -4590,7 +4590,7 @@ namespace SqlParser.Tests
             {
                 PivotAlias = new TableAlias("p", new Ident[] { "c", "d" })
             };
-            
+
             Assert.Equal(expected, relation);
             Assert.Equal(sql.Replace("\r", "").Replace("\n", ""), VerifiedStatement(sql).ToSql());
         }
@@ -4611,9 +4611,9 @@ namespace SqlParser.Tests
             {
                 Alias = new TableAlias("s")
             };
-            var expected = new TableFactor.Unpivot(table, "quantity", "quarter", new Sequence<Ident>{"Q1", "Q2", "Q3", "Q4"})
+            var expected = new TableFactor.Unpivot(table, "quantity", "quarter", new Sequence<Ident> { "Q1", "Q2", "Q3", "Q4" })
             {
-                PivotAlias = new TableAlias("u", new Sequence<Ident>{ "product", "quarter", "quantity" })
+                PivotAlias = new TableAlias("u", new Sequence<Ident> { "product", "quarter", "quantity" })
             };
 
 
@@ -4766,7 +4766,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Parse_Create_Table_Collate()
         {
-            VerifiedStatement("CREATE TABLE tbl (foo INT, bar TEXT COLLATE \"de_DE\")", new Dialect[]{ new PostgreSqlDialect(), new GenericDialect() });
+            VerifiedStatement("CREATE TABLE tbl (foo INT, bar TEXT COLLATE \"de_DE\")", new Dialect[] { new PostgreSqlDialect(), new GenericDialect() });
         }
 
         [Fact]
@@ -4845,33 +4845,33 @@ namespace SqlParser.Tests
             OneStatementParsesTo(
                 "SELECT field/1000 FROM tbl1",
                 "SELECT field / 1000 FROM tbl1"
-        
+
             );
 
             OneStatementParsesTo(
                 "SELECT tbl1.field/tbl2.field FROM tbl1 JOIN tbl2 ON tbl1.id = tbl2.entity_id",
                 "SELECT tbl1.field / tbl2.field FROM tbl1 JOIN tbl2 ON tbl1.id = tbl2.entity_id"
-        
+
             );
 
             // x % y
             OneStatementParsesTo(
                 "SELECT field%1000 FROM tbl1",
                 "SELECT field % 1000 FROM tbl1"
-        
+
             );
 
             OneStatementParsesTo(
                 "SELECT tbl1.field%tbl2.field FROM tbl1 JOIN tbl2 ON tbl1.id = tbl2.entity_id",
                 "SELECT tbl1.field % tbl2.field FROM tbl1 JOIN tbl2 ON tbl1.id = tbl2.entity_id"
-        
+
             );
         }
 
         [Fact]
         public void Test_Savepoint()
         {
-            var release = (Statement.Savepoint) VerifiedStatement("SAVEPOINT test1");
+            var release = (Statement.Savepoint)VerifiedStatement("SAVEPOINT test1");
 
             var expected = new Statement.Savepoint("test1");
             Assert.Equal(expected, release);
@@ -4884,6 +4884,26 @@ namespace SqlParser.Tests
 
             var expected = new Statement.ReleaseSavepoint("test1");
             Assert.Equal(expected, release);
+        }
+
+        [Fact]
+        public void Parse_Insert_Default_Values()
+        {
+            var insert = (Statement.Insert)VerifiedStatement("INSERT INTO test_table DEFAULT VALUES");
+            var expected = new Statement.Insert("test_table", null) { Into = true };
+            Assert.Equal(expected, insert);
+
+            insert = (Statement.Insert)VerifiedStatement("INSERT INTO test_table DEFAULT VALUES RETURNING test_column");
+            Assert.NotEmpty(insert.Returning!);
+
+            insert = (Statement.Insert)VerifiedStatement("INSERT INTO test_table DEFAULT VALUES ON CONFLICT DO NOTHING");
+            Assert.NotNull(insert.On);
+            
+            
+            Assert.Throws<ParserException>(() => ParseSqlStatements("INSERT INTO test_table (test_col) DEFAULT VALUES"));
+            Assert.Throws<ParserException>(() => ParseSqlStatements("INSERT INTO test_table DEFAULT VALUES (some_column)"));
+            Assert.Throws<ParserException>(() => ParseSqlStatements("INSERT INTO test_table DEFAULT VALUES PARTITION (some_column)"));
+            Assert.Throws<ParserException>(() => ParseSqlStatements("INSERT INTO test_table DEFAULT VALUES (1)"));
         }
     }
 }

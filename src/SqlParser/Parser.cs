@@ -7550,15 +7550,22 @@ public class Parser
         var table = ParseKeyword(Keyword.TABLE);
         var tableName = ParseObjectName();
         var isMySql = _dialect is MySqlDialect;
-        var columns = ParseParenthesizedColumnList(IsOptional.Optional, isMySql);
+        Sequence<Ident>? columns = null;//ParseParenthesizedColumnList(IsOptional.Optional, isMySql);
+        Sequence<Expression>? partitioned = null;
+        Sequence<Ident>? afterColumns = null;
+        Statement.Select? source = null;
 
-        var partitioned = ParseInit(ParseKeyword(Keyword.PARTITION), () =>
+        if (!ParseKeywordSequence(Keyword.DEFAULT, Keyword.VALUES))
         {
-            return ExpectParens(() => ParseCommaSeparated(ParseExpr));
-        });
-
-        var afterColumns = ParseParenthesizedColumnList(IsOptional.Optional, false);
-        var source = ParseQuery();
+            columns = ParseParenthesizedColumnList(IsOptional.Optional, isMySql);
+            if (ParseKeyword(Keyword.PARTITION))
+            {
+                partitioned = ExpectParens(() => ParseCommaSeparated(ParseExpr));
+            }
+            afterColumns = ParseParenthesizedColumnList(IsOptional.Optional, false);
+            source = ParseQuery();
+        }
+        
         var on = ParseOn();
 
         var returning = ParseInit(ParseKeyword(Keyword.RETURNING), () => ParseCommaSeparated(ParseSelectItem));
