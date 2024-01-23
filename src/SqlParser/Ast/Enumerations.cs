@@ -402,6 +402,13 @@ public enum TransactionAccessMode
     ReadWrite
 }
 
+public enum TransactionModifier
+{
+    Deferred,
+    Immediate,
+    Exclusive
+}
+
 public enum TransactionIsolationLevel
 {
     ReadUncommitted,

@@ -11,13 +11,13 @@ namespace SqlParser.Tests.Dialects
     {
         public SqliteDialectTests()
         {
-            DefaultDialects = new[] { new SQLiteDialect() };
+            DefaultDialects = new[] {new SQLiteDialect()};
         }
 
         [Fact]
         public void Parse_Create_Table_Without_Rowid()
         {
-            DefaultDialects = new Dialect[] { new SQLiteDialect(), new GenericDialect() };
+            DefaultDialects = new Dialect[] {new SQLiteDialect(), new GenericDialect()};
 
             var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE t (a INT) WITHOUT ROWID");
 
@@ -27,13 +27,15 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Create_Virtual_Table()
         {
-            DefaultDialects = new Dialect[] { new SQLiteDialect(), new GenericDialect() };
+            DefaultDialects = new Dialect[] {new SQLiteDialect(), new GenericDialect()};
 
-            var create = VerifiedStatement<Statement.CreateVirtualTable>("CREATE VIRTUAL TABLE IF NOT EXISTS t USING module_name (arg1, arg2)");
+            var create =
+                VerifiedStatement<Statement.CreateVirtualTable>(
+                    "CREATE VIRTUAL TABLE IF NOT EXISTS t USING module_name (arg1, arg2)");
 
             Assert.Equal("t", create.Name);
             Assert.Equal("module_name", create.ModuleName!);
-            Assert.Equal(new Ident[] { "arg1", "arg2" }, create.ModuleArgs!);
+            Assert.Equal(new Ident[] {"arg1", "arg2"}, create.ModuleArgs!);
 
             VerifiedStatement("CREATE VIRTUAL TABLE t USING module_name");
         }
@@ -41,18 +43,19 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Create_Table_Auto_Increment()
         {
-            DefaultDialects = new Dialect[] { new SQLiteDialect(), new GenericDialect() };
+            DefaultDialects = new Dialect[] {new SQLiteDialect(), new GenericDialect()};
 
-            var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (bar INT PRIMARY KEY AUTOINCREMENT)");
+            var create =
+                VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (bar INT PRIMARY KEY AUTOINCREMENT)");
 
             Assert.Equal("foo", create.Name);
 
             var expected = new ColumnDef[]
             {
-                new ("bar", new DataType.Int(), Options:new ColumnOptionDef[]
+                new("bar", new DataType.Int(), Options: new ColumnOptionDef[]
                 {
-                    new (new ColumnOption.Unique(true)),
-                    new (new ColumnOption.DialectSpecific(new []{ new Word("AUTOINCREMENT") }))
+                    new(new ColumnOption.Unique(true)),
+                    new(new ColumnOption.DialectSpecific(new[] {new Word("AUTOINCREMENT")}))
                 })
             };
 
@@ -65,8 +68,8 @@ namespace SqlParser.Tests.Dialects
             var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE `PRIMARY` (\"KEY\" INT, [INDEX] INT)");
             var expected = new ColumnDef[]
             {
-                new (new Ident("KEY", Symbols.DoubleQuote), new DataType.Int()),
-                new (new Ident("INDEX", Symbols.SquareBracketOpen), new DataType.Int())
+                new(new Ident("KEY", Symbols.DoubleQuote), new DataType.Int()),
+                new(new Ident("INDEX", Symbols.SquareBracketOpen), new DataType.Int())
             };
             Assert.Equal("`PRIMARY`", create.Name);
             Assert.Equal(expected, create.Columns);
@@ -122,16 +125,21 @@ namespace SqlParser.Tests.Dialects
                 var negation = negated ? "NOT " : null;
 
                 var select = VerifiedOnlySelect($"SELECT * FROM customers WHERE name {negation}SIMILAR TO '%a'");
-                var expected = new SimilarTo(new Identifier("name"), negated, new LiteralValue(new Value.SingleQuotedString("%a")));
+                var expected = new SimilarTo(new Identifier("name"), negated,
+                    new LiteralValue(new Value.SingleQuotedString("%a")));
                 Assert.Equal(expected, select.Selection);
 
-                select = VerifiedOnlySelect($"SELECT * FROM customers WHERE name {negation}SIMILAR TO '%a' ESCAPE '\\'");
-                expected = new SimilarTo(new Identifier("name"), negated, new LiteralValue(new Value.SingleQuotedString("%a")), Symbols.Backslash);
+                select = VerifiedOnlySelect(
+                    $"SELECT * FROM customers WHERE name {negation}SIMILAR TO '%a' ESCAPE '\\'");
+                expected = new SimilarTo(new Identifier("name"), negated,
+                    new LiteralValue(new Value.SingleQuotedString("%a")), Symbols.Backslash);
                 Assert.Equal(expected, select.Selection);
 
                 // This statement tests that LIKE and NOT LIKE have the same precedence.
-                select = VerifiedOnlySelect($"SELECT * FROM customers WHERE name {negation}SIMILAR TO '%a' ESCAPE '\\' IS NULL");
-                var isNull = new IsNull(new SimilarTo(new Identifier("name"), negated, new LiteralValue(new Value.SingleQuotedString("%a")), Symbols.Backslash));
+                select = VerifiedOnlySelect(
+                    $"SELECT * FROM customers WHERE name {negation}SIMILAR TO '%a' ESCAPE '\\' IS NULL");
+                var isNull = new IsNull(new SimilarTo(new Identifier("name"), negated,
+                    new LiteralValue(new Value.SingleQuotedString("%a")), Symbols.Backslash));
                 Assert.Equal(isNull, select.Selection);
             }
         }
@@ -141,7 +149,7 @@ namespace SqlParser.Tests.Dialects
         {
             const string sql = "CREATE TABLE Fruits (id TEXT NOT NULL PRIMARY KEY) STRICT";
 
-            var create = (Statement.CreateTable)VerifiedStatement(sql);
+            var create = (Statement.CreateTable) VerifiedStatement(sql);
 
             Assert.Equal("Fruits", create.Name);
             Assert.True(create.Strict);
@@ -150,7 +158,9 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Create_View_Temporary_If_Not_Exists()
         {
-            var create = VerifiedStatement<Statement.CreateView>("CREATE TEMPORARY VIEW IF NOT EXISTS myschema.myview AS SELECT foo FROM bar");
+            var create =
+                VerifiedStatement<Statement.CreateView>(
+                    "CREATE TEMPORARY VIEW IF NOT EXISTS myschema.myview AS SELECT foo FROM bar");
 
             Assert.Equal("myschema.myview", create.Name);
             Assert.Equal(new Sequence<Ident>(), create.Columns);
@@ -165,7 +175,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Window_Function_With_Filter()
         {
-            var functioNames = new[] { "row_number", "rank", "max", "count", "user_defined_function" };
+            var functioNames = new[] {"row_number", "rank", "max", "count", "user_defined_function"};
 
             foreach (var fn in functioNames)
             {
@@ -177,7 +187,7 @@ namespace SqlParser.Tests.Dialects
                 {
                     Over = new WindowType.WindowSpecType(new WindowSpec()),
                     Filter = new Identifier("y"),
-                    Args = [new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("x")))]
+                    Args =  [new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("x")))]
                 });
                 Assert.Equal(expected, select.Projection.First());
             }
@@ -188,7 +198,7 @@ namespace SqlParser.Tests.Dialects
         {
             const string sql = "PRAGMA cache_size";
 
-            var pragma = VerifiedStatement(sql, new Dialect[] { new SQLiteDialect(), new GenericDialect() });
+            var pragma = VerifiedStatement(sql, new Dialect[] {new SQLiteDialect(), new GenericDialect()});
             var expected = new Statement.Pragma("cache_size", null, false);
             Assert.Equal(expected, pragma);
         }
@@ -198,7 +208,7 @@ namespace SqlParser.Tests.Dialects
         {
             const string sql = "PRAGMA cache_size = 10";
 
-            var pragma = VerifiedStatement(sql, new Dialect[] { new SQLiteDialect(), new GenericDialect() });
+            var pragma = VerifiedStatement(sql, new Dialect[] {new SQLiteDialect(), new GenericDialect()});
             var expected = new Statement.Pragma("cache_size", new Value.Number("10"), true);
             Assert.Equal(expected, pragma);
         }
@@ -208,7 +218,7 @@ namespace SqlParser.Tests.Dialects
         {
             const string sql = "PRAGMA cache_size(10)";
 
-            var pragma = VerifiedStatement(sql, new Dialect[] { new SQLiteDialect(), new GenericDialect() });
+            var pragma = VerifiedStatement(sql, new Dialect[] {new SQLiteDialect(), new GenericDialect()});
             var expected = new Statement.Pragma("cache_size", new Value.Number("10"), false);
             Assert.Equal(expected, pragma);
         }
@@ -225,15 +235,15 @@ namespace SqlParser.Tests.Dialects
             var sql = "SELECT * FROM t1 WHERE a IN ()";
             var select = VerifiedOnlySelect(sql);
 
-            var inList = (InList)select.Selection!;
+            var inList = (InList) select.Selection!;
 
             Assert.Empty(inList.List);
 
             OneStatementParsesTo(
                 "SELECT * FROM t1 WHERE a IN (,)",
                 "SELECT * FROM t1 WHERE a IN ()",
-                dialects: new[] { new SQLiteDialect() },
-                options: new ParserOptions { TrailingCommas = true }
+                dialects: new[] {new SQLiteDialect()},
+                options: new ParserOptions {TrailingCommas = true}
             );
         }
 
@@ -250,6 +260,24 @@ namespace SqlParser.Tests.Dialects
             VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2))");
             VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2) VIRTUAL)");
             VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2) STORED)");
+        }
+
+        [Fact]
+        public void Parse_Start_Transaction_With_Modifier()
+        {
+            var dialects = new Dialect[] {new SQLiteDialect(), new GenericDialect()};
+            VerifiedStatement("BEGIN DEFERRED TRANSACTION", dialects);
+            VerifiedStatement("BEGIN IMMEDIATE TRANSACTION", dialects);
+            VerifiedStatement("BEGIN EXCLUSIVE TRANSACTION", dialects);
+            OneStatementParsesTo("BEGIN DEFERRED", "BEGIN DEFERRED TRANSACTION", dialects);
+            OneStatementParsesTo("BEGIN IMMEDIATE", "BEGIN IMMEDIATE TRANSACTION", dialects);
+            OneStatementParsesTo("BEGIN EXCLUSIVE", "BEGIN EXCLUSIVE TRANSACTION", dialects);
+
+            var unsupported = AllDialects.Where(d => d is not SQLiteDialect or GenericDialect).ToArray();
+
+            Assert.Throws<ParserException>(() => ParseSqlStatements("BEGIN DEFERRED", unsupported));
+            Assert.Throws<ParserException>(() => ParseSqlStatements("BEGIN IMMEDIATE", unsupported));
+            Assert.Throws<ParserException>(() => ParseSqlStatements("BEGIN EXCLUSIVE", unsupported));
         }
     }
 }

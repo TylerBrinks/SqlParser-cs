@@ -111,4 +111,6 @@ public abstract class Dialect
     /// and an expression second, e.g. `CONVERT(varchar, 1)`
     /// </summary>
     public virtual bool ConvertTypeBeforeValue => false;
+    
+    public virtual bool SupportsStartTransactionModifier => false;
 }

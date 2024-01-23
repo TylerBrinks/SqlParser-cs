@@ -53,4 +53,6 @@ public class SQLiteDialect : Dialect
     public override bool SupportsFilterDuringAggregation => true;
 
     public override bool SupportsInEmptyList => true;
+
+    public override bool SupportsStartTransactionModifier => true;
 }

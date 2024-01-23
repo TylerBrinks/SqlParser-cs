@@ -2016,11 +2016,26 @@ public abstract record Statement : IWriteSql, IElement
     /// START TRANSACTION
     /// </summary>
     /// <param name="Modes">Transaction modes</param>
-    public record StartTransaction(Sequence<TransactionMode>? Modes, bool Begin) : Statement
+    public record StartTransaction(Sequence<TransactionMode>? Modes, bool Begin, TransactionModifier? Modifier = null) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.Write(Begin ? "BEGIN TRANSACTION" : "START TRANSACTION");
+            if (Begin)
+            {
+                if (Modifier != null)
+                {
+                    writer.WriteSql($"BEGIN {Modifier} TRANSACTION");
+                }
+                else
+                {
+                    writer.Write("BEGIN TRANSACTION");
+                }
+            }
+            else
+            {
+                writer.Write("START TRANSACTION");
+            }
+
 
             if (Modes.SafeAny())
             {

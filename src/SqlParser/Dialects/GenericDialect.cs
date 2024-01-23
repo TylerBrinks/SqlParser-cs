@@ -24,4 +24,6 @@ public class GenericDialect : Dialect
     }
 
     public override bool SupportsGroupByExpression => true;
+
+    public override bool SupportsStartTransactionModifier => true;
 }

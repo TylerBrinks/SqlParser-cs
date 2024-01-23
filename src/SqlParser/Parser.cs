@@ -8229,8 +8229,27 @@ public class Parser
 
     public Statement ParseBegin()
     {
+        TransactionModifier? modifier = null;
+
+        if (!_dialect.SupportsStartTransactionModifier)
+        {
+            modifier = null;
+        }
+        else if (ParseKeyword(Keyword.DEFERRED))
+        {
+            modifier = TransactionModifier.Deferred;
+        }
+        else if (ParseKeyword(Keyword.IMMEDIATE))
+        {
+            modifier = TransactionModifier.Immediate;
+        }
+        else if (ParseKeyword(Keyword.EXCLUSIVE))
+        {
+            modifier = TransactionModifier.Exclusive;
+        }
+
         _ = ParseOneOfKeywords(Keyword.TRANSACTION, Keyword.WORK);
-        return new StartTransaction(ParseTransactionModes(), true);
+        return new StartTransaction(ParseTransactionModes(), true, modifier);
     }
 
     public Statement ParseEnd()
