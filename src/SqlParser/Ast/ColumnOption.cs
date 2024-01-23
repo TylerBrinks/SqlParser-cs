@@ -178,6 +178,7 @@ public abstract record ColumnOption : IWriteSql
     /// <param name="SequenceOptions">Sequence options</param>
     /// <param name="GenerationExpr">Generation expression</param>
     public record Generated(GeneratedAs GeneratedAs,
+        bool GeneratedKeyword,
         Sequence<SequenceOptions>? SequenceOptions = null,
         Expression? GenerationExpr = null,
         GeneratedExpressionMode? GenerationExpressionMode = null) : ColumnOption, IElement
@@ -193,7 +194,14 @@ public abstract record ColumnOption : IWriteSql
                     _ => null
                 };
 
-                writer.WriteSql($"GENERATED ALWAYS AS ({GenerationExpr}){modifier}");
+                if (GeneratedKeyword)
+                {
+                    writer.WriteSql($"GENERATED ALWAYS AS ({GenerationExpr}){modifier}");
+                }
+                else
+                {
+                    writer.WriteSql($"AS ({GenerationExpr}){modifier}");
+                }
             }
             else
             {

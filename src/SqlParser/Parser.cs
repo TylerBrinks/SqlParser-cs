@@ -1,6 +1,4 @@
-﻿using System.Data;
-using System.Diagnostics.Tracing;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
@@ -614,7 +612,7 @@ public class Parser
         Expression ParseConvertExpr()
         {
             Expression expr;
-            DataType? dataType = null;
+            DataType? dataType;
             ObjectName? charset = null;
 
             if (_dialect.ConvertTypeBeforeValue)
@@ -2067,11 +2065,11 @@ public class Parser
 
         return new ArrayIndex(expr, indexes);
     }
-    
+
     public LockTable ParseLockTable()
     {
         var table = ParseIdentifier();
-        var alias = ParseOptionalAlias(new[] { Keyword.READ, Keyword.WRITE, Keyword.LOW_PRIORITY});
+        var alias = ParseOptionalAlias(new[] { Keyword.READ, Keyword.WRITE, Keyword.LOW_PRIORITY });
         LockTableType lockType;
 
         if (ParseKeyword(Keyword.READ))
@@ -4193,6 +4191,11 @@ public class Parser
             return ParseOptionalColumnOptionGenerated();
         }
 
+        if (ParseKeyword(Keyword.AS) && _dialect is MySqlDialect or SQLiteDialect or DuckDbDialect or GenericDialect)
+        {
+            return ParseOptionalColumnOptionAs();
+        }
+
         return null;
     }
 
@@ -4210,7 +4213,7 @@ public class Parser
             }
             catch (ParserException) { }
 
-            return new ColumnOption.Generated(GeneratedAs.Always, sequenceOptions);
+            return new ColumnOption.Generated(GeneratedAs.Always, true, sequenceOptions);
         }
 
         if (ParseKeywordSequence(Keyword.BY, Keyword.DEFAULT, Keyword.AS, Keyword.IDENTITY))
@@ -4225,7 +4228,7 @@ public class Parser
             }
             catch (ParserException) { }
 
-            return new ColumnOption.Generated(GeneratedAs.ByDefault, sequenceOptions);
+            return new ColumnOption.Generated(GeneratedAs.ByDefault, true, sequenceOptions);
         }
 
         if (ParseKeywordSequence(Keyword.ALWAYS, Keyword.AS))
@@ -4257,7 +4260,7 @@ public class Parser
                     genAs = GeneratedAs.Always;
                 }
 
-                return new ColumnOption.Generated(genAs, GenerationExpr: expr, GenerationExpressionMode: expressionMode);
+                return new ColumnOption.Generated(genAs, true, GenerationExpr: expr, GenerationExpressionMode: expressionMode);
             }
             catch (ParserException)
             {
@@ -4266,6 +4269,31 @@ public class Parser
         }
 
         return null;
+    }
+
+    public ColumnOption? ParseOptionalColumnOptionAs()
+    {
+        var expr = ExpectParens(ParseExpr);
+
+        GeneratedAs genAs;
+        GeneratedExpressionMode? expressionMode = null;
+
+        if (ParseKeyword(Keyword.STORED))
+        {
+            genAs = GeneratedAs.ExpStored;
+            expressionMode = GeneratedExpressionMode.Sorted;
+        }
+        else if (ParseKeyword(Keyword.VIRTUAL))
+        {
+            genAs = GeneratedAs.Always;
+            expressionMode = GeneratedExpressionMode.Virtual;
+        }
+        else
+        {
+            genAs = GeneratedAs.Always;
+        }
+
+        return new ColumnOption.Generated(genAs, false, null, expr, expressionMode);
     }
 
     public ReferentialAction ParseReferentialAction()
@@ -4875,7 +4903,7 @@ public class Parser
 
         if (PeekToken() is not LeftParen)
         {
-            return new Call(new Function(name) {Special = true});
+            return new Call(new Function(name) { Special = true });
         }
 
         var fnExpression = ParseFunction(name);
@@ -7404,7 +7432,7 @@ public class Parser
             }
         }
 
-        return  new JsonTableColumn(name, type, path, exists, onEmpty, onError);
+        return new JsonTableColumn(name, type, path, exists, onEmpty, onError);
     }
 
     public JsonTableColumnErrorHandling? ParseJsonTableColumnErrorHandling()

@@ -1005,9 +1005,14 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Create_Table_Gencol()
         {
-            VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2))");
-            VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2) VIRTUAL)");
-            VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2) STORED)");
+            var dialects = new Dialect[] {new MySqlDialect(), new GenericDialect()};
+            VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2))", dialects);
+            VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2) VIRTUAL)", dialects);
+            VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2) STORED)", dialects);
+
+            VerifiedStatement("CREATE TABLE t1 (a INT, b INT AS (a * 2))", dialects);
+            VerifiedStatement("CREATE TABLE t1 (a INT, b INT AS (a * 2) VIRTUAL)", dialects);
+            VerifiedStatement("CREATE TABLE t1 (a INT, b INT AS (a * 2) STORED)", dialects);
         }
 
         [Fact]
