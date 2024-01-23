@@ -8,7 +8,6 @@ namespace SqlParserDemo;
 
 public class CsvQuery
 {
-
     public void Run()
     {
         var loop = true;
