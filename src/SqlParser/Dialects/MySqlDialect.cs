@@ -1,4 +1,5 @@
 ﻿using SqlParser.Ast;
+using static SqlParser.Ast.Statement;
 
 namespace SqlParser.Dialects;
 
@@ -37,5 +38,15 @@ public class MySqlDialect : Dialect
         }
 
         return base.ParseInfix(parser, expr, precedence);
+    }
+
+    public override Statement? ParseStatement(Parser parser)
+    {
+        if (parser.ParseKeywordSequence(Keyword.LOCK, Keyword.TABLES))
+        {
+            return new LockTables(parser.ParseCommaSeparated(parser.ParseLockTable));
+        }
+        
+        return parser.ParseKeywordSequence(Keyword.UNLOCK, Keyword.TABLES) ? new UnlockTables() : null;
     }
 }

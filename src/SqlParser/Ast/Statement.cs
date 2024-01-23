@@ -2,8 +2,6 @@
 // ReSharper disable CommentTypo
 // ReSharper disable UnusedMember
 
-using static SqlParser.Ast.Statement;
-
 namespace SqlParser.Ast;
 
 public abstract record Statement : IWriteSql, IElement
@@ -1583,6 +1581,18 @@ public abstract record Statement : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// MySql `LOCK TABLES table_name  [READ [LOCAL] | [LOW_PRIORITY] WRITE]`
+    /// </summary>
+    /// <param name="Tables"></param>
+    public record LockTables(Sequence<LockTable> Tables) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"LOCK TABLES ");
+            writer.WriteDelimited(Tables, ", ");
+        }
+    }
+    /// <summary>
     /// Merge statement
     /// </summary>
     /// <param name="Into">True if into</param>
@@ -2050,6 +2060,16 @@ public abstract record Statement : IWriteSql, IElement
             writer.Write(IfExists
                 ? $"UNCACHE TABLE IF EXISTS {Name}"
                 : $"UNCACHE TABLE {Name}");
+        }
+    }
+    /// <summary>
+    /// MySql `Unlock Tables`
+    /// </summary>
+    public record UnlockTables : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("UNLOCK TABLES");
         }
     }
     /// <summary>

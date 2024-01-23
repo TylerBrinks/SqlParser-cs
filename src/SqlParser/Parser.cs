@@ -2067,6 +2067,32 @@ public class Parser
 
         return new ArrayIndex(expr, indexes);
     }
+    
+    public LockTable ParseLockTable()
+    {
+        var table = ParseIdentifier();
+        var alias = ParseOptionalAlias(new[] { Keyword.READ, Keyword.WRITE, Keyword.LOW_PRIORITY});
+        LockTableType lockType;
+
+        if (ParseKeyword(Keyword.READ))
+        {
+            lockType = ParseKeyword(Keyword.LOCAL) ? new LockTableType.Read(true) : new LockTableType.Read(false);
+        }
+        else if (ParseKeyword(Keyword.WRITE))
+        {
+            lockType = new LockTableType.Write(false);
+        }
+        else if (ParseKeywordSequence(Keyword.LOW_PRIORITY, Keyword.WRITE))
+        {
+            lockType = new LockTableType.Write(true);
+        }
+        else
+        {
+            throw Expected("an lock type in LOCK TABLES", PeekToken());
+        }
+
+        return new LockTable(table, alias, lockType);
+    }
 
     public Expression ParseMapAccess(Expression expr)
     {
@@ -3857,17 +3883,17 @@ public class Parser
             throw Expected("identifier", token);
         });
 
-        var comment = ParseInit(ParseKeyword(Keyword.COMMENT), () =>
-        {
-            ConsumeToken<Equal>();
-            var next = NextToken();
-            if (next is SingleQuotedString str)
-            {
-                return str.Value;
-            }
+        //var comment = ParseInit(ParseKeyword(Keyword.COMMENT), () =>
+        //{
+        //    ConsumeToken<Equal>();
+        //    var next = NextToken();
+        //    if (next is SingleQuotedString str)
+        //    {
+        //        return str.Value;
+        //    }
 
-            throw Expected("Comment", PeekToken());
-        });
+        //    throw Expected("Comment", PeekToken());
+        //});
 
         int? autoIncrementOffset = null;
 
@@ -3942,6 +3968,18 @@ public class Parser
         }
 
         var strict = ParseKeyword(Keyword.STRICT);
+
+        var comment = ParseInit(ParseKeyword(Keyword.COMMENT), () =>
+        {
+            ConsumeToken<Equal>();
+            var next = NextToken();
+            if (next is SingleQuotedString str)
+            {
+                return str.Value;
+            }
+
+            throw Expected("Comment", PeekToken());
+        });
 
         return new CreateTable(tableName, columns)
         {
@@ -4037,7 +4075,7 @@ public class Parser
                     throw Expected("constraint details after CONSTRAINT <name>", PeekToken());
                 }
             }
-            else if ((opt = ParseOptionalColumnOption()) is { })
+            else if ((opt = ParseOptionalColumnOption()) is not null)
             {
                 options ??= new Sequence<ColumnOptionDef>();
                 options.Add(new ColumnOptionDef(opt));

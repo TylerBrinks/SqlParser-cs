@@ -915,8 +915,8 @@ namespace SqlParser.Tests.Dialects
             var delete = VerifiedStatement(sql);
 
             var expected = new Statement.Delete(null,
-                new Sequence<TableWithJoins>{new (new TableFactor.Table("customers"))},
-                
+                new Sequence<TableWithJoins> { new(new TableFactor.Table("customers")) },
+
                 OrderBy: new Sequence<OrderByExpression>
                 {
                     new (new Identifier("id"), Asc:false)
@@ -948,7 +948,7 @@ namespace SqlParser.Tests.Dialects
                     "SELECT 1 WHERE 'a' NOT REGEXP '^a$'",
                 };
 
-            var dialects = new Dialect[] {new MySqlDialect(), new GenericDialect()};
+            var dialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
             foreach (var sql in queries)
             {
                 VerifiedOnlySelect(sql, dialects);
@@ -960,7 +960,7 @@ namespace SqlParser.Tests.Dialects
         {
             const string sql = "INSERT IGNORE INTO tasks (title, priority) VALUES ('Test Some Inserts', 1)";
 
-            var dialects = new Dialect[] {new MySqlDialect(), new GenericDialect()};
+            var dialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
 
             var insert = VerifiedStatement(sql, dialects);
 
@@ -1032,7 +1032,7 @@ namespace SqlParser.Tests.Dialects
             VerifiedOnlySelect("SELECT * FROM JSON_TABLE('[1,2]', '$[*]' COLUMNS(x INT PATH '$' ERROR ON ERROR)) AS t");
             VerifiedOnlySelect("SELECT * FROM JSON_TABLE('[1,2]', '$[*]' COLUMNS(x INT PATH '$' ERROR ON EMPTY)) AS t");
             VerifiedOnlySelect("SELECT * FROM JSON_TABLE('[1,2]', '$[*]' COLUMNS(x INT PATH '$' ERROR ON EMPTY DEFAULT '0' ON ERROR)) AS t");
-            
+
             var joinTable = VerifiedOnlySelect("SELECT * FROM JSON_TABLE('[1,2]', '$[*]' COLUMNS(x INT PATH '$' DEFAULT '0' ON EMPTY NULL ON ERROR)) AS t");
 
             var expected = new TableFactor.JsonTable(
@@ -1049,6 +1049,36 @@ namespace SqlParser.Tests.Dialects
             };
 
             Assert.Equal(expected, joinTable.From![0].Relation);
+        }
+
+        [Fact]
+        public void Parse_Create_Table_With_Column_Collate()
+        {
+            var sql = "CREATE TABLE tb (id TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci)";
+            var canonical = "CREATE TABLE tb (id TEXT COLLATE utf8mb4_0900_ai_ci CHARACTER SET utf8mb4)";
+
+            var create = OneStatementParsesTo(sql, canonical);
+
+            var expected = new Statement.CreateTable("tb", new Sequence<ColumnDef>
+            {
+                new("id", new DataType.Text(), "utf8mb4_0900_ai_ci", new Sequence<ColumnOptionDef>
+                {
+                    new (new ColumnOption.CharacterSet("utf8mb4"))
+                })
+            });
+
+            Assert.Equal(expected, create);
+        }
+
+        [Fact]
+        public void Parse_Lock_Tables()
+        {
+            OneStatementParsesTo("LOCK TABLES trans t READ, customer WRITE", "LOCK TABLES trans AS t READ, customer WRITE");
+
+            VerifiedStatement("LOCK TABLES trans AS t READ, customer WRITE");
+            VerifiedStatement("LOCK TABLES trans AS t READ LOCAL, customer WRITE");
+            VerifiedStatement("LOCK TABLES trans AS t READ, customer LOW_PRIORITY WRITE");
+            VerifiedStatement("UNLOCK TABLES");
         }
     }
 }
