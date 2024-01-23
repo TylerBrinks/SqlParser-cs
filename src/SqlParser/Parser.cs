@@ -12,7 +12,6 @@ using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
 using Select = SqlParser.Ast.Select;
 using System.Globalization;
-using System.Resources;
 using static SqlParser.Ast.AlterTableOperation;
 
 namespace SqlParser;
@@ -7242,6 +7241,7 @@ public class Parser
                             or TableFactor.Table
                             or TableFactor.Function
                             or TableFactor.UnNest
+                            or TableFactor.JsonTable
                             or TableFactor.TableFunction
                             or TableFactor.Pivot
                             or TableFactor.Unpivot
@@ -7281,6 +7281,21 @@ public class Parser
             };
         }
 
+        if (ParseKeyword(Keyword.JSON_TABLE))
+        {
+            var jsonTable = ExpectParens(() =>
+            {
+                var jsonExpr = ParseExpr();
+                ExpectToken<Comma>();
+                var path = ParseValue();
+                ExpectKeyword(Keyword.COLUMNS);
+                var columns = ExpectParens(() => ParseCommaSeparated(ParseJsonTableColumnDef));
+                return new TableFactor.JsonTable(jsonExpr, path, columns);
+            });
+            jsonTable.Alias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
+            return jsonTable;
+        }
+
         var name = ParseObjectName();
         // Parse potential version qualifier
         var version = ParseTableVersion();
@@ -7290,10 +7305,6 @@ public class Parser
 
         var optionalAlias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
 
-        //if (ParseKeyword(Keyword.PIVOT))
-        //{
-        //    return ParsePivotTableFactor(name, optionalAlias);
-        //}
 
         Sequence<Expression>? withHints = null;
         if (ParseKeyword(Keyword.WITH))
@@ -7329,6 +7340,59 @@ public class Parser
         }
 
         return table;
+    }
+
+    public JsonTableColumn ParseJsonTableColumnDef()
+    {
+        var name = ParseIdentifier();
+        var type = ParseDataType();
+        var exists = ParseKeyword(Keyword.EXISTS);
+        ExpectKeyword(Keyword.PATH);
+        var path = ParseValue();
+
+        JsonTableColumnErrorHandling? onEmpty = null;
+        JsonTableColumnErrorHandling? onError = null;
+
+        while (ParseJsonTableColumnErrorHandling() is { } handling)
+        {
+            if (ParseKeyword(Keyword.EMPTY))
+            {
+                onEmpty = handling;
+            }
+            else
+            {
+                ExpectKeyword(Keyword.ERROR);
+                onError = handling;
+            }
+        }
+
+        return  new JsonTableColumn(name, type, path, exists, onEmpty, onError);
+    }
+
+    public JsonTableColumnErrorHandling? ParseJsonTableColumnErrorHandling()
+    {
+        JsonTableColumnErrorHandling res;
+
+        if (ParseKeyword(Keyword.NULL))
+        {
+            res = new JsonTableColumnErrorHandling.Null();
+        }
+        else if (ParseKeyword(Keyword.ERROR))
+        {
+            res = new JsonTableColumnErrorHandling.Error();
+        }
+        else if (ParseKeyword(Keyword.DEFAULT))
+        {
+            res = new JsonTableColumnErrorHandling.Default(ParseValue());
+        }
+        else
+        {
+            return null;
+        }
+
+        ExpectKeyword(Keyword.ON);
+
+        return res;
     }
 
     public TableVersion? ParseTableVersion()

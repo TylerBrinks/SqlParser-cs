@@ -1009,5 +1009,46 @@ namespace SqlParser.Tests.Dialects
             VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2) VIRTUAL)");
             VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2) STORED)");
         }
+
+        [Fact]
+        public void Parse_Json_Table()
+        {
+            VerifiedOnlySelect("SELECT * FROM JSON_TABLE('[[1, 2], [3, 4]]', '$[*]' COLUMNS(a INT PATH '$[0]', b INT PATH '$[1]')) AS t");
+            VerifiedOnlySelect("SELECT * FROM JSON_TABLE('[\"x\", \"y\"]', '$[*]' COLUMNS(a VARCHAR(20) PATH '$')) AS t");
+
+            // with a bound parameter
+            VerifiedOnlySelect("SELECT * FROM JSON_TABLE(?, '$[*]' COLUMNS(a VARCHAR(20) PATH '$')) AS t");
+
+            // quote escaping
+            VerifiedOnlySelect("SELECT * FROM JSON_TABLE('{\"''\": [1,2,3]}', '$.\"''\"[*]' COLUMNS(a VARCHAR(20) PATH '$')) AS t");
+
+            // double quotes
+            VerifiedOnlySelect("SELECT * FROM JSON_TABLE(\"[]\", \"$[*]\" COLUMNS(a VARCHAR(20) PATH \"$\")) AS t");
+
+            // exists
+            VerifiedOnlySelect("SELECT * FROM JSON_TABLE('[{}, {\"x\":1}]', '$[*]' COLUMNS(x INT EXISTS PATH '$.x')) AS t");
+
+            // error handling
+            VerifiedOnlySelect("SELECT * FROM JSON_TABLE('[1,2]', '$[*]' COLUMNS(x INT PATH '$' ERROR ON ERROR)) AS t");
+            VerifiedOnlySelect("SELECT * FROM JSON_TABLE('[1,2]', '$[*]' COLUMNS(x INT PATH '$' ERROR ON EMPTY)) AS t");
+            VerifiedOnlySelect("SELECT * FROM JSON_TABLE('[1,2]', '$[*]' COLUMNS(x INT PATH '$' ERROR ON EMPTY DEFAULT '0' ON ERROR)) AS t");
+            
+            var joinTable = VerifiedOnlySelect("SELECT * FROM JSON_TABLE('[1,2]', '$[*]' COLUMNS(x INT PATH '$' DEFAULT '0' ON EMPTY NULL ON ERROR)) AS t");
+
+            var expected = new TableFactor.JsonTable(
+                new LiteralValue(new Value.SingleQuotedString("[1,2]")),
+                new Value.SingleQuotedString("$[*]"),
+                new Sequence<JsonTableColumn>
+                {
+                    new ("x", new DataType.Int(), new Value.SingleQuotedString("$"),
+                        false, new JsonTableColumnErrorHandling.Default(new Value.SingleQuotedString("0")),
+                        new JsonTableColumnErrorHandling.Null())
+                })
+            {
+                Alias = new TableAlias("t")
+            };
+
+            Assert.Equal(expected, joinTable.From![0].Relation);
+        }
     }
 }

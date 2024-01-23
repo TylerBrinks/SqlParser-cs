@@ -225,6 +225,35 @@ public abstract record TableFactor : IWriteSql, IElement
             }
         }
     }
+    /// <summary>
+    /// The `JSON_TABLE` table-valued function.
+    /// Part of the SQL standard, but implemented only by MySQL, Oracle, and DB2.
+    /// 
+    /// SELECT * FROM JSON_TABLE(
+    ///    '[{"a": 1, "b": 2}, {"a": 3, "b": 4}]',
+    ///    '$[*]' COLUMNS(
+    ///        a INT PATH '$.a' DEFAULT '0' ON EMPTY,
+    ///        b INT PATH '$.b' NULL ON ERROR
+    ///     )
+    /// ) AS jt;
+    /// </summary>
+    /// <param name="JsonExpression"></param>
+    /// <param name="JsonPath"></param>
+    /// <param name="Columns"></param>
+    public record JsonTable(Expression JsonExpression, Value JsonPath, Sequence<JsonTableColumn> Columns) : TableFactor
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"JSON_TABLE({JsonExpression}, {JsonPath} COLUMNS(");
+            writer.WriteDelimited(Columns, ", ");
+            writer.Write("))");
+
+            if (Alias != null)
+            {
+                writer.WriteSql($" AS {Alias}");
+            }
+        }
+    }
 
     public T As<T>() where T : TableFactor
     {
