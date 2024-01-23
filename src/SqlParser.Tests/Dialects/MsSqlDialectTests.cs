@@ -47,7 +47,7 @@ namespace SqlParser.Tests.Dialects
             DefaultDialects = new Dialect[] { new MsSqlDialect(), new GenericDialect() };
 
             var select = VerifiedOnlySelect("SELECT TOP (5) * FROM foo");
-            Assert.Equal(new LiteralValue(Number("5")), select.Top!.Quantity);
+            Assert.Equal(new TopQuantity.TopExpression(new LiteralValue(new Value.Number("5"))), select.Top!.Quantity);
             Assert.False(select.Top!.Percent);
         }
 
@@ -57,7 +57,7 @@ namespace SqlParser.Tests.Dialects
             DefaultDialects = new Dialect[] { new MsSqlDialect(), new GenericDialect() };
 
             var select = VerifiedOnlySelect("SELECT TOP (5) PERCENT * FROM foo");
-            Assert.Equal(new LiteralValue(Number("5")), select.Top!.Quantity);
+            Assert.Equal(new TopQuantity.TopExpression(new LiteralValue(new Value.Number("5"))), select.Top!.Quantity);
             Assert.True(select.Top!.Percent);
         }
 
@@ -67,7 +67,7 @@ namespace SqlParser.Tests.Dialects
             DefaultDialects = new Dialect[] { new MsSqlDialect(), new GenericDialect() };
 
             var select = VerifiedOnlySelect("SELECT TOP (10) PERCENT WITH TIES * FROM foo");
-            Assert.Equal(new LiteralValue(Number("10")), select.Top!.Quantity);
+            Assert.Equal(new TopQuantity.TopExpression(new LiteralValue(new Value.Number("10"))), select.Top!.Quantity);
             Assert.True(select.Top!.Percent);
         }
 
@@ -76,7 +76,7 @@ namespace SqlParser.Tests.Dialects
         {
             DefaultDialects = new Dialect[] { new MsSqlDialect(), new GenericDialect() };
 
-            OneStatementParsesTo("SELECT TOP 5 bar, baz FROM foo", "SELECT TOP (5) bar, baz FROM foo");
+            OneStatementParsesTo("SELECT TOP 5 bar, baz FROM foo", "SELECT TOP 5 bar, baz FROM foo");
         }
 
         [Fact]

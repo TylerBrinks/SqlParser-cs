@@ -8138,16 +8138,27 @@ public class Parser
     /// <exception cref="NotImplementedException"></exception>
     public Top ParseTop()
     {
-        Expression? quantity;
+        TopQuantity? quantity = null;
         if (ConsumeToken<LeftParen>())
         {
             var quantityExp = ParseExpr();
             ExpectRightParen();
-            quantity = quantityExp;
+            quantity = new TopQuantity.TopExpression(quantityExp);
         }
         else
         {
-            quantity = new LiteralValue(ParseNumberValue());
+            var next = NextToken();
+            if (next is Number n)
+            {
+                if (long.TryParse(n.Value, out var longVal))
+                {
+                    quantity = new TopQuantity.Constant(longVal);
+                }
+            }
+            else
+            {
+                throw Expected("literal int", next);
+            }
         }
 
         var percent = ParseKeyword(Keyword.PERCENT);

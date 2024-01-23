@@ -61,7 +61,8 @@ namespace SqlParser.Tests
         [Fact]
         public void Top_Renders_Sql()
         {
-            var top = new Top(new Expression.LiteralValue(new Value.Number("1")), false, false);
+            //ar top = new Top(new Expression.LiteralValue(new Value.Number("1")), false, false);
+            var top = new Top(new TopQuantity.TopExpression(new Expression.LiteralValue(new Value.Number("1"))), false, false);
             Assert.Equal("TOP (1)", top.ToSql());
         }
 
