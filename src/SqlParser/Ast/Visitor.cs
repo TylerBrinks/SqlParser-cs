@@ -18,18 +18,6 @@ public interface IElement
             {
                 visitor.PreVisitTableFactor(t);
 
-                //if (t is TableFactor.Table table)
-                //{
-                //    visitor.PreVisitRelation(table.Name);
-                //    if (table.Alias != null)
-                //    {
-                //        IElement alias = table.Alias;
-                //        //alias.Visit(table.Name);
-                //        visitor.PostVisitRelation(table.Name);
-                //        alias.Visit(visitor);
-                //    }
-                //}
-
                 if (t is TableFactor.Table table)
                 {
                     visitor.PreVisitRelation(table.Name);

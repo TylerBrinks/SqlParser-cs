@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Data;
+using System.Text;
 using SqlParser.Ast;
 using SqlParser.Dialects;
 using static SqlParser.Ast.DataType;
@@ -44,7 +45,7 @@ namespace SqlParser.Tests
                         Assert.Equal(column, new Ident(column));
                     }
 
-                    if (insert.Source.Query.Body is SetExpression.ValuesExpression v)
+                    if (insert.Source!.Query.Body is SetExpression.ValuesExpression v)
                     {
                         Assert.Equal(v.Values.Rows, expectedRows);
                     }
@@ -3817,7 +3818,7 @@ namespace SqlParser.Tests
 
             var createIndex = VerifiedStatement<Statement.CreateIndex>("CREATE UNIQUE INDEX IF NOT EXISTS idx_name ON test USING btree(name,age DESC)");
 
-            Assert.Equal("idx_name", createIndex.Name);
+            Assert.Equal("idx_name", createIndex.Name!);
             Assert.Equal("test", createIndex.TableName);
             Assert.Equal("btree", createIndex.Using!);
             Assert.Equal(expected, createIndex.Columns!);
@@ -4915,6 +4916,29 @@ namespace SqlParser.Tests
             OneStatementParsesTo("END TRANSACTION AND CHAIN", "COMMIT AND CHAIN");
             OneStatementParsesTo("END WORK", "COMMIT");
             OneStatementParsesTo("END TRANSACTION", "COMMIT");
+        }
+
+        [Fact]
+        public void Parse_Call()
+        {
+            VerifiedStatement("CALL my_procedure()");
+            VerifiedStatement("CALL my_procedure(1, 'a')");
+            VerifiedStatement("CALL my_procedure(1, 'a', $1)", new Dialect[]{new PostgreSqlDialect(), new GenericDialect()});
+            VerifiedStatement("CALL my_procedure");
+
+            var call = (Statement.Call) VerifiedStatement("CALL my_procedure('a')");
+            var expected = new Statement.Call(new Function("my_procedure")
+            {
+                Args = new Sequence<FunctionArg>
+                {
+                    new FunctionArg.Unnamed(
+                        new FunctionArgExpression.FunctionExpression(
+                            new LiteralValue(
+                                new Value.SingleQuotedString("a"))))
+                }
+            });
+
+            Assert.Equal(expected, call);
         }
     }
 }

@@ -232,6 +232,16 @@ public abstract record Statement : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// Call statement
+    /// </summary>
+    public record Call(Expression.Function Function) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+           writer.WriteSql($"CALL {Function}");
+        }
+    }
+    /// <summary>
     /// Closes statement closes the portal underlying an open cursor.
     /// </summary>
     /// <param name="Cursor">Cursor to close</param>
@@ -283,7 +293,7 @@ public abstract record Statement : IWriteSql, IElement
     /// <param name="Source">Source of the Coyp To</param>
     /// <param name="To">True if to</param>
     /// <param name="Target">Copy target</param>
-    public record Copy(/*ObjectName Name, Sequence<Ident>? Columns,*/CopySource Source, bool To, CopyTarget Target) : Statement
+    public record Copy(CopySource Source, bool To, CopyTarget Target) : Statement
     {
         public Sequence<CopyOption>? Options { get; init; }
         // WITH options (before PostgreSQL version 9.0)
@@ -1130,93 +1140,6 @@ public abstract record Statement : IWriteSql, IElement
         }
     }
     /// <summary>
-    /// Execute statement
-    /// </summary>
-    /// <param name="Name">Name identifier</param>
-    /// <param name="Parameters">Parameter expressions</param>
-    public record Execute(Ident Name, Sequence<Expression>? Parameters = null) : Statement
-    {
-        public override void ToSql(SqlTextWriter writer)
-        {
-            writer.WriteSql($"EXECUTE {Name}");
-
-            if (Parameters.SafeAny())
-            {
-                writer.WriteSql($"({Parameters})");
-            }
-        }
-    }
-    /// <summary>
-    /// DROP statement
-    /// </summary>
-    /// <param name="Names">Object names</param>
-    public record Drop(Sequence<ObjectName> Names) : Statement
-    {
-        /// The type of the object to drop: TABLE, VIEW, etc.
-        public ObjectType ObjectType { get; init; }
-        /// An optional `IF EXISTS` clause. (Non-standard.)
-        public bool IfExists { get; init; }
-        /// Whether `CASCADE` was specified. This will be `false` when
-        /// `RESTRICT` or no drop behavior at all was specified.
-        public bool Cascade { get; init; }
-        /// Whether `RESTRICT` was specified. This will be `false` when
-        /// `CASCADE` or no drop behavior at all was specified.
-        public bool Restrict { get; init; }
-        /// Hive allows you specify whether the table's stored data will be
-        /// deleted along with the dropped table
-        public bool Purge { get; init; }
-        /// <summary>
-        /// MySQL-specific "TEMPORARY" keyword
-        /// </summary>
-        public bool Temporary { get; init; }
-
-        public override void ToSql(SqlTextWriter writer)
-        {
-            var ifExists = IfExists ? " IF EXISTS" : null;
-            var cascade = Cascade ? " CASCADE" : null;
-            var restrict = Restrict ? " RESTRICT" : null;
-            var purge = Purge ? " PURGE" : null;
-            var temporary = Temporary ? "TEMPORARY " : null;
-
-            writer.WriteSql($"DROP {temporary}{ObjectType}{ifExists} {Names}{cascade}{restrict}{purge}");
-        }
-    }
-    /// <summary>
-    /// DROP Function statement
-    /// </summary>
-    /// <param name="IfExists">True if exists</param>
-    /// <param name="FuncDesc">Drop function descriptions</param>
-    /// <param name="Option">Referential actions</param>
-    public record DropFunction(bool IfExists, Sequence<DropFunctionDesc> FuncDesc, ReferentialAction Option) : Statement
-    {
-        public override void ToSql(SqlTextWriter writer)
-        {
-            var ifEx = IfExists ? " IF EXISTS" : null;
-            writer.WriteSql($"DROP FUNCTION{ifEx} {FuncDesc}");
-
-            if (Option != ReferentialAction.None)
-            {
-                writer.Write($" {Option}");
-            }
-        }
-    }
-    /// <summary>
-    /// Drop function description
-    /// </summary>
-    /// <param name="Name">Object name</param>
-    /// <param name="Args">Operate function arguments</param>
-    public record DropFunctionDesc(ObjectName Name, Sequence<OperateFunctionArg>? Args = null) : Statement
-    {
-        public override void ToSql(SqlTextWriter writer)
-        {
-            Name.ToSql(writer);
-            if (Args.SafeAny())
-            {
-                writer.WriteSql($"({Args})");
-            }
-        }
-    }
-    /// <summary>
     /// DISCARD [ ALL | PLANS | SEQUENCES | TEMPORARY | TEMP ]
     ///
     /// Note: this is a PostgreSQL-specific statement,
@@ -1372,6 +1295,93 @@ public abstract record Statement : IWriteSql, IElement
             }
 
             writer.WriteSql($" {Source}");
+        }
+    }
+    /// <summary>
+    /// DROP statement
+    /// </summary>
+    /// <param name="Names">Object names</param>
+    public record Drop(Sequence<ObjectName> Names) : Statement
+    {
+        /// The type of the object to drop: TABLE, VIEW, etc.
+        public ObjectType ObjectType { get; init; }
+        /// An optional `IF EXISTS` clause. (Non-standard.)
+        public bool IfExists { get; init; }
+        /// Whether `CASCADE` was specified. This will be `false` when
+        /// `RESTRICT` or no drop behavior at all was specified.
+        public bool Cascade { get; init; }
+        /// Whether `RESTRICT` was specified. This will be `false` when
+        /// `CASCADE` or no drop behavior at all was specified.
+        public bool Restrict { get; init; }
+        /// Hive allows you specify whether the table's stored data will be
+        /// deleted along with the dropped table
+        public bool Purge { get; init; }
+        /// <summary>
+        /// MySQL-specific "TEMPORARY" keyword
+        /// </summary>
+        public bool Temporary { get; init; }
+
+        public override void ToSql(SqlTextWriter writer)
+        {
+            var ifExists = IfExists ? " IF EXISTS" : null;
+            var cascade = Cascade ? " CASCADE" : null;
+            var restrict = Restrict ? " RESTRICT" : null;
+            var purge = Purge ? " PURGE" : null;
+            var temporary = Temporary ? "TEMPORARY " : null;
+
+            writer.WriteSql($"DROP {temporary}{ObjectType}{ifExists} {Names}{cascade}{restrict}{purge}");
+        }
+    }
+    /// <summary>
+    /// DROP Function statement
+    /// </summary>
+    /// <param name="IfExists">True if exists</param>
+    /// <param name="FuncDesc">Drop function descriptions</param>
+    /// <param name="Option">Referential actions</param>
+    public record DropFunction(bool IfExists, Sequence<DropFunctionDesc> FuncDesc, ReferentialAction Option) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            var ifEx = IfExists ? " IF EXISTS" : null;
+            writer.WriteSql($"DROP FUNCTION{ifEx} {FuncDesc}");
+
+            if (Option != ReferentialAction.None)
+            {
+                writer.Write($" {Option}");
+            }
+        }
+    }
+    /// <summary>
+    /// Drop function description
+    /// </summary>
+    /// <param name="Name">Object name</param>
+    /// <param name="Args">Operate function arguments</param>
+    public record DropFunctionDesc(ObjectName Name, Sequence<OperateFunctionArg>? Args = null) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            Name.ToSql(writer);
+            if (Args.SafeAny())
+            {
+                writer.WriteSql($"({Args})");
+            }
+        }
+    }
+    /// <summary>
+    /// Execute statement
+    /// </summary>
+    /// <param name="Name">Name identifier</param>
+    /// <param name="Parameters">Parameter expressions</param>
+    public record Execute(Ident Name, Sequence<Expression>? Parameters = null) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"EXECUTE {Name}");
+
+            if (Parameters.SafeAny())
+            {
+                writer.WriteSql($"({Parameters})");
+            }
         }
     }
     /// <summary>
@@ -1908,6 +1918,22 @@ public abstract record Statement : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// SHOW FUNCTIONS
+    /// </summary>
+    /// <param name="Filter">Show statement filter</param>
+    public record ShowFunctions(ShowStatementFilter? Filter = null) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("SHOW FUNCTIONS");
+
+            if (Filter != null)
+            {
+                writer.WriteSql($" {Filter}");
+            }
+        }
+    }
+    /// <summary>
     /// SHOW VARIABLE
     /// </summary>
     /// <param name="Variable">Variable identifiers</param>
@@ -1943,22 +1969,6 @@ public abstract record Statement : IWriteSql, IElement
             }
 
             writer.Write(" VARIABLES");
-
-            if (Filter != null)
-            {
-                writer.WriteSql($" {Filter}");
-            }
-        }
-    }
-    /// <summary>
-    /// SHOW FUNCTIONS
-    /// </summary>
-    /// <param name="Filter">Show statement filter</param>
-    public record ShowFunctions(ShowStatementFilter? Filter = null) : Statement
-    {
-        public override void ToSql(SqlTextWriter writer)
-        {
-            writer.Write("SHOW FUNCTIONS");
 
             if (Filter != null)
             {

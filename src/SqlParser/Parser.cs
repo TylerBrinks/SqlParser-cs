@@ -205,6 +205,7 @@ public class Parser
             Keyword.UNCACHE => ParseUncacheTable(),
             Keyword.UPDATE => ParseUpdate(),
             Keyword.ALTER => ParseAlter(),
+            Keyword.CALL => ParseCall(),
             Keyword.COPY => ParseCopy(),
             Keyword.CLOSE => ParseClose(),
             Keyword.SET => ParseSet(),
@@ -4829,6 +4830,24 @@ public class Parser
         }
 
         return operation;
+    }
+
+    public Statement ParseCall()
+    {
+        var name = ParseObjectName();
+
+        if (PeekToken() is not LeftParen)
+        {
+            return new Call(new Function(name) {Special = true});
+        }
+
+        var fnExpression = ParseFunction(name);
+        if (fnExpression is Function fn)
+        {
+            return new Call(fn);
+        }
+
+        throw Expected("a simple procedure call", PeekToken());
     }
 
     public Copy ParseCopy()
