@@ -4940,5 +4940,14 @@ namespace SqlParser.Tests
 
             Assert.Equal(expected, call);
         }
+
+        [Fact]
+        public void Parse_Replace_Into()
+        {
+            var dialects = new []{ new PostgreSqlDialect() };
+
+            Assert.Throws<ParserException>(() => 
+                ParseSqlStatements("REPLACE INTO public.customer (id, name, active) VALUES (1, 2, 3)", dialects: dialects));
+        }
     }
 }

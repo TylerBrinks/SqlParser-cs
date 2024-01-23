@@ -1510,6 +1510,10 @@ public abstract record Statement : IWriteSql, IElement
         public OnInsert? On { get; init; }
         /// RETURNING
         [Visit(3)] public Sequence<SelectItem>? Returning { get; init; }
+        /// Only for mysql
+        public bool ReplaceInto { get; set; }
+        /// Only for mysql
+        public MySqlInsertPriority Priority { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
@@ -1519,11 +1523,18 @@ public abstract record Statement : IWriteSql, IElement
             }
             else
             {
+                writer.Write(ReplaceInto ? "REPLACE" : "INSERT");
+
+                if (Priority!= MySqlInsertPriority.None)
+                {
+                    writer.WriteSql($" {Priority}");
+                }
+
                 var over = Overwrite ? " OVERWRITE" : null;
                 var into = Into ? " INTO" : null;
                 var table = Table ? " TABLE" : null;
                 var ignore = Ignore ? " IGNORE" : null;
-                writer.Write($"INSERT{ignore}{over}{into}{table} {Name} ");
+                writer.Write($"{ignore}{over}{into}{table} {Name} ");
             }
 
             if (Columns.SafeAny())

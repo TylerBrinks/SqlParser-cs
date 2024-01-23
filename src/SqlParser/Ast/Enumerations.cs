@@ -282,6 +282,14 @@ public enum LockType
     Update
 }
 
+public enum MySqlInsertPriority
+{
+    None,
+    LowPriority,
+    Delayed,
+    HighPriority
+}
+
 public enum NonBlock
 {
     None,

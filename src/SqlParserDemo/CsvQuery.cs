@@ -81,7 +81,8 @@ public class CsvQuery
         // Filter the Top N records if 'TOP N' is in the query
         if (select.Top != null)
         {
-            plan.Top = select.Top.Quantity!.AsLiteral().Value.AsNumber().AsInt();
+            var top = (TopQuantity.Constant)select.Top.Quantity!;
+            plan.Top = (int)top.Quantity;
         }
         
         return plan;

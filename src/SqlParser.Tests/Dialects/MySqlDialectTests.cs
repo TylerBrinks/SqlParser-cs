@@ -1005,7 +1005,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Create_Table_Gencol()
         {
-            var dialects = new Dialect[] {new MySqlDialect(), new GenericDialect()};
+            var dialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
             VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2))", dialects);
             VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2) VIRTUAL)", dialects);
             VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2) STORED)", dialects);
@@ -1084,6 +1084,34 @@ namespace SqlParser.Tests.Dialects
             VerifiedStatement("LOCK TABLES trans AS t READ LOCAL, customer WRITE");
             VerifiedStatement("LOCK TABLES trans AS t READ, customer LOW_PRIORITY WRITE");
             VerifiedStatement("UNLOCK TABLES");
+        }
+
+        [Fact]
+        public void Parse_Priority_Insert()
+        {
+            var sql = "INSERT HIGH_PRIORITY INTO tasks (title, priority) VALUES ('Test Some Inserts', 1)";
+
+            var insert = VerifiedStatement(sql);
+
+            var select = new Statement.Select(new Query(new SetExpression.ValuesExpression(
+                new Values(new Sequence<Sequence<Expression>>
+                {
+                    new()
+                    {
+                        new LiteralValue(new Value.SingleQuotedString("Test Some Inserts")),
+                        new LiteralValue(new Value.Number("1"))
+                    }
+                }))));
+
+            var expected = new Statement.Insert("tasks", select)
+            {
+                Into = true,
+                Columns = new Sequence<Ident> { "title", "priority" },
+                AfterColumns = new Sequence<Ident>(),
+                Priority = MySqlInsertPriority.HighPriority
+            };
+
+            Assert.Equal(expected, insert);
         }
     }
 }

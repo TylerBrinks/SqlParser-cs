@@ -199,6 +199,7 @@ public class Parser
             Keyword.FETCH => ParseFetchStatement(),
             Keyword.DELETE => ParseDelete(),
             Keyword.INSERT => ParseInsert(),
+            Keyword.REPLACE => ParseReplace(),
             Keyword.UNCACHE => ParseUncacheTable(),
             Keyword.UPDATE => ParseUpdate(),
             Keyword.ALTER => ParseAlter(),
@@ -7695,7 +7696,7 @@ public class Parser
         return new Revoke(privileges, grantObjects, grantees, cascade, grantedBy);
     }
 
-    internal Statement ParseInsert()
+    public Statement ParseInsert()
     {
         var orConflict = _dialect is not SQLiteDialect ? SqliteOnConflict.None :
             ParseKeywordSequence(Keyword.OR, Keyword.REPLACE) ? SqliteOnConflict.Replace :
@@ -7706,7 +7707,15 @@ public class Parser
             ParseKeywordSequence(Keyword.REPLACE) ? SqliteOnConflict.Replace :
             SqliteOnConflict.None;
 
+        var priority = _dialect is not MySqlDialect or GenericDialect ? MySqlInsertPriority.None :
+            ParseKeyword(Keyword.LOW_PRIORITY) ? MySqlInsertPriority.LowPriority :
+            ParseKeyword(Keyword.DELAYED) ? MySqlInsertPriority.Delayed : 
+            ParseKeyword(Keyword.HIGH_PRIORITY) ? MySqlInsertPriority.HighPriority :
+            MySqlInsertPriority.None;
+
+
         var ignore = _dialect is MySqlDialect or GenericDialect && ParseKeyword(Keyword.IGNORE);
+        
         var action = ParseOneOfKeywords(Keyword.INTO, Keyword.OVERWRITE);
         var into = action == Keyword.INTO;
         var overwrite = action == Keyword.OVERWRITE;
@@ -7797,10 +7806,28 @@ public class Parser
             AfterColumns = afterColumns,
             Table = table,
             On = on,
-            Returning = returning
+            Returning = returning,
+            ReplaceInto = false,
+            Priority = priority
         };
     }
 
+    public Statement ParseReplace()
+    {
+        if (_dialect is not MySqlDialect or GenericDialect)
+        {
+            throw new ParserException("Unsupported statement REPLACE", PeekToken().Location);
+        }
+
+        var insert = ParseInsert();
+        if (insert is Insert i)
+        {
+            i.ReplaceInto = true;
+        }
+
+        return insert;
+    }
+   
     public Statement ParseUpdate()
     {
         var table = ParseTableAndJoins();

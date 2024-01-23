@@ -64,6 +64,10 @@ public static class EnumWriter
             JsonOperator.AtQuestion => "@?",
             JsonOperator.AtAt => "@@",
 
+            MySqlInsertPriority.LowPriority => "LOW_PRIORITY",
+            MySqlInsertPriority.Delayed => "DELAYED",
+            MySqlInsertPriority.HighPriority => "HIGH_PRIORITY",
+
             SetQuantifier.ByName => "BY NAME",
             SetQuantifier.AllByName => "ALL BY NAME",
             SetQuantifier.DistinctByName => "DISTINCT BY NAME",
