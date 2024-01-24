@@ -2884,6 +2884,11 @@ public class Parser
             ThrowExpected("[EXTERNAL] TABLE or [MATERIALIZED] VIEW or FUNCTION after CREATE OR REPLACE", PeekToken());
         }
 
+        if (ParseKeyword(Keyword.EXTENSION))
+        {
+            return ParseCreateExtension();
+        }
+
         if (ParseKeyword(Keyword.INDEX))
         {
             return ParseCreateIndex(false);
@@ -3834,6 +3839,33 @@ public class Parser
             throw Expected("ALL, PLANS, SEQUENCES, TEMP or TEMPORARY after DISCARD", PeekToken());
 
         return new Discard(objectType);
+    }
+
+    public Statement ParseCreateExtension()
+    {
+        var ifNot = ParseIfExists();
+        var name = ParseIdentifier();
+
+        Ident? schema = null;
+        Ident? version = null;
+        var cascade = false;
+
+        if (ParseKeyword(Keyword.WITH))
+        {
+            if (ParseKeyword(Keyword.SCHEMA))
+            {
+                schema = ParseIdentifier();
+            }
+
+            if (ParseKeyword(Keyword.VERSION))
+            {
+                version = ParseIdentifier();
+            }
+
+            var cascade = ParseKeyword(Keyword.CASCADE);
+        }
+
+        return new CreateExtension(name, ifNot, cascade, schema, version);
     }
 
     public CreateIndex ParseCreateIndex(bool unique)

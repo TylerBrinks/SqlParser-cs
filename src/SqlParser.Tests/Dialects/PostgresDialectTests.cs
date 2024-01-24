@@ -452,7 +452,7 @@ namespace SqlParser.Tests.Dialects
                     new(new ColumnOption.NotNull())
                 }),
 
-                new("create_date", new DataType.Date(), Options: new ColumnOptionDef[] 
+                new("create_date", new DataType.Date(), Options: new ColumnOptionDef[]
                 {
                     new(new ColumnOption.Default(VerifiedExpr("CAST(now() AS TEXT)"))),
                     new(new ColumnOption.NotNull())
@@ -673,7 +673,7 @@ namespace SqlParser.Tests.Dialects
             copy = VerifiedStatement<Statement.Copy>("COPY users TO 'data.csv' DELIMITER ','");
             expected = new Statement.Copy(source, true, new CopyTarget.File("data.csv"))
             {
-                LegacyOptions = new []
+                LegacyOptions = new[]
                 {
                     new CopyLegacyOption.Delimiter(Symbols.Comma)
                 }
@@ -721,7 +721,7 @@ namespace SqlParser.Tests.Dialects
 
             var copy = OneStatementParsesTo(sql, "");
 
-            var source = new CopySource.Table(new ObjectName("table"), new Sequence<Ident> {"a", "b"});
+            var source = new CopySource.Table(new ObjectName("table"), new Sequence<Ident> { "a", "b" });
 
             var expected = new Statement.Copy(
                 source,
@@ -764,7 +764,7 @@ namespace SqlParser.Tests.Dialects
             source = new CopySource.Table(new ObjectName("country"), new Sequence<Ident>());
             expected = new Statement.Copy(source, true, new CopyTarget.Stdout())
             {
-                Options = new [] { new CopyOption.Delimiter(Symbols.Pipe) }
+                Options = new[] { new CopyOption.Delimiter(Symbols.Pipe) }
             };
             Assert.Equal(expected, copy);
 
@@ -858,35 +858,35 @@ namespace SqlParser.Tests.Dialects
 
             var set = VerifiedStatement<Statement.SetVariable>("SET a = b");
             Assert.Equal("a", set.Variable!);
-            Assert.Equal(new []{ new Identifier("b") }, set.Value);
+            Assert.Equal(new[] { new Identifier("b") }, set.Value);
 
             set = VerifiedStatement<Statement.SetVariable>("SET a = 'b'");
             Assert.Equal("a", set.Variable!);
-            Assert.Equal(new []{ new LiteralValue(new Value.SingleQuotedString("b")) }, set.Value);
+            Assert.Equal(new[] { new LiteralValue(new Value.SingleQuotedString("b")) }, set.Value);
 
             set = VerifiedStatement<Statement.SetVariable>("SET a = 0");
             Assert.Equal("a", set.Variable!);
-            Assert.Equal(new []{ new LiteralValue(Number("0")) }, set.Value);
+            Assert.Equal(new[] { new LiteralValue(Number("0")) }, set.Value);
 
             set = VerifiedStatement<Statement.SetVariable>("SET a = DEFAULT");
             Assert.Equal("a", set.Variable!);
-            Assert.Equal(new []{ new Identifier("DEFAULT") }, set.Value);
+            Assert.Equal(new[] { new Identifier("DEFAULT") }, set.Value);
 
             set = VerifiedStatement<Statement.SetVariable>("SET LOCAL a = b");
             Assert.Equal("a", set.Variable!);
             Assert.True(set.Local);
-            Assert.Equal(new []{ new Identifier("b") }, set.Value);
+            Assert.Equal(new[] { new Identifier("b") }, set.Value);
 
             set = VerifiedStatement<Statement.SetVariable>("SET a.b.c = b");
             Assert.Equal(new ObjectName(new Ident[] { "a", "b", "c" }), set.Variable!);
-            Assert.Equal(new []{ new Identifier("b") }, set.Value);
+            Assert.Equal(new[] { new Identifier("b") }, set.Value);
 
             set = OneStatementParsesTo<Statement.SetVariable>(
                 "SET hive.tez.auto.reducer.parallelism=false",
                 "SET hive.tez.auto.reducer.parallelism = false");
 
             Assert.Equal(new ObjectName(new Ident[] { "hive", "tez", "auto", "reducer", "parallelism" }), set.Variable!);
-            Assert.Equal(new []{ new LiteralValue(new Value.Boolean(false)) }, set.Value);
+            Assert.Equal(new[] { new LiteralValue(new Value.Boolean(false)) }, set.Value);
 
             OneStatementParsesTo("SET a TO b", "SET a = b");
             OneStatementParsesTo("SET SESSION a = b", "SET a = b");
@@ -924,10 +924,10 @@ namespace SqlParser.Tests.Dialects
             DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
 
             var show = VerifiedStatement<Statement.ShowVariable>("SHOW a a");
-            Assert.Equal(new Statement.ShowVariable(new Ident[]{ "a", "a" }), show);
+            Assert.Equal(new Statement.ShowVariable(new Ident[] { "a", "a" }), show);
 
             show = VerifiedStatement<Statement.ShowVariable>("SHOW ALL ALL");
-            Assert.Equal(new Statement.ShowVariable(new Ident[]{ "ALL", "ALL" }), show);
+            Assert.Equal(new Statement.ShowVariable(new Ident[] { "ALL", "ALL" }), show);
         }
 
         [Fact]
@@ -980,7 +980,7 @@ namespace SqlParser.Tests.Dialects
             var values = (SetExpression.ValuesExpression)source.Body;
             Assert.Equal("a", prepare.Name);
 
-            var expected = new []
+            var expected = new[]
             {
                 new Identifier("a1"),
                 new Identifier("a2"),
@@ -1010,7 +1010,7 @@ namespace SqlParser.Tests.Dialects
                 }
             )))
             {
-                ConflictTarget = new ConflictTarget.Column(new Ident[]{ "did" })
+                ConflictTarget = new ConflictTarget.Column(new Ident[] { "did" })
             });
 
             Assert.Equal(on, insert.On);
@@ -1202,7 +1202,7 @@ namespace SqlParser.Tests.Dialects
             expected = new ArrayIndex(new Nested(
                     new Cast(
                         new Expression.Array(
-                            new ArrayExpression(new []
+                            new ArrayExpression(new[]
                             {
                                 new Expression.Array(new ArrayExpression(
                                         new []
@@ -1278,7 +1278,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Test_Json()
         {
-            DefaultDialects = new[] {new PostgreSqlDialect()};
+            DefaultDialects = new[] { new PostgreSqlDialect() };
             var select = VerifiedOnlySelect("SELECT params ->> 'name' FROM events");
             var expected = new SelectItem.UnnamedExpression(new JsonAccess(
                 new Identifier("params"),
@@ -1368,7 +1368,7 @@ namespace SqlParser.Tests.Dialects
             expected = new SelectItem.UnnamedExpression(new JsonAccess(
                 new Identifier("info"),
                 JsonOperator.HashMinus,
-                new Expression.Array(new ArrayExpression(new []
+                new Expression.Array(new ArrayExpression(new[]
                     {
                         new LiteralValue(new Value.SingleQuotedString("a")),
                         new LiteralValue(new Value.SingleQuotedString("b"))
@@ -1670,8 +1670,8 @@ namespace SqlParser.Tests.Dialects
             //role = VerifiedStatement<Statement.CreateRole>("CREATE ROLE abc WITH USER foo, bar ROLE baz ");
             role = (Statement.CreateRole)ParseSqlStatements("CREATE ROLE abc WITH USER foo, bar ROLE baz ").First()!;
             Assert.Equal(new ObjectName[] { "abc" }, role.Names);
-            Assert.Equal(new Ident[]{ "foo", "bar" }, role.User!);
-            Assert.Equal(new Ident[]{ "baz" }, role.Role!);
+            Assert.Equal(new Ident[] { "foo", "bar" }, role.User!);
+            Assert.Equal(new Ident[] { "baz" }, role.Role!);
 
             foreach (var keyword in new[]
                      {
@@ -1927,7 +1927,7 @@ namespace SqlParser.Tests.Dialects
 
             var truncate = VerifiedStatement("TRUNCATE db.table_name");
 
-            var name = new ObjectName(new Ident[] {"db", "table_name"});
+            var name = new ObjectName(new Ident[] { "db", "table_name" });
             var expected = new Statement.Truncate(name, null, false);
             Assert.Equal(expected, truncate);
         }
@@ -1986,9 +1986,9 @@ namespace SqlParser.Tests.Dialects
             sql = "ALTER ROLE role_name IN DATABASE database_name SET maintenance_work_mem = 100000";
             statement = ParseSqlStatements(sql, dialect).First();
             expected = new Statement.AlterRole("role_name", new AlterRoleOperation.Set(
-                "maintenance_work_mem", 
-                new SetConfigValue.Value(new LiteralValue(new Value.Number("100000"))), 
-                new ObjectName(new Ident[]{"database_name"}) ));
+                "maintenance_work_mem",
+                new SetConfigValue.Value(new LiteralValue(new Value.Number("100000"))),
+                new ObjectName(new Ident[] { "database_name" })));
             Assert.Equal(expected, statement);
 
 
@@ -2020,7 +2020,7 @@ namespace SqlParser.Tests.Dialects
             statement = VerifiedStatement(sql, dialect);
             expected = new Statement.AlterRole("role_name",
                 new AlterRoleOperation.Reset(new ResetConfig.ConfigName("maintenance_work_mem"),
-                    new ObjectName(new Ident[] {"database_name"})));
+                    new ObjectName(new Ident[] { "database_name" })));
             Assert.Equal(expected, statement);
 
         }
@@ -2030,7 +2030,7 @@ namespace SqlParser.Tests.Dialects
         {
             const string sql = "CREATE INDEX IF NOT EXISTS my_index ON my_table(col1,col2)";
 
-            var createIndex = VerifiedStatement<Statement.CreateIndex>(sql, new[] {new PostgreSqlDialect()});
+            var createIndex = VerifiedStatement<Statement.CreateIndex>(sql, new[] { new PostgreSqlDialect() });
 
             Assert.Equal("my_index", createIndex.Name!);
             Assert.Equal("my_table", createIndex.TableName);
@@ -2112,6 +2112,19 @@ namespace SqlParser.Tests.Dialects
             Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t ALTER COLUMN id ADD GENERATED ( INCREMENT 1 MINVALUE 1 )"));
             Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t ALTER COLUMN id ADD GENERATED AS IDENTITY ( INCREMENT )"));
             Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t ALTER COLUMN id ADD GENERATED AS IDENTITY ("));
+        }
+
+        [Fact]
+        public void Parse_Create_Extension()
+        {
+            VerifiedStatement("CREATE EXTENSION extension_name");
+            VerifiedStatement("CREATE EXTENSION extension_name WITH SCHEMA schema_name");
+            VerifiedStatement("CREATE EXTENSION extension_name WITH VERSION version");
+            VerifiedStatement("CREATE EXTENSION extension_name WITH CASCADE");
+            VerifiedStatement("CREATE EXTENSION extension_name WITH SCHEMA schema_name VERSION version CASCADE");
+            VerifiedStatement("CREATE EXTENSION extension_name WITH SCHEMA schema_name CASCADE");
+            VerifiedStatement("CREATE EXTENSION extension_name WITH VERSION version CASCADE");
+            VerifiedStatement("CREATE EXTENSION extension_name WITH SCHEMA schema_name VERSION version");
         }
     }
 }

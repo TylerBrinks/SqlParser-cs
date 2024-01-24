@@ -438,6 +438,7 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
+
     /// <summary>
     /// Create Database statement
     /// </summary>
@@ -466,6 +467,41 @@ public abstract record Statement : IWriteSql, IElement
             {
                 // ReSharper disable once StringLiteralTypo
                 writer.WriteSql($" MANAGEDLOCATION '{ManagedLocation}'");
+            }
+        }
+    }
+    /// <summary>
+    /// Create extension statement
+    /// </summary>
+    /// <param name="Name">Name</param>
+    /// <param name="IfNotExists">True if not exists</param>
+    /// <param name="Cascade">Cascade</param>
+    /// <param name="Schema">Schema</param>
+    /// <param name="Version">Version</param>
+    public record CreateExtension(Ident Name, bool IfNotExists, bool Cascade, Ident? Schema, Ident? Version) : Statement, IIfNotExists
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            var ifNotExists = IfNotExists ? "IF NOT EXISTS " : null;
+
+            writer.WriteSql($"CREATE EXTENSION {ifNotExists}{Name}");
+
+            if (Cascade || Schema != null)
+            {
+                if (Schema != null)
+                {
+                    writer.WriteSql($" SCHEMA {Name}");
+                }
+
+                if (Version != null)
+                {
+                    writer.WriteSql($" VERSION {Version}");
+                }
+
+                if (Cascade)
+                {
+                    writer.Write($" CASCADE");
+                }
             }
         }
     }
@@ -1457,7 +1493,15 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
-    
+    /// <summary>
+    /// Flush statement
+    /// </summary>
+    /// <param name="ObjectType">Object type</param>
+    /// <param name="Location">Location</param>
+    /// <param name="Channel">Channel</param>
+    /// <param name="ReadLock">Read lock</param>
+    /// <param name="Export">Export</param>
+    /// <param name="Tables">Tables</param>
     public record Flush(FlushType ObjectType, FlushLocation? Location, string? Channel, bool ReadLock, bool Export, Sequence<ObjectName>? Tables) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
