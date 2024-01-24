@@ -2026,7 +2026,7 @@ namespace SqlParser.Tests
             Assert.IsType<AlterColumnOperation.SetDataType>(op.Operation);
 
             var ex = Assert.Throws<ParserException>(() => new Parser().ParseSql("ALTER TABLE tab ALTER COLUMN is_active TYPE TEXT"));
-            Assert.Equal("Expected SET/DROP NOT NULL, SET DEFAULT, SET DATA TYPE after ALTER COLUMN, found TYPE, Line: 1, Col: 40", ex.Message);
+            Assert.Equal("Expected SET/DROP NOT NULL, SET DEFAULT, or SET DATA TYPE after ALTER COLUMN, found TYPE, Line: 1, Col: 40", ex.Message);
 
             ex = Assert.Throws<ParserException>(() => new Parser().ParseSql("ALTER TABLE tab ALTER COLUMN is_active SET DATA TYPE TEXT USING 'text'"));
             Assert.Equal("Expected end of statement, found USING, Line: 1, Col: 59", ex.Message);

@@ -5090,9 +5090,33 @@ public class Parser
 
                 op = new AlterColumnOperation.SetDataType(dataType, @using);
             }
+            else if (ParseKeywordSequence(Keyword.ADD, Keyword.GENERATED))
+            {
+                GeneratedAs? genAs = ParseKeyword(Keyword.ALWAYS) ? GeneratedAs.Always :
+                    ParseKeywordSequence(Keyword.BY, Keyword.DEFAULT) ? GeneratedAs.ByDefault : 
+                    null;
+
+                ExpectKeywords(Keyword.AS, Keyword.IDENTITY);
+
+                Sequence<SequenceOptions>? options = null;
+
+                if (PeekToken() is LeftParen)
+                {
+                    options = ExpectParens(ParseCreateSequenceOptions);
+                }
+
+                op = new AlterColumnOperation.AddGenerated(genAs, options);
+            }
             else
             {
-                throw Expected("SET/DROP NOT NULL, SET DEFAULT, SET DATA TYPE after ALTER COLUMN", PeekToken());
+                if (_dialect is PostgreSqlDialect)
+                {
+                    throw Expected("SET/DROP NOT NULL, SET DEFAULT, SET DATA TYPE, or ADD GENERATED after ALTER COLUMN", PeekToken());
+                }
+                else
+                {
+                    throw Expected("SET/DROP NOT NULL, SET DEFAULT, or SET DATA TYPE after ALTER COLUMN", PeekToken());
+                }
             }
 
             operation = new AlterColumn(columnName, op);

@@ -53,6 +53,8 @@ public abstract record AlterColumnOperation : IWriteSql
     /// <param name="DataType"></param>
     public record SetDataType(DataType DataType, Expression? Using = null) : AlterColumnOperation, IElement;
 
+    public record AddGenerated(GeneratedAs? GeneratedAs, Sequence<SequenceOptions> SequenceOptions) : AlterColumnOperation, IElement;
+
     public void ToSql(SqlTextWriter writer)
     {
         switch (this)
@@ -82,6 +84,22 @@ public abstract record AlterColumnOperation : IWriteSql
                     writer.WriteSql($" USING {sdt.Using}");
                 }
                
+                break;
+
+            case AddGenerated ag:
+                var genAs = ag.GeneratedAs switch
+                {
+                    GeneratedAs.Always => " ALWAYS",
+                    GeneratedAs.ByDefault => " BY DEFAULT",
+                    _ => string.Empty
+                };
+                writer.Write($"ADD GENERATED{genAs} AS IDENTITY");
+                if (ag.SequenceOptions.SafeAny())
+                {
+                    writer.Write(" (");
+                    writer.WriteDelimited(ag.SequenceOptions, "");
+                    writer.Write(" )");
+                }
                 break;
 
         }
