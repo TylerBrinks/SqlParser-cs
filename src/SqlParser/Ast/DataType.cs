@@ -781,6 +781,16 @@ public abstract record DataType : IWriteSql
         }
     }
     /// <summary>
+    /// No type specified - only used with SQLite
+    /// </summary>
+    public record Unspecified : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            // No text written
+        }
+    }
+    /// <summary>
     /// UUID data ype
     /// </summary>
     public record Uuid : DataType

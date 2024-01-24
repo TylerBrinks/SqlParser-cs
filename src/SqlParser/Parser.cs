@@ -1,4 +1,5 @@
-﻿using System.Data;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Data;
 using System.Text.RegularExpressions;
 using SqlParser.Ast;
 using SqlParser.Dialects;
@@ -4178,7 +4179,7 @@ public class Parser
     public ColumnDef ParseColumnDef()
     {
         var name = ParseIdentifier();
-        var dataType = ParseDataType();
+        var dataType = IsUnspecified() ? new DataType.Unspecified() : ParseDataType();
         var collation = ParseInit(ParseKeyword(Keyword.COLLATE), ParseObjectName);
         Sequence<ColumnOptionDef>? options = null;
 
@@ -4214,6 +4215,31 @@ public class Parser
         }
 
         return new ColumnDef(name, dataType, collation, options);
+
+        bool IsUnspecified()
+        {
+            if (_dialect is not SQLiteDialect)
+            {
+                return false;
+            }
+
+            if (PeekToken() is Word w)
+            {
+                return w.Keyword
+                    is Keyword.CONSTRAINT
+                    or Keyword.PRIMARY
+                    or Keyword.NOT
+                    or Keyword.UNIQUE
+                    or Keyword.CHECK
+                    or Keyword.DEFAULT
+                    or Keyword.COLLATE
+                    or Keyword.REFERENCES
+                    or Keyword.GENERATED
+                    or Keyword.AS;
+            }
+
+            return true;
+        }
     }
 
     public ColumnOption? ParseOptionalColumnOption()

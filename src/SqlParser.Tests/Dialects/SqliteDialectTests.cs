@@ -279,5 +279,11 @@ namespace SqlParser.Tests.Dialects
             Assert.Throws<ParserException>(() => ParseSqlStatements("BEGIN IMMEDIATE", unsupported));
             Assert.Throws<ParserException>(() => ParseSqlStatements("BEGIN EXCLUSIVE", unsupported));
         }
+
+        [Fact]
+        public void Parse_Create_Table_Untyped()
+        {
+            VerifiedStatement("CREATE TABLE t1 (a, b AS (a * 2), c NOT NULL)");
+        }
     }
 }

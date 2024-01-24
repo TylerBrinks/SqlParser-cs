@@ -11,7 +11,14 @@ public record ColumnDef(Ident Name, DataType DataType, ObjectName? Collation = n
 {
     public void ToSql(SqlTextWriter writer)
     {
-        writer.WriteSql($"{Name} {DataType}");
+        if (DataType is DataType.Unspecified)
+        {
+            writer.WriteSql($"{Name}");
+        }
+        else
+        {
+            writer.WriteSql($"{Name} {DataType}");
+        }
 
         if (Collation != null)
         {
