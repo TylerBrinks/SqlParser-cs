@@ -1113,5 +1113,76 @@ namespace SqlParser.Tests.Dialects
 
             Assert.Equal(expected, insert);
         }
+
+        [Fact]
+        public void Parse_Flush()
+        {
+            var flush = (Statement.Flush) VerifiedStatement("FLUSH OPTIMIZER_COSTS");
+            var expected = new Statement.Flush(FlushType.OptimizerCosts, null, null, false, false, null);
+            Assert.Equal(expected, flush);
+
+            flush = (Statement.Flush)VerifiedStatement("FLUSH BINARY LOGS");
+            expected = new Statement.Flush(FlushType.BinaryLogs, null, null, false, false, null);
+            Assert.Equal(expected, flush);
+
+            flush = (Statement.Flush)VerifiedStatement("FLUSH ENGINE LOGS");
+            expected = new Statement.Flush(FlushType.EngineLogs, null, null, false, false, null);
+            Assert.Equal(expected, flush);
+
+            flush = (Statement.Flush)VerifiedStatement("FLUSH ERROR LOGS");
+            expected = new Statement.Flush(FlushType.ErrorLogs, null, null, false, false, null);
+            Assert.Equal(expected, flush);
+
+            flush = (Statement.Flush)VerifiedStatement("FLUSH RELAY LOGS FOR CHANNEL test");
+            expected = new Statement.Flush(FlushType.RelayLogs, null, "test", false, false, null);
+            Assert.Equal(expected, flush);
+
+            flush = (Statement.Flush)VerifiedStatement("FLUSH LOCAL SLOW LOGS");
+            expected = new Statement.Flush(FlushType.SlowLogs, new FlushLocation.Local(), null, false, false, null);
+            Assert.Equal(expected, flush);
+
+            flush = (Statement.Flush)VerifiedStatement("FLUSH TABLES `mek`.`table1`, table2");
+            expected = new Statement.Flush(FlushType.Tables, null, null, false, false, 
+                new Sequence<ObjectName>
+                {
+                    new (new Ident[]
+                    {
+                        new ("mek", Symbols.Backtick), 
+                        new ("table1", Symbols.Backtick),
+                    }),
+                    new ("table2")
+                });
+            Assert.Equal(expected, flush);
+
+            flush = (Statement.Flush)VerifiedStatement("FLUSH TABLES WITH READ LOCK");
+            expected = new Statement.Flush(FlushType.Tables, null, null, true, false, null);
+            Assert.Equal(expected, flush);
+
+            flush = (Statement.Flush)VerifiedStatement("FLUSH TABLES `mek`.`table1`, table2 WITH READ LOCK");
+            expected = new Statement.Flush(FlushType.Tables, null, null, true, false, 
+                new Sequence<ObjectName>
+                {
+                    new (new Ident[]
+                    {
+                        new ("mek", Symbols.Backtick),
+                        new ("table1", Symbols.Backtick),
+                    }),
+                    new ("table2")
+                });
+            Assert.Equal(expected, flush);
+
+            flush = (Statement.Flush)VerifiedStatement("FLUSH TABLES `mek`.`table1`, table2 FOR EXPORT");
+            expected = new Statement.Flush(FlushType.Tables, null, null, false, true,
+                new Sequence<ObjectName>
+                {
+                    new (new Ident[]
+                    {
+                        new ("mek", Symbols.Backtick),
+                        new ("table1", Symbols.Backtick),
+                    }),
+                    new ("table2")
+                });
+            Assert.Equal(expected, flush);
+        }
     }
 }

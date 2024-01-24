@@ -53,6 +53,20 @@ public static class EnumWriter
 
             FileFormat.None => null,
 
+            FlushType.BinaryLogs => "BINARY LOGS",
+            FlushType.EngineLogs => "ENGINE LOGS",
+            FlushType.ErrorLogs => "ERROR LOGS",
+            FlushType.GeneralLogs => "GENERAL LOGS",
+            FlushType.Hosts => "HOSTS",
+            FlushType.Privileges => "PRIVILEGES",
+            FlushType.OptimizerCosts => "OPTIMIZER_COSTS",
+            FlushType.RelayLogs => "RELAY LOGS",
+            FlushType.SlowLogs => "SLOW LOGS",
+            FlushType.Status => "STATUS",
+            FlushType.UserResources => "USER_RESOURCES",
+            FlushType.Tables => "TABLES",
+
+
             JsonOperator.Arrow => "->",
             JsonOperator.LongArrow => "->>",
             JsonOperator.HashArrow => "#>",

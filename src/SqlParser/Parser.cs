@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Data;
+using System.Text.RegularExpressions;
 using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
@@ -184,6 +185,7 @@ public class Parser
         return word.Keyword switch
         {
             Keyword.KILL => ParseKill(),
+            Keyword.FLUSH => ParseFlush(),
             Keyword.DESCRIBE => ParseExplain(true),
             Keyword.EXPLAIN => ParseExplain(false),
             Keyword.ANALYZE => ParseAnalyze(),
@@ -262,6 +264,128 @@ public class Parser
     public bool ParseIfExists()
     {
         return ParseKeywordSequence(Keyword.IF, Keyword.EXISTS);
+    }
+
+    public Statement ParseFlush()
+    {
+        string? channel = null;
+        Sequence<ObjectName>? tables = null;
+        var readLock = false;
+        var export = false;
+        FlushLocation? location = null;
+        FlushType objectType = 0;
+
+        if (_dialect is not MySqlDialect or GenericDialect)
+        {
+            throw new ParserException("Unsupported statement FLUSH", PeekToken().Location);
+        }
+
+        if (ParseKeyword(Keyword.NO_WRITE_TO_BINLOG))
+        {
+            location = new FlushLocation.NoWriteToBinlog();
+        }
+        else if (ParseKeyword(Keyword.LOCAL))
+        {
+            location = new FlushLocation.Local();
+        }
+
+        if (ParseKeywordSequence(Keyword.BINARY, Keyword.LOGS))
+        {
+            objectType = FlushType.BinaryLogs;
+        }
+        else if (ParseKeywordSequence(Keyword.ENGINE, Keyword.LOGS))
+        {
+            objectType = FlushType.EngineLogs;
+        }
+        else if (ParseKeywordSequence(Keyword.ERROR, Keyword.LOGS))
+        {
+            objectType = FlushType.ErrorLogs;
+        }
+        else if (ParseKeywordSequence(Keyword.GENERAL, Keyword.LOGS))
+        {
+            objectType = FlushType.GeneralLogs;
+        }
+        else if (ParseKeyword(Keyword.HOSTS))
+        {
+            objectType = FlushType.Hosts;
+        }
+        else if (ParseKeyword(Keyword.PRIVILEGES))
+        {
+            objectType = FlushType.Privileges;
+
+        }
+        else if (ParseKeyword(Keyword.OPTIMIZER_COSTS))
+        {
+            objectType = FlushType.OptimizerCosts;
+
+        }
+        else if (ParseKeywordSequence(Keyword.RELAY, Keyword.LOGS))
+        {
+            if(ParseKeywordSequence(Keyword.FOR, Keyword.CHANNEL))
+            {
+                channel = ParseObjectName();
+            }
+
+            objectType = FlushType.RelayLogs;
+
+        }
+        else if (ParseKeywordSequence(Keyword.SLOW, Keyword.LOGS))
+        {
+            objectType = FlushType.SlowLogs;
+
+        }
+        else if (ParseKeyword(Keyword.STATUS))
+        {
+            objectType = FlushType.Status;
+
+        }
+        else if (ParseKeyword(Keyword.USER_RESOURCES))
+        {
+
+            objectType = FlushType.UserResources;
+        }
+        else if (ParseKeyword(Keyword.LOGS))
+        {
+            objectType = FlushType.Logs;
+
+        }
+        else if (ParseKeyword(Keyword.TABLES))
+        {
+            var loop = true;
+
+            while (loop)
+            {
+                var next = NextToken();
+                switch (next)
+                {
+                    case Word {Keyword: Keyword.WITH}:
+                        readLock = ParseKeywordSequence(Keyword.READ, Keyword.LOCK);
+                        break;
+
+                    case Word { Keyword: Keyword.FOR }:
+                        export = ParseKeyword(Keyword.EXPORT);
+                        break;
+                    case Word { Keyword: Keyword.undefined }:
+                        PrevToken();
+                        tables = ParseCommaSeparated(ParseObjectName);
+                        break;
+
+                    default:
+                        loop = false;
+                        break;
+                }
+            }
+
+            objectType = FlushType.Tables;
+        }
+        else
+        {
+            throw Expected(
+                "BINARY LOGS, ENGINE LOGS, ERROR LOGS, GENERAL LOGS, HOSTS, LOGS, PRIVILEGES, OPTIMIZER_COSTS, RELAY LOGS[FOR CHANNEL channel], SLOW LOGS, STATUS, USER_RESOURCES",
+                PeekToken());
+        }
+
+        return new Flush(objectType!, location, channel, readLock, export, tables);
     }
 
     // ReSharper disable once IdentifierTypo
@@ -7709,13 +7833,13 @@ public class Parser
 
         var priority = _dialect is not MySqlDialect or GenericDialect ? MySqlInsertPriority.None :
             ParseKeyword(Keyword.LOW_PRIORITY) ? MySqlInsertPriority.LowPriority :
-            ParseKeyword(Keyword.DELAYED) ? MySqlInsertPriority.Delayed : 
+            ParseKeyword(Keyword.DELAYED) ? MySqlInsertPriority.Delayed :
             ParseKeyword(Keyword.HIGH_PRIORITY) ? MySqlInsertPriority.HighPriority :
             MySqlInsertPriority.None;
 
 
         var ignore = _dialect is MySqlDialect or GenericDialect && ParseKeyword(Keyword.IGNORE);
-        
+
         var action = ParseOneOfKeywords(Keyword.INTO, Keyword.OVERWRITE);
         var into = action == Keyword.INTO;
         var overwrite = action == Keyword.OVERWRITE;
@@ -7827,7 +7951,7 @@ public class Parser
 
         return insert;
     }
-   
+
     public Statement ParseUpdate()
     {
         var table = ParseTableAndJoins();

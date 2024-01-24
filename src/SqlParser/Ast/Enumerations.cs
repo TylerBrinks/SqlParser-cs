@@ -189,6 +189,23 @@ public enum FileFormat
     JsonFile,
 }
 
+public enum FlushType
+{
+    BinaryLogs,
+    EngineLogs,
+    ErrorLogs,
+    GeneralLogs,
+    Hosts,
+    Logs,
+    Privileges,
+    OptimizerCosts,
+    RelayLogs,
+    SlowLogs,
+    Status,
+    UserResources,
+    Tables,
+}
+
 public enum FunctionBehavior
 {
     Immutable,

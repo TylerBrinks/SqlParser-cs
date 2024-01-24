@@ -1457,6 +1457,35 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
+    
+    public record Flush(FlushType ObjectType, FlushLocation? Location, string? Channel, bool ReadLock, bool Export, Sequence<ObjectName>? Tables) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("FLUSH");
+            if (Location != null)
+            {
+                writer.WriteSql($" {Location}");
+            }
+
+            writer.WriteSql($" {ObjectType}");
+            if (Channel != null)
+            {
+                writer.Write($" FOR CHANNEL {Channel}");
+            }
+
+            if (Tables.SafeAny())
+            {
+                writer.Write(" ");
+                writer.WriteDelimited(Tables, ", ");
+            }
+
+            var export = Export ? " FOR EXPORT" : null;
+            var read = ReadLock ? " WITH READ LOCK" : null;
+
+            writer.WriteSql($"{read}{export}");
+        }
+    }
     /// <summary>
     /// GRANT privileges ON objects TO grantees
     /// </summary>
