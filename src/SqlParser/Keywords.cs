@@ -408,6 +408,7 @@ public enum Keyword
     JAR,
     JOIN,
     JSON,
+    JSONB,
     JSONFILE,
     JSON_TABLE,
     JULIAN,

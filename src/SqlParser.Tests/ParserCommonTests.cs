@@ -1260,6 +1260,10 @@ namespace SqlParser.Tests
             select = VerifiedOnlySelect("SELECT CAST(id AS BLOB(50)) FROM customer");
             expected = new Cast(new Identifier("id"), new Blob(50));
             Assert.Equal(expected, select.Projection.Single().AsExpr());
+
+            select = VerifiedOnlySelect("SELECT CAST(details AS JSONB) FROM customer");
+            expected = new Cast(new Identifier("details"), new JsonB());
+            Assert.Equal(expected, select.Projection.Single().AsExpr());
         }
 
         [Fact]

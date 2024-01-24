@@ -5704,6 +5704,7 @@ public class Parser
             // parse_interval for a taste.
             Word { Keyword: Keyword.INTERVAL } => new DataType.Interval(),
             Word { Keyword: Keyword.JSON } => new DataType.Json(),
+            Word { Keyword: Keyword.JSONB } => new DataType.JsonB(),
             Word { Keyword: Keyword.REGCLASS } => new DataType.Regclass(),
             Word { Keyword: Keyword.STRING } => new DataType.StringType(),
             Word { Keyword: Keyword.TEXT } => new DataType.Text(),

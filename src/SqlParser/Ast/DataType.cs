@@ -510,7 +510,7 @@ public abstract record DataType : IWriteSql
         }
     }
     /// <summary>
-    /// Join data type
+    /// Json data type
     /// </summary>
     public record Json : DataType
     {
@@ -519,7 +519,16 @@ public abstract record DataType : IWriteSql
             writer.Write("JSON");
         }
     }
-
+    /// <summary>
+    /// Binary Json data type
+    /// </summary>
+    public record JsonB : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("JSONB");
+        }
+    }
     /// <summary>
     /// MySQL medium integer ([1]) with optional display width e.g. MEDIUMINT or MEDIUMINT(5)
     ///
