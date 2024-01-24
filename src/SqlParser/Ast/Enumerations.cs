@@ -166,8 +166,10 @@ public enum DateTimeField
     Quarter,
     Time,
     Timezone,
+    TimezoneAbbr,
     TimezoneHour,
     TimezoneMinute,
+    TimezoneRegion,
     NoDateTime
 }
 

@@ -1319,8 +1319,10 @@ namespace SqlParser.Tests
             VerifiedStatement("SELECT EXTRACT(MILLISECONDS FROM d)");
             VerifiedStatement("SELECT EXTRACT(QUARTER FROM d)");
             VerifiedStatement("SELECT EXTRACT(TIMEZONE FROM d)");
+            VerifiedStatement("SELECT EXTRACT(TIMEZONE_ABBR FROM d)");
             VerifiedStatement("SELECT EXTRACT(TIMEZONE_HOUR FROM d)");
             VerifiedStatement("SELECT EXTRACT(TIMEZONE_MINUTE FROM d)");
+            VerifiedStatement("SELECT EXTRACT(TIMEZONE_REGION FROM d)");
             VerifiedStatement("SELECT EXTRACT(TIME FROM d)");
 
             var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT EXTRACT(JIFFY FROM d)"));

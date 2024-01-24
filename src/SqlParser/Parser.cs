@@ -1823,8 +1823,10 @@ public class Parser
             Keyword.QUARTER => DateTimeField.Quarter,
             Keyword.TIME => DateTimeField.Time,
             Keyword.TIMEZONE => DateTimeField.Timezone,
+            Keyword.TIMEZONE_ABBR => DateTimeField.TimezoneAbbr,
             Keyword.TIMEZONE_HOUR => DateTimeField.TimezoneHour,
             Keyword.TIMEZONE_MINUTE => DateTimeField.TimezoneMinute,
+            Keyword.TIMEZONE_REGION => DateTimeField.TimezoneRegion,
             _ => throw Expected("date/time field", token)
         };
     }

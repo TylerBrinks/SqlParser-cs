@@ -51,6 +51,8 @@ public static class EnumWriter
 
             DateTimeField.TimezoneMinute => "TIMEZONE_MINUTE",
             DateTimeField.TimezoneHour => "TIMEZONE_HOUR",
+            DateTimeField.TimezoneAbbr => "TIMEZONE_ABBR",
+            DateTimeField.TimezoneRegion => "TIMEZONE_REGION",
 
             FileFormat.None => null,
 
