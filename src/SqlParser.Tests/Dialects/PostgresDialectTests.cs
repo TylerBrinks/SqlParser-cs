@@ -358,6 +358,8 @@ namespace SqlParser.Tests.Dialects
             NO MINVALUE  MAXVALUE 20 OWNED BY NONE
             """;
             OneStatementParsesTo(sql, "CREATE TEMPORARY SEQUENCE IF NOT EXISTS name3 INCREMENT 1 NO MINVALUE MAXVALUE 20 OWNED BY NONE");
+
+            Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE SEQUENCE foo INCREMENT 1 NO MINVALUE NO"));
         }
 
         [Fact]

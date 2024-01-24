@@ -8864,12 +8864,9 @@ public class Parser
         }
 
         // [ [ NO ] CYCLE ]
-        if (ParseKeyword(Keyword.NO))
+        if (ParseKeywordSequence(Keyword.NO, Keyword.CYCLE))
         {
-            if (ParseKeyword(Keyword.CYCLE))
-            {
-                sequenceOptions.Add(new SequenceOptions.Cycle(true));
-            }
+            sequenceOptions.Add(new SequenceOptions.Cycle(true));
         }
         else if (ParseKeyword(Keyword.CYCLE))
         {
