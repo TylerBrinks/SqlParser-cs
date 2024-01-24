@@ -321,7 +321,7 @@ public class Parser
         }
         else if (ParseKeywordSequence(Keyword.RELAY, Keyword.LOGS))
         {
-            if(ParseKeywordSequence(Keyword.FOR, Keyword.CHANNEL))
+            if (ParseKeywordSequence(Keyword.FOR, Keyword.CHANNEL))
             {
                 channel = ParseObjectName();
             }
@@ -358,7 +358,7 @@ public class Parser
                 var next = NextToken();
                 switch (next)
                 {
-                    case Word {Keyword: Keyword.WITH}:
+                    case Word { Keyword: Keyword.WITH }:
                         readLock = ParseKeywordSequence(Keyword.READ, Keyword.LOCK);
                         break;
 
@@ -4910,6 +4910,68 @@ public class Parser
                 operation = new RenameColumn(oldColumnName, newColumnName);
             }
         }
+        else if (ParseKeyword(Keyword.DISABLE))
+        {
+            if (ParseKeywordSequence(Keyword.ROW, Keyword.LEVEL, Keyword.SECURITY))
+            {
+                operation = new DisableRowLevelSecurity();
+            }
+            else if (ParseKeyword(Keyword.RULE))
+            {
+                var name = ParseIdentifier();
+                operation = new DisableRule(name);
+            }
+            else if (ParseKeyword(Keyword.TRIGGER))
+            {
+                var name = ParseIdentifier();
+                operation = new DisableTrigger(name);
+            }
+            else
+            {
+                throw Expected("ROW LEVEL SECURITY, RULE, or TRIGGER after DISABLE", PeekToken());
+            }
+        }
+        else if (ParseKeyword(Keyword.ENABLE))
+        {
+            if (ParseKeywordSequence(Keyword.ALWAYS, Keyword.RULE))
+            {
+                var name = ParseIdentifier();
+                operation = new EnableAlwaysRule(name);
+            }
+            else if (ParseKeywordSequence(Keyword.ALWAYS, Keyword.TRIGGER))
+            {
+                var name = ParseIdentifier();
+                operation = new EnableAlwaysTrigger(name);
+            }
+            else if (ParseKeywordSequence(Keyword.ROW, Keyword.LEVEL, Keyword.SECURITY))
+            {
+                operation = new EnableRowLevelSecurity();
+            }
+            else if (ParseKeywordSequence(Keyword.REPLICA, Keyword.RULE))
+            {
+                var name = ParseIdentifier();
+                operation = new EnableReplicaRule(name);
+            }
+            else if (ParseKeywordSequence(Keyword.REPLICA, Keyword.TRIGGER))
+            {
+                var name = ParseIdentifier();
+                operation = new EnableReplicaTrigger(name);
+            }
+            else if (ParseKeyword(Keyword.RULE))
+            {
+                var name = ParseIdentifier();
+                operation = new EnableRule(name);
+            }
+            else if (ParseKeyword(Keyword.TRIGGER))
+            {
+                var name = ParseIdentifier();
+                operation = new EnableTrigger(name);
+            }
+            else
+            {
+                throw Expected("ALWAYS, REPLICA, ROW LEVEL SECURITY, RULE, or TRIGGER after ENABLE", PeekToken());
+            }
+        }
         else if (ParseKeyword(Keyword.DROP))
         {
             if (ParseKeywordSequence(Keyword.IF, Keyword.EXISTS, Keyword.PARTITION))
@@ -5574,7 +5636,7 @@ public class Parser
         };
 
         // Parse array data types. Note: this is postgresql-specific and different from
-        // Keyword::ARRAY syntax from above
+        // Keyword.ARRAY syntax from above
         while (ConsumeToken<LeftBracket>())
         {
             ExpectToken<RightBracket>();
@@ -6688,7 +6750,7 @@ public class Parser
         return new ForClause.Xml(forXml, elements, binaryBase64, root, type);
     }
     /// <summary>
-    ///  /// Parse a "query body", which is an expression with roughly the
+    /// Parse a "query body", which is an expression with roughly the
     /// following grammar:
     /// `sql
     ///   query_body ::= restricted_select | '(' subquery ')' | set_operation

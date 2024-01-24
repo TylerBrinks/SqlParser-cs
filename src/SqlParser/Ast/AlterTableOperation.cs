@@ -38,16 +38,51 @@ public abstract record AlterTableOperation : IWriteSql
         {
             writer.Write("ADD");
 
-            if(ColumnKeyword) {
+            if (ColumnKeyword)
+            {
                 writer.Write(" COLUMN");
             }
 
-            if(IfNotExists)
+            if (IfNotExists)
             {
                 writer.Write($" {IIfNotExists.IfNotExistsPhrase}");
             }
 
             writer.WriteSql($" {ColumnDef}");
+        }
+    }
+
+    /// <summary>
+    /// DISABLE ROW LEVEL SECURITY
+    /// Note: this is a PostgreSQL-specific operation.
+    /// </summary>
+    public record DisableRowLevelSecurity : AlterTableOperation
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"DISABLE ROW LEVEL SECURITY");
+        }
+    }
+    /// <summary>
+    /// DISABLE RULE rewrite_rule_name
+    /// Note: this is a PostgreSQL-specific operation.
+    /// </summary>
+    public record DisableRule(Ident Name) : AlterTableOperation
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"DISABLE RULE {Name}");
+        }
+    }
+    /// <summary>
+    /// DISABLE TRIGGER [ trigger_name | ALL | USER ]
+    /// Note: this is a PostgreSQL-specific operation.
+    /// </summary>
+    public record DisableTrigger(Ident Name) : AlterTableOperation
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"DISABLE TRIGGER {Name}");
         }
     }
     /// <summary>
@@ -109,6 +144,76 @@ public abstract record AlterTableOperation : IWriteSql
         public override void ToSql(SqlTextWriter writer)
         {
             writer.Write("DROP PRIMARY KEY");
+        }
+    }
+    /// ENABLE ALWAYS RULE rewrite_rule_name
+    ///
+    /// Note: this is a PostgreSQL-specific operation.
+    public record EnableAlwaysRule(Ident Name) : AlterTableOperation
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"ENABLE ALWAYS RULE {Name}");
+        }
+    }
+    /// ENABLE ALWAYS TRIGGER trigger_name
+    ///
+    /// Note: this is a PostgreSQL-specific operation.
+    public record EnableAlwaysTrigger(Ident Name) : AlterTableOperation
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"ENABLE ALWAYS TRIGGER {Name}");
+        }
+    }
+    /// ENABLE REPLICA RULE rewrite_rule_name
+    ///
+    /// Note: this is a PostgreSQL-specific operation.
+    public record EnableReplicaRule(Ident Name) : AlterTableOperation
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"ENABLE REPLICA RULE {Name}");
+        }
+    }
+    /// ENABLE REPLICA TRIGGER trigger_name
+    ///
+    /// Note: this is a PostgreSQL-specific operation.
+    public record EnableReplicaTrigger(Ident Name) : AlterTableOperation
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"ENABLE REPLICA TRIGGER {Name}");
+        }
+    }
+    /// ENABLE ROW LEVEL SECURITY
+    ///
+    /// Note: this is a PostgreSQL-specific operation.
+    public record EnableRowLevelSecurity : AlterTableOperation
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"ENABLE ROW LEVEL SECURITY");
+        }
+    }
+    /// ENABLE RULE rewrite_rule_name
+    ///
+    /// Note: this is a PostgreSQL-specific operation.
+    public record EnableRule(Ident Name) : AlterTableOperation
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"ENABLE RULE {Name}");
+        }
+    }
+    /// ENABLE TRIGGER [ trigger_name | ALL | USER ]
+    ///
+    /// Note: this is a PostgreSQL-specific operation.
+    public record EnableTrigger(Ident Name) : AlterTableOperation
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"ENABLE TRIGGER {Name}");
         }
     }
     /// <summary>

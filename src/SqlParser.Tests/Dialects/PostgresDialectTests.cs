@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using SqlParser.Ast;
+﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
@@ -2075,6 +2074,30 @@ namespace SqlParser.Tests.Dialects
         {
             var dialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
             VerifiedOnlySelect("SELECT REGEXP.REGEXP AS REGEXP FROM REGEXP AS REGEXP WHERE REGEXP.REGEXP", dialects);
+        }
+
+        [Fact]
+        public void Parse_Alter_Table_Disable()
+        {
+            VerifiedStatement("ALTER TABLE tab DISABLE ROW LEVEL SECURITY");
+            VerifiedStatement("ALTER TABLE tab DISABLE RULE rule_name");
+            VerifiedStatement("ALTER TABLE tab DISABLE TRIGGER ALL");
+            VerifiedStatement("ALTER TABLE tab DISABLE TRIGGER USER");
+            VerifiedStatement("ALTER TABLE tab DISABLE TRIGGER trigger_name");
+        }
+
+        [Fact]
+        public void Parse_Alter_Table_Enable()
+        {
+            VerifiedStatement("ALTER TABLE tab ENABLE ALWAYS RULE rule_name");
+            VerifiedStatement("ALTER TABLE tab ENABLE ALWAYS TRIGGER trigger_name");
+            VerifiedStatement("ALTER TABLE tab ENABLE REPLICA TRIGGER trigger_name");
+            VerifiedStatement("ALTER TABLE tab ENABLE REPLICA RULE rule_name");
+            VerifiedStatement("ALTER TABLE tab ENABLE ROW LEVEL SECURITY");
+            VerifiedStatement("ALTER TABLE tab ENABLE RULE rule_name");
+            VerifiedStatement("ALTER TABLE tab ENABLE TRIGGER ALL");
+            VerifiedStatement("ALTER TABLE tab ENABLE TRIGGER USER");
+            VerifiedStatement("ALTER TABLE tab ENABLE TRIGGER trigger_name");
         }
     }
 }

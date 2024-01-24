@@ -7,7 +7,7 @@ public ref struct Tokenizer
 {
     private Dialect _dialect;
     private State _state;
-    public readonly bool _unescape;
+    private readonly bool _unescape;
 
     public Tokenizer(bool unescape = true)
     {
