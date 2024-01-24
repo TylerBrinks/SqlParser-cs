@@ -3862,7 +3862,7 @@ public class Parser
                 version = ParseIdentifier();
             }
 
-            var cascade = ParseKeyword(Keyword.CASCADE);
+            cascade = ParseKeyword(Keyword.CASCADE);
         }
 
         return new CreateExtension(name, ifNot, cascade, schema, version);
@@ -7999,8 +7999,11 @@ public class Parser
 
         var table = ParseKeyword(Keyword.TABLE);
         var tableName = ParseObjectName();
+
+        var tableAlias = _dialect is PostgreSqlDialect && ParseKeyword(Keyword.AS) ? ParseIdentifier() : null;
+
         var isMySql = _dialect is MySqlDialect;
-        Sequence<Ident>? columns = null;//ParseParenthesizedColumnList(IsOptional.Optional, isMySql);
+        Sequence<Ident>? columns = null;
         Sequence<Expression>? partitioned = null;
         Sequence<Ident>? afterColumns = null;
         Statement.Select? source = null;
@@ -8076,7 +8079,8 @@ public class Parser
             On = on,
             Returning = returning,
             ReplaceInto = false,
-            Priority = priority
+            Priority = priority,
+            Alias = tableAlias
         };
     }
 

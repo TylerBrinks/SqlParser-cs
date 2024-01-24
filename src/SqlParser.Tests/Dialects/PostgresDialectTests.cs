@@ -2126,5 +2126,67 @@ namespace SqlParser.Tests.Dialects
             VerifiedStatement("CREATE EXTENSION extension_name WITH VERSION version CASCADE");
             VerifiedStatement("CREATE EXTENSION extension_name WITH SCHEMA schema_name VERSION version");
         }
+
+        [Fact]
+        public void Test_Complex_Postgres_Insert_With_Alias()
+        {
+            VerifiedStatement("WITH existing AS (SELECT test_table.id FROM test_tables AS test_table WHERE (a = 12) AND (b = 34)), inserted AS (INSERT INTO test_tables AS test_table (id, a, b, c) VALUES (DEFAULT, 56, 78, 90) ON CONFLICT(a, b) DO UPDATE SET c = EXCLUDED.c WHERE (test_table.c <> EXCLUDED.c)) SELECT c FROM existing");
+        }
+
+        [Fact]
+        public void Test_Simple_Postgres_Insert_With_Alias()
+        {
+            var insert = (Statement.Insert)VerifiedStatement("INSERT INTO test_tables AS test_table (id, a) VALUES (DEFAULT, 123)");
+
+            var values = new Values(new Sequence<Sequence<Expression>>
+            {
+                new()
+                {
+                    new Identifier("DEFAULT"),
+                    new LiteralValue(new Value.Number("123"))
+                }
+            });
+
+            var columns = new Sequence<Ident> {"id", "a"};
+
+            var expected = new Statement.Insert("test_tables",
+                new Statement.Select(new Query(new SetExpression.ValuesExpression(values))))
+            {
+                Columns = columns,
+                Into = true,
+                Alias = new Ident("test_table"),
+                AfterColumns = new Sequence<Ident>()
+            };
+
+            Assert.Equal(expected, insert);
+        }
+
+        [Fact]
+        public void Test_Simple_Postgres_Insert_With_Quoted_Alias()
+        {
+            var insert = (Statement.Insert)VerifiedStatement("INSERT INTO test_tables AS \"Test_Table\" (id, a) VALUES (DEFAULT, '0123')");
+
+            var values = new Values(new Sequence<Sequence<Expression>>
+            {
+                new()
+                {
+                    new Identifier("DEFAULT"),
+                    new LiteralValue(new Value.SingleQuotedString("0123"))
+                }
+            });
+
+            var columns = new Sequence<Ident> { "id", "a" };
+
+            var expected = new Statement.Insert("test_tables",
+                new Statement.Select(new Query(new SetExpression.ValuesExpression(values))))
+            {
+                Columns = columns,
+                Into = true,
+                Alias = new Ident("Test_Table", Symbols.DoubleQuote),
+                AfterColumns = new Sequence<Ident>()
+            };
+
+            Assert.Equal(expected, insert);
+        }
     }
 }

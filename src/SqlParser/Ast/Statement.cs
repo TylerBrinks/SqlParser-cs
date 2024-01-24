@@ -236,7 +236,7 @@ public abstract record Statement : IWriteSql, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-           writer.WriteSql($"CALL {Function}");
+            writer.WriteSql($"CALL {Function}");
         }
     }
     /// <summary>
@@ -486,11 +486,13 @@ public abstract record Statement : IWriteSql, IElement
 
             writer.WriteSql($"CREATE EXTENSION {ifNotExists}{Name}");
 
-            if (Cascade || Schema != null)
+            if (Cascade || Schema != null || Version != null)
             {
+                writer.Write(" WITH");
+
                 if (Schema != null)
                 {
-                    writer.WriteSql($" SCHEMA {Name}");
+                    writer.WriteSql($" SCHEMA {Schema}");
                 }
 
                 if (Version != null)
@@ -500,7 +502,7 @@ public abstract record Statement : IWriteSql, IElement
 
                 if (Cascade)
                 {
-                    writer.Write($" CASCADE");
+                    writer.Write(" CASCADE");
                 }
             }
         }
@@ -1570,6 +1572,8 @@ public abstract record Statement : IWriteSql, IElement
         public bool Ignore { get; init; }
         /// INTO - optional keyword
         public bool Into { get; init; }
+        /// table_name as foo (for PostgreSQL)
+        public Ident? Alias { get; init; }
         /// COLUMNS
         public Sequence<Ident>? Columns { get; init; }
         /// Overwrite (Hive)
@@ -1590,15 +1594,17 @@ public abstract record Statement : IWriteSql, IElement
 
         public override void ToSql(SqlTextWriter writer)
         {
+            var tableName = Alias != null ? $"{Name.ToSql()} as {Alias.ToSql()}" : $"{Name.ToSql()}";
+
             if (Or != SqliteOnConflict.None)
             {
-                writer.WriteSql($"INSERT OR {Or} INTO {Name} ");
+                writer.WriteSql($"INSERT OR {Or} INTO {tableName} ");
             }
             else
             {
                 writer.Write(ReplaceInto ? "REPLACE" : "INSERT");
 
-                if (Priority!= MySqlInsertPriority.None)
+                if (Priority != MySqlInsertPriority.None)
                 {
                     writer.WriteSql($" {Priority}");
                 }
@@ -1607,7 +1613,7 @@ public abstract record Statement : IWriteSql, IElement
                 var into = Into ? " INTO" : null;
                 var table = Table ? " TABLE" : null;
                 var ignore = Ignore ? " IGNORE" : null;
-                writer.Write($"{ignore}{over}{into}{table} {Name} ");
+                writer.Write($"{ignore}{over}{into}{table} {tableName} ");
             }
 
             if (Columns.SafeAny())
