@@ -1934,6 +1934,7 @@ public class Parser
             ShiftRight when _dialect is PostgreSqlDialect or DuckDbDialect or GenericDialect => BinaryOperator.PGBitwiseShiftRight,
             Hash when _dialect is PostgreSqlDialect => BinaryOperator.PGBitwiseXor,
             Overlap when _dialect is PostgreSqlDialect or DuckDbDialect => BinaryOperator.PGOverlap,
+            CaretAt when _dialect is PostgreSqlDialect or GenericDialect => BinaryOperator.PGStartsWith,
             Tilde => BinaryOperator.PGRegexMatch,
             TildeAsterisk => BinaryOperator.PGRegexIMatch,
             ExclamationMarkTilde => BinaryOperator.PGRegexNotMatch,
@@ -2349,17 +2350,18 @@ public class Parser
                 or DuckIntDiv
                 or Modulo
                 or StringConcat
-                => MulDivModOpPrecedence, // MultiplyPrecedence,
-
+                => MulDivModOpPrecedence,
 
             DoubleColon
                 or Colon
-                or ExclamationMark => ArrowPrecedence,
+                or ExclamationMark 
+                => ArrowPrecedence,
 
             LeftBracket
                 or LongArrow
                 or Arrow
                 or Overlap
+                or CaretAt
                 or HashArrow
                 or HashLongArrow
                 or AtArrow

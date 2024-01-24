@@ -86,6 +86,8 @@ public enum BinaryOperator
     PGRegexNotMatch,
     // Postgres Regex not IMatch !~*
     PGRegexNotIMatch,
+    // String "starts with", eg: `a ^@ b` (PostgreSQL-specific)
+    PGStartsWith,
     // PostgreSQL-specific custom operator.
     //
     // https://www.postgresql.org/docs/current/sql-createoperator.html

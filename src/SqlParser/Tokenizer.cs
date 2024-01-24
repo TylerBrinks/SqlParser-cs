@@ -113,8 +113,8 @@ public ref struct Tokenizer
             Symbols.Backslash => TokenizeSingleCharacter(new Backslash()),
             Symbols.SquareBracketOpen => TokenizeSingleCharacter(new LeftBracket()),
             Symbols.SquareBracketClose => TokenizeSingleCharacter(new RightBracket()),
-            Symbols.Ampersand => TokenizeAmpersand(), //TokenizeSingleCharacter(new Ampersand()),
-            Symbols.Caret => TokenizeSingleCharacter(new Caret()),
+            Symbols.Ampersand => TokenizeAmpersand(),
+            Symbols.Caret => TokenizeCaret(),
             Symbols.CurlyBracketOpen => TokenizeSingleCharacter(new LeftBrace()),
             Symbols.CurlyBracketClose => TokenizeSingleCharacter(new RightBrace()),
 
@@ -732,9 +732,6 @@ public ref struct Tokenizer
             Symbols.Equal => TokenizeSingleCharacter(new DoubleEqual()),
             _ => new Equal()
         };
-        //return _state.Peek() == Symbols.GreaterThan
-        //    ? TokenizeSingleCharacter(new RightArrow())
-        //    : new Equal();
     }
 
     private Token TokenizeExclamation()
@@ -815,6 +812,19 @@ public ref struct Tokenizer
 
         _state.Next();
         return new Overlap();
+    }
+
+    private Token TokenizeCaret()
+    {
+         _state.Next();
+         var token = _state.Peek();
+
+         if (token is Symbols.At)
+         {
+             return TokenizeSingleCharacter(new CaretAt());
+         }
+
+         return new Caret();
     }
 
     private Token TokenizeSnowflakeComment()
