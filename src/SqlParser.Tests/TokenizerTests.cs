@@ -620,5 +620,46 @@ namespace SqlParser.Tests
             };
             Assert.Equal(expected, tokens);
         }
+
+        [Fact]
+        public void Tokenize_Pg_Like_Match()
+        {
+            var sql = "SELECT col ~~ '_a%', col ~~* '_a%', col !~~ '_a%', col !~~* '_a%'";
+            var tokens = new Tokenizer().Tokenize(sql, new GenericDialect());
+
+            var expected = new Sequence<Token>
+            {
+                new Word("SELECT"),
+                new Whitespace(WhitespaceKind.Space),
+                new Word("col"),
+                new Whitespace(WhitespaceKind.Space),
+                new DoubleTilde(),
+                new Whitespace(WhitespaceKind.Space),
+                new SingleQuotedString("_a%"),
+                new Comma(),
+                new Whitespace(WhitespaceKind.Space),
+                new Word("col"),
+                new Whitespace(WhitespaceKind.Space),
+                new DoubleTildeAsterisk(),
+                new Whitespace(WhitespaceKind.Space),
+                new SingleQuotedString("_a%"),
+                new Comma(),
+                new Whitespace(WhitespaceKind.Space),
+                new Word("col"),
+                new Whitespace(WhitespaceKind.Space),
+                new ExclamationMarkDoubleTilde(),
+                new Whitespace(WhitespaceKind.Space),
+                new SingleQuotedString("_a%"),
+                new Comma(),
+                new Whitespace(WhitespaceKind.Space),
+                new Word("col"),
+                new Whitespace(WhitespaceKind.Space),
+                new ExclamationMarkDoubleTildeAsterisk(),
+                new Whitespace(WhitespaceKind.Space),
+                new SingleQuotedString("_a%"),
+            };
+
+            Assert.Equal(expected, tokens);
+        }
     }
 }

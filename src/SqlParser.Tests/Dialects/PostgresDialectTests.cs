@@ -2189,5 +2189,28 @@ namespace SqlParser.Tests.Dialects
 
             Assert.Equal(expected, insert);
         }
+
+        [Fact]
+        public void Parse_Pg_Like_Match_Ops()
+        {
+            var likeMatchOps = new Dictionary<string, BinaryOperator>
+            {
+                { "~~", BinaryOperator.PGLikeMatch},
+                { "~~*", BinaryOperator.PGILikeMatch},
+                { "!~~", BinaryOperator.PGNotLikeMatch},
+                { "!~~*", BinaryOperator.PGNotILikeMatch }
+            };
+
+            foreach (var op in likeMatchOps)
+            {
+                var select = VerifiedOnlySelect($"SELECT 'abc' {op.Key} 'a_c%'");
+
+                Assert.Equal(new SelectItem.UnnamedExpression(new BinaryOp(
+                    new LiteralValue(new Value.SingleQuotedString("abc")),
+                    op.Value,
+                    new LiteralValue(new Value.SingleQuotedString("a_c%"))
+                )), select.Projection[0]);
+            }
+        }
     }
 }

@@ -48,6 +48,10 @@ public static class EnumWriter
             BinaryOperator.PGRegexNotMatch => "!~",
             BinaryOperator.PGRegexNotIMatch => "!~*",
             BinaryOperator.PGStartsWith => "^@",
+            BinaryOperator.PGLikeMatch => "~~",
+            BinaryOperator.PGILikeMatch => "~~*",
+            BinaryOperator.PGNotLikeMatch => "!~~",
+            BinaryOperator.PGNotILikeMatch => "!~~*",
 
             DateTimeField.TimezoneMinute => "TIMEZONE_MINUTE",
             DateTimeField.TimezoneHour => "TIMEZONE_HOUR",

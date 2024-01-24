@@ -1941,6 +1941,10 @@ public class Parser
             TildeAsterisk => BinaryOperator.PGRegexIMatch,
             ExclamationMarkTilde => BinaryOperator.PGRegexNotMatch,
             ExclamationMarkTildeAsterisk => BinaryOperator.PGRegexNotIMatch,
+            DoubleTilde => BinaryOperator.PGLikeMatch,
+            DoubleTildeAsterisk => BinaryOperator.PGILikeMatch,
+            ExclamationMarkDoubleTilde => BinaryOperator.PGNotLikeMatch,
+            ExclamationMarkDoubleTildeAsterisk => BinaryOperator.PGNotILikeMatch,
             Word wrd => MatchKeyword(wrd.Keyword),
             _ => BinaryOperator.None
         };
@@ -2333,6 +2337,10 @@ public class Parser
                 or TildeAsterisk
                 or ExclamationMarkTilde
                 or ExclamationMarkTildeAsterisk
+                or DoubleTilde
+                or DoubleTildeAsterisk
+                or ExclamationMarkDoubleTilde
+                or ExclamationMarkDoubleTildeAsterisk
                 or Spaceship
                 => BetweenPrecedence,
 

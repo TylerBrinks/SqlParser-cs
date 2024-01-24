@@ -124,7 +124,7 @@ public ref struct Tokenizer
             Symbols.At => TokenizeAt(character),
             Symbols.QuestionMark => TokenizeQuestionMark(),
             // Identifier or keyword
-            _ when _dialect.IsIdentifierStart(character) => TokenizeIdentifierOrKeyword(new []{ character }),
+            _ when _dialect.IsIdentifierStart(character) => TokenizeIdentifierOrKeyword(new[] { character }),
             Symbols.Dollar => TokenizeDollar(),
             _ when string.IsNullOrWhiteSpace(character.ToString()) => TokenizeSingleCharacter(new Whitespace(WhitespaceKind.Space)),
             // Unknown character
@@ -308,8 +308,8 @@ public ref struct Tokenizer
                         var symbol = next switch
                         {
                             Symbols.SingleQuote
-                                or Symbols.DoubleQuote 
-                                or Symbols.Backslash 
+                                or Symbols.DoubleQuote
+                                or Symbols.Backslash
                                 or Symbols.Percent
                                 or Symbols.Underscore
                                 => next,
@@ -454,7 +454,7 @@ public ref struct Tokenizer
 
         if (_dialect.IsIdentifierStart(Symbols.Percent))
         {
-            return TokenizeIdentifierOrKeyword(new[]{ character, next });
+            return TokenizeIdentifierOrKeyword(new[] { character, next });
         }
 
         return new Modulo();
@@ -747,9 +747,21 @@ public ref struct Tokenizer
 
             case Symbols.Tilde:
                 _state.Next();
-                return _state.Peek() == Symbols.Asterisk
-                    ? TokenizeSingleCharacter(new ExclamationMarkTildeAsterisk())
-                    : new ExclamationMarkTilde();
+                var peek = _state.Peek();
+                switch (peek)
+                {
+                    case Symbols.Asterisk:
+                        return TokenizeSingleCharacter(new ExclamationMarkTildeAsterisk());
+
+                    case Symbols.Tilde:
+                        _state.Next();
+                        return _state.Peek() == Symbols.Asterisk ? 
+                            TokenizeSingleCharacter(new ExclamationMarkDoubleTildeAsterisk()) 
+                            : new ExclamationMarkDoubleTilde();
+
+                    default:
+                        return  new ExclamationMarkTilde();
+                }
 
             default:
                 return new ExclamationMark();
@@ -816,15 +828,15 @@ public ref struct Tokenizer
 
     private Token TokenizeCaret()
     {
-         _state.Next();
-         var token = _state.Peek();
+        _state.Next();
+        var token = _state.Peek();
 
-         if (token is Symbols.At)
-         {
-             return TokenizeSingleCharacter(new CaretAt());
-         }
+        if (token is Symbols.At)
+        {
+            return TokenizeSingleCharacter(new CaretAt());
+        }
 
-         return new Caret();
+        return new Caret();
     }
 
     private Token TokenizeSnowflakeComment()
@@ -841,9 +853,22 @@ public ref struct Tokenizer
     private Token TokenizeTilde()
     {
         _state.Next();
-        return _state.Peek() == Symbols.Asterisk
-            ? TokenizeSingleCharacter(new TildeAsterisk())
-            : new Tilde();
+        var peek = _state.Peek();
+
+        switch (peek)
+        {
+            case Symbols.Asterisk:
+                return TokenizeSingleCharacter(new TildeAsterisk());
+           
+            case Symbols.Tilde:
+                _state.Next();
+                return _state.Peek() == Symbols.Asterisk 
+                    ? TokenizeSingleCharacter(new DoubleTildeAsterisk()) 
+                    : new DoubleTilde();
+           
+            default:
+                return new Tilde();
+        }
     }
 
     private Token TokenizeHash(char character)
@@ -886,7 +911,7 @@ public ref struct Tokenizer
             Symbols.QuestionMark => TokenizeSingleCharacter(new AtQuestion()),
             Symbols.At => TokenizeAtAt(character),
             Symbols.Space => new AtSign(),
-            _ when _dialect.IsIdentifierStart(Symbols.At) => TokenizeIdentifierOrKeyword(new[]{ character, _state.Peek() }),
+            _ when _dialect.IsIdentifierStart(Symbols.At) => TokenizeIdentifierOrKeyword(new[] { character, _state.Peek() }),
             _ => new AtSign()
         };
     }
@@ -900,8 +925,8 @@ public ref struct Tokenizer
             return new AtAt();
         }
 
-        return _dialect.IsIdentifierStart(Symbols.At) ? 
-            TokenizeIdentifierOrKeyword(new[] { character, Symbols.At, next }) 
+        return _dialect.IsIdentifierStart(Symbols.At) ?
+            TokenizeIdentifierOrKeyword(new[] { character, Symbols.At, next })
             : new AtAt();
     }
 

@@ -86,6 +86,14 @@ public enum BinaryOperator
     PGRegexNotMatch,
     // Postgres Regex not IMatch !~*
     PGRegexNotIMatch,
+    // String matches pattern (case sensitively), e.g. `a ~~ b` (PostgreSQL-specific)
+    PGLikeMatch,
+    // String matches pattern (case insensitively), e.g. `a ~~* b` (PostgreSQL-specific)
+    PGILikeMatch,
+    // String does not match pattern (case sensitively), e.g. `a !~~ b` (PostgreSQL-specific)
+    PGNotLikeMatch,
+    // String does not match pattern (case insensitively), e.g. `a !~~* b` (PostgreSQL-specific)
+    PGNotILikeMatch,
     // String "starts with", eg: `a ^@ b` (PostgreSQL-specific)
     PGStartsWith,
     // PostgreSQL-specific custom operator.
