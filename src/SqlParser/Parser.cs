@@ -2356,7 +2356,7 @@ public class Parser
 
             DoubleColon
                 or Colon
-                or ExclamationMark 
+                or ExclamationMark
                 => ArrowPrecedence,
 
             LeftBracket
@@ -5129,7 +5129,7 @@ public class Parser
             else if (ParseKeywordSequence(Keyword.ADD, Keyword.GENERATED))
             {
                 GeneratedAs? genAs = ParseKeyword(Keyword.ALWAYS) ? GeneratedAs.Always :
-                    ParseKeywordSequence(Keyword.BY, Keyword.DEFAULT) ? GeneratedAs.ByDefault : 
+                    ParseKeywordSequence(Keyword.BY, Keyword.DEFAULT) ? GeneratedAs.ByDefault :
                     null;
 
                 ExpectKeywords(Keyword.AS, Keyword.IDENTITY);
@@ -8742,17 +8742,30 @@ public class Parser
         var name = ParseObjectName();
         if (ConsumeToken<LeftParen>())
         {
-            var value = ParseNumberValue();
+            var value = ParsePragmaValue();
             ExpectRightParen();
             return new Pragma(name, value, false);
         }
 
         if (ConsumeToken<Equal>())
         {
-            return new Pragma(name, ParseNumberValue(), true);
+            return new Pragma(name, ParsePragmaValue(), true);
         }
 
         return new Pragma(name, null, false);
+    }
+
+    public Value ParsePragmaValue()
+    {
+        var value = ParseValue();
+
+        if (value is Value.SingleQuotedString or Value.DoubleQuotedString or Value.Number or Value.Placeholder)
+        {
+            return value;
+        }
+
+        PrevToken();
+        throw Expected("number or string or ? placeholder", PeekToken());
     }
     /// <summary>
     /// CREATE [ { TEMPORARY | TEMP } ] SEQUENCE [ IF NOT EXISTS ] sequence_name

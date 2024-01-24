@@ -285,5 +285,32 @@ namespace SqlParser.Tests.Dialects
         {
             VerifiedStatement("CREATE TABLE t1 (a, b AS (a * 2), c NOT NULL)");
         }
+
+        [Fact]
+        public void Pragma_Eq_String_Style()
+        {
+            var pragma = (Statement.Pragma)VerifiedStatement("PRAGMA table_info = 'sqlite_master'");
+
+            Assert.Equal("table_info", pragma.Name);
+            Assert.Equal("'sqlite_master'", pragma.Value!.ToSql());
+        }
+
+        [Fact]
+        public void Pragma_Function_String_Style()
+        {
+            var pragma = (Statement.Pragma)VerifiedStatement("PRAGMA table_info(\"sqlite_master\")");
+          
+            Assert.Equal("table_info", pragma.Name);
+            Assert.Equal("\"sqlite_master\"", pragma.Value!.ToSql());
+        }
+
+        [Fact]
+        public void Pragma_Eq_Placeholder_Style()
+        {
+            var pragma = (Statement.Pragma)VerifiedStatement("PRAGMA table_info = ?");
+
+            Assert.Equal("table_info", pragma.Name);
+            Assert.Equal("?", pragma.Value!.ToSql());
+        }
     }
 }
