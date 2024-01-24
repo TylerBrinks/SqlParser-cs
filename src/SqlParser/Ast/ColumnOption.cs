@@ -226,5 +226,20 @@ public abstract record ColumnOption : IWriteSql
         }
     }
 
+    /// <summary>
+    /// BigQuery specific: Explicit column options in a view or table
+    /// <c>OPTIONS(description="field desc")</c>
+    /// </summary>
+    /// <param name="OptionList">Options</param>
+    public record Options(Sequence<SqlOption> OptionList) : ColumnOption
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("OPTIONS(");
+            writer.WriteDelimited(OptionList, ", ");
+            writer.Write(")");
+        }
+    }
+
     public abstract void ToSql(SqlTextWriter writer);
 }

@@ -35,7 +35,9 @@ public class Parser
     public const short AmpersandPrecedence = 23;
     public const short XOrPrecedence = 24;
     public const short MulDivModOpPrecedence = 40;
+
     public const short PlusMinusPrecedence = 30;
+
     //public const short MultiplyPrecedence = 40;
     public const short ArrowPrecedence = 50;
 
@@ -57,6 +59,7 @@ public class Parser
     {
         return ParseSql(sql, new GenericDialect(), options);
     }
+
     /// <summary>
     /// Parses a given SQL string into an Abstract Syntax Tree using a given SQL dialect
     /// </summary>
@@ -78,6 +81,7 @@ public class Parser
 
         return statements;
     }
+
     /// <summary>
     /// Builds a parser with a SQL fragment that is tokenized but not yet parsed.  This
     /// allows the parser to be used for with subsets of SQL calling any of the parser's
@@ -97,6 +101,7 @@ public class Parser
         _index = 0;
         return this;
     }
+
     /// <summary>
     /// Initializes a field if the input condition is met; default initialization if not.
     /// </summary>
@@ -108,6 +113,7 @@ public class Parser
     {
         return condition ? initialization() : default;
     }
+
     /// <summary>
     /// Parse potentially multiple statements
     ///
@@ -153,6 +159,7 @@ public class Parser
 
         return statements;
     }
+
     /// <summary>
     /// Parse a single top-level statement (such as SELECT, INSERT, CREATE, etc.),
     /// stopping before the statement separator, if any.
@@ -176,6 +183,7 @@ public class Parser
             _ => throw Expected("a SQL statement", token)
         };
     }
+
     /// <summary>
     /// Match the Word token and parse the statement recursively
     /// </summary>
@@ -418,10 +426,8 @@ public class Parser
     {
         var table = ParseKeyword(Keyword.TABLE);
         var tableName = ParseObjectName();
-        var partitions = ParseInit(ParseKeyword(Keyword.PARTITION), () =>
-        {
-            return ExpectParens(() => ParseCommaSeparated(ParseExpr));
-        });
+        var partitions = ParseInit(ParseKeyword(Keyword.PARTITION),
+            () => { return ExpectParens(() => ParseCommaSeparated(ParseExpr)); });
 
         return new Truncate(tableName, partitions, table);
     }
@@ -576,8 +582,10 @@ public class Parser
             {
                 break;
             }
+
             expr = ParseInfix(expr, nextPrecedence);
         }
+
         return expr;
     }
 
@@ -676,6 +684,7 @@ public class Parser
         var token = NextToken();
 
         #region Prefix Expression Parsing
+
         LiteralValue ParseTokenValue()
         {
             PrevToken();
@@ -771,6 +780,7 @@ public class Parser
             {
                 charset = ParseObjectName();
             }
+
             ExpectRightParen();
 
             return new Expression.Convert(expr, dataType, charset, false);
@@ -921,6 +931,7 @@ public class Parser
                 {
                     forExpr = ParseExpr();
                 }
+
                 return new Overlay(expr, whatExpr, fromExpr, forExpr);
             });
         }
@@ -994,7 +1005,8 @@ public class Parser
                     {
                         //none
                     }
-                    else if (current is SingleQuotedString or EscapedStringLiteral or NationalStringLiteral or HexStringLiteral)
+                    else if (current is SingleQuotedString or EscapedStringLiteral or NationalStringLiteral
+                             or HexStringLiteral)
                     {
                         filter = ParseExpr();
                     }
@@ -1008,6 +1020,7 @@ public class Parser
                     {
                         throw Expected("either WITH or WITHOUT in LISTAGG", current);
                     }
+
                     ExpectKeyword(Keyword.COUNT);
                     onOverflow = new ListAggOnOverflow.Truncate
                     {
@@ -1016,6 +1029,7 @@ public class Parser
                     };
                 }
             }
+
             ExpectRightParen();
 
             // Once again ANSI SQL requires WITHIN GROUP, but Redshift does not. Again we choose the
@@ -1082,7 +1096,8 @@ public class Parser
 
             if (!_dialect.SupportsWithinAfterArrayAggregation)
             {
-                var orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY), () => ParseCommaSeparated(ParseOrderByExpr));
+                var orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY),
+                    () => ParseCommaSeparated(ParseOrderByExpr));
 
                 var limit = ParseInit(ParseKeyword(Keyword.LIMIT), ParseLimit);
 
@@ -1104,7 +1119,8 @@ public class Parser
             {
                 ExpectLeftParen();
 
-                withinGroup = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY), () => ParseCommaSeparated(ParseOrderByExpr));
+                withinGroup = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY),
+                    () => ParseCommaSeparated(ParseOrderByExpr));
 
                 ExpectRightParen();
             }
@@ -1271,22 +1287,28 @@ public class Parser
         #endregion
 
         #region Prefix Expression Patterns
+
         var expr = token switch
         {
             Word { Keyword: Keyword.TRUE or Keyword.FALSE or Keyword.NULL } => ParseTokenValue(),
             Word { Keyword: Keyword.CURRENT_CATALOG or Keyword.CURRENT_USER or Keyword.SESSION_USER or Keyword.USER } word
                 when _dialect is PostgreSqlDialect or GenericDialect
-                    => new Function(new ObjectName(word.ToIdent()))
-                    {
-                        Special = true
-                    },
+                => new Function(new ObjectName(word.ToIdent()))
+                {
+                    Special = true
+                },
 
-            Word { Keyword: Keyword.CURRENT_TIMESTAMP or Keyword.CURRENT_TIME or Keyword.CURRENT_DATE or Keyword.LOCALTIME or Keyword.LOCALTIMESTAMP } word
+            Word
+            {
+                Keyword: Keyword.CURRENT_TIMESTAMP or Keyword.CURRENT_TIME or Keyword.CURRENT_DATE
+                    or Keyword.LOCALTIME or Keyword.LOCALTIMESTAMP
+            } word
                 => ParseTimeFunctions(new ObjectName(word.ToIdent())),
 
             Word { Keyword: Keyword.CASE } => ParseCaseExpr(),
             Word { Keyword: Keyword.CONVERT } => ParseConvertExpr(),
-            Word { Keyword: Keyword.CAST } => ParseCastExpression((expr, dataType, format) => new Cast(expr, dataType, format)),
+            Word { Keyword: Keyword.CAST } => ParseCastExpression((expr, dataType, format) =>
+                new Cast(expr, dataType, format)),
             Word { Keyword: Keyword.TRY_CAST } => ParseTryCastExpr(),
             Word { Keyword: Keyword.SAFE_CAST } => ParseSafeCastExpr(),
             Word { Keyword: Keyword.EXISTS } => ParseExistsExpr(false),
@@ -1301,7 +1323,8 @@ public class Parser
             Word { Keyword: Keyword.LISTAGG } => ParseListAggExpr(),
             // Treat ARRAY[1,2,3] as an array [1,2,3], otherwise try as subquery or a function call
             Word { Keyword: Keyword.ARRAY } when PeekToken() is LeftBracket => ParseLeftArray(),
-            Word { Keyword: Keyword.ARRAY } when PeekToken() is LeftParen && _dialect is not ClickHouseDialect => ParseArraySubquery(),
+            Word { Keyword: Keyword.ARRAY } when PeekToken() is LeftParen && _dialect is not ClickHouseDialect =>
+                ParseArraySubquery(),
             Word { Keyword: Keyword.ARRAY_AGG } => ParseArrayAggregateExpression(),
             Word { Keyword: Keyword.NOT } => ParseNot(),
             Word { Keyword: Keyword.MATCH } when _dialect is MySqlDialect or GenericDialect => ParseMatchAgainst(),
@@ -1320,7 +1343,7 @@ public class Parser
                 or AtSign
                 or Tilde
                 when _dialect is PostgreSqlDialect
-                    => ParsePostgresOperator(token),
+                => ParsePostgresOperator(token),
 
             EscapedStringLiteral when _dialect is PostgreSqlDialect or GenericDialect => ParseTokenValue(),
 
@@ -1333,13 +1356,14 @@ public class Parser
                 or RawStringLiteral
                 or NationalStringLiteral
                 or HexStringLiteral
-                    => ParseTokenValue(),
+                => ParseTokenValue(),
 
             LeftParen => ParseLeftParen(),
             Placeholder or Colon or AtSign => ParseTokenValue(),
 
             _ => throw Expected("an expression", token)
         };
+
         #endregion
 
         if (ParseKeyword(Keyword.COLLATE))
@@ -1349,6 +1373,7 @@ public class Parser
 
         return expr;
     }
+
     /// <summary>
     /// Parse an expression value for a bigquery struct
     /// </summary>
@@ -1370,7 +1395,8 @@ public class Parser
         return (new StructField(fieldType, fieldName), trailingBracket);
     }
 
-    public (Sequence<StructField> Fields, bool MatchingTrailingBracket) ParseStructTypeDef(Func<(StructField, bool)> elementParser)
+    public (Sequence<StructField> Fields, bool MatchingTrailingBracket) ParseStructTypeDef(
+        Func<(StructField, bool)> elementParser)
     {
         var startToken = PeekToken();
         ExpectKeyword(Keyword.STRUCT);
@@ -1540,6 +1566,7 @@ public class Parser
 
         return new WindowFrame(units, startBound, endBound);
     }
+
     /// <summary>
     /// Parse `CURRENT ROW` or `{ positive number | UNBOUNDED } { PRECEDING | FOLLOWING }`
     /// </summary>
@@ -1585,13 +1612,16 @@ public class Parser
         var windowSpec = ParseWindowSpec();
         return new NamedWindowDefinition(ident, windowSpec);
     }
+
     /// <summary>
     /// Parse window spec expression
     /// </summary>
     public WindowSpec ParseWindowSpec()
     {
-        var partitionBy = ParseInit(ParseKeywordSequence(Keyword.PARTITION, Keyword.BY), () => ParseCommaSeparated(ParseExpr));
-        var orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY), () => ParseCommaSeparated(ParseOrderByExpr));
+        var partitionBy = ParseInit(ParseKeywordSequence(Keyword.PARTITION, Keyword.BY),
+            () => ParseCommaSeparated(ParseExpr));
+        var orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY),
+            () => ParseCommaSeparated(ParseOrderByExpr));
         var windowFrame = ParseInit(!ConsumeToken<RightParen>(), () =>
         {
             var windowFrame = ParseWindowFrame();
@@ -1653,6 +1683,7 @@ public class Parser
         var dataType = ParseDataType();
         return new ProcedureParam(name, dataType);
     }
+
     /// <summary>
     /// Parse create type expression
     /// </summary>
@@ -1680,7 +1711,8 @@ public class Parser
                 attributeCollation = ParseObjectName();
             }
 
-            attributes.Add(new UserDefinedTypeCompositeAttributeDef(attributeName, attributeDataType, attributeCollation));
+            attributes.Add(
+                new UserDefinedTypeCompositeAttributeDef(attributeName, attributeDataType, attributeCollation));
             var comma = ConsumeToken<Comma>();
             if (ConsumeToken<RightParen>())
             {
@@ -1696,6 +1728,7 @@ public class Parser
 
         return new CreateType(name, new UserDefinedTypeRepresentation.Composite(attributes));
     }
+
     /// <summary>
     /// Parse a group by expr. a group by Expression can be one of group sets, roll up, cube, or simple
     /// </summary>
@@ -1736,6 +1769,7 @@ public class Parser
             });
         }
     }
+
     /// <summary>
     /// parse a tuple with `(` and `)`.
     /// If `lift_singleton` is true, then a singleton tuple is lifted to a tuple of length 1, otherwise it will fail.
@@ -1891,6 +1925,7 @@ public class Parser
     {
         return Extensions.DateTimeFields.Any(kwd => kwd == keyword) ? ParseDateTimeField() : DateTimeField.None;
     }
+
     /// <summary>
     /// Parse an operator following an expression
     /// </summary>
@@ -1911,6 +1946,7 @@ public class Parser
         Sequence<string?>? pgOptions = null;
 
         #region Binary operator
+
         var regularBinaryOperator = token switch
         {
             Spaceship => BinaryOperator.Spaceship,
@@ -1932,8 +1968,10 @@ public class Parser
             Ampersand => BinaryOperator.BitwiseAnd,
             Divide => BinaryOperator.Divide,
             DuckIntDiv when _dialect is DuckDbDialect or GenericDialect => BinaryOperator.DuckIntegerDivide,
-            ShiftLeft when _dialect is PostgreSqlDialect or DuckDbDialect or GenericDialect => BinaryOperator.PGBitwiseShiftLeft,
-            ShiftRight when _dialect is PostgreSqlDialect or DuckDbDialect or GenericDialect => BinaryOperator.PGBitwiseShiftRight,
+            ShiftLeft when _dialect is PostgreSqlDialect or DuckDbDialect or GenericDialect => BinaryOperator
+                .PGBitwiseShiftLeft,
+            ShiftRight when _dialect is PostgreSqlDialect or DuckDbDialect or GenericDialect => BinaryOperator
+                .PGBitwiseShiftRight,
             Hash when _dialect is PostgreSqlDialect => BinaryOperator.PGBitwiseXor,
             Overlap when _dialect is PostgreSqlDialect or DuckDbDialect => BinaryOperator.PGOverlap,
             CaretAt when _dialect is PostgreSqlDialect or GenericDialect => BinaryOperator.PGStartsWith,
@@ -1948,6 +1986,7 @@ public class Parser
             Word wrd => MatchKeyword(wrd.Keyword),
             _ => BinaryOperator.None
         };
+
         #endregion
 
         if (regularBinaryOperator is not BinaryOperator.None)
@@ -1965,7 +2004,8 @@ public class Parser
                     regularBinaryOperator != BinaryOperator.Eq &&
                     regularBinaryOperator != BinaryOperator.NotEq)
                 {
-                    throw Expected($"one of [=, >, <, =>, =<, !=] as comparison operator, found: {regularBinaryOperator}");
+                    throw Expected(
+                        $"one of [=, >, <, =>, =<, !=] as comparison operator, found: {regularBinaryOperator}");
                 }
 
                 return keyword switch
@@ -2056,22 +2096,27 @@ public class Parser
                         {
                             return new RLike(negated, expr, ParseSubExpression(LikePrecedence), regexp);
                         }
+
                         if (ParseKeyword(Keyword.IN))
                         {
                             return ParseIn(expr, negated);
                         }
+
                         if (ParseKeyword(Keyword.BETWEEN))
                         {
                             return ParseBetween(expr, negated);
                         }
+
                         if (ParseKeyword(Keyword.LIKE))
                         {
                             return new Like(expr, negated, ParseSubExpression(LikePrecedence), ParseEscapeChar());
                         }
+
                         if (ParseKeyword(Keyword.ILIKE))
                         {
                             return new ILike(expr, negated, ParseSubExpression(LikePrecedence), ParseEscapeChar());
                         }
+
                         if (ParseKeywordSequence(Keyword.SIMILAR, Keyword.TO))
                         {
                             return new SimilarTo(expr, negated, ParseSubExpression(LikePrecedence), ParseEscapeChar());
@@ -2108,14 +2153,14 @@ public class Parser
         }
 
         if (token is Arrow
-                 or LongArrow
-                 or HashArrow
-                 or HashLongArrow
-                 or AtArrow
-                 or ArrowAt
-                 or HashMinus
-                 or AtQuestion
-                 or AtAt)
+            or LongArrow
+            or HashArrow
+            or HashLongArrow
+            or AtArrow
+            or ArrowAt
+            or HashMinus
+            or AtQuestion
+            or AtAt)
         {
             var op = token switch
             {
@@ -2170,6 +2215,7 @@ public class Parser
             return BinaryOperator.PGCustomBinaryOperator;
         }
     }
+
     /// <summary>
     /// Parse the ESCAPE CHAR portion of LIKE, ILIKE, and SIMILAR TO
     /// </summary>
@@ -2279,6 +2325,7 @@ public class Parser
 
         return inOp;
     }
+
     /// <summary>
     /// Parses `BETWEEN low AND high`, assuming the `BETWEEN` keyword was already consumed
     /// </summary>
@@ -2290,6 +2337,7 @@ public class Parser
 
         return new Between(expr, negated, low, high);
     }
+
     /// <summary>
     /// Parse a postgresql casting style which is in the form of `expr::datatype`
     /// </summary>
@@ -2299,6 +2347,7 @@ public class Parser
     {
         return new Cast(expr, ParseDataType());
     }
+
     /// <summary>
     /// Get the precedence of the next token
     /// </summary>
@@ -2323,7 +2372,8 @@ public class Parser
             Word { Keyword: Keyword.NOT } => GetNotPrecedence(),
             Word { Keyword: Keyword.IS } => IsPrecedence,
             Word { Keyword: Keyword.IN or Keyword.BETWEEN or Keyword.OPERATOR } => BetweenPrecedence,
-            Word { Keyword: Keyword.LIKE or Keyword.ILIKE or Keyword.SIMILAR or Keyword.REGEXP or Keyword.RLIKE } => LikePrecedence,
+            Word { Keyword: Keyword.LIKE or Keyword.ILIKE or Keyword.SIMILAR or Keyword.REGEXP or Keyword.RLIKE } =>
+                LikePrecedence,
             Word { Keyword: Keyword.DIV } => MulDivModOpPrecedence,
 
             Equal
@@ -2404,11 +2454,15 @@ public class Parser
             return PeekNthToken(1) switch
             {
                 Word { Keyword: Keyword.IN or Keyword.BETWEEN } => BetweenPrecedence,
-                Word { Keyword: Keyword.LIKE or Keyword.ILIKE or Keyword.SIMILAR or Keyword.REGEXP or Keyword.RLIKE } => LikePrecedence,
+                Word
+                {
+                    Keyword: Keyword.LIKE or Keyword.ILIKE or Keyword.SIMILAR or Keyword.REGEXP or Keyword.RLIKE
+                } => LikePrecedence,
                 _ => 0
             };
         }
     }
+
     /// <summary>
     /// Gets the next token in the queue without advancing the current
     /// location.  If an overrun would exist, an EOF token is returned.
@@ -2418,6 +2472,7 @@ public class Parser
     {
         return PeekNthToken(0);
     }
+
     /// <summary>
     /// Gets a token at the Nth position from the current parser location.
     /// If an overrun would exist, an EOF token is returned.
@@ -2454,6 +2509,7 @@ public class Parser
             n--;
         }
     }
+
     /// <summary>
     /// Checks if the Nth peeked token is of a given type
     /// </summary>
@@ -2466,6 +2522,7 @@ public class Parser
 
         return token.GetType() == typeof(T);
     }
+
     /// <summary>
     /// Checks if the peeked token is of a given type
     /// </summary>
@@ -2475,6 +2532,7 @@ public class Parser
     {
         return PeekToken().GetType() == typeof(T);
     }
+
     /// <summary>
     /// Gets the next token in the queue.
     /// </summary>
@@ -2505,6 +2563,7 @@ public class Parser
         _index++;
         return _index - 1 >= _tokens.Count ? null : _tokens[_index - 1];
     }
+
     /// <summary>
     /// Rewinds the token queue to the previous non-whitespace token
     /// </summary>
@@ -2529,6 +2588,7 @@ public class Parser
             return;
         }
     }
+
     /// <summary>
     /// Look for an expected sequence of keywords and consume them if they exist
     /// </summary>
@@ -2545,6 +2605,7 @@ public class Parser
         NextToken();
         return true;
     }
+
     /// <summary>
     /// Look for an expected keyword and consume it if it exists
     /// </summary>
@@ -2559,6 +2620,7 @@ public class Parser
         _index = index;
         return false;
     }
+
     /// <summary>
     /// Parses the keyword list and returns the first keyword
     /// found that matches one of the input keywords
@@ -2569,6 +2631,7 @@ public class Parser
     {
         return ParseOneOfKeywords((IEnumerable<Keyword>)keywords);
     }
+
     /// <summary>
     /// Look for an expected keyword and consume it if it exists
     /// </summary>
@@ -2594,6 +2657,7 @@ public class Parser
 
         return Keyword.undefined;
     }
+
     /// <summary>
     /// Expects the next keyword to be of a specific type.  If the keyword
     /// is not found, an exception is thrown. This makes it possible
@@ -2609,6 +2673,7 @@ public class Parser
             throw Expected($"{keyword}", PeekToken());
         }
     }
+
     /// <summary>
     /// Expect at of the keywords exist in sequence
     /// </summary>
@@ -2621,6 +2686,7 @@ public class Parser
             ExpectKeyword(keyword);
         }
     }
+
     /// <summary>
     /// Expect one lf the keywords exist in sequence
     /// </summary>
@@ -2637,6 +2703,7 @@ public class Parser
         var expected = string.Join(',', keywords);
         throw Expected($"one of the keywords {expected}");
     }
+
     /// <summary>
     ///  Consume the next token to check for a matching type.  
     /// </summary>
@@ -2652,6 +2719,7 @@ public class Parser
         NextToken();
         return true;
     }
+
     /// <summary>
     /// Attempts to consume the current token and checks the next token type.
     /// If the type is not a match, and exception is thrown.  This makes
@@ -2668,6 +2736,7 @@ public class Parser
             ThrowExpectedToken(token, PeekToken());
         }
     }
+
     /// <summary>
     /// Parse a comma-separated list of 1+ SelectItem
     /// </summary>
@@ -2689,6 +2758,7 @@ public class Parser
 
         return result;
     }
+
     /// <summary>
     /// Parse a comma-separated list of 1+ items accepted by type T
     /// </summary>
@@ -2728,6 +2798,7 @@ public class Parser
 
         return values;
     }
+
     /// <summary>
     /// Parse a comma-separated list of 0+ items accepted by type T
     /// </summary>
@@ -2772,6 +2843,7 @@ public class Parser
         _index = index;
         return default;
     }
+
     /// <summary>
     /// Run a parser method reverting back to the current position if unsuccessful.
     /// The result is checked against the default value for genetic type T. The
@@ -2796,6 +2868,7 @@ public class Parser
         var isDefault = EqualityComparer<T>.Default.Equals(result, default);
         return new MaybeParsed<T>(!isDefault, result!);
     }
+
     /// <summary>
     /// Parse either `ALL` or `DISTINCT`. Returns `true` if `DISTINCT` is parsed and results in a
     /// </summary>
@@ -2840,6 +2913,7 @@ public class Parser
         ExpectRightParen();
         return new DistinctFilter.On(columnNames);
     }
+
     /// <summary>
     /// Parse a SQL CREATE statement
     /// </summary>
@@ -2948,6 +3022,7 @@ public class Parser
 
         throw Expected("Expected an object type after CREATE", PeekToken());
     }
+
     /// <summary>
     /// Parse a CACHE TABLE statement
     /// </summary>
@@ -3037,6 +3112,7 @@ public class Parser
             throw Expected("a TABLE keyword", PeekToken());
         }
     }
+
     /// <summary>
     /// Parse as Select statement
     /// </summary>
@@ -3051,11 +3127,13 @@ public class Parser
                 NextToken();
                 return (true, ParseQuery());
             }
+
             return (false, ParseQuery());
         }
 
         throw Expected("Expected a QUERY statement", token);
     }
+
     // ReSharper disable once IdentifierTypo
     /// <summary>
     /// Parse a UNCACHE TABLE statement
@@ -3079,6 +3157,7 @@ public class Parser
 
         throw Expected("'TABLE' keyword", PeekToken());
     }
+
     /// <summary>
     /// SQLite-specific `CREATE VIRTUAL TABLE`
     /// </summary>
@@ -3322,6 +3401,7 @@ public class Parser
             }
         }
     }
+
     /// <summary>
     /// DuckDb create macro statement
     /// </summary>
@@ -3358,6 +3438,7 @@ public class Parser
         PrevToken();
         throw Expected("an object type after CREATE", PeekToken());
     }
+
     /// <summary>
     /// Parse DuckDb macro argument
     /// </summary>
@@ -3434,8 +3515,14 @@ public class Parser
         var ifNotExists = _dialect is SQLiteDialect or GenericDialect && ParseIfNotExists();
 
         var name = ParseObjectName();
-        var columns = ParseParenthesizedColumnList(IsOptional.Optional, false);
+        var columns = ParseViewColumns(); //ParseParenthesizedColumnList(IsOptional.Optional, false);
+        CreateTableOptions options = new CreateTableOptions.None();
         var withOptions = ParseOptions(Keyword.WITH);
+
+        if (withOptions.SafeAny())
+        {
+            options = new CreateTableOptions.With(withOptions);
+        }
 
         var clusterBy = ParseInit(ParseKeyword(Keyword.CLUSTER), () =>
         {
@@ -3443,22 +3530,34 @@ public class Parser
             return ParseParenthesizedColumnList(IsOptional.Optional, false);
         });
 
+        if (_dialect is BigQueryDialect or GenericDialect)
+        {
+            if (PeekToken() is Word w && w.Keyword == Keyword.OPTIONS)
+            {
+                var opts = ParseOptions(Keyword.OPTIONS);
+                if (opts.SafeAny())
+                {
+                    options = new CreateTableOptions.Options(opts);
+                }
+            }
+        }
+
         ExpectKeyword(Keyword.AS);
         var query = ParseQuery();
 
         var withNoBinding = _dialect is RedshiftDialect or GenericDialect &&
-                          ParseKeywordSequence(Keyword.WITH, Keyword.NO, Keyword.SCHEMA, Keyword.BINDING);
+                            ParseKeywordSequence(Keyword.WITH, Keyword.NO, Keyword.SCHEMA, Keyword.BINDING);
 
         return new CreateView(name, query)
         {
             Columns = columns,
-            WithOptions = withOptions,
             ClusterBy = clusterBy,
             Materialized = materialized,
             OrReplace = orReplace,
             WithNoSchemaBinding = withNoBinding,
             IfNotExists = ifNotExists,
-            Temporary = temporary
+            Temporary = temporary,
+            Options = options
         };
     }
 
@@ -3711,6 +3810,7 @@ public class Parser
             Temporary = temporary
         };
     }
+
     /// <summary>
     ///  DROP FUNCTION [ IF EXISTS ] name [ ( [ [ argmode ] [ argname ] argtype [, ...] ] ) ] [, ...]
     /// [ CASCADE | RESTRICT ]
@@ -3749,6 +3849,7 @@ public class Parser
             return new DropFunctionDesc(name, args);
         }
     }
+
     /// <summary>
     /// DECLARE name [ BINARY ] [ ASENSITIVE | INSENSITIVE ] [ [ NO ] SCROLL ]
     ///     CURSOR [ { WITH | WITHOUT } HOLD ] FOR query
@@ -3796,6 +3897,7 @@ public class Parser
             Query = query
         };
     }
+
     /// <summary>
     /// FETCH [ direction { FROM | IN } ] cursor INTO target;
     /// </summary>
@@ -4051,18 +4153,6 @@ public class Parser
             throw Expected("identifier", token);
         });
 
-        //var comment = ParseInit(ParseKeyword(Keyword.COMMENT), () =>
-        //{
-        //    ConsumeToken<Equal>();
-        //    var next = NextToken();
-        //    if (next is SingleQuotedString str)
-        //    {
-        //        return str.Value;
-        //    }
-
-        //    throw Expected("Comment", PeekToken());
-        //});
-
         int? autoIncrementOffset = null;
 
         if (ParseKeyword(Keyword.AUTO_INCREMENT))
@@ -4090,6 +4180,10 @@ public class Parser
             return cols;
 
         });
+
+        var bigQueryConfig = _dialect is BigQueryDialect or GenericDialect
+            ? ParseOptionalBigQueryCreateTableConfig()
+            : (null, null, null);
 
         // Parse optional `AS ( query )`
         var query = ParseInit<Query>(ParseKeyword(Keyword.AS), () => ParseQuery());
@@ -4173,8 +4267,36 @@ public class Parser
             OnCommit = onCommit,
             OnCluster = onCluster,
             Strict = strict,
-            AutoIncrementOffset = autoIncrementOffset
+            AutoIncrementOffset = autoIncrementOffset,
+            PartitionBy = bigQueryConfig.PartitionBy,
+            ClusterBy = bigQueryConfig.ClusterBy,
+            Options = bigQueryConfig.Options
         };
+    }
+
+    public (Expression? PartitionBy,Sequence<Ident>? ClusterBy, Sequence<SqlOption>? Options)
+        ParseOptionalBigQueryCreateTableConfig()
+    {
+        Expression? partitionBy = null;
+        Sequence<Ident>? clusterBy = null;
+        Sequence<SqlOption>? options = null;
+
+        if (ParseKeywordSequence(Keyword.PARTITION, Keyword.BY))
+        {
+            partitionBy = ParseExpr();
+        }
+
+        if (ParseKeywordSequence(Keyword.CLUSTER, Keyword.BY))
+        {
+            clusterBy = ParseCommaSeparated(ParseIdentifier);
+        }
+
+        if (PeekToken() is Word w && w.Keyword == Keyword.OPTIONS)
+        {
+            options = ParseOptions(Keyword.OPTIONS);
+        }
+
+        return (partitionBy, clusterBy, options);
     }
 
     public (Sequence<ColumnDef>, Sequence<TableConstraint>) ParseColumns()
@@ -4386,6 +4508,12 @@ public class Parser
             return ParseOptionalColumnOptionGenerated();
         }
 
+        if (_dialect is BigQueryDialect or GenericDialect && ParseKeyword(Keyword.OPTIONS))
+        {
+            PrevToken();
+            return new ColumnOption.Options(ParseOptions(Keyword.OPTIONS));
+        }
+
         if (ParseKeyword(Keyword.AS) && _dialect is MySqlDialect or SQLiteDialect or DuckDbDialect or GenericDialect)
         {
             return ParseOptionalColumnOptionAs();
@@ -4406,7 +4534,9 @@ public class Parser
                 sequenceOptions = ParseCreateSequenceOptions();
                 ExpectRightParen();
             }
-            catch (ParserException) { }
+            catch (ParserException)
+            {
+            }
 
             return new ColumnOption.Generated(GeneratedAs.Always, true, sequenceOptions);
         }
@@ -4421,7 +4551,9 @@ public class Parser
                 sequenceOptions = ParseCreateSequenceOptions();
                 ExpectRightParen();
             }
-            catch (ParserException) { }
+            catch (ParserException)
+            {
+            }
 
             return new ColumnOption.Generated(GeneratedAs.ByDefault, true, sequenceOptions);
         }
@@ -4455,7 +4587,8 @@ public class Parser
                     genAs = GeneratedAs.Always;
                 }
 
-                return new ColumnOption.Generated(genAs, true, GenerationExpr: expr, GenerationExpressionMode: expressionMode);
+                return new ColumnOption.Generated(genAs, true, GenerationExpr: expr,
+                    GenerationExpressionMode: expressionMode);
             }
             catch (ParserException)
             {
@@ -4532,8 +4665,10 @@ public class Parser
             Word { Keyword: Keyword.PRIMARY or Keyword.UNIQUE } w => ParsePrimary(w),
             Word { Keyword: Keyword.FOREIGN } => ParseForeign(),
             Word { Keyword: Keyword.CHECK } => ParseCheck(),
-            Word { Keyword: Keyword.INDEX or Keyword.KEY } w when _dialect is GenericDialect or MySqlDialect => ParseIndex(w),
-            Word { Keyword: Keyword.FULLTEXT or Keyword.SPATIAL } w when _dialect is GenericDialect or MySqlDialect => ParseText(w),
+            Word { Keyword: Keyword.INDEX or Keyword.KEY } w when _dialect is GenericDialect or MySqlDialect =>
+                ParseIndex(w),
+            Word { Keyword: Keyword.FULLTEXT or Keyword.SPATIAL } w when _dialect is GenericDialect or MySqlDialect =>
+                ParseText(w),
             _ => ParseDefault()
         };
 
@@ -4682,7 +4817,7 @@ public class Parser
     {
         var name = ParseIdentifier();
         ExpectToken<Equal>();
-        var value = ParseValue();
+        var value = ParseExpr();
         return new SqlOption(name, value);
     }
 
@@ -4746,169 +4881,38 @@ public class Parser
         }
     }
 
-    //private AlterTableOperation ParseAlterTableOperation()
-    //{
-    //    AlterTableOperation operation = null!;
+    public Sequence<ViewColumnDef>? ParseViewColumns()
+    {
+        if (ConsumeToken<LeftParen>())
+        {
+            if (PeekToken() is RightParen)
+            {
+                NextToken();
+                return null;
+            }
 
-    //    if (ParseKeyword(Keyword.ADD))
-    //    {
-    //        var constraint = ParseOptionalTableConstraint();
-    //        if (constraint != null)
-    //        {
-    //            operation = new AddConstraint(constraint);
-    //        }
-    //        else
-    //        {
-    //            var ifNotExists = ParseIfNotExists();
-    //            if (ParseKeywordSequence(Keyword.PARTITION))
-    //            {
-    //                var partitions = ExpectParens(() => ParseCommaSeparated(ParseExpr));
-    //                operation = new AddPartitions(ifNotExists, partitions);
-    //            }
-    //            else
-    //            {
-    //                var columnKeyword = ParseKeyword(Keyword.COLUMN);
+            var cols = ParseCommaSeparated(ParseViewColumn);
+            ExpectRightParen();
 
-    //                var ifNotExistsInner = false;
-    //                if (_dialect is PostgreSqlDialect or BigQueryDialect or DuckDbDialect or GenericDialect)
-    //                {
-    //                    ifNotExistsInner = ParseIfNotExists() || ifNotExists;
-    //                }
+            return cols;
+        }
 
-    //                var columnDef = ParseColumnDef();
-    //                operation = new AddColumn(columnKeyword, ifNotExistsInner, columnDef);
-    //            }
-    //        }
-    //    }
-    //    else if (ParseKeyword(Keyword.RENAME))
-    //    {
-    //        if (_dialect is PostgreSqlDialect && ParseKeyword(Keyword.CONSTRAINT))
-    //        {
-    //            var oldName = ParseIdentifier();
-    //            ExpectKeyword(Keyword.TO);
+        return null;
+    }
 
-    //            var newName = ParseIdentifier();
-    //            operation = new RenameConstraint(oldName, newName);
-    //        }
-    //        else if (ParseKeyword(Keyword.TO))
-    //        {
-    //            var newName = ParseObjectName();
-    //            operation = new RenameTable(newName);
-    //        }
-    //        else
-    //        {
-    //            ParseKeyword(Keyword.COLUMN);
-    //            var oldColumnName = ParseIdentifier();
-    //            ExpectKeyword(Keyword.TO);
-    //            var newColumnName = ParseIdentifier();
-    //            operation = new RenameColumn(oldColumnName, newColumnName);
-    //        }
-    //    }
-    //    else if (ParseKeyword(Keyword.DROP))
-    //    {
-    //        if (ParseKeywordSequence(Keyword.IF, Keyword.EXISTS, Keyword.PARTITION))
-    //        {
-    //            var partitions = ExpectParens(() => ParseCommaSeparated(ParseExpr));
-    //            operation = new DropPartitions(partitions, true);
-    //        }
-    //        else if (ParseKeyword(Keyword.PARTITION))
-    //        {
-    //            var partitions = ExpectParens(() => ParseCommaSeparated(ParseExpr));
-    //            operation = new DropPartitions(partitions, false);
-    //        }
-    //        else if (ParseKeyword(Keyword.CONSTRAINT))
-    //        {
-    //            var ifExists = ParseIfExists();
-    //            var name = ParseIdentifier();
-    //            var cascade = ParseKeyword(Keyword.CASCADE);
-    //            operation = new DropConstraint(name, ifExists, cascade);
-    //        }
-    //        else if (ParseKeywordSequence(Keyword.PRIMARY, Keyword.KEY) && _dialect is MySqlDialect or GenericDialect)
-    //        {
-    //            operation = new DropPrimaryKey();
-    //        }
-    //        else
-    //        {
-    //            ParseKeyword(Keyword.COLUMN);
-    //            var ifExists = ParseIfExists();
-    //            var columnName = ParseIdentifier();
-    //            var cascade = ParseKeyword(Keyword.CASCADE);
-    //            operation = new DropColumn(columnName, ifExists, cascade);
-    //        }
-    //    }
-    //    else if (ParseKeyword(Keyword.PARTITION))
-    //    {
-    //        var before = ExpectParens(() => ParseCommaSeparated(ParseExpr));
-    //        ExpectKeyword(Keyword.RENAME);
-    //        ExpectKeywords(Keyword.TO, Keyword.PARTITION);
+    public ViewColumnDef ParseViewColumn()
+    {
+        var name = ParseIdentifier();
+        Sequence<SqlOption>? options = null;
 
-    //        var renames = ExpectParens(() => ParseCommaSeparated(ParseExpr));
-    //        operation = new RenamePartitions(before, renames);
-    //    }
-    //    else if (ParseKeyword(Keyword.CHANGE))
-    //    {
-    //        ParseKeyword(Keyword.COLUMN);
-    //        var oldName = ParseIdentifier();
-    //        var newName = ParseIdentifier();
-    //        var dataType = ParseDataType();
-    //        var options = new Sequence<ColumnOption>();
+        if (_dialect is BigQueryDialect or GenericDialect && ParseKeyword(Keyword.OPTIONS))
+        {
+            PrevToken();
+            options = ParseOptions(Keyword.OPTIONS);
+        }
 
-    //        while (ParseOptionalColumnOption() is { } option)
-    //        {
-    //            options.Add(option);
-    //        }
-
-    //        operation = new ChangeColumn(oldName, newName, dataType, options);
-    //    }
-    //    else if (ParseKeyword(Keyword.ALTER))
-    //    {
-    //        ParseKeyword(Keyword.COLUMN);
-    //        var columnName = ParseIdentifier();
-    //        var isPostgresql = _dialect is PostgreSqlDialect;
-    //        AlterColumnOperation op;
-
-    //        if (ParseKeywordSequence(Keyword.SET, Keyword.NOT, Keyword.NULL))
-    //        {
-    //            op = new AlterColumnOperation.SetNotNull();
-    //        }
-    //        else if (ParseKeywordSequence(Keyword.DROP, Keyword.NOT, Keyword.NULL))
-    //        {
-    //            op = new AlterColumnOperation.DropNotNull();
-    //        }
-    //        else if (ParseKeywordSequence(Keyword.SET, Keyword.DEFAULT))
-    //        {
-    //            op = new AlterColumnOperation.SetDefault(ParseExpr());
-    //        }
-    //        else if (ParseKeywordSequence(Keyword.DROP, Keyword.DEFAULT))
-    //        {
-    //            op = new AlterColumnOperation.DropDefault();
-    //        }
-    //        else if (ParseKeywordSequence(Keyword.SET, Keyword.DATA, Keyword.TYPE) || (isPostgresql && ParseKeyword(Keyword.TYPE)))
-    //        {
-    //            var dataType = ParseDataType();
-    //            var @using = ParseInit(isPostgresql && ParseKeyword(Keyword.USING), ParseExpr);
-    //            op = new AlterColumnOperation.SetDataType(dataType) { Using = @using };
-    //        }
-    //        else
-    //        {
-    //            throw Expected("SET/DROP NOT NULL, SET DEFAULT, SET DATA TYPE after ALTER COLUMN", PeekToken());
-    //        }
-
-    //        operation = new AlterColumn(columnName, op);
-    //    }
-    //    else if (ParseKeyword(Keyword.SWAP))
-    //    {
-    //        ExpectKeyword(Keyword.WITH);
-    //        var name = ParseObjectName();
-    //        operation = new AlterTableOperation.SwapWith(name);
-    //    }
-    //    else
-    //    {
-    //        ThrowExpected("ADD, RENAME, PARTITION, SWAP or DROP after ALTER TABLE", PeekToken());
-    //    }
-
-    //    return operation;
-    //}
+        return new ViewColumnDef(name, options);
+    }
 
     private AlterTableOperation ParseAlterTableOperation()
     {

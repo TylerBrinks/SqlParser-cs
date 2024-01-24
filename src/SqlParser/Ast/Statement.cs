@@ -738,6 +738,9 @@ public abstract record Statement : IWriteSql, IElement
         // ReSharper disable once MemberHidesStaticFromOuterClass
         public new string? Comment { get; init; }
         public Sequence<Ident>? OrderBy { get; init; }
+        public Expression? PartitionBy { get; init; }
+        public Sequence<Ident>? ClusterBy { get; init; }
+        public Sequence<SqlOption>? Options { get; init; }
         public int? AutoIncrementOffset { get; init; }
         public string? DefaultCharset { get; init; }
         public string? Collation { get; init; }
@@ -896,6 +899,23 @@ public abstract record Statement : IWriteSql, IElement
                 writer.WriteSql($" ORDER BY ({OrderBy})");
             }
 
+            if (PartitionBy != null)
+            {
+                writer.WriteSql($" PARTITION BY {PartitionBy}");
+            }
+
+            if (ClusterBy != null)
+            {
+                writer.WriteSql($" CLUSTER BY {ClusterBy}");
+            }
+
+            if (Options.SafeAny())
+            {
+                writer.Write("OPTIONS(");
+                writer.WriteDelimited(Options, ", ");
+                writer.Write(")");
+            }
+
             if (Query != null)
             {
                 writer.WriteSql($" AS {Query}");
@@ -941,8 +961,9 @@ public abstract record Statement : IWriteSql, IElement
     {
         public bool OrReplace { get; init; }
         public bool Materialized { get; init; }
-        public Sequence<Ident>? Columns { get; init; }
-        [Visit(2)] public Sequence<SqlOption>? WithOptions { get; init; }
+        public Sequence<ViewColumnDef>? Columns { get; init; }
+        public required CreateTableOptions Options { get; init; }
+        //[Visit(2)] public Sequence<SqlOption>? WithOptions { get; init; }
         public Sequence<Ident>? ClusterBy { get; init; }
         public bool WithNoSchemaBinding { get; init; }
         public bool IfNotExists { get; init; }
@@ -957,10 +978,9 @@ public abstract record Statement : IWriteSql, IElement
 
             writer.WriteSql($"CREATE {orReplace}{materialized}{temporary}VIEW {ifNotExists}{Name}");
 
-
-            if (WithOptions.SafeAny())
+            if (Options is CreateTableOptions.With)
             {
-                writer.WriteSql($" WITH ({WithOptions!.ToSqlDelimited()})");
+                writer.WriteSql($" {Options}");
             }
 
             if (Columns.SafeAny())
@@ -971,6 +991,11 @@ public abstract record Statement : IWriteSql, IElement
             if (ClusterBy.SafeAny())
             {
                 writer.WriteSql($" CLUSTER BY ({ClusterBy!.ToSqlDelimited()})");
+            }
+
+            if (Options is CreateTableOptions.Options)
+            {
+                writer.WriteSql($"{Options}");
             }
 
             writer.Write(" AS ");

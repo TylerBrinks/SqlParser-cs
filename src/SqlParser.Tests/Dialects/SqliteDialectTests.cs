@@ -163,7 +163,7 @@ namespace SqlParser.Tests.Dialects
                     "CREATE TEMPORARY VIEW IF NOT EXISTS myschema.myview AS SELECT foo FROM bar");
 
             Assert.Equal("myschema.myview", create.Name);
-            Assert.Equal(new Sequence<Ident>(), create.Columns);
+            Assert.Null(create.Columns);
             Assert.Equal("SELECT foo FROM bar", create.Query.Query.ToSql());
             Assert.False(create.Materialized);
             Assert.False(create.OrReplace);

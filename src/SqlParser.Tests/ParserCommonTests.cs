@@ -3371,7 +3371,7 @@ namespace SqlParser.Tests
             var create = VerifiedStatement<Statement.CreateView>("CREATE VIEW v (has, cols) AS SELECT 1, 2");
 
             Assert.Equal("v", create.Name);
-            Assert.Equal(new Sequence<Ident> { "has", "cols" }, create.Columns);
+            Assert.Equal(new Sequence<ViewColumnDef> { new ViewColumnDef("has"), new ViewColumnDef("cols") }, create.Columns);
             Assert.Equal("SELECT 1, 2", create.Query.Query.ToSql());
             Assert.False(create.Materialized);
             Assert.False(create.OrReplace);
@@ -3384,12 +3384,12 @@ namespace SqlParser.Tests
         public void Parse_Create_View_With_Options()
         {
             var create = VerifiedStatement<Statement.CreateView>("CREATE VIEW v WITH (foo = 'bar', a = 123) AS SELECT 1");
-            var expected = new SqlOption[]
+            var expected = new CreateTableOptions.With(new Sequence<SqlOption>
             {
-                new ("foo", new Value.SingleQuotedString("bar")),
-                new ("a", Number("123"))
-            };
-            Assert.Equal(expected, create.WithOptions!);
+                new ("foo", new LiteralValue(new Value.SingleQuotedString("bar"))),
+                new ("a", new LiteralValue(Number("123")))
+            });
+            Assert.Equal(expected, create.Options!);
         }
 
         [Fact]
@@ -3409,7 +3409,7 @@ namespace SqlParser.Tests
             var create = VerifiedStatement<Statement.CreateView>("CREATE TEMPORARY VIEW myschema.myview AS SELECT foo FROM bar");
 
             Assert.Equal("myschema.myview", create.Name);
-            Assert.Equal(new Sequence<Ident>(), create.Columns);
+            Assert.Null(create.Columns);
             Assert.Equal("SELECT foo FROM bar", create.Query.Query.ToSql());
             Assert.False(create.Materialized);
             Assert.False(create.OrReplace);
@@ -4352,8 +4352,8 @@ namespace SqlParser.Tests
                 TableFlag = new ObjectName(tableFlag),
                 Options = new SqlOption[]
                 {
-                    new(new Ident("K1", Symbols.SingleQuote), new Value.SingleQuotedString("V1")),
-                    new(new Ident("K2", Symbols.SingleQuote), Number("0.88"))
+                    new(new Ident("K1", Symbols.SingleQuote), new LiteralValue(new Value.SingleQuotedString("V1"))),
+                    new(new Ident("K2", Symbols.SingleQuote), new LiteralValue(Number("0.88")))
                 }
             };
             Assert.Equal(cache, VerifiedStatement<Statement.Cache>($"CACHE {tableFlag} TABLE '{cacheTableName}' OPTIONS('K1' = 'V1', 'K2' = 0.88)"));
@@ -4364,8 +4364,8 @@ namespace SqlParser.Tests
                 TableFlag = new ObjectName(tableFlag),
                 Options = new SqlOption[]
                 {
-                    new(new Ident("K1", Symbols.SingleQuote), new Value.SingleQuotedString("V1")),
-                    new(new Ident("K2", Symbols.SingleQuote), Number("0.88"))
+                    new(new Ident("K1", Symbols.SingleQuote), new LiteralValue(new Value.SingleQuotedString("V1"))),
+                    new(new Ident("K2", Symbols.SingleQuote), new LiteralValue(Number("0.88")))
                 },
                 Query = query
             };
@@ -4378,8 +4378,8 @@ namespace SqlParser.Tests
                 TableFlag = new ObjectName(tableFlag),
                 Options = new SqlOption[]
                 {
-                    new(new Ident("K1", Symbols.SingleQuote), new Value.SingleQuotedString("V1")),
-                    new(new Ident("K2", Symbols.SingleQuote), Number("0.88"))
+                    new(new Ident("K1", Symbols.SingleQuote), new LiteralValue(new Value.SingleQuotedString("V1"))),
+                    new(new Ident("K2", Symbols.SingleQuote), new LiteralValue(Number("0.88")))
                 },
                 Query = query
             };
