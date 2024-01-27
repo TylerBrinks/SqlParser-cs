@@ -12,6 +12,8 @@ using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
 using Select = SqlParser.Ast.Select;
 using System.Globalization;
+using System.Runtime.CompilerServices;
+using System.Text;
 using static SqlParser.Ast.AlterTableOperation;
 
 namespace SqlParser;
@@ -2473,6 +2475,11 @@ public class Parser
         return PeekNthToken(0);
     }
 
+    public Token PeekTokenNoSkip()
+    {
+        return PeekNthTokenNoSkip(0);
+    }
+
     /// <summary>
     /// Gets a token at the Nth position from the current parser location.
     /// If an overrun would exist, an EOF token is returned.
@@ -2508,6 +2515,16 @@ public class Parser
 
             n--;
         }
+    }
+
+    public Token PeekNthTokenNoSkip(int nth)
+    {
+        if (_index + nth >= _tokens.Count)
+        {
+            return new EOF();
+        }
+
+        return _tokens[_index + nth];
     }
 
     /// <summary>
@@ -6024,17 +6041,22 @@ public class Parser
 
         return null;
     }
+
+    public ObjectName ParseObjectName()
+    {
+        return ParseObjectNameWithClause(false);
+    }
     /// <summary>
     ///  Parse a possibly qualified, possibly quoted identifier, e.g.
     /// `foo` or `schema."table"
     /// </summary>
     /// <returns></returns>
-    public ObjectName ParseObjectName()
+    public ObjectName ParseObjectNameWithClause(bool inTableClause)
     {
         var idents = new Sequence<Ident>();
         while (true)
         {
-            idents.Add(ParseIdentifier());
+            idents.Add(ParseIdentifierWithClause(inTableClause));
             if (!ConsumeToken<Period>())
             {
                 break;
@@ -6074,6 +6096,7 @@ public class Parser
 
         return idents;
     }
+
     /// <summary>
     ///  Parse a simple one-word identifier (possibly quoted, possibly a keyword)
     /// </summary>
@@ -6081,14 +6104,80 @@ public class Parser
     /// <exception cref="ParserException"></exception>
     public Ident ParseIdentifier()
     {
+        return ParseIdentifierWithClause(false);
+    }
+
+    public Ident ParseIdentifierWithClause(bool inTableClause)
+    {
         var token = NextToken();
         return token switch
         {
-            Word word => word.ToIdent(),
+            Word word => ParseIdent(word),
             SingleQuotedString s => new Ident(s.Value, Symbols.SingleQuote),
             DoubleQuotedString s => new Ident(s.Value, Symbols.DoubleQuote),
             _ => throw Expected("identifier", token)
         };
+
+        Ident ParseIdent(Word word)
+        {
+            var parsed = word.ToIdent();
+
+            // On BigQuery, hyphens are permitted in unquoted identifiers inside of a FROM or
+            // TABLE clause [0].
+            //
+            // The first segment must be an ordinary unquoted identifier, e.g. it must not start
+            // with a digit. Subsequent segments are either must either be valid identifiers or
+            // integers, e.g. foo-123 is allowed, but foo-123a is not.
+            //
+            // https://cloud.google.com/bigquery/docs/reference/standard-sql/lexical
+
+            if (_dialect is BigQueryDialect && word.QuoteStyle == null && inTableClause)
+            {
+                var requireWhitespace = false;
+                var peek = PeekTokenNoSkip();
+                var text = new StringBuilder(word.Value);
+
+                if (peek is Minus)
+                {
+                    NextToken();
+                    text.Append("-");
+
+                    var token = NextTokenNoSkip();
+                    if (token is Word w)
+                    {
+                        if (w.QuoteStyle == null)
+                        {
+                            text.Append(w.Value);
+                        }
+                    }
+                    else if (token is Number n)
+                    {
+                        if (n.Value.All(char.IsDigit))
+                        {
+                            text.Append(n.Value);
+                            requireWhitespace = true;
+                        }
+                    }
+                    else
+                    {
+                        throw Expected("continuation of hyphenated identifier", token);
+                    }
+                }
+
+                if (requireWhitespace)
+                {
+                    var next = NextToken();
+                    if (token is EOF or Whitespace)
+                    {
+                        throw Expected("whitespace following hyphenated identifier", next);
+                    }
+                }
+
+                parsed = new Ident(text.ToString(), parsed.QuoteStyle);
+            }
+
+            return parsed;
+        }
     }
     /// <summary>
     ///  Parse a parenthesized comma-separated list of unqualified, possibly quoted identifiers
@@ -7648,7 +7737,7 @@ public class Parser
             return jsonTable;
         }
 
-        var name = ParseObjectName();
+        var name = ParseObjectNameWithClause(true);
         // Parse potential version qualifier
         var version = ParseTableVersion();
 

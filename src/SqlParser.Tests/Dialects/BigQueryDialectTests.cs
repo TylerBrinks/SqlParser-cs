@@ -101,6 +101,15 @@ namespace SqlParser.Tests.Dialects
                 new Ident("da-sh-es", Symbols.Backtick),
             }, "`_5abc`.`da-sh-es`");
 
+            Test("foo-bar.baz-123", new Ident[]{"foo-bar", "baz-123"}, "foo-bar.baz-123");
+
+            Assert.Throws<ParserException>(() => VerifiedStatement("foo-`bar`"));
+            Assert.Throws<ParserException>(() => VerifiedStatement("`foo`-bar"));
+            Assert.Throws<ParserException>(() => VerifiedStatement("foo-123a"));
+            Assert.Throws<ParserException>(() => VerifiedStatement("foo - bar"));
+            Assert.Throws<ParserException>(() => VerifiedStatement("123-bar"));
+            Assert.Throws<ParserException>(() => VerifiedStatement("bar-"));
+
             // Parses a table identifier ident and verifies that re-serializing the
             // parsed identifier produces the original ident string.
             //
