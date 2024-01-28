@@ -2214,5 +2214,17 @@ namespace SqlParser.Tests.Dialects
                 )), select.Projection[0]);
             }
         }
+
+        [Fact]
+        public void Parse_Array_Query()
+        {
+            VerifiedStatement("SELECT GREATEST(sections_tbl.*) AS sections FROM sections_tbl");
+
+            VerifiedStatement("SELECT ARRAY_AGG(sections_tbl.*) AS sections FROM sections_tbl");
+
+            VerifiedStatement("SELECT GREATEST(my_schema.sections_tbl.*) AS sections FROM sections_tbl");
+
+            VerifiedStatement("SELECT ARRAY_AGG(my_schema.sections_tbl.*) AS sections FROM sections_tbl");
+        }
     }
 }

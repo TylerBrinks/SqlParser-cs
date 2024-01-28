@@ -508,7 +508,56 @@ public class Parser
     /// </summary>
     /// <returns></returns>
     /// <exception cref="ParserException">Wildcard Expression</exception>
-    public WildcardExpression ParseWildcardExpr()
+    //public WildcardExpression ParseWildcardExpr()
+    //{
+    //    var index = _index;
+
+    //    var nextToken = NextToken();
+
+    //    switch (nextToken)
+    //    {
+    //        case Word or SingleQuotedString when PeekTokenIs<Period>():
+    //            {
+    //                var ident = nextToken switch
+    //                {
+    //                    Word w => w.ToIdent(),
+    //                    SingleQuotedString s => new Ident(s.Value, Symbols.SingleQuote),
+    //                    _ => throw Expected("identifier or quoted string", PeekToken())
+    //                };
+    //                var idParts = new Sequence<Ident> { ident };
+
+    //                while (ConsumeToken<Period>())
+    //                {
+    //                    nextToken = NextToken();
+    //                    switch (nextToken)
+    //                    {
+    //                        case Word w:
+    //                            idParts.Add(w.ToIdent());
+    //                            break;
+
+    //                        case SingleQuotedString s:
+    //                            idParts.Add(new Ident(s.Value, QuoteStyle: Symbols.SingleQuote));
+    //                            break;
+
+    //                        case Multiply:
+    //                            return new WildcardExpression.QualifiedWildcard(new ObjectName(idParts));
+
+    //                        default:
+    //                            throw Expected("an identifier or a '*' after '.'");
+    //                    }
+    //                }
+
+    //                break;
+    //            }
+    //        case Multiply:
+    //            return new WildcardExpression.Wildcard();
+    //    }
+
+    //    _index = index;
+    //    var expr = ParseExpr();
+    //    return new WildcardExpression.Expr(expr);
+    //}
+    public Expression ParseWildcardExpr()
     {
         var index = _index;
 
@@ -540,7 +589,7 @@ public class Parser
                                 break;
 
                             case Multiply:
-                                return new WildcardExpression.QualifiedWildcard(new ObjectName(idParts));
+                                return new Expression.QualifiedWildcard(new ObjectName(idParts));
 
                             default:
                                 throw Expected("an identifier or a '*' after '.'");
@@ -550,12 +599,13 @@ public class Parser
                     break;
                 }
             case Multiply:
-                return new WildcardExpression.Wildcard();
+                return new Wildcard();
         }
 
         _index = index;
         var expr = ParseExpr();
-        return new WildcardExpression.Expr(expr);
+        return expr;
+        //return new Expression.Expr(expr);
     }
 
     /// <summary>
@@ -1206,6 +1256,7 @@ public class Parser
             if (tkn is LeftParen or Period)
             {
                 var idParts = new Sequence<Ident> { word.ToIdent() };
+                var endsWithWildcard = false;
                 while (ConsumeToken<Period>())
                 {
                     switch (NextToken())
@@ -1213,6 +1264,17 @@ public class Parser
                         case Word w:
                             idParts.Add(w.ToIdent());
                             break;
+
+                        case Multiply m:
+                            if (_dialect is PostgreSqlDialect)
+                            {
+                                endsWithWildcard = true;
+                                break;
+                            }
+                            else
+                            {
+                                throw Expected("an identifier after '.'", PeekToken());
+                            }
 
                         case SingleQuotedString s:
                             idParts.Add(new Ident(s.Value, Symbols.SingleQuote));
@@ -1223,7 +1285,11 @@ public class Parser
                     }
                 }
 
-                if (ConsumeToken<LeftParen>())
+                if (endsWithWildcard)
+                {
+                    return new QualifiedWildcard(new ObjectName(idParts));
+                }
+                else if (ConsumeToken<LeftParen>())
                 {
                     PrevToken();
                     return ParseFunction(new ObjectName(idParts));
@@ -8247,14 +8313,24 @@ public class Parser
     {
         if (!PeekNthTokenIs<RightArrow>(1))
         {
-            return new FunctionArg.Unnamed(ParseWildcardExpr());
+            return new FunctionArg.Unnamed(WildcardToFnArg(ParseWildcardExpr()));
         }
 
         var name = ParseIdentifier();
         ExpectToken<RightArrow>();
-        var arg = (FunctionArgExpression)ParseWildcardExpr();
+        
+        return new FunctionArg.Named(name, WildcardToFnArg(ParseWildcardExpr()));
 
-        return new FunctionArg.Named(name, arg);
+        FunctionArgExpression WildcardToFnArg(Expression wildcard)
+        {
+            FunctionArgExpression functionExpr = wildcard switch
+            {
+                QualifiedWildcard q => new FunctionArgExpression.QualifiedWildcard(q.Name),
+                Wildcard w => new FunctionArgExpression.Wildcard(),
+                _ => new FunctionArgExpression.FunctionExpression(wildcard)
+            };
+            return functionExpr;
+        }
     }
 
     public Sequence<FunctionArg> ParseOptionalArgs()
@@ -8333,26 +8409,26 @@ public class Parser
 
         }
 
-        if (wildcardExpr is WildcardExpression.Expr e)
+        if (wildcardExpr is QualifiedWildcard q)
         {
-            var expr = GetExpression(e.Expression);
-
-            var alias = ParseOptionalAlias(Keywords.ReservedForColumnAlias);
-
-            if (alias != null)
-            {
-                return new SelectItem.ExpressionWithAlias(expr, alias);
-            }
-
-            return new SelectItem.UnnamedExpression(expr);
+            return new SelectItem.QualifiedWildcard(q.Name, ParseWildcardAdditionalOptions());
         }
 
-        if (wildcardExpr is WildcardExpression.QualifiedWildcard qw)
+        if (wildcardExpr is Wildcard)
         {
-            return new SelectItem.QualifiedWildcard(qw.Name, ParseWildcardAdditionalOptions());
+            return new SelectItem.Wildcard(ParseWildcardAdditionalOptions());
         }
 
-        return new SelectItem.Wildcard(ParseWildcardAdditionalOptions());
+        var expr = GetExpression(wildcardExpr);
+
+        var alias = ParseOptionalAlias(Keywords.ReservedForColumnAlias);
+
+        if (alias != null)
+        {
+            return new SelectItem.ExpressionWithAlias(expr, alias);
+        }
+
+        return new SelectItem.UnnamedExpression(expr);
     }
     /// <summary>
     /// Parse an [`WildcardAdditionalOptions`](WildcardAdditionalOptions) information for wildcard select items.

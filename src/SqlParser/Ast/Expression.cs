@@ -1,7 +1,4 @@
-﻿using static SqlParser.Ast.WildcardExpression;
-using System.ComponentModel;
-
-namespace SqlParser.Ast;
+﻿namespace SqlParser.Ast;
 
 // ReSharper disable CommentTypo
 
@@ -897,7 +894,7 @@ public abstract record Expression : IWriteSql, IElement
     ///
     /// <example>
     /// <c>
-    /// column['field'] or column[4]
+    /// column['field'] or column
     /// </c>
     /// </example>
     public record MapAccess(Expression Column, Sequence<Expression> Keys) : Expression
@@ -1021,6 +1018,19 @@ public abstract record Expression : IWriteSql, IElement
             writer.WriteSql($"POSITION({Expression} IN {In})");
         }
     }
+
+    /// <summary>
+    /// Qualified wildcard, e.g. `alias.*` or `schema.table.*`.
+    /// (Same caveats apply to `QualifiedWildcard` as to `Wildcard`.)
+    /// </summary>
+    /// <param name="Name">Object name</param>
+    public record QualifiedWildcard(ObjectName Name) : Expression
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{Name}.*");
+        }
+    }
     /// <summary>
     /// MySql RLike regex or REGEXP regex
     /// </summary>
@@ -1106,7 +1116,6 @@ public abstract record Expression : IWriteSql, IElement
             }
         }
     }
-
     /// <summary>
     /// BigQuery specific Struct literal expression
     /// </summary>
@@ -1295,6 +1304,17 @@ public abstract record Expression : IWriteSql, IElement
             }
         }
     }
+    /// <summary>
+    /// Wildcard expression
+    /// </summary>
+    public record Wildcard : Expression
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("*");
+        }
+    }
+
     public virtual void ToSql(SqlTextWriter writer) { }
 
     internal INegated AsNegated => (INegated)this;

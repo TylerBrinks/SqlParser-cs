@@ -310,6 +310,14 @@ namespace SqlParser.Tests.Dialects
             {
                 VerifiedStatement(sql, supportedDialects);
             }
+
+            var wildcardSql = "SELECT ARRAY_AGG(sections_tbl.*) AS sections FROM sections_tbl";
+            foreach (var dialect in AllDialects)
+            {
+                if(dialect is PostgreSqlDialect){continue;}
+
+                Assert.Throws<ParserException>(() => ParseSqlStatements(wildcardSql));
+            }
         }
 
         [Fact]
