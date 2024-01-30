@@ -169,6 +169,23 @@ namespace SqlParser.Tests.Dialects
                 new LiteralValue(new Value.UnQuotedString("date"))
             ));
             Assert.Equal(expected, select.Projection[0]);
+
+            select = VerifiedOnlySelect("SELECT a:start, a:end FROM t");
+
+            var projection = new Sequence<SelectItem>
+            {
+                new SelectItem.UnnamedExpression(new JsonAccess(
+                    new Identifier("a"),
+                    JsonOperator.Colon,
+                    new LiteralValue(new Value.UnQuotedString("start")))),
+
+                new SelectItem.UnnamedExpression(new JsonAccess(
+                    new Identifier("a"),
+                    JsonOperator.Colon,
+                    new LiteralValue(new Value.UnQuotedString("end"))))
+            };
+
+            Assert.Equal(projection, select.Projection);
         }
 
         [Fact]

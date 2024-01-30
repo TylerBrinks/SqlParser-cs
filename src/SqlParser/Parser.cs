@@ -5609,7 +5609,7 @@ public class Parser
                     Keyword.undefined when w.QuoteStyle != null => throw Expected("a value", PeekToken()),
 
                     // Case when Snowflake Semi-structured data like key:value
-                    Keyword.undefined or Keyword.LOCATION or Keyword.TYPE or Keyword.DATE
+                    Keyword.undefined or Keyword.LOCATION or Keyword.TYPE or Keyword.DATE or Keyword.START or Keyword.END
                         when _dialect is SnowflakeDialect or GenericDialect
                             => new Value.UnQuotedString(w.Value),
 
