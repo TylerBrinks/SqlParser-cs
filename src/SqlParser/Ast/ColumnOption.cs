@@ -56,9 +56,16 @@ public abstract record ColumnOption : IWriteSql
     /// <param name="IsPrimary">True if primary</param>
     public record Unique(bool IsPrimary) : ColumnOption
     {
+        public ConstraintCharacteristics? Characteristics { get; init; }
+       
         public override void ToSql(SqlTextWriter writer)
         {
             writer.Write(IsPrimary ? "PRIMARY KEY" : "UNIQUE");
+
+            if (Characteristics != null)
+            {
+                writer.WriteSql($" {Characteristics}");
+            }
         }
     }
     /// <summary>
@@ -83,6 +90,8 @@ public abstract record ColumnOption : IWriteSql
         ReferentialAction OnUpdateAction = ReferentialAction.None)
         : ColumnOption, IElement
     {
+        public ConstraintCharacteristics? Characteristics { get; init; }
+
         public override void ToSql(SqlTextWriter writer)
         {
             writer.WriteSql($"REFERENCES {Name}");
@@ -99,6 +108,11 @@ public abstract record ColumnOption : IWriteSql
             if (OnUpdateAction != ReferentialAction.None)
             {
                 writer.WriteSql($" ON UPDATE {OnUpdateAction}");
+            }
+
+            if (Characteristics != null)
+            {
+                writer.WriteSql($" {Characteristics}");
             }
         }
     }

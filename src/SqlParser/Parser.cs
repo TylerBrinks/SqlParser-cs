@@ -139,7 +139,7 @@ public class Parser
             }
 
             var next = PeekToken();
-            if (next is EOF) //PeekTokenIs<EOF>())
+            if (next is EOF)
             {
                 break;
             }
@@ -4357,7 +4357,7 @@ public class Parser
         };
     }
 
-    public (Expression? PartitionBy,Sequence<Ident>? ClusterBy, Sequence<SqlOption>? Options)
+    public (Expression? PartitionBy, Sequence<Ident>? ClusterBy, Sequence<SqlOption>? Options)
         ParseOptionalBigQueryCreateTableConfig()
     {
         Expression? partitionBy = null;
@@ -4526,12 +4526,20 @@ public class Parser
 
         if (ParseKeywordSequence(Keyword.PRIMARY, Keyword.KEY))
         {
-            return new ColumnOption.Unique(true);
+            var characteristics = ParseConstraintCharacteristics();
+            return new ColumnOption.Unique(true)
+            {
+                Characteristics = characteristics
+            };
         }
 
         if (ParseKeyword(Keyword.UNIQUE))
         {
-            return new ColumnOption.Unique(false);
+            var characteristics = ParseConstraintCharacteristics();
+            return new ColumnOption.Unique(false)
+            {
+                Characteristics = characteristics
+            };
         }
 
         if (ParseKeyword(Keyword.REFERENCES))
@@ -4557,11 +4565,16 @@ public class Parser
                 }
             }
 
+            var characteristics = ParseConstraintCharacteristics();
+
             return new ColumnOption.ForeignKey(
                 foreignTable,
                 referredColumns.Any() ? referredColumns : null,
                 onDelete,
-                onUpdate);
+                onUpdate)
+            {
+                Characteristics = characteristics
+            };
         }
 
         if (ParseKeyword(Keyword.CHECK))
@@ -4707,6 +4720,59 @@ public class Parser
         return new ColumnOption.Generated(genAs, false, null, expr, expressionMode);
     }
 
+    public ConstraintCharacteristics? ParseConstraintCharacteristics()
+    {
+        var cc = new ConstraintCharacteristics();
+
+        while (true)
+        {
+            if (cc.Deferrable == null && ParseKeywordSequence(Keyword.NOT, Keyword.DEFERRABLE))
+            {
+                cc.Deferrable = false;
+            }
+            else if (cc.Deferrable == null && ParseKeyword(Keyword.DEFERRABLE))
+            {
+                cc.Deferrable = true;
+            }
+            else if (cc.Initially == null && ParseKeyword(Keyword.INITIALLY))
+            {
+                if (ParseKeyword(Keyword.DEFERRED))
+                {
+                    cc.Initially = DeferrableInitial.Deferred;
+                }
+                else if (ParseKeyword(Keyword.IMMEDIATE))
+                {
+                    cc.Initially = DeferrableInitial.Immediate;
+                }
+                else
+                {
+                    throw Expected("one of DEFERRED or IMMEDIATE", PeekToken());
+                }
+            }
+            else if (cc.Enforced == null && ParseKeyword(Keyword.ENFORCED))
+            {
+                cc.Enforced = true;
+            }
+            else if (cc.Enforced == null && ParseKeywordSequence(Keyword.NOT, Keyword.ENFORCED))
+            {
+                cc.Enforced = false;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        if (cc.Deferrable != null || cc.Initially != null || cc.Enforced != null)
+        {
+            return cc;
+        }
+        else
+        {
+            return null;
+        }
+    }
+
     public ReferentialAction ParseReferentialAction()
     {
         if (ParseKeyword(Keyword.RESTRICT))
@@ -4764,10 +4830,13 @@ public class Parser
             var identName = MaybeParse(ParseIdentifier) ?? name;
 
             var columns = ParseParenthesizedColumnList(IsOptional.Mandatory, false);
+            var characteristics = ParseConstraintCharacteristics();
+
             return new TableConstraint.Unique(columns)
             {
                 Name = identName,
                 IsPrimaryKey = isPrimary,
+                Characteristics = characteristics
             };
         }
 
@@ -4797,12 +4866,15 @@ public class Parser
                 }
             }
 
+            var characteristics = ParseConstraintCharacteristics();
+
             return new TableConstraint.ForeignKey(foreignTable, columns)
             {
                 Name = name,
                 ReferredColumns = referredColumns,
                 OnDelete = onDelete,
                 OnUpdate = onUpdate,
+                Characteristics = characteristics
             };
         }
 
@@ -8318,7 +8390,7 @@ public class Parser
 
         var name = ParseIdentifier();
         ExpectToken<RightArrow>();
-        
+
         return new FunctionArg.Named(name, WildcardToFnArg(ParseWildcardExpr()));
 
         FunctionArgExpression WildcardToFnArg(Expression wildcard)

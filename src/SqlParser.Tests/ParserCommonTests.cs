@@ -2,6 +2,7 @@
 using System.Text;
 using SqlParser.Ast;
 using SqlParser.Dialects;
+using static SqlParser.Ast.CopyOption;
 using static SqlParser.Ast.DataType;
 using static SqlParser.Ast.Expression;
 using Action = SqlParser.Ast.Action;
@@ -1528,6 +1529,190 @@ namespace SqlParser.Tests
 
             Assert.Equal(columns, create.Columns);
             Assert.Equal(constraints, create.Constraints!);
+        }
+
+        [Fact]
+        public void Parse_Create_Table_With_Constraint_Characteristics()
+        {
+            var sql = """
+                CREATE TABLE uk_cities (
+                name VARCHAR(100) NOT NULL,
+                lat DOUBLE NULL,
+                lng DOUBLE,
+                constraint fkey foreign key (lat) references othertable3 (lat) on delete restrict deferrable initially deferred,
+                constraint fkey2 foreign key (lat) references othertable4(lat) on delete no action on update restrict deferrable initially immediate, 
+                foreign key (lat) references othertable4(lat) on update set default on delete cascade not deferrable initially deferred not enforced, 
+                FOREIGN KEY (lng) REFERENCES othertable4 (longitude) ON UPDATE SET NULL enforced not deferrable initially immediate
+                )
+                """;
+
+            var canonical = """
+                CREATE TABLE uk_cities (
+                name VARCHAR(100) NOT NULL, 
+                lat DOUBLE NULL, 
+                lng DOUBLE, 
+                CONSTRAINT fkey FOREIGN KEY (lat) REFERENCES othertable3(lat) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED, 
+                CONSTRAINT fkey2 FOREIGN KEY (lat) REFERENCES othertable4(lat) ON DELETE NO ACTION ON UPDATE RESTRICT DEFERRABLE INITIALLY IMMEDIATE, 
+                FOREIGN KEY (lat) REFERENCES othertable4(lat) ON DELETE CASCADE ON UPDATE SET DEFAULT NOT DEFERRABLE INITIALLY DEFERRED NOT ENFORCED, 
+                FOREIGN KEY (lng) REFERENCES othertable4(longitude) ON UPDATE SET NULL NOT DEFERRABLE INITIALLY IMMEDIATE ENFORCED)
+                """;
+
+            var create = OneStatementParsesTo<Statement.CreateTable>(sql, canonical);
+
+            var columns = new ColumnDef[]
+            {
+                new("name", new Varchar(new CharacterLength.IntegerLength(100)),Options:new ColumnOptionDef[]{new (new ColumnOption.NotNull())}),
+                new("lat", new DataType.Double(), Options:new ColumnOptionDef[]{new(Option: new ColumnOption.Null())}),
+                new("lng", new DataType.Double())
+            };
+
+            var constraints = new TableConstraint.ForeignKey[]
+            {
+                new ("othertable3", new Ident[]{"lat"})
+                {
+                    Name = "fkey",
+                    OnDelete = ReferentialAction.Restrict,
+                    ReferredColumns = new Ident[]{"lat"},
+                    Characteristics = new ConstraintCharacteristics
+                    {
+                        Deferrable = true,
+                        Initially = DeferrableInitial.Deferred
+                    }
+                },
+                new ("othertable4", new Ident[]{"lat"})
+                {
+                    Name = "fkey2",
+                    ReferredColumns = new Ident[]{"lat"},
+                    OnDelete = ReferentialAction.NoAction,
+                    OnUpdate = ReferentialAction.Restrict,
+                    Characteristics = new ConstraintCharacteristics
+                    {
+                        Deferrable = true,
+                        Initially = DeferrableInitial.Immediate
+                    }
+                },
+                new ("othertable4", new Ident[]{"lat"})
+                {
+                    ReferredColumns = new Ident[]{"lat"},
+                    OnDelete = ReferentialAction.Cascade,
+                    OnUpdate = ReferentialAction.SetDefault,
+                    Characteristics = new ConstraintCharacteristics
+                    {
+                        Deferrable = false,
+                        Initially = DeferrableInitial.Deferred,
+                        Enforced = false
+                    }
+                },
+                new ("othertable4", new Ident[]{"lng"})
+                {
+                    ReferredColumns = new Ident[]{"longitude"},
+                    OnUpdate = ReferentialAction.SetNull,
+                    Characteristics = new ConstraintCharacteristics
+                    {
+                        Deferrable = false,
+                        Initially = DeferrableInitial.Immediate,
+                        Enforced = true
+                    }
+                }
+            };
+
+            Assert.Equal("uk_cities", create.Name);
+            Assert.Equal(columns[0], create.Columns[0]);
+            Assert.Equal(columns[1], create.Columns[1]);
+            Assert.Equal(columns[2], create.Columns[2]);
+
+            Assert.Equal(columns, create.Columns);
+            Assert.Equal(constraints, create.Constraints!);
+
+            Assert.Throws<ParserException>(() => ParseSqlStatements(
+                """
+                CREATE TABLE t (
+                a int NOT NULL,
+                    FOREIGN KEY (a) REFERENCES othertable4(a) ON DELETE CASCADE ON UPDATE SET DEFAULT DEFERRABLE INITIALLY IMMEDIATE NOT DEFERRABLE, \
+                )
+                """));
+            Assert.Throws<ParserException>(() => ParseSqlStatements(
+                """
+                CREATE TABLE t (
+                a int NOT NULL,
+                 FOREIGN KEY (a) REFERENCES othertable4(a) ON DELETE CASCADE ON UPDATE SET DEFAULT NOT ENFORCED INITIALLY DEFERRED ENFORCED, \
+                )
+                """));
+            Assert.Throws<ParserException>(() => ParseSqlStatements(
+                """
+                CREATE TABLE t (
+                a int NOT NULL,
+                FOREIGN KEY (lat) REFERENCES othertable4(lat) ON DELETE CASCADE ON UPDATE SET DEFAULT INITIALLY DEFERRED INITIALLY IMMEDIATE, \
+                )
+                """));
+
+        }
+
+        [Fact]
+        public void Parse_Create_Table_Column_Constraint_Characteristics()
+        {
+            foreach (var deferrable in new bool?[] { null, false, true })
+            {
+                foreach (var initially in new DeferrableInitial?[] { null, DeferrableInitial.Immediate, DeferrableInitial.Deferred })
+                {
+                    foreach (var enforced in new bool?[] { null, false, true })
+                    {
+                        var deferrableText = string.Empty;
+                        if (deferrable.HasValue)
+                        {
+                            deferrableText = deferrable.Value ? "DEFERRABLE" : "NOT DEFERRABLE";
+                        }
+
+                        var initiallyText = string.Empty;
+                        if (initially.HasValue)
+                        {
+                            initiallyText = initially.Value == DeferrableInitial.Immediate ? "INITIALLY IMMEDIATE" : "INITIALLY DEFERRED";
+                        }
+
+                        var enforcedText = string.Empty;
+                        if (enforced.HasValue)
+                        {
+                            enforcedText = enforced.Value ? "ENFORCED" : "NOT ENFORCED";
+                        }
+
+                        var parts = new[] { deferrableText, initiallyText, enforcedText }.Where(t => !string.IsNullOrEmpty(t));
+
+                        var syntax = string.Join(" ", parts);
+
+                        Test(syntax, deferrable, initially, enforced);
+                    }
+                }
+            }
+
+            void Test(string syntax, bool? deferrable, DeferrableInitial? initially, bool? enforced)
+            {
+                var sql = $"CREATE TABLE t (a int UNIQUE {syntax})";
+                var expectedClause = string.IsNullOrWhiteSpace(syntax) ? "" : $" {syntax}";
+
+                var expected = $"CREATE TABLE t (a INT UNIQUE{expectedClause})";
+                var ast = (Statement.CreateTable)OneStatementParsesTo(sql, expected);
+
+                var expectedValue = deferrable.HasValue || initially.HasValue || enforced.HasValue
+                    ? new ConstraintCharacteristics
+                    {
+                        Initially = initially,
+                        Deferrable = deferrable,
+                        Enforced = enforced
+                    }
+                    : null;
+
+                var columnDef = new Sequence<ColumnDef>{
+                    new ("a", new Int(), Options: new Sequence<ColumnOptionDef>
+                    {
+                        new (new ColumnOption.Unique(false)
+                        {
+                            Characteristics = expectedValue
+                        })
+                    })
+                };
+
+                Assert.Equal(columnDef, ast.Columns);
+            }
         }
 
         [Fact]
@@ -4905,7 +5090,7 @@ namespace SqlParser.Tests
 
             insert = (Statement.Insert)VerifiedStatement("INSERT INTO test_table DEFAULT VALUES ON CONFLICT DO NOTHING");
             Assert.NotNull(insert.On);
-            
+
             Assert.Throws<ParserException>(() => ParseSqlStatements("INSERT INTO test_table (test_col) DEFAULT VALUES"));
             Assert.Throws<ParserException>(() => ParseSqlStatements("INSERT INTO test_table DEFAULT VALUES (some_column)"));
             Assert.Throws<ParserException>(() => ParseSqlStatements("INSERT INTO test_table DEFAULT VALUES PARTITION (some_column)"));
@@ -4929,10 +5114,10 @@ namespace SqlParser.Tests
         {
             VerifiedStatement("CALL my_procedure()");
             VerifiedStatement("CALL my_procedure(1, 'a')");
-            VerifiedStatement("CALL my_procedure(1, 'a', $1)", new Dialect[]{new PostgreSqlDialect(), new GenericDialect()});
+            VerifiedStatement("CALL my_procedure(1, 'a', $1)", new Dialect[] { new PostgreSqlDialect(), new GenericDialect() });
             VerifiedStatement("CALL my_procedure");
 
-            var call = (Statement.Call) VerifiedStatement("CALL my_procedure('a')");
+            var call = (Statement.Call)VerifiedStatement("CALL my_procedure('a')");
             var expected = new Statement.Call(new Function("my_procedure")
             {
                 Args = new Sequence<FunctionArg>
@@ -4950,9 +5135,9 @@ namespace SqlParser.Tests
         [Fact]
         public void Parse_Replace_Into()
         {
-            var dialects = new []{ new PostgreSqlDialect() };
+            var dialects = new[] { new PostgreSqlDialect() };
 
-            Assert.Throws<ParserException>(() => 
+            Assert.Throws<ParserException>(() =>
                 ParseSqlStatements("REPLACE INTO public.customer (id, name, active) VALUES (1, 2, 3)", dialects: dialects));
         }
     }

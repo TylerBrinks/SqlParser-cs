@@ -18,6 +18,7 @@ public abstract record TableConstraint : IWriteSql, IElement
     {
         public Ident? Name { get; init; }
         public bool IsPrimaryKey { get; init; }
+        public ConstraintCharacteristics Characteristics { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
@@ -45,6 +46,7 @@ public abstract record TableConstraint : IWriteSql, IElement
         public Sequence<Ident>? ReferredColumns { get; init; }
         public ReferentialAction OnDelete { get; init; }
         public ReferentialAction OnUpdate { get; init; }
+        public ConstraintCharacteristics? Characteristics { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
@@ -59,6 +61,11 @@ public abstract record TableConstraint : IWriteSql, IElement
             if (OnUpdate != ReferentialAction.None)
             {
                 writer.WriteSql($" ON UPDATE {OnUpdate}");
+            }
+
+            if (Characteristics != null)
+            {
+                writer.WriteSql($" {Characteristics}");
             }
         }
     }

@@ -181,6 +181,12 @@ public enum DateTimeField
     NoDateTime
 }
 
+public enum DeferrableInitial
+{
+    Immediate,
+    Deferred,
+}
+
 public enum DiscardObject
 {
     All,
