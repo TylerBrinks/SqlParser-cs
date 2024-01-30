@@ -94,12 +94,12 @@ public abstract record AlterColumnOperation : IWriteSql
                     _ => string.Empty
                 };
                 writer.Write($"ADD GENERATED{genAs} AS IDENTITY");
+                    writer.Write(" (");
                 if (ag.SequenceOptions.SafeAny())
                 {
-                    writer.Write(" (");
                     writer.WriteDelimited(ag.SequenceOptions, "");
-                    writer.Write(" )");
                 }
+                writer.Write(" )");
                 break;
 
         }

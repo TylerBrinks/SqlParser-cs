@@ -1,18 +1,15 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Data;
+﻿using System.Data;
 using System.Text.RegularExpressions;
 using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
 using static SqlParser.Ast.ExactNumberInfo;
 using static SqlParser.Ast.Statement;
-using static SqlParser.Ast.MinMaxValue;
 using static SqlParser.Ast.GrantObjects;
 using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
 using Select = SqlParser.Ast.Select;
 using System.Globalization;
-using System.Runtime.CompilerServices;
 using System.Text;
 using static SqlParser.Ast.AlterTableOperation;
 
@@ -9060,30 +9057,22 @@ public class Parser
         if (ParseKeyword(Keyword.MINVALUE))
         {
             var expr = new LiteralValue(ParseNumberValue());
-            sequenceOptions.Add(new SequenceOptions.MinValue(new Some(expr)));
+            sequenceOptions.Add(new SequenceOptions.MinValue(expr));
         }
         else if (ParseKeywordSequence(Keyword.NO, Keyword.MINVALUE))
         {
-            sequenceOptions.Add(new SequenceOptions.MinValue(new MinMaxValue.None()));
+            sequenceOptions.Add(new SequenceOptions.MinValue(null));
         }
-        else
-        {
-            sequenceOptions.Add(new SequenceOptions.MinValue(new Empty()));
-        }
-
+       
         //[ MAXVALUE maxvalue | NO MAXVALUE ]
         if (ParseKeywordSequence(Keyword.MAXVALUE))
         {
             var expr = new LiteralValue(ParseNumberValue());
-            sequenceOptions.Add(new SequenceOptions.MaxValue(new Some(expr)));
+            sequenceOptions.Add(new SequenceOptions.MaxValue(expr));
         }
         else if (ParseKeywordSequence(Keyword.NO, Keyword.MAXVALUE))
         {
-            sequenceOptions.Add(new SequenceOptions.MaxValue(new MinMaxValue.None()));
-        }
-        else
-        {
-            sequenceOptions.Add(new SequenceOptions.MaxValue(new Empty()));
+            sequenceOptions.Add(new SequenceOptions.MaxValue(null));
         }
 
         //[ START [ WITH ] start ]

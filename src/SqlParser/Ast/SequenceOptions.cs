@@ -30,16 +30,17 @@ public abstract record SequenceOptions : IWriteSql, IElement
     /// <summary>
     /// Min value sequence
     /// </summary>
-    /// <param name="Value">Min value</param>
-    public record MinValue(MinMaxValue Value) : SequenceOptions
+    /// <param name="Expression">Min value</param>
+    //public record MinValue(MinMaxValue Value) : SequenceOptions
+    public record MinValue(Expression? Expression) : SequenceOptions
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            if (Value is MinMaxValue.Some)
+            if (Expression != null)
             {
-                writer.WriteSql($" MINVALUE {Value}");
+                writer.WriteSql($" MINVALUE {Expression}");
             }
-            else if (Value is MinMaxValue.None)
+            else
             {
                 writer.Write(" NO MINVALUE");
             }
@@ -48,16 +49,16 @@ public abstract record SequenceOptions : IWriteSql, IElement
     /// <summary>
     /// Max value sequence
     /// </summary>
-    /// <param name="Value">Max value</param>
-    public record MaxValue(MinMaxValue Value) : SequenceOptions
+    /// <param name="Expression">Max value</param>
+    public record MaxValue(Expression? Expression) : SequenceOptions
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            if (Value is MinMaxValue.Some)
+            if (Expression != null)
             {
-                writer.WriteSql($" MAXVALUE {Value}");
+                writer.WriteSql($" MAXVALUE {Expression}");
             }
-            else if (Value is MinMaxValue.None)
+            else
             {
                 writer.Write(" NO MAXVALUE");
             }
