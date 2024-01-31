@@ -3,12 +3,6 @@ namespace SqlParser
 {
     public class Location
     {
-        public Location()
-        {
-            Line = 1; 
-            Column = 1;
-        }
-
         public static Location From(long line, long column)
         {
             return new Location
@@ -38,8 +32,8 @@ namespace SqlParser
             return $"Line: {Line}, Col: {Column}";
         }
 
-        public long Line { get; private set; }
+        public long Line { get; private set; } = 1;
 
-        public long Column { get; private set; }
+        public long Column { get; private set; } = 1;
     }
 }

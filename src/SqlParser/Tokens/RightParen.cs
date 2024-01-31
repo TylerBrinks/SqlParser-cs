@@ -3,9 +3,4 @@
 /// <summary>
 /// Right parenthesis `)`
 /// </summary>
-public class RightParen : SingleCharacterToken
-{
-    public RightParen() : base(Symbols.ParenClose)
-    {
-    }
-}
+public class RightParen() : SingleCharacterToken(Symbols.ParenClose);

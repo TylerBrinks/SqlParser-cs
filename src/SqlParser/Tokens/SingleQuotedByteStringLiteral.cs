@@ -1,6 +1,3 @@
 ﻿namespace SqlParser.Tokens;
 
-public class SingleQuotedByteStringLiteral : StringToken
-{
-    public SingleQuotedByteStringLiteral(string value) : base(value) { }
-}
+public class SingleQuotedByteStringLiteral(string value) : StringToken(value);

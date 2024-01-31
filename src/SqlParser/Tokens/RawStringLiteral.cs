@@ -1,6 +1,3 @@
 ﻿namespace SqlParser.Tokens;
 
-public class RawStringLiteral : StringToken
-{
-    public RawStringLiteral(string value) : base(value) { }
-}
+public class RawStringLiteral(string value) : StringToken(value);

@@ -3,9 +3,4 @@
 /// <summary>
 /// Greater Than operator `>`
 /// </summary>
-public class GreaterThan : SingleCharacterToken
-{
-    public GreaterThan() : base(Symbols.GreaterThan)
-    {
-    }
-}
+public class GreaterThan() : SingleCharacterToken(Symbols.GreaterThan);

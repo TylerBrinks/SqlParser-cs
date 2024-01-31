@@ -3,9 +3,4 @@
 /// <summary>
 /// Left bracket `[`
 /// </summary>
-public class LeftBracket : SingleCharacterToken
-{
-    public LeftBracket() : base(Symbols.SquareBracketOpen)
-    {
-    }
-}
+public class LeftBracket() : SingleCharacterToken(Symbols.SquareBracketOpen);

@@ -3,9 +3,4 @@
 /// <summary>
 /// Hash `#` used for PostgreSQL Bitwise XOR operator
 /// </summary>
-public class Hash : SingleCharacterToken
-{
-    public Hash():base(Symbols.Num)
-    {
-    }
-}
+public class Hash() : SingleCharacterToken(Symbols.Num);

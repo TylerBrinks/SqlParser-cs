@@ -500,60 +500,6 @@ public class Parser
         };
     }
 
-    /// <summary>
-    /// Parse a new expression including wildcard & qualified wildcard
-    /// </summary>
-    /// <returns></returns>
-    /// <exception cref="ParserException">Wildcard Expression</exception>
-    //public WildcardExpression ParseWildcardExpr()
-    //{
-    //    var index = _index;
-
-    //    var nextToken = NextToken();
-
-    //    switch (nextToken)
-    //    {
-    //        case Word or SingleQuotedString when PeekTokenIs<Period>():
-    //            {
-    //                var ident = nextToken switch
-    //                {
-    //                    Word w => w.ToIdent(),
-    //                    SingleQuotedString s => new Ident(s.Value, Symbols.SingleQuote),
-    //                    _ => throw Expected("identifier or quoted string", PeekToken())
-    //                };
-    //                var idParts = new Sequence<Ident> { ident };
-
-    //                while (ConsumeToken<Period>())
-    //                {
-    //                    nextToken = NextToken();
-    //                    switch (nextToken)
-    //                    {
-    //                        case Word w:
-    //                            idParts.Add(w.ToIdent());
-    //                            break;
-
-    //                        case SingleQuotedString s:
-    //                            idParts.Add(new Ident(s.Value, QuoteStyle: Symbols.SingleQuote));
-    //                            break;
-
-    //                        case Multiply:
-    //                            return new WildcardExpression.QualifiedWildcard(new ObjectName(idParts));
-
-    //                        default:
-    //                            throw Expected("an identifier or a '*' after '.'");
-    //                    }
-    //                }
-
-    //                break;
-    //            }
-    //        case Multiply:
-    //            return new WildcardExpression.Wildcard();
-    //    }
-
-    //    _index = index;
-    //    var expr = ParseExpr();
-    //    return new WildcardExpression.Expr(expr);
-    //}
     public Expression ParseWildcardExpr()
     {
         var index = _index;
@@ -586,7 +532,7 @@ public class Parser
                                 break;
 
                             case Multiply:
-                                return new Expression.QualifiedWildcard(new ObjectName(idParts));
+                                return new QualifiedWildcard(new ObjectName(idParts));
 
                             default:
                                 throw Expected("an identifier or a '*' after '.'");
@@ -1683,10 +1629,8 @@ public class Parser
     /// </summary>
     public WindowSpec ParseWindowSpec()
     {
-        var partitionBy = ParseInit(ParseKeywordSequence(Keyword.PARTITION, Keyword.BY),
-            () => ParseCommaSeparated(ParseExpr));
-        var orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY),
-            () => ParseCommaSeparated(ParseOrderByExpr));
+        var partitionBy = ParseInit(ParseKeywordSequence(Keyword.PARTITION, Keyword.BY), () => ParseCommaSeparated(ParseExpr));
+        var orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY), () => ParseCommaSeparated(ParseOrderByExpr));
         var windowFrame = ParseInit(!ConsumeToken<RightParen>(), () =>
         {
             var windowFrame = ParseWindowFrame();
@@ -1710,7 +1654,6 @@ public class Parser
 
     public Sequence<ProcedureParam>? ParseOptionalProcedureParameters()
     {
-
         if (!ConsumeToken<LeftParen>() || ConsumeToken<RightParen>())
         {
             return null;
@@ -1776,8 +1719,7 @@ public class Parser
                 attributeCollation = ParseObjectName();
             }
 
-            attributes.Add(
-                new UserDefinedTypeCompositeAttributeDef(attributeName, attributeDataType, attributeCollation));
+            attributes.Add(new UserDefinedTypeCompositeAttributeDef(attributeName, attributeDataType, attributeCollation));
             var comma = ConsumeToken<Comma>();
             if (ConsumeToken<RightParen>())
             {
@@ -5650,13 +5592,9 @@ public class Parser
                 return new Value.Placeholder(p.Value);
 
             case Colon c:
-                //var colonIdent = ParseIdentifier();
-                //return new Value.Placeholder(c.Character + colonIdent.Value);
                 return ParsePlaceholder(c);
 
             case AtSign a:
-                //var atIdent = ParseIdentifier();
-                //return new Value.Placeholder(a.Character + atIdent.Value);
                 return ParsePlaceholder(a);
 
             default:

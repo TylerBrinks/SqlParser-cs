@@ -6,7 +6,6 @@
 /// <param name="Relation">Relation table factor</param>
 public record TableWithJoins(TableFactor Relation) : IWriteSql, IElement
 {
-
     [Visit(0)] public TableFactor? Relation { get; set; } = Relation;
 
     [Visit(1)] public Sequence<Join>? Joins { get; set; }

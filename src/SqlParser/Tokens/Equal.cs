@@ -3,9 +3,4 @@
 /// <summary>
 /// Equality operator `=`
 /// </summary>
-public class Equal :SingleCharacterToken
-{
-    public Equal() : base(Symbols.Equal)
-    {
-    }
-}
+public class Equal() : SingleCharacterToken(Symbols.Equal);

@@ -4,8 +4,6 @@
 // ReSharper disable IdentifierTypo
 // ReSharper disable StringLiteralTypo
 
-using System.Reflection;
-
 namespace SqlParser;
 
 internal static class Keywords

@@ -5,7 +5,7 @@ public abstract record GroupByExpression : IWriteSql
 {
     public record All : GroupByExpression;
 
-    public record Expressions(Sequence<Expression> ColumnNames) : GroupByExpression { }
+    public record Expressions(Sequence<Expression> ColumnNames) : GroupByExpression;
 
     public void ToSql(SqlTextWriter writer)
     {
@@ -17,7 +17,6 @@ public abstract record GroupByExpression : IWriteSql
         {
             writer.Write("GROUP BY ");
             writer.WriteDelimited(expressions.ColumnNames, ", ");
-            //writer.Write(")");
         }
     }
 }

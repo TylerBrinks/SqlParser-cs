@@ -130,6 +130,7 @@ public interface IElement
                 }
             }
         }
+        // ReSharper disable once EmptyGeneralCatchClause
         catch { }
 
         return decorated.ToArray();

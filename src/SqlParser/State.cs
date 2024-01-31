@@ -92,12 +92,12 @@ public ref struct State
         return [.. chars];
     }
 
-    internal Location CloneLocation()
+    internal readonly Location CloneLocation()
     {
         return Location.From(_location.Line, _location.Column);
     }
 
-    internal State Clone()
+    internal readonly State Clone()
     {
         return new State(_index, CloneLocation(), _characters);
     }

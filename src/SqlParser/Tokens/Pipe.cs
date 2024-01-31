@@ -3,9 +3,4 @@
 /// <summary>
 /// Pipe `|`
 /// </summary>
-public class Pipe : SingleCharacterToken
-{
-    public Pipe() : base(Symbols.Pipe)
-    {
-    }
-}
+public class Pipe() : SingleCharacterToken(Symbols.Pipe);

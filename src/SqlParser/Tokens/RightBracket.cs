@@ -3,9 +3,4 @@
 /// <summary>
 /// Right bracket `]`
 /// </summary>
-public class RightBracket : SingleCharacterToken
-{
-    public RightBracket() : base(Symbols.SquareBracketClose)
-    {
-    }
-}
+public class RightBracket() : SingleCharacterToken(Symbols.SquareBracketClose);

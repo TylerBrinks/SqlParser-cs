@@ -3,9 +3,4 @@
 /// <summary>
 /// Caret `^`
 /// </summary>
-public class Caret : SingleCharacterToken
-{
-    public Caret() : base(Symbols.Caret)
-    {
-    }
-}
+public class Caret() : SingleCharacterToken(Symbols.Caret);

@@ -3,10 +3,8 @@
 /// <summary>
 /// Double quoted string: i.e: "string"
 /// </summary>
-public class DoubleQuotedString : StringToken
+public class DoubleQuotedString(string value) : StringToken(value)
 {
-    public DoubleQuotedString(string value) : base(value) { }
-
     public override string ToString()
     {
         return $"\"{Value}\"";

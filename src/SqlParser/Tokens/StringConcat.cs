@@ -3,9 +3,4 @@
 /// <summary>
 /// String concatenation `||`
 /// </summary>
-public class StringConcat : StringToken
-{
-    public StringConcat() : base("||")
-    {
-    }
-}
+public class StringConcat() : StringToken("||");

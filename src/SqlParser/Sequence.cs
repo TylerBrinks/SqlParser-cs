@@ -95,16 +95,9 @@ public class Sequence<T> : List<T>, IWriteSql, IElement
             return ControlFlow.Continue;
         }
 
-        foreach (var item in this)
-        {
-            var control = (item as IElement)!.Visit(visitor);
-            if (control == ControlFlow.Break)
-            {
-                return control;
-            }
-        }
-
-        return ControlFlow.Continue;
+        return this.Select(item => (item as IElement)!
+            .Visit(visitor))
+            .FirstOrDefault(control => control == ControlFlow.Break);
     }
 
     public static implicit operator T[](Sequence<T> list)

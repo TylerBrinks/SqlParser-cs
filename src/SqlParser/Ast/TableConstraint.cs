@@ -18,7 +18,7 @@ public abstract record TableConstraint : IWriteSql, IElement
     {
         public Ident? Name { get; init; }
         public bool IsPrimaryKey { get; init; }
-        public ConstraintCharacteristics Characteristics { get; init; }
+        public ConstraintCharacteristics? Characteristics { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {

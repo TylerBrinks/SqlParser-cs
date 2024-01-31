@@ -3,18 +3,13 @@
 /// <summary>
 /// An unsigned numeric literal token
 /// </summary>
-public class Number : StringToken
+public class Number(string value, bool @long) : StringToken(value)
 {
     public Number(string value) : this(value, false)
     {
     }
 
-    public Number(string value, bool @long) : base(value)
-    {
-        Long = @long;
-    }
-
-    public bool Long { get; }
+    public bool Long { get; } = @long;
 
     public override string ToString()
     {

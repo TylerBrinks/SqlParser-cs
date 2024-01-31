@@ -3,12 +3,8 @@
 /// <summary>
 /// Ampersand &
 /// </summary>
-public class Ampersand : SingleCharacterToken
+public class Ampersand() : SingleCharacterToken(Symbols.Ampersand)
 {
-    public Ampersand() : base(Symbols.Ampersand)
-    {
-    }
-
     public override bool Equals(object? obj)
     {
         return base.Equals(obj) && Equals(obj as Ampersand);

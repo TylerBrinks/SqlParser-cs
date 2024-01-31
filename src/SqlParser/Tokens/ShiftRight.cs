@@ -3,9 +3,4 @@
 /// <summary>
 /// '>>' a bitwise shift right operator in PostgreSQL
 /// </summary>
-public class ShiftRight : StringToken
-{
-    public ShiftRight() : base(">>")
-    {
-    }
-}
+public class ShiftRight() : StringToken(">>");

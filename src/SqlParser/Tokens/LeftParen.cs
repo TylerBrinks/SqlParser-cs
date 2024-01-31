@@ -3,9 +3,4 @@
 /// <summary>
 /// Left parenthesis `(`
 /// </summary>
-public class LeftParen : SingleCharacterToken
-{
-    public LeftParen() : base(Symbols.ParenOpen)
-    {
-    }
-}
+public class LeftParen() : SingleCharacterToken(Symbols.ParenOpen);

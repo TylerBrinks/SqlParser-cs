@@ -12,33 +12,38 @@ public record ConstraintCharacteristics : IWriteSql
         var initial = Initially is DeferrableInitial.Deferred ? "INITIALLY DEFERRED" : "INITIALLY IMMEDIATE";
         var enforced = Enforced is true ? "ENFORCED" : "NOT ENFORCED";
 
-        if (!Deferrable.HasValue && !Initially.HasValue && Enforced.HasValue)
+        switch (Deferrable)
         {
-            writer.Write($"{enforced}");
-        }
-        else if (!Deferrable.HasValue && Initially.HasValue && !Enforced.HasValue)
-        {
-            writer.Write($"{initial}");
-        }
-        else if (!Deferrable.HasValue && Initially.HasValue && Enforced.HasValue)
-        {
-            writer.Write($"{initial} {enforced}");
-        }
-        else if (Deferrable.HasValue && !Initially.HasValue && !Enforced.HasValue)
-        {
-            writer.Write($"{deferrable}");
-        }
-        else if (Deferrable.HasValue && !Initially.HasValue && Enforced.HasValue)
-        {
-            writer.Write($"{deferrable} {enforced}");
-        }
-        else if (Deferrable.HasValue && Initially.HasValue && !Enforced.HasValue)
-        {
-            writer.Write($"{deferrable} {initial}");
-        }
-        else if (Deferrable.HasValue && Initially.HasValue && Enforced.HasValue)
-        {
-            writer.Write($"{deferrable} {initial} {enforced}");
+            case null when !Initially.HasValue && Enforced.HasValue:
+                writer.Write($"{enforced}");
+                break;
+            case null when Initially.HasValue && !Enforced.HasValue:
+                writer.Write($"{initial}");
+                break;
+            case null when Initially.HasValue && Enforced.HasValue:
+                writer.Write($"{initial} {enforced}");
+                break;
+            default:
+            {
+                if (Deferrable.HasValue && !Initially.HasValue && !Enforced.HasValue)
+                {
+                    writer.Write($"{deferrable}");
+                }
+                else if (Deferrable.HasValue && !Initially.HasValue && Enforced.HasValue)
+                {
+                    writer.Write($"{deferrable} {enforced}");
+                }
+                else if (Deferrable.HasValue && Initially.HasValue && !Enforced.HasValue)
+                {
+                    writer.Write($"{deferrable} {initial}");
+                }
+                else if (Deferrable.HasValue && Initially.HasValue && Enforced.HasValue)
+                {
+                    writer.Write($"{deferrable} {initial} {enforced}");
+                }
+
+                break;
+            }
         }
     }
 }

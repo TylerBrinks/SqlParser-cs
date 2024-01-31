@@ -3,9 +3,4 @@
 /// <summary>
 /// Multiplication operator `*`
 /// </summary>
-public class Multiply : SingleCharacterToken
-{
-    public Multiply() : base(Symbols.Asterisk)
-    {
-    }
-}
+public class Multiply() : SingleCharacterToken(Symbols.Asterisk);

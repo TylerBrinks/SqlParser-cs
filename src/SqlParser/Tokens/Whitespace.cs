@@ -3,21 +3,15 @@
 /// <summary>
 /// Whitespace (space, tab, etc)
 /// </summary>
-public class Whitespace : Token
+public class Whitespace(WhitespaceKind kind, string? value) : Token
 {
     public Whitespace(WhitespaceKind kind) : this(kind, null)
     {
     }
 
-    public Whitespace(WhitespaceKind kind, string? value)
-    {
-        WhitespaceKind = kind;
-        Value = value;
-    }
-
-    public WhitespaceKind WhitespaceKind { get; init; }
+    public WhitespaceKind WhitespaceKind { get; init; } = kind;
     public string? Prefix { get; init; }
-    public string? Value { get; init; }
+    public string? Value { get; init; } = value;
 
     public override bool Equals(object? obj)
     {

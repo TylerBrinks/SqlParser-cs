@@ -3,16 +3,10 @@ using SqlParser.Tokens;
 
 namespace SqlParser;
 
-public ref struct Tokenizer
+public ref struct Tokenizer(bool unescape = true)
 {
     private Dialect _dialect;
     private State _state;
-    private readonly bool _unescape;
-
-    public Tokenizer(bool unescape = true)
-    {
-        _unescape = unescape;
-    }
 
     /// <summary>
     /// Reads a string into primitive SQL tokens using a generic SQL dialect
@@ -37,7 +31,7 @@ public ref struct Tokenizer
         return TokenizeWithLocation(sql);
     }
 
-    private IList<Token> TokenizeWithLocation(ReadOnlySpan<char> sql)
+    private List<Token> TokenizeWithLocation(ReadOnlySpan<char> sql)
     {
         _state = new State(sql);
 
@@ -147,7 +141,7 @@ public ref struct Tokenizer
         return token;
     }
 
-    private Token TokenizeCarriageReturn()
+    private Whitespace TokenizeCarriageReturn()
     {
         _state.Next();
         if (_state.Peek() == Symbols.NewLine)
@@ -198,29 +192,6 @@ public ref struct Tokenizer
         return new HexStringLiteral(new string(hex));
 
     }
-
-    //private Token TokenizeIdent()
-    //{
-    //    var chars = TokenizeWord();
-
-    //    // Check for numbers given dialects like Hive support
-    //    // numeric identifiers
-    //    if (!chars.All(c => c.IsDigit() || c == Symbols.Dot))
-    //    {
-    //        return new Word(new string(chars), null);
-    //    }
-
-    //    // Dialect supports digit identifier. Capture the remainder of the whole word
-    //    // with all digits and dots. 
-    //    var additional = _state.PeekTakeWhile(c => c.IsDigit() || c == Symbols.Dot);
-
-    //    if (additional.Length > 0)
-    //    {
-    //        chars = ConcatArrays(chars, additional);
-    //    }
-
-    //    return new Number(new string(chars), false);
-    //}
 
     public Token TokenizeIdentifierOrKeyword(char[] characters)
     {
@@ -276,7 +247,7 @@ public ref struct Tokenizer
                 {
                     word.Add(current);
 
-                    if (!_unescape)
+                    if (!unescape)
                     {
                         // In no-escape mode, the given query has to be saved completely
                         word.Add(current);
@@ -297,7 +268,7 @@ public ref struct Tokenizer
                 if (_dialect is MySqlDialect)
                 {
                     var next = _state.Peek();
-                    if (!_unescape)
+                    if (!unescape)
                     {
                         word.Add(current);
                         word.Add(next);
@@ -329,8 +300,6 @@ public ref struct Tokenizer
                 {
                     word.Add(current);
                 }
-
-                //_state.Next();
             }
             else
             {
@@ -342,7 +311,7 @@ public ref struct Tokenizer
         throw new TokenizeException($"Unterminated string literal. Expected {quoteStyle} after {errorLocation}", errorLocation);
     }
 
-    private Token TokenizeDelimitedQuoted(char startQuote)
+    private Word TokenizeDelimitedQuoted(char startQuote)
     {
         var errorLocation = _state.CloneLocation();
 
@@ -454,7 +423,7 @@ public ref struct Tokenizer
 
         if (_dialect.IsIdentifierStart(Symbols.Percent))
         {
-            return TokenizeIdentifierOrKeyword(new[] { character, next });
+            return TokenizeIdentifierOrKeyword([character, next]);
         }
 
         return new Modulo();
@@ -551,13 +520,13 @@ public ref struct Tokenizer
         return (true, isEscaped);
     }
 
-    private bool EscapeBackslash(ICollection<char> s, bool isEscaped)
+    private bool EscapeBackslash(ICollection<char> stringValue, bool isEscaped)
     {
         bool escaped;
 
         if (isEscaped)
         {
-            s.Add(Symbols.Backslash);
+            stringValue.Add(Symbols.Backslash);
             escaped = false;
         }
         else
@@ -569,18 +538,18 @@ public ref struct Tokenizer
         return escaped;
     }
 
-    private bool EscapeControlCharacter(ICollection<char> s, char current, bool isEscaped, char escaped)
+    private bool EscapeControlCharacter(ICollection<char> stringValue, char current, bool isEscaped, char escaped)
     {
         var continueEscaped = isEscaped;
 
         if (isEscaped)
         {
-            s.Add(escaped);
+            stringValue.Add(escaped);
             continueEscaped = false;
         }
         else
         {
-            s.Add(current);
+            stringValue.Add(current);
         }
         _state.Next();
 
@@ -618,7 +587,6 @@ public ref struct Tokenizer
 
         _state.Next();
         return new LongArrow();
-
     }
 
     private Token TokenizeDivide()
@@ -698,7 +666,7 @@ public ref struct Tokenizer
 
         if (_state.Peek() == Symbols.NewLine)
         {
-            comment = ConcatArrays(comment, new[] { Symbols.NewLine });
+            comment = ConcatArrays(comment, [Symbols.NewLine]);
             _state.Next();
         }
 
@@ -839,7 +807,7 @@ public ref struct Tokenizer
         return new Caret();
     }
 
-    private Token TokenizeSnowflakeComment()
+    private Whitespace TokenizeSnowflakeComment()
     {
         _state.Next();
         var comment = TokenizeInlineComment();
@@ -895,7 +863,7 @@ public ref struct Tokenizer
             default:
                 if (_dialect.IsIdentifierStart(Symbols.Num))
                 {
-                    return TokenizeIdentifierOrKeyword(new[] { character, _state.Peek() });
+                    return TokenizeIdentifierOrKeyword([character, _state.Peek()]);
                 }
 
                 return new Hash();
@@ -916,7 +884,7 @@ public ref struct Tokenizer
         };
     }
 
-    Token TokenizeAtAt(char character)
+    private Token TokenizeAtAt(char character)
     {
         _state.Next();
         var next = _state.Peek();
@@ -930,11 +898,11 @@ public ref struct Tokenizer
             : new AtAt();
     }
 
-    private Token TokenizeQuestionMark()
+    private Placeholder TokenizeQuestionMark()
     {
         _state.Next();
         var word = _state.PeekTakeWhile(c => c.IsDigit());
-        var question = ConcatArrays(new[] { Symbols.QuestionMark }, word);
+        var question = ConcatArrays([Symbols.QuestionMark], word);
         return new Placeholder(new string(question));
     }
 
@@ -1059,7 +1027,7 @@ public ref struct Tokenizer
                     _state.Next();
                     chars.Add(current);
 
-                    if (!_unescape)
+                    if (!unescape)
                     {
                         chars.Add(current);
                     }

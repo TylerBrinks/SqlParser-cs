@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using SqlParser.Ast;
+﻿using SqlParser.Ast;
 
 namespace SqlParser.Tokens;
 

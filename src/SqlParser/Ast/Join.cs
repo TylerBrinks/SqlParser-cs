@@ -4,25 +4,6 @@ public record Join(TableFactor? Relation = null, JoinOperator? JoinOperator = nu
 {
     public void ToSql(SqlTextWriter writer)
     {
-        string? Prefix(JoinConstraint constraint)
-        {
-            return constraint is JoinConstraint.Natural ? "NATURAL " : null;
-        }
-
-        string? Suffix(JoinConstraint constraint)
-        {
-            if (constraint is JoinConstraint.On on)
-            {
-                return $" ON {on.Expression.ToSql()}";
-            }
-            
-            if (constraint is JoinConstraint.Using @using)
-            {
-                return $" USING({ @using.Idents.ToSqlDelimited() })";
-            }
-            return null;
-        }
-
         switch (JoinOperator)
         {
             case JoinOperator.CrossApply:
@@ -75,6 +56,22 @@ public record Join(TableFactor? Relation = null, JoinOperator? JoinOperator = nu
         }
 
         writer.WriteSql($" {Prefix(constraint)}{joinText} {Relation}{Suffix(constraint)}");
+        return;
+
+        string? Suffix(JoinConstraint constraint)
+        {
+            return constraint switch
+            {
+                JoinConstraint.On on => $" ON {on.Expression.ToSql()}",
+                JoinConstraint.Using @using => $" USING({@using.Idents.ToSqlDelimited()})",
+                _ => null
+            };
+        }
+
+        string? Prefix(JoinConstraint prefixConstraint)
+        {
+            return prefixConstraint is JoinConstraint.Natural ? "NATURAL " : null;
+        }
     }
 }
 

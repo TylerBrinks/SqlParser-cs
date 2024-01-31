@@ -4,9 +4,4 @@
 /// <summary>
 /// Double Equal `==` used for PostgreSQL prefix factorial operator
 /// </summary>
-public class DoubleEqual : StringToken
-{
-    public DoubleEqual() : base("==")
-    {
-    }
-}
+public class DoubleEqual() : StringToken("==");

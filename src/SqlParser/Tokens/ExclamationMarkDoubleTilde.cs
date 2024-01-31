@@ -3,9 +3,4 @@
 /// <summary>
 /// `!~~`, a case sensitive not match pattern operator in PostgreSQL
 /// </summary>
-public class ExclamationMarkDoubleTilde : StringToken
-{
-    public ExclamationMarkDoubleTilde() : base("!~~")
-    {
-    }
-}
+public class ExclamationMarkDoubleTilde() : StringToken("!~~");

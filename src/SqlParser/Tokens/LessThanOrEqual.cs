@@ -3,9 +3,4 @@
 /// <summary>
 /// Less Than Or Equals operator `<=`
 /// </summary>
-public class LessThanOrEqual : StringToken
-{
-    public LessThanOrEqual() : base("<=")
-    {
-    }
-}
+public class LessThanOrEqual() : StringToken("<=");

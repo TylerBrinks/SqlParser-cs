@@ -3,9 +3,4 @@
 /// <summary>
 /// Spaceship operator <=>
 /// </summary>
-public class Spaceship : StringToken
-{
-    public Spaceship() : base("<=>")
-    {
-    }
-}
+public class Spaceship() : StringToken("<=>");

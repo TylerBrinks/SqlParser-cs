@@ -3,10 +3,4 @@
 /// <summary>
 /// Plus operator `+`
 /// </summary>
-public class Plus : SingleCharacterToken
-{
-    public Plus() : base(Symbols.Plus)
-    {
-
-    }
-}
+public class Plus() : SingleCharacterToken(Symbols.Plus);

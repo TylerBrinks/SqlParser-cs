@@ -3,10 +3,8 @@
 /// <summary>
 /// Hexadecimal string literal: i.e.: X'deadbeef'
 /// </summary>
-public class HexStringLiteral : StringToken
+public class HexStringLiteral(string value) : StringToken(value)
 {
-    public HexStringLiteral(string value) : base(value) { }
-
     public override string ToString()
     {
         return $"X'{Value}'";

@@ -83,7 +83,7 @@ public abstract record AlterColumnOperation : IWriteSql
                 {
                     writer.WriteSql($" USING {sdt.Using}");
                 }
-               
+
                 break;
 
             case AddGenerated ag:
@@ -94,10 +94,10 @@ public abstract record AlterColumnOperation : IWriteSql
                     _ => string.Empty
                 };
                 writer.Write($"ADD GENERATED{genAs} AS IDENTITY");
-                    writer.Write(" (");
+                writer.Write(" (");
                 if (ag.SequenceOptions.SafeAny())
                 {
-                    writer.WriteDelimited(ag.SequenceOptions, "");
+                    writer.WriteDelimited(ag.SequenceOptions, string.Empty);
                 }
                 writer.Write(" )");
                 break;

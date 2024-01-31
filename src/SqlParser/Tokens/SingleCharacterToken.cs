@@ -1,13 +1,8 @@
 ﻿namespace SqlParser.Tokens;
 
-public class SingleCharacterToken : Token
+public class SingleCharacterToken(char character) : Token
 {
-    public SingleCharacterToken(char character)
-    {
-        Character = character;
-    }
-
-    public char Character { get; }
+    public char Character { get; } = character;
 
     public override string ToString()
     {

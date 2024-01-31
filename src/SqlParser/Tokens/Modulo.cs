@@ -3,9 +3,4 @@
 /// <summary>
 /// Modulo Operator `%`
 /// </summary>
-public class Modulo : SingleCharacterToken
-{
-    public Modulo() : base(Symbols.Percent)
-    {
-    }
-}
+public class Modulo() : SingleCharacterToken(Symbols.Percent);

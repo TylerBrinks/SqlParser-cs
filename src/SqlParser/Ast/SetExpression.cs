@@ -151,7 +151,7 @@ public abstract record SetExpression : IWriteSql, IElement
         return As<SelectExpression>();
     }
 
-    public Ast.Select AsSelect()
+    public Select AsSelect()
     {
         return AsSelectExpression().Select;
     }

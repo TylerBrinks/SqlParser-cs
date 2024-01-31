@@ -3,9 +3,7 @@
 /// <summary>
 /// Dollar quoted string: i.e: $$string$$ or $tag_name$string$tag_name$
 /// </summary>
-public class DollarQuotedString : StringToken
+public class DollarQuotedString(string value) : StringToken(value)
 {
-    public DollarQuotedString(string value) : base(value) { }
-
     public string? Tag { get; set; }
 }

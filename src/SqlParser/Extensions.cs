@@ -205,17 +205,16 @@ internal static class Extensions
 
         var builder = StringBuilderPool.Get();
 
-        foreach (var character in value)
+        foreach (var escaped in value.Select(character => character switch
+                 {
+                     Symbols.SingleQuote => @"\'",
+                     Symbols.Backslash => @"\\",
+                     Symbols.NewLine => @"\n",
+                     Symbols.Tab => @"\t",
+                     Symbols.CarriageReturn => @"\r",
+                     _ => character.ToString()
+                 }))
         {
-            var escaped = character switch
-            {
-                Symbols.SingleQuote => @"\'",
-                Symbols.Backslash => @"\\",
-                Symbols.NewLine => @"\n",
-                Symbols.Tab => @"\t",
-                Symbols.CarriageReturn => @"\r",
-                _ => character.ToString()
-            };
             builder.Append(escaped);
         }
 

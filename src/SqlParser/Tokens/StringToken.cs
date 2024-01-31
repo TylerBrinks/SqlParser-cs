@@ -3,14 +3,9 @@
 /// <summary>
 /// Represents a token composed of a character array
 /// </summary>
-public abstract class StringToken : Token
+public abstract class StringToken(string value) : Token
 {
-    protected StringToken(string value)
-    {
-        Value = value;
-    }
-
-    public string Value { get; init; }
+    public string Value { get; init; } = value;
 
     public override string ToString()
     {

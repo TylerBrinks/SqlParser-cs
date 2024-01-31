@@ -3,9 +3,4 @@
 /// <summary>
 /// `~*` a case insensitive match regular expression operator in PostgreSQL
 /// </summary>
-public class TildeAsterisk : StringToken
-{
-    public TildeAsterisk() : base("~*")
-    {
-    }
-}
+public class TildeAsterisk() : StringToken("~*");

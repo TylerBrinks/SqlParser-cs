@@ -3,9 +3,4 @@
 /// <summary>
 /// -> used as a operator to extract json field in PostgreSQL
 /// </summary>
-public class Arrow : StringToken
-{
-    public Arrow() : base("->")
-    {
-    }
-}
+public class Arrow() : StringToken("->");

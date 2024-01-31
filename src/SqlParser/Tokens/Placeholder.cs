@@ -3,9 +3,4 @@
 /// <summary>
 /// `?` or `$` a prepared statement arg placeholder
 /// </summary>
-public class Placeholder : StringToken
-{
-    public Placeholder(string value) : base(value)
-    {
-    }
-}
+public class Placeholder(string value) : StringToken(value);

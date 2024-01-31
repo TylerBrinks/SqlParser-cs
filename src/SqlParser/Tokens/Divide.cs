@@ -3,9 +3,4 @@
 /// <summary>
 /// Division operator `/`
 /// </summary>
-public class Divide : SingleCharacterToken
-{
-    public Divide() : base(Symbols.Divide)
-    {
-    }
-}
+public class Divide() : SingleCharacterToken(Symbols.Divide);

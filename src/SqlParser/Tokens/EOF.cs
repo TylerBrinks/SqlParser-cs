@@ -4,12 +4,8 @@ namespace SqlParser.Tokens;
 /// <summary>
 /// An end-of-file marker, not a real token
 /// </summary>
-public class EOF : StringToken
+public class EOF() : StringToken("EOF")
 {
-    public EOF() : base("EOF")
-    {
-    }
-
     public override bool Equals(object? obj)
     {
         return obj is EOF;

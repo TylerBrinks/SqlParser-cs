@@ -3,9 +3,4 @@
 /// <summary>
 /// Comma
 /// </summary>
-public class Comma : SingleCharacterToken
-{
-    public Comma() : base(Symbols.Comma)
-    {
-    }
-}
+public class Comma() : SingleCharacterToken(Symbols.Comma);
