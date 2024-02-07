@@ -18,19 +18,28 @@
 		<PackageTags>SQL, Parser,Lexer, AST, Dialect, Postgres, MySQL, MsSql, Redshift, Snowflake, SQLite</PackageTags>
 		<PackageIcon>icon.jpg</PackageIcon>
 		<PackageId>SqlParserCS</PackageId>
-		<PublishRepositoryUrl>true</PublishRepositoryUrl>
-		<GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
-		<GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
-		<GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
-		<SignAssembly>true</SignAssembly>
+		<SignAssembly>True</SignAssembly>
 		<AssemblyOriginatorKeyFile>sqlparser.snk</AssemblyOriginatorKeyFile>
-		<EmbedUntrackedSources>true</EmbedUntrackedSources>
-		<IncludeSymbols>true</IncludeSymbols>
-		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0|AnyCPU'">
+		<GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net7.0|AnyCPU'">
+		<GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net8.0|AnyCPU'">
+		<GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net7.0|AnyCPU'">
+		<GenerateAssemblyInfo>False</GenerateAssemblyInfo>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<InternalsVisibleTo Include="SqlParser.Tests, PublicKey=002400000480000094000000060200000024000052534131000400000100010099467834d460ca875e5d2c8f2320f197aa5cc1e4f11186ec69ed29f0eb866afd16bf403d82854a4590d2b36af8f46b974acc55a5a409c0b1c83182125d840527fd930979046a9f6646d86ceceb0e886136c37463ae195b78622b387ee0ddc2fc51b0c081d03b270fcc81aad3d4979d2bc47d0fb20f8698291e034e352c9758a9" />
+		<InternalsVisibleTo Include="SqlParser.Tests, PublicKey=2fd3b9322714feba" />
 	</ItemGroup>
 
 	<ItemGroup>

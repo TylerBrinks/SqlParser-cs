@@ -1,5 +1,4 @@
 ﻿namespace SqlParser;
-
 internal static class Symbols
 {
     public const char Null = '\0';                      // 0x0

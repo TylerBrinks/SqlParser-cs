@@ -552,10 +552,5 @@ namespace SqlParser.Tests.Dialects
             }, new Sequence<StructField>());
             Assert.Equal(expected, select.Projection.Skip(4).First().AsExpr());
         }
-
-        public void Parse_Typed_Struct_Syntax()
-        {
-
-        }
     }
 }
