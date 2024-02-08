@@ -909,7 +909,7 @@ namespace SqlParser.Tests.Dialects
             const string sql = "DELETE FROM customers ORDER BY id DESC";
             var delete = VerifiedStatement(sql);
 
-            var from = new FromTable.WithoutKeyword([new(new TableFactor.Table("customers"))]);
+            var from = new FromTable.WithFromKeyword([new(new TableFactor.Table("customers"))]);
             var expected = new Statement.Delete(null, from,
                 OrderBy: new Sequence<OrderByExpression>
                 {
@@ -925,7 +925,7 @@ namespace SqlParser.Tests.Dialects
         {
             const string sql = "DELETE FROM customers LIMIT 100";
             var delete = VerifiedStatement(sql);
-            var from = new FromTable.WithoutKeyword([new(new TableFactor.Table("customers"))]);
+            var from = new FromTable.WithFromKeyword([new(new TableFactor.Table("customers"))]);
             var expected = new Statement.Delete(null, from,
                 Limit: new LiteralValue(new Value.Number("100"))
             );

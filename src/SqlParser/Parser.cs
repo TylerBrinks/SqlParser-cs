@@ -8309,7 +8309,8 @@ public class Parser
                 or BigQueryDialect
                 or SnowflakeDialect
                 or RedshiftDialect
-                or MsSqlDialect)
+                or MsSqlDialect
+                or SQLiteDialect)
         {
             from = ParseTableAndJoins();
         }

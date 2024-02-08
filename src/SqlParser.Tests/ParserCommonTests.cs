@@ -112,7 +112,8 @@ namespace SqlParser.Tests
                 new BigQueryDialect(),
                 new SnowflakeDialect(),
                 new RedshiftDialect(),
-                new MsSqlDialect()
+                new MsSqlDialect(),
+                new SQLiteDialect()
             };
 
             var statement = VerifiedStatement(sql, dialects);
