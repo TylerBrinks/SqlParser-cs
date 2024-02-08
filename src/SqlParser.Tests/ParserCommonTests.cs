@@ -190,16 +190,20 @@ namespace SqlParser.Tests
         }
 
         [Fact]
-        public void Parse_Delete_Statement()
+        public void Parse_Quoted_Delete_Statement()
         {
-            var statement = VerifiedStatement("DELETE FROM \"table\"");
+            var delete = (Statement.Delete)VerifiedStatement("DELETE FROM \"table\"");
+            var relation = (delete.From as FromTable.WithFromKeyword).From.First().Relation;
 
-            var factor = new TableFactor.Table(new ObjectName(new Ident("table", Symbols.DoubleQuote)));
-            var from = new TableWithJoins(factor);
+            var expected = new TableFactor.Table(new ObjectName(new Ident("table", Symbols.DoubleQuote)));
 
-            var delete = new Statement.Delete(null, new Sequence<TableWithJoins> { from });
+            Assert.Equal(expected, relation);
+        }
 
-            Assert.Equal(delete, statement);
+        [Fact]
+        public void Parse_Delete_Without_fFrom_Error()
+        {
+            Assert.Throws<ParserException>(() => ParseSqlStatements("DELETE \"table\" WHERE 1"));
         }
 
         [Fact]
@@ -211,11 +215,11 @@ namespace SqlParser.Tests
             var binaryOp = new BinaryOp(new Identifier("name"), BinaryOperator.Eq, new LiteralValue(Number("5")));
 
             var delete = statement.AsDelete();
-            Assert.Equal(table, delete.From.First().Relation);
+            Assert.Equal(table, (delete.From as FromTable.WithFromKeyword).From.First().Relation);
             Assert.Null(delete.Using);
             Assert.Equal(binaryOp, delete.Selection);
         }
-
+        
         [Fact]
         public void Parse_Where_Delete_With_Alias_Statement()
         {
@@ -228,7 +232,7 @@ namespace SqlParser.Tests
                 BinaryOperator.Lt,
                 new CompoundIdentifier(new Ident[] { "b", "id" }));
 
-            Assert.Equal(table, delete.From.First().Relation);
+            Assert.Equal(table, (delete.From as FromTable.WithFromKeyword).From.First().Relation);
             Assert.Equal(@using, delete.Using);
             Assert.Equal(binaryOp, delete.Selection);
             Assert.Null(delete.Returning);

@@ -253,7 +253,7 @@ namespace SqlParser.Tests.Dialects
         public void Parse_Escaped_Quote_Identifiers_With_Escape()
         {
             var query = VerifiedStatement<Statement.Select>("SELECT `quoted `` identifier`", unescape: true);
-            var body = new SetExpression.SelectExpression(new Ast.Select(new[]
+            var body = new SetExpression.SelectExpression(new Select(new[]
             {
                 new SelectItem.UnnamedExpression(new Identifier(new Ident("quoted ` identifier", Symbols.Backtick)))
             }));
@@ -266,7 +266,7 @@ namespace SqlParser.Tests.Dialects
         public void Parse_Escaped_Quote_Identifiers_No_Escape()
         {
             var query = VerifiedStatement<Statement.Select>("SELECT `quoted `` identifier`");
-            var body = new SetExpression.SelectExpression(new Ast.Select(new[]
+            var body = new SetExpression.SelectExpression(new Select(new[]
             {
                 new SelectItem.UnnamedExpression(new Identifier(new Ident("quoted `` identifier", Symbols.Backtick)))
             }));
@@ -282,10 +282,9 @@ namespace SqlParser.Tests.Dialects
 
             var statement = VerifiedStatement(sql, new[] { new MySqlDialect() });
 
-            var body = new SetExpression.SelectExpression(new Ast.Select(new()
-            {
+            var body = new SetExpression.SelectExpression(new Select([
                 new SelectItem.UnnamedExpression(new Identifier(new Ident("``quoted identifier``", '`')))
-            }));
+            ]));
             var expected = new Query(body);
 
             Assert.Equal(expected, statement);
@@ -366,27 +365,24 @@ namespace SqlParser.Tests.Dialects
             var insert = VerifiedStatement<Statement.Insert>(sql);
             var body = new SetExpression.ValuesExpression(new Values(new Sequence<Expression>[]
             {
-                new()
-                {
+                [
                     new LiteralValue(new Value.SingleQuotedString("Test Some Inserts")),
                     new LiteralValue(Number("1"))
-                },
-                new()
-                {
+                ],
+                [
                     new LiteralValue(new Value.SingleQuotedString("Test Entry 2")),
                     new LiteralValue(Number("2"))
-                },
-                new()
-                {
+                ],
+                [
                     new LiteralValue(new Value.SingleQuotedString("Test Entry 3")),
                     new LiteralValue(Number("3"))
-                }
+                ]
             }));
             var expected = new Query(body);
 
             Assert.Equal("tasks", insert.Name);
             Assert.Equal(new Ident[] { "title", "priority" }, insert.Columns!);
-            Assert.Equal(expected, insert.Source.Query);
+            Assert.Equal(expected, insert.Source!.Query);
         }
 
         [Fact]
@@ -423,18 +419,17 @@ namespace SqlParser.Tests.Dialects
 
             var rows = new Sequence<Expression>[]
             {
-                new()
-                {
+                [
                     new LiteralValue(new Value.SingleQuotedString("accounting_manager")),
                     new LiteralValue(new Value.SingleQuotedString("Some description about the group")),
                     new LiteralValue(new Value.Boolean(true)),
                     new LiteralValue(new Value.Boolean(true)),
                     new LiteralValue(new Value.Boolean(true)),
                     new LiteralValue(new Value.Boolean(true))
-                }
+                ]
             };
 
-            Assert.Equal(new Query(new SetExpression.ValuesExpression(new Values(rows))), (Query)insert.Source);
+            Assert.Equal(new Query(new SetExpression.ValuesExpression(new Values(rows))), (Query)insert.Source!);
 
             var update = new OnInsert.DuplicateKeyUpdate(new Statement.Assignment[]
             {
@@ -569,7 +564,7 @@ namespace SqlParser.Tests.Dialects
             var query = OneStatementParsesTo<Statement.Select>(
                 "SELECT DISTINCT SUBSTRING(description, 0, 1) FROM test",
                 "SELECT DISTINCT SUBSTRING(description FROM 0 FOR 1) FROM test");
-            var body = new SetExpression.SelectExpression(new Ast.Select(new[]
+            var body = new SetExpression.SelectExpression(new Select(new[]
             {
                 new SelectItem.UnnamedExpression(new Substring(
                     new Identifier("description"),
@@ -838,7 +833,7 @@ namespace SqlParser.Tests.Dialects
                 new("id", new DataType.Int(), Options: new Sequence<ColumnOptionDef>
                 {
                     new(new ColumnOption.Unique(true)),
-                    new(new ColumnOption.DialectSpecific(new Sequence<Token> {new Word("AUTO_INCREMENT")}))
+                    new(new ColumnOption.DialectSpecific([new Word("AUTO_INCREMENT")]))
                 }),
                 new("bar", new DataType.Int(), Options: new Sequence<ColumnOptionDef>
                 {
@@ -914,9 +909,8 @@ namespace SqlParser.Tests.Dialects
             const string sql = "DELETE FROM customers ORDER BY id DESC";
             var delete = VerifiedStatement(sql);
 
-            var expected = new Statement.Delete(null,
-                new Sequence<TableWithJoins> { new(new TableFactor.Table("customers")) },
-
+            var from = new FromTable.WithoutKeyword([new(new TableFactor.Table("customers"))]);
+            var expected = new Statement.Delete(null, from,
                 OrderBy: new Sequence<OrderByExpression>
                 {
                     new (new Identifier("id"), Asc:false)
@@ -931,8 +925,8 @@ namespace SqlParser.Tests.Dialects
         {
             const string sql = "DELETE FROM customers LIMIT 100";
             var delete = VerifiedStatement(sql);
-            var expected = new Statement.Delete(null,
-                new Sequence<TableWithJoins> { new(new TableFactor.Table("customers")) },
+            var from = new FromTable.WithoutKeyword([new(new TableFactor.Table("customers"))]);
+            var expected = new Statement.Delete(null, from,
                 Limit: new LiteralValue(new Value.Number("100"))
             );
             Assert.Equal(expected, delete);
@@ -964,14 +958,12 @@ namespace SqlParser.Tests.Dialects
 
             var insert = VerifiedStatement(sql, dialects);
 
-            var query = new Query(new SetExpression.ValuesExpression(new Values(new Sequence<Sequence<Expression>>
-            {
-                new ()
-                {
+            var query = new Query(new SetExpression.ValuesExpression(new Values([
+                [
                     new LiteralValue(new Value.SingleQuotedString("Test Some Inserts")),
                     new LiteralValue(new Value.Number("1"))
-                }
-            })));
+                ]
+            ])));
 
             var expected = new Statement.Insert("tasks", new Statement.Select(query))
             {
@@ -1043,12 +1035,11 @@ namespace SqlParser.Tests.Dialects
             var expected = new TableFactor.JsonTable(
                 new LiteralValue(new Value.SingleQuotedString("[1,2]")),
                 new Value.SingleQuotedString("$[*]"),
-                new Sequence<JsonTableColumn>
-                {
-                    new ("x", new DataType.Int(), new Value.SingleQuotedString("$"),
+                [
+                    new("x", new DataType.Int(), new Value.SingleQuotedString("$"),
                         false, new JsonTableColumnErrorHandling.Default(new Value.SingleQuotedString("0")),
                         new JsonTableColumnErrorHandling.Null())
-                })
+                ])
             {
                 Alias = new TableAlias("t")
             };
@@ -1064,13 +1055,12 @@ namespace SqlParser.Tests.Dialects
 
             var create = OneStatementParsesTo(sql, canonical);
 
-            var expected = new Statement.CreateTable("tb", new Sequence<ColumnDef>
-            {
+            var expected = new Statement.CreateTable("tb", [
                 new("id", new DataType.Text(), "utf8mb4_0900_ai_ci", new Sequence<ColumnOptionDef>
                 {
-                    new (new ColumnOption.CharacterSet("utf8mb4"))
+                    new(new ColumnOption.CharacterSet("utf8mb4"))
                 })
-            });
+            ]);
 
             Assert.Equal(expected, create);
         }
@@ -1094,14 +1084,12 @@ namespace SqlParser.Tests.Dialects
             var insert = VerifiedStatement(sql);
 
             var select = new Statement.Select(new Query(new SetExpression.ValuesExpression(
-                new Values(new Sequence<Sequence<Expression>>
-                {
-                    new()
-                    {
+                new Values([
+                    [
                         new LiteralValue(new Value.SingleQuotedString("Test Some Inserts")),
                         new LiteralValue(new Value.Number("1"))
-                    }
-                }))));
+                    ]
+                ]))));
 
             var expected = new Statement.Insert("tasks", select)
             {

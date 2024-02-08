@@ -1288,7 +1288,7 @@ public abstract record Statement : IWriteSql, IElement
     /// <param name="Returning">Select items to return</param>
     public record Delete(
         Sequence<ObjectName>? Tables,
-        Sequence<TableWithJoins> From,
+        FromTable From,
         Sequence<OrderByExpression>? OrderBy = null,
         TableFactor? Using = null,
         Expression? Selection = null,
@@ -1304,8 +1304,7 @@ public abstract record Statement : IWriteSql, IElement
                 writer.WriteDelimited(Tables, ", ");
             }
 
-            writer.Write("From ");
-            writer.WriteDelimited(From, ", ");
+            writer.WriteSql($"{From}");
 
             if (Using != null)
             {

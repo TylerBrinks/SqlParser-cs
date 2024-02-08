@@ -6601,11 +6601,20 @@ public class Parser
     public Delete ParseDelete()
     {
         Sequence<ObjectName>? tables = null;
+        bool withFromKeyword = true;
 
         if (!ParseKeyword(Keyword.FROM))
         {
-            tables = ParseCommaSeparated(ParseObjectName);
-            ExpectKeyword(Keyword.FROM);
+            if (_dialect is BigQueryDialect or GenericDialect)
+            {
+                withFromKeyword = false;
+            }
+            else
+            {
+                tables = ParseCommaSeparated(ParseObjectName);
+                ExpectKeyword(Keyword.FROM);
+                withFromKeyword = true;
+            }
         }
 
         var from = ParseCommaSeparated(ParseTableAndJoins);
@@ -6616,7 +6625,9 @@ public class Parser
         var orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY), () => ParseCommaSeparated(ParseOrderByExpr));
         var limit = ParseInit(ParseKeyword(Keyword.LIMIT), ParseLimit);
 
-        return new Delete(tables, from, orderBy, @using, selection, returning, limit);
+        FromTable fromTable = withFromKeyword ? new FromTable.WithFromKeyword(from) : new FromTable.WithoutKeyword(from);
+
+        return new Delete(tables, fromTable, orderBy, @using, selection, returning, limit);
     }
     /// <summary>
     /// KILL[CONNECTION | QUERY | MUTATION] processlist_id
@@ -9006,7 +9017,7 @@ public class Parser
         {
             sequenceOptions.Add(new SequenceOptions.MinValue(null));
         }
-       
+
         //[ MAXVALUE maxvalue | NO MAXVALUE ]
         if (ParseKeywordSequence(Keyword.MAXVALUE))
         {

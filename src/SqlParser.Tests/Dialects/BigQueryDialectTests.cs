@@ -552,5 +552,16 @@ namespace SqlParser.Tests.Dialects
             }, new Sequence<StructField>());
             Assert.Equal(expected, select.Projection.Skip(4).First().AsExpr());
         }
+
+        [Fact]
+        public void Parse_Delete_Statement()
+        {
+            var delete = (Statement.Delete) VerifiedStatement("DELETE \"table\" WHERE 1");
+            var relation = (delete.From as FromTable.WithoutKeyword).From.First().Relation;
+
+            var expected = new TableFactor.Table(new ObjectName(new Ident("table", Symbols.DoubleQuote)));
+
+            Assert.Equal(expected, relation);
+        }
     }
 }
