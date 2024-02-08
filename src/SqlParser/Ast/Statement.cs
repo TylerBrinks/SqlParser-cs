@@ -2059,6 +2059,31 @@ public abstract record Statement : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// SHOW [GLOBAL | SESSION] STATUS [LIKE 'pattern' | WHERE expr]
+    /// </summary>
+    public record ShowStatus(ShowStatementFilter? Filter, bool Session, bool Global) : Statement{
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("SHOW");
+            
+            if(Global)
+            {
+                writer.Write(" GLOBAL");
+            }
+
+            if(Session)
+            {
+                writer.Write(" SESSION");
+            }
+            writer.Write(" STATUS");
+            
+            if(Filter != null)
+            {
+                writer.WriteSql($" {Filter}");
+            }
+        }
+    }
+    /// <summary>
     /// SHOW VARIABLE
     /// </summary>
     /// <param name="Variable">Variable identifiers</param>

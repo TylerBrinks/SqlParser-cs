@@ -1184,5 +1184,21 @@ namespace SqlParser.Tests.Dialects
                 });
             Assert.Equal(expected, flush);
         }
+
+        [Fact]
+        public void Parse_Show_Status()
+        {
+            var show = (Statement.ShowStatus) VerifiedStatement("SHOW SESSION STATUS LIKE 'ssl_cipher'");
+            var expected = new Statement.ShowStatus(new ShowStatementFilter.Like("ssl_cipher"), true, false);
+            Assert.Equal(expected, show);
+
+            show = (Statement.ShowStatus)VerifiedStatement("SHOW GLOBAL STATUS LIKE 'ssl_cipher'"); 
+            expected = new Statement.ShowStatus(new ShowStatementFilter.Like("ssl_cipher"), false, true);
+            Assert.Equal(expected, show);
+
+            show = (Statement.ShowStatus)VerifiedStatement("SHOW STATUS WHERE value = 2");
+            expected = new Statement.ShowStatus(new ShowStatementFilter.Where(VerifiedExpr("value = 2")), false, false);
+            Assert.Equal(expected, show);
+        }
     }
 }

@@ -7416,6 +7416,11 @@ public class Parser
             return new ShowVariables(ParseShowStatementFilter(), global, session);
         }
 
+        if (ParseKeyword(Keyword.STATUS) && _dialect is MySqlDialect or GenericDialect)
+        {
+            return new ShowStatus(ParseShowStatementFilter(), session, global);
+        }
+
         return new ShowVariable(ParseIdentifiers());
     }
 
