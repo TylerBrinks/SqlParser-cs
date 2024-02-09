@@ -3534,10 +3534,10 @@ public class Parser
         var materialized = ParseKeyword(Keyword.MATERIALIZED);
         ExpectKeyword(Keyword.VIEW);
 
-        var ifNotExists = _dialect is SQLiteDialect or GenericDialect && ParseIfNotExists();
+        var ifNotExists = _dialect is BigQueryDialect or SQLiteDialect or GenericDialect && ParseIfNotExists();
 
         var name = ParseObjectName();
-        var columns = ParseViewColumns(); //ParseParenthesizedColumnList(IsOptional.Optional, false);
+        var columns = ParseViewColumns(); 
         CreateTableOptions options = new CreateTableOptions.None();
         var withOptions = ParseOptions(Keyword.WITH);
 

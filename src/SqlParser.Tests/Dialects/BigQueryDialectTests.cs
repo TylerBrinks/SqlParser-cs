@@ -563,5 +563,16 @@ namespace SqlParser.Tests.Dialects
 
             Assert.Equal(expected, relation);
         }
+
+        [Fact]
+        public void Parse_Create_View_If_Not_Exists()
+        {
+            var sql = "CREATE VIEW IF NOT EXISTS mydataset.newview AS SELECT foo FROM bar";
+            var create = (Statement.CreateView)VerifiedStatement(sql);
+
+
+            Assert.Equal("mydataset.newview", create.Name);
+            Assert.Equal("SELECT foo FROM bar", create.Query.ToSql());
+        }
     }
 }
