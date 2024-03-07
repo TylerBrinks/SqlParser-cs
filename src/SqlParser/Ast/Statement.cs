@@ -2,6 +2,8 @@
 // ReSharper disable CommentTypo
 // ReSharper disable UnusedMember
 
+using System.ComponentModel;
+
 namespace SqlParser.Ast;
 
 public abstract record Statement : IWriteSql, IElement
@@ -1331,6 +1333,26 @@ public abstract record Statement : IWriteSql, IElement
             {
                 writer.WriteSql($" LIMIT {Limit}");
             }
+        }
+    }
+    /// <summary>
+    /// Install statement
+    /// </summary>
+    public record Install(Ident ExtensionName) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"INSTALL {ExtensionName}");
+        }
+    }
+    /// <summary>
+    /// Load statement
+    /// </summary>
+    public record Load(Ident ExtensionName) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"LOAD {ExtensionName}");
         }
     }
     /// <summary>

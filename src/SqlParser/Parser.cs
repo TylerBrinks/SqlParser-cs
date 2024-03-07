@@ -241,7 +241,11 @@ public class Parser
             Keyword.PREPARE => ParsePrepare(),
             Keyword.MERGE => ParseMerge(),
             Keyword.PRAGMA => ParsePragma(),
-
+            // `INSTALL` is duckdb specific https://duckdb.org/docs/extensions/overview
+            Keyword.INSTALL when _dialect is DuckDbDialect or GenericDialect => ParseInstall(),
+            // `LOAD` is duckdb specific https://duckdb.org/docs/extensions/overview
+            Keyword.LOAD when _dialect is DuckDbDialect or GenericDialect =>  ParseLoad(),
+                
             _ => throw Expected("a SQL statement", PeekToken())
         };
     }
@@ -8974,6 +8978,22 @@ public class Parser
 
         PrevToken();
         throw Expected("number or string or ? placeholder", PeekToken());
+    }
+    /// <summary>
+    /// INSTALL [ extension_name ]
+    /// </summary>
+    /// <returns></returns>
+    public Statement ParseInstall()
+    {
+        return new Statement.Install(ParseIdentifier());
+    }
+    /// <summary>
+    /// INSTALL [ extension_name ]
+    /// </summary>
+    /// <returns></returns>
+    public Statement ParseLoad()
+    {
+        return new Statement.Load(ParseIdentifier());
     }
     /// <summary>
     /// CREATE [ { TEMPORARY | TEMP } ] SEQUENCE [ IF NOT EXISTS ] sequence_name

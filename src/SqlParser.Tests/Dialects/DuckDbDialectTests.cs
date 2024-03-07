@@ -142,4 +142,24 @@ public class DuckDbDialectTests : ParserTestBase
         //};
         //Assert.Equal(expected, select.Body);
     }
+
+    [Fact]
+    public void Test_Duckdb_Install()
+    {
+        var statement = VerifiedStatement("INSTALL tpch");
+
+        var expected = new Statement.Install("tpch");
+
+        Assert.Equal(expected, statement);
+    }
+
+    [Fact]
+    public void Test_Duckdb_Load_Extension()
+    {
+        var statement = VerifiedStatement("LOAD my_extension");
+
+        var expected = new Statement.Load("my_extension");
+
+        Assert.Equal(expected, statement);
+    }
 }
