@@ -8335,16 +8335,23 @@ public class Parser
 
     public FunctionArg ParseFunctionArgs()
     {
-        if (!PeekNthTokenIs<RightArrow>(1))
+        if (PeekNthTokenIs<RightArrow>(1))
+        {
+            var name = ParseIdentifier();
+            ExpectToken<RightArrow>();
+            return new FunctionArg.Named(name, WildcardToFnArg(ParseWildcardExpr()), new FunctionArgOperator.RightArrow());
+        }
+        else if (PeekNthTokenIs<Equal>(1))
+        {
+            var name = ParseIdentifier();
+            ExpectToken<Equal>();
+            return new FunctionArg.Named(name, WildcardToFnArg(ParseWildcardExpr()), new FunctionArgOperator.Equal());
+        }
+        else
         {
             return new FunctionArg.Unnamed(WildcardToFnArg(ParseWildcardExpr()));
         }
-
-        var name = ParseIdentifier();
-        ExpectToken<RightArrow>();
-
-        return new FunctionArg.Named(name, WildcardToFnArg(ParseWildcardExpr()));
-
+        
         FunctionArgExpression WildcardToFnArg(Expression wildcard)
         {
             FunctionArgExpression functionExpr = wildcard switch

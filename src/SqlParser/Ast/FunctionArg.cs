@@ -10,11 +10,11 @@ public abstract record FunctionArg : IWriteSql, IElement
     /// </summary>
     /// <param name="Name">Name identifier</param>
     /// <param name="Arg">Function argument expression</param>
-    public record Named(Ident Name, FunctionArgExpression Arg) : FunctionArg
+    public record Named(Ident Name, FunctionArgExpression Arg, FunctionArgOperator Operator) : FunctionArg
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"{Name} => {Arg}");
+            writer.WriteSql($"{Name} {Operator} {Arg}");
         }
     }
     /// <summary>
@@ -100,6 +100,27 @@ public abstract record FunctionDefinition : IWriteSql
                 break;
         }
     }
+}
+
+public abstract record FunctionArgOperator : IWriteSql, IElement
+{
+    public record Equal : FunctionArgOperator
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("=");
+        }
+    }
+
+    public record RightArrow : FunctionArgOperator
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("=>");
+        }
+    }
+
+    public abstract void ToSql(SqlTextWriter writer);
 }
 
 /// <summary>

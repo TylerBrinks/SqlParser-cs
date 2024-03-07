@@ -2328,9 +2328,38 @@ namespace SqlParser.Tests
             {
                 Args = new[]
                 {
-                    new FunctionArg.Named("a", new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.SingleQuotedString("1")))),
-                    new FunctionArg.Named("b", new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.SingleQuotedString("2"))))
-                }
+                    new FunctionArg.Named(
+                        "a", 
+                        new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.SingleQuotedString("1"))), 
+                        new FunctionArgOperator.RightArrow()),
+                    new FunctionArg.Named(
+                        "b", 
+                        new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.SingleQuotedString("2"))),
+                        new FunctionArgOperator.RightArrow())
+                },
+                
+            };
+            Assert.Equal(expected, select.Projection.Single().AsExpr());
+        }
+
+        [Fact]
+        public void Parse_Named_Argument_Function_With_Eq_Operator()
+        {
+            var select = VerifiedOnlySelect("SELECT FUN(a = '1', b = '2') FROM foo");
+            var expected = new Function("FUN")
+            {
+                Args = new[]
+                {
+                    new FunctionArg.Named(
+                        "a",
+                        new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.SingleQuotedString("1"))),
+                        new FunctionArgOperator.Equal()),
+                    new FunctionArg.Named(
+                        "b",
+                        new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.SingleQuotedString("2"))),
+                        new FunctionArgOperator.Equal())
+                },
+
             };
             Assert.Equal(expected, select.Projection.Single().AsExpr());
         }
