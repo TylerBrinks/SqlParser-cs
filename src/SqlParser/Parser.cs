@@ -7815,8 +7815,11 @@ public class Parser
             };
         }
 
-        if (ParseKeyword(Keyword.JSON_TABLE))
+        //if (ParseKeyword(Keyword.JSON_TABLE))
+        var nextToken = PeekToken();
+        if (nextToken is Word w && w.Keyword == Keyword.JSON_TABLE && PeekNthTokenIs<LeftParen>(1))
         {
+            ExpectKeyword(Keyword.JSON_TABLE);
             var jsonTable = ExpectParens(() =>
             {
                 var jsonExpr = ParseExpr();

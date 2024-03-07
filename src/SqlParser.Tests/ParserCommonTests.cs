@@ -5188,5 +5188,15 @@ namespace SqlParser.Tests
         {
             VerifiedStatement("SELECT 1 AS RETURNING");
         }
+
+        [Fact]
+        public void Parse_Json_Table_Is_Not_Reserve()
+        {
+            var dialects = new Dialect[]{new PostgreSqlDialect(), new GenericDialect()};
+            var select = VerifiedOnlySelect("SELECT * FROM JSON_TABLE", dialects);
+
+            Assert.Single(select.From!);
+            Assert.Equal("JSON_TABLE", select.From![0].Relation!.AsTable().Name);
+        }
     }
 }
