@@ -8,7 +8,7 @@ var loop = true;
 
 while (loop)
 {
-    var demoChoices = new List<string> {"Parse & format a SQL query you type in", "Use SQL to query sample CSV files (using pre-build queries)", "Exit"};
+    var demoChoices = new List<string> { "Parse & format a SQL query you type in", "Use SQL to query sample CSV files (using pre-build queries)", "Exit" };
     var demo = AnsiConsole.Prompt(new SelectionPrompt<string>()
         .Title("[yellow]Select a feature to demo[/]")
         .AddChoices(demoChoices));
@@ -19,6 +19,6 @@ while (loop)
         { } when demo == demoChoices[1] => () => new CsvQuery().Run(),
         _ => () => { loop = false; Console.Clear(); }
     };
-    
+
     demoChoice();
 }

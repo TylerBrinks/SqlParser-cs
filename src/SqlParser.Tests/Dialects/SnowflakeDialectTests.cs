@@ -721,5 +721,44 @@ namespace SqlParser.Tests.Dialects
         {
             VerifiedStatement("SELECT * FROM (SELECT place_id, weekday, open FROM times AS p) PIVOT(max(open) FOR weekday IN (0, 1, 2, 3, 4, 5, 6)) AS p (place_id, open_sun, open_mon, open_tue, open_wed, open_thu, open_fri, open_sat)");
         }
+
+        [Fact]
+        public void Parse_Comma_Outer_Join()
+        {
+            var select = VerifiedOnlySelect("SELECT t1.c1, t2.c2 FROM t1, t2 WHERE t1.c1 = t2.c2 (+)");
+            Expression left = new CompoundIdentifier(["t1", "c1"]);
+            Expression right = new OuterJoin(new CompoundIdentifier(["t2", "c2"]));
+            Assert.Equal(select.Selection!.AsBinaryOp().Left, left);
+            Assert.Equal(select.Selection.AsBinaryOp().Right, right);
+            Assert.Equal(BinaryOperator.Eq, select.Selection.AsBinaryOp().Op);
+
+            select = VerifiedOnlySelect("SELECT t1.c1, t2.c2 FROM t1, t2 WHERE c1 = c2 (+)");
+            left = new Identifier("c1");
+            right = new OuterJoin(new Identifier("c2"));
+            Assert.Equal(select.Selection!.AsBinaryOp().Left, left);
+            Assert.Equal(select.Selection.AsBinaryOp().Right, right);
+            Assert.Equal(BinaryOperator.Eq, select.Selection.AsBinaryOp().Op);
+
+            select = VerifiedOnlySelect("SELECT t1.c1, t2.c2 FROM t1, t2 WHERE c1 = myudf(+42)");
+            left = new Identifier("c1");
+            right = new Function("myudf")
+            {
+                Args = new Sequence<FunctionArg>
+                {
+                    new FunctionArg.Unnamed(
+                        new FunctionArgExpression.FunctionExpression(
+                            new UnaryOp(
+                                new LiteralValue(
+                                    new Value.Number("42")), UnaryOperator.Plus)))
+                }
+            };
+            Assert.Equal(select.Selection!.AsBinaryOp().Left, left);
+            Assert.Equal(select.Selection.AsBinaryOp().Right, right);
+            Assert.Equal(BinaryOperator.Eq, select.Selection.AsBinaryOp().Op);
+
+            VerifiedOnlySelectWithCanonical(
+                "SELECT t1.c1, t2.c2 FROM t1, t2 WHERE t1.c1 = t2.c2(   +     )",
+                "SELECT t1.c1, t2.c2 FROM t1, t2 WHERE t1.c1 = t2.c2 (+)");
+        }
     }
 }

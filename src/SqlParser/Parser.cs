@@ -1238,8 +1238,21 @@ public class Parser
                 }
                 else if (ConsumeToken<LeftParen>())
                 {
-                    PrevToken();
-                    return ParseFunction(new ObjectName(idParts));
+                    if (_dialect is SnowflakeDialect or MsSqlDialect && ConsumeTokens(typeof(Plus), typeof(RightParen)))
+                    {
+                        if (idParts.Count == 1)
+                        {
+                            return new OuterJoin(new Identifier(idParts[0]));
+                        }
+
+                        return new OuterJoin(new CompoundIdentifier(idParts));
+                    }
+                    else
+                    {
+
+                        PrevToken();
+                        return ParseFunction(new ObjectName(idParts));
+                    }
                 }
 
                 return new CompoundIdentifier(idParts);
@@ -2743,6 +2756,33 @@ public class Parser
         }
 
         NextToken();
+        return true;
+    }
+
+    public bool ConsumeToken(Type type)
+    {
+        if (PeekToken().GetType() == type)
+        {
+            NextToken();
+            return true;
+        }
+
+        return false;
+    }
+    
+    public bool ConsumeTokens(params Type[] tokens)
+    {
+        var index = _index;
+        foreach (var token in tokens)
+        {
+           
+            if (!ConsumeToken(token))
+            {
+                _index = index;
+                return false;
+            }
+        }
+
         return true;
     }
 

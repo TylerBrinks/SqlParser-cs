@@ -1002,6 +1002,24 @@ public abstract record Expression : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// Some dialects support an older syntax for outer joins where columns are
+    /// marked with the `(+)` operator in the WHERE clause, for example:
+    ///
+    /// SELECT t1.c1, t2.c2 FROM t1, t2 WHERE t1.c1 = t2.c2 (+)
+    ///
+    /// which is equivalent to
+    ///
+    /// SELECT t1.c1, t2.c2 FROM t1 LEFT OUTER JOIN t2 ON t1.c1 = t2.c2
+    /// </summary>
+    /// <param name="Expression">Expression</param>
+    public record OuterJoin(Expression Expression) : Expression
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{Expression} (+)");
+        }
+    }
+    /// <summary>
     /// Position expression
     /// <example>
     /// <c>
