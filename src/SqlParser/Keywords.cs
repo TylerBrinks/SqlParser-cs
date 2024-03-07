@@ -59,6 +59,7 @@ internal static class Keywords
         Keyword.INTERSECT,
         Keyword.CLUSTER,
         Keyword.DISTRIBUTE,
+        Keyword.RETURNING,
         // Reserved only as a column alias in the `SELECT` clause
         Keyword.FROM,
         Keyword.INTO,

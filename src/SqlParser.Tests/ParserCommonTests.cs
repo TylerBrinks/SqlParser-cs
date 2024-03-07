@@ -5174,5 +5174,19 @@ namespace SqlParser.Tests
             Assert.Throws<ParserException>(() =>
                 ParseSqlStatements("REPLACE INTO public.customer (id, name, active) VALUES (1, 2, 3)", dialects: dialects));
         }
+
+        [Fact]
+        public void Parse_Insert_Select_Returning()
+        {
+            var statement = VerifiedStatement("INSERT INTO t SELECT x RETURNING x AS y");
+            
+            Assert.Single((statement as Statement.Insert)!.Returning!);
+        }
+
+        [Fact]
+        public void Parse_Returning_As_Column_Alias()
+        {
+            VerifiedStatement("SELECT 1 AS RETURNING");
+        }
     }
 }
