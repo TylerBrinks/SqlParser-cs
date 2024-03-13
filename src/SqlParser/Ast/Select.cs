@@ -14,7 +14,6 @@ public record Select([Visit(1)] Sequence<SelectItem> Projection) : IWriteSql, IE
     [Visit(3)] public Sequence<TableWithJoins>? From { get; init; }
     [Visit(4)] public Sequence<LateralView>? LateralViews { get; init; }
     [Visit(5)] public Expression? Selection { get; init; }
-    //[Visit(6)] public Sequence<Expression>? GroupBy { get; init; }
     [Visit(6)] public GroupByExpression? GroupBy { get; init; }
     [Visit(7)] public Sequence<Expression>? ClusterBy { get; init; }
     [Visit(8)] public Sequence<Expression>? DistributeBy { get; init; }
@@ -22,10 +21,16 @@ public record Select([Visit(1)] Sequence<SelectItem> Projection) : IWriteSql, IE
     [Visit(10)] public Expression? Having { get; init; }
     [Visit(11)] public Sequence<NamedWindowDefinition>? NamedWindow { get; init; }
     [Visit(12)] public Expression? QualifyBy { get; init; }
+    [Visit(13)] public ValueTableMode? ValueTableMode { get; init; }
 
     public void ToSql(SqlTextWriter writer)
     {
         writer.Write("SELECT");
+
+        if (ValueTableMode != null)
+        {
+            writer.WriteSql($" {ValueTableMode}");
+        }
 
         if (Distinct != null)
         {

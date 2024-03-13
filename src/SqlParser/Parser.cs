@@ -244,8 +244,8 @@ public class Parser
             // `INSTALL` is duckdb specific https://duckdb.org/docs/extensions/overview
             Keyword.INSTALL when _dialect is DuckDbDialect or GenericDialect => ParseInstall(),
             // `LOAD` is duckdb specific https://duckdb.org/docs/extensions/overview
-            Keyword.LOAD when _dialect is DuckDbDialect or GenericDialect =>  ParseLoad(),
-                
+            Keyword.LOAD when _dialect is DuckDbDialect or GenericDialect => ParseLoad(),
+
             _ => throw Expected("a SQL statement", PeekToken())
         };
     }
@@ -2769,13 +2769,13 @@ public class Parser
 
         return false;
     }
-    
+
     public bool ConsumeTokens(params Type[] tokens)
     {
         var index = _index;
         foreach (var token in tokens)
         {
-           
+
             if (!ConsumeToken(token))
             {
                 _index = index;
@@ -3581,7 +3581,7 @@ public class Parser
         var ifNotExists = _dialect is BigQueryDialect or SQLiteDialect or GenericDialect && ParseIfNotExists();
 
         var name = ParseObjectName();
-        var columns = ParseViewColumns(); 
+        var columns = ParseViewColumns();
         CreateTableOptions options = new CreateTableOptions.None();
         var withOptions = ParseOptions(Keyword.WITH);
 
@@ -7169,6 +7169,19 @@ public class Parser
     /// <exception cref="NotImplementedException"></exception>
     public Select ParseSelect()
     {
+        ValueTableMode? valueTableMode = null;
+        if (_dialect is BigQueryDialect && ParseKeyword(Keyword.AS))
+        {
+            if (ParseKeyword(Keyword.VALUE))
+            {
+                valueTableMode = new ValueTableMode.AsValue();
+            }
+            else if (ParseKeyword(Keyword.STRUCT))
+            {
+                valueTableMode = new ValueTableMode.AsStruct();
+            }
+        }
+
         var distinct = ParseAllOrDistinct();
 
         var top = ParseInit(ParseKeyword(Keyword.TOP), ParseTop);
@@ -7263,7 +7276,8 @@ public class Parser
             SortBy = sortBy,
             Having = having,
             NamedWindow = namedWindows,
-            QualifyBy = qualify
+            QualifyBy = qualify,
+            ValueTableMode = valueTableMode
         };
     }
 
@@ -8398,7 +8412,7 @@ public class Parser
         {
             return new FunctionArg.Unnamed(WildcardToFnArg(ParseWildcardExpr()));
         }
-        
+
         FunctionArgExpression WildcardToFnArg(Expression wildcard)
         {
             FunctionArgExpression functionExpr = wildcard switch

@@ -61,7 +61,7 @@ namespace SqlParser.Tests.Dialects
             Assert.Throws<ParserException>(() => VerifiedStatement("SELECT 1 FROM abc5!.dataField"));
             Test("`GROUP`.dataField", new Ident[] { new("GROUP", '`'), "dataField" });
             Test("abc5.GROUP", new Ident[] { "abc5", "GROUP" });
-            Test("`foo.bar.baz`", new []
+            Test("`foo.bar.baz`", new[]
             {
                 new Ident("foo", Symbols.Backtick),
                 new Ident("bar", Symbols.Backtick),
@@ -101,7 +101,7 @@ namespace SqlParser.Tests.Dialects
                 new Ident("da-sh-es", Symbols.Backtick),
             }, "`_5abc`.`da-sh-es`");
 
-            Test("foo-bar.baz-123", new Ident[]{"foo-bar", "baz-123"}, "foo-bar.baz-123");
+            Test("foo-bar.baz-123", new Ident[] { "foo-bar", "baz-123" }, "foo-bar.baz-123");
 
             Assert.Throws<ParserException>(() => VerifiedStatement("foo-`bar`"));
             Assert.Throws<ParserException>(() => VerifiedStatement("`foo`-bar"));
@@ -120,8 +120,8 @@ namespace SqlParser.Tests.Dialects
             // the equivalent canonical representation `foo`.`bar`
             void Test(string ident, Sequence<Ident> names, string? canonical = null)
             {
-                var select = canonical != null 
-                    ? VerifiedOnlySelectWithCanonical($"SELECT 1 FROM {ident}", $"SELECT 1 FROM {canonical}") 
+                var select = canonical != null
+                    ? VerifiedOnlySelectWithCanonical($"SELECT 1 FROM {ident}", $"SELECT 1 FROM {canonical}")
                     : VerifiedOnlySelect($"SELECT 1 FROM {ident}");
 
                 var expected = new TableWithJoins[]
@@ -314,7 +314,7 @@ namespace SqlParser.Tests.Dialects
             var wildcardSql = "SELECT ARRAY_AGG(sections_tbl.*) AS sections FROM sections_tbl";
             foreach (var dialect in AllDialects)
             {
-                if(dialect is PostgreSqlDialect){continue;}
+                if (dialect is PostgreSqlDialect) { continue; }
 
                 Assert.Throws<ParserException>(() => ParseSqlStatements(wildcardSql));
             }
@@ -438,14 +438,14 @@ namespace SqlParser.Tests.Dialects
 
             sql = "SELECT TRIM('xyz', 'a')";
 
-            var select = VerifiedOnlySelect(sql, new[] {new BigQueryDialect()});
+            var select = VerifiedOnlySelect(sql, new[] { new BigQueryDialect() });
             var expected = new Trim(new LiteralValue(new Value.SingleQuotedString("xyz")),
                 TrimWhereField.None,
                 TrimCharacters: new Sequence<Expression>
                 {
                     new LiteralValue(new Value.SingleQuotedString("a"))
                 });
-            
+
             Assert.Equal(expected, select.Projection.First().AsExpr());
 
             Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT TRIM('xyz' 'a')", new[] { new BigQueryDialect() }));
@@ -456,7 +456,7 @@ namespace SqlParser.Tests.Dialects
         {
             var sql = "CREATE TABLE table (x STRUCT<a ARRAY<INT64>, b BYTES(42)>, y ARRAY<STRUCT<INT64>>)";
 
-            var create = (Statement.CreateTable )OneStatementParsesTo(sql, sql, new []{new BigQueryDialect()});
+            var create = (Statement.CreateTable)OneStatementParsesTo(sql, sql, new[] { new BigQueryDialect() });
 
             var columns = new Sequence<ColumnDef>
             {
@@ -556,7 +556,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Delete_Statement()
         {
-            var delete = (Statement.Delete) VerifiedStatement("DELETE \"table\" WHERE 1");
+            var delete = (Statement.Delete)VerifiedStatement("DELETE \"table\" WHERE 1");
             var relation = (delete.From as FromTable.WithoutKeyword).From.First().Relation;
 
             var expected = new TableFactor.Table(new ObjectName(new Ident("table", Symbols.DoubleQuote)));
@@ -573,6 +573,20 @@ namespace SqlParser.Tests.Dialects
 
             Assert.Equal("mydataset.newview", create.Name);
             Assert.Equal("SELECT foo FROM bar", create.Query.ToSql());
+        }
+        [Fact]
+        public void Test_Select_As_Struct()
+        {
+            VerifiedOnlySelect("SELECT * FROM (SELECT AS VALUE STRUCT(123 AS a, false AS b))");
+            var select = VerifiedOnlySelect("SELECT AS STRUCT 1 AS a, 2 AS b");
+            Assert.IsType<ValueTableMode.AsStruct>(select.ValueTableMode);
+        }
+        [Fact]
+        public void Test_Select_As_Value()
+        {
+            VerifiedOnlySelect("SELECT * FROM (SELECT AS VALUE STRUCT(5 AS star_rating, false AS up_down_rating))");
+            var select = VerifiedOnlySelect("SELECT AS VALUE STRUCT(1 AS a, 2 AS b) AS xyz");
+            Assert.IsType<ValueTableMode.AsValue>(select.ValueTableMode);
         }
     }
 }
