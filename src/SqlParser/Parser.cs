@@ -12,6 +12,7 @@ using Select = SqlParser.Ast.Select;
 using System.Globalization;
 using System.Text;
 using static SqlParser.Ast.AlterTableOperation;
+using Declare = SqlParser.Ast.Declare;
 
 namespace SqlParser;
 
@@ -3921,8 +3922,17 @@ public class Parser
     ///     CURSOR [ { WITH | WITHOUT } HOLD ] FOR query
     /// </summary>
     /// <returns></returns>
-    public Declare ParseDeclare()
+    public Statement.Declare ParseDeclare()
     {
+        if (_dialect is BigQueryDialect)
+        {
+            return ParseBigQueryDeclare();
+        }
+        if (_dialect is SnowflakeDialect)
+        {
+            return ParseSnowflakeDeclare();
+        }
+
         var name = ParseIdentifier();
         var binary = ParseKeyword(Keyword.BINARY);
         bool? sensitive =
@@ -3936,6 +3946,7 @@ public class Parser
             null;
 
         ExpectKeyword(Keyword.CURSOR);
+        var declareType = DeclareType.Cursor;
 
         bool? hold = null;
         var keyword = ParseOneOfKeywords(Keyword.WITH, Keyword.WITHOUT);
@@ -3954,16 +3965,170 @@ public class Parser
 
         var query = ParseQuery();
 
-        return new Declare(name)
+        return new Statement.Declare(new Sequence<Declare>
         {
-            Binary = binary,
-            Sensitive = sensitive,
-            Scroll = scroll,
-            Hold = hold,
-            Query = query
-        };
+            new Declare([name], null, null, declareType)
+            {
+                Binary =binary,
+                Sensitive = sensitive,
+                Scroll =scroll,
+                Hold = hold,
+                ForQuery = query
+            }
+        });
     }
 
+    public Statement.Declare ParseBigQueryDeclare()
+    {
+        var names = ParseCommaSeparated(ParseIdentifier);
+
+        var token = PeekToken();
+        DataType? dataType = token switch
+        {
+            Word w when w.Keyword == Keyword.DEFAULT => null,
+            _ => ParseDataType()
+        };
+
+        Expression? expression = null;
+
+        if (dataType != null)
+        {
+            if (ParseKeyword(Keyword.DEFAULT))
+            {
+                expression = ParseExpr();
+            }
+        }
+        else
+        {
+            // If no variable type - default expression must be specified, per BQ docs.
+            // i.e `DECLARE foo;` is invalid.
+            ExpectKeyword(Keyword.DEFAULT);
+            expression = ParseExpr();
+        };
+
+        DeclareAssignment? declaration = null;
+        if (expression != null)
+        {
+            declaration = new DeclareAssignment.Default(expression);
+        }
+
+        return new Statement.Declare(new Sequence<Declare>
+        {
+            new Declare(names, dataType, declaration, null)
+        });
+    }
+
+    public Statement.Declare ParseSnowflakeDeclare()
+    {
+        var statements = new Sequence<Ast.Declare>();
+
+        while (true)
+        {
+            var name = ParseIdentifier();
+            
+            DeclareType? declareType = null;
+            Query? forQuery = null;
+            DeclareAssignment? assignedExpression = null;
+            DataType? dataType = null;
+
+            if (ParseKeyword(Keyword.CURSOR))
+            {
+                declareType = DeclareType.Cursor;
+
+                ExpectKeyword(Keyword.FOR);
+
+                switch (PeekToken())
+                {
+                    case Word w when w.Keyword == Keyword.SELECT:
+                        forQuery = ParseQuery();
+                        break;
+
+                    default:
+                        assignedExpression = new DeclareAssignment.For(ParseExpr());
+                        break;
+                }
+            }
+            else if (ParseKeyword(Keyword.RESULTSET))
+            {
+                if (!PeekTokenIs<SemiColon>())
+                {
+                    assignedExpression = ParseSnowflakeVariableDeclarationExpression();
+                }
+
+                declareType = DeclareType.ResultSet;
+            }
+            else if (ParseKeyword(Keyword.EXCEPTION))
+            {
+                if (PeekTokenIs<LeftParen>())
+                {
+                    assignedExpression = new DeclareAssignment.DeclareExpression((ParseExpr()));
+                }
+                declareType = DeclareType.Exception;
+            }
+            else
+            {
+                // Without an explicit keyword, the only valid option is variable declaration.
+                assignedExpression = ParseSnowflakeVariableDeclarationExpression();
+                if (assignedExpression == null) //TODO
+                {
+                    if (PeekTokenIs<Word>())
+                    {
+                        dataType = ParseDataType();
+
+                        assignedExpression = ParseSnowflakeVariableDeclarationExpression();
+                    }
+                }
+            }
+
+            var statement = new Declare(new Sequence<Ident> { name }, dataType, assignedExpression, declareType)
+            {
+                ForQuery = forQuery
+            };
+
+            statements.Add(statement);
+            if (ConsumeToken<SemiColon>())
+            {
+                var token = PeekToken();
+                if (token is Word w)
+                {
+                    if (System.Array.IndexOf(Keywords.All, w.Value.ToUpperInvariant()) > -1)
+                    {
+                        // Not a keyword -start of a new declaration.
+                        continue;
+                    }
+
+                    // Put back the semi-colon, this is the end of the DECLARE statement.
+                    PrevToken();
+                }
+            }
+
+            break;
+        }
+
+        return new Statement.Declare(statements);
+    }
+
+    public DeclareAssignment? ParseSnowflakeVariableDeclarationExpression()
+    {
+        return PeekToken() switch
+        {
+            Word w when w.Keyword == Keyword.DEFAULT => ParseDefault(),
+            DuckAssignment => ParseDuckAssignment(),
+            _ => null
+        };
+
+        DeclareAssignment ParseDefault()
+        {
+            NextToken();
+            return new DeclareAssignment.Default(ParseExpr());
+        }
+
+        DeclareAssignment ParseDuckAssignment()
+        {
+            NextToken();
+            return new DeclareAssignment.DuckAssignment(ParseExpr());
+        }
+    }
     /// <summary>
     /// FETCH [ direction { FROM | IN } ] cursor INTO target;
     /// </summary>

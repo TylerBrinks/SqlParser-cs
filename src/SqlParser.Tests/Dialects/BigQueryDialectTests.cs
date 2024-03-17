@@ -588,5 +588,30 @@ namespace SqlParser.Tests.Dialects
             var select = VerifiedOnlySelect("SELECT AS VALUE STRUCT(1 AS a, 2 AS b) AS xyz");
             Assert.IsType<ValueTableMode.AsValue>(select.ValueTableMode);
         }
+
+        [Fact]
+        public void Parse_Big_Query_Declare()
+        {
+            List<(string Sql, Sequence<Ident> Idents, DataType? DataType, DeclareAssignment? Assignment)> queries =
+            [
+                ("DECLARE x INT64", ["x"], new DataType.Int64(), null),
+                ("DECLARE x INT64 DEFAULT 42", ["x"], new DataType.Int64(), new DeclareAssignment.Default(new LiteralValue(new Value.Number("42")))),
+                ("DECLARE x, y, z INT64 DEFAULT 42", ["x", "y", "z"], new DataType.Int64(), new DeclareAssignment.Default(new LiteralValue(new Value.Number("42")))),
+                ("DECLARE x DEFAULT 42", ["x"], null, new DeclareAssignment.Default(new LiteralValue(new Value.Number("42"))))
+            ];
+
+            foreach (var query in queries)
+            {
+                var declare = (Statement.Declare)VerifiedStatement(query.Sql);
+                Assert.Single(declare.Statements);
+                var statement = declare.Statements[0];
+                Assert.Equal(query.Idents, statement.Names);
+                Assert.Equal(query.DataType, statement.DataType);
+                Assert.Equal(query.Assignment, statement.Assignment);
+            }
+
+            Assert.Throws<ParserException>(() => { ParseSqlStatements("DECLARE x"); });
+            Assert.Throws<ParserException>(() => { ParseSqlStatements("DECLARE x 42"); });
+        }
     }
 }

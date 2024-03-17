@@ -1223,61 +1223,12 @@ public abstract record Statement : IWriteSql, IElement
     /// but may also compatible with other SQL.
     /// </summary>
     /// <param name="Name">Name identifier</param>
-    public record Declare(Ident Name) : Statement
+    public record Declare(Sequence<Ast.Declare> Statements) : Statement
     {
-        /// <summary>
-        /// Causes the cursor to return data in binary rather than in text format.
-        /// </summary>
-        public bool? Binary { get; init; }
-        /// <summary>
-        /// None = Not specified
-        /// Some(true) = INSENSITIVE
-        /// Some(false) = ASENSITIVE
-        /// </summary>
-        public bool? Sensitive { get; init; }
-        /// <summary>
-        /// None = Not specified
-        /// Some(true) = SCROLL
-        /// Some(false) = NO SCROLL
-        /// </summary>
-        public bool? Scroll { get; init; }
-        /// <summary>
-        /// None = Not specified
-        /// Some(true) = WITH HOLD, specifies that the cursor can continue to be used after the transaction that created it successfully commits
-        /// Some(false) = WITHOUT HOLD, specifies that the cursor cannot be used outside of the transaction that created it
-        /// </summary>
-        public bool? Hold { get; init; }
-        /// <summary>
-        /// Select
-        /// </summary>
-        public Select? Query { get; init; }
-
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.Write($"DECLARE {Name} ");
-            if (Binary.HasValue && Binary.Value)
-            {
-                writer.Write("BINARY ");
-            }
-
-            if (Sensitive.HasValue)
-            {
-                writer.Write(Sensitive.Value ? "INSENSITIVE " : "ASENSITIVE ");
-            }
-
-            if (Scroll.HasValue)
-            {
-                writer.Write(Scroll.Value ? "SCROLL " : "NO SCROLL ");
-            }
-
-            writer.Write("CURSOR ");
-
-            if (Hold.HasValue)
-            {
-                writer.Write(Hold.Value ? "WITH HOLD " : "WITHOUT HOLD ");
-            }
-
-            writer.WriteSql($"FOR {Query}");
+            writer.WriteSql($"DECLARE ");
+            writer.WriteDelimited(Statements, "; ");
         }
     }
     /// <summary>

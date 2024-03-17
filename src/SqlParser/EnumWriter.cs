@@ -57,6 +57,10 @@ public static class EnumWriter
             DateTimeField.TimezoneHour => "TIMEZONE_HOUR",
             DateTimeField.TimezoneAbbr => "TIMEZONE_ABBR",
             DateTimeField.TimezoneRegion => "TIMEZONE_REGION",
+            
+            DeclareType.Cursor => "CURSOR",
+            DeclareType.ResultSet => "RESULTSET",
+            DeclareType.Exception => "EXCEPTION",
 
             FileFormat.None => null,
 

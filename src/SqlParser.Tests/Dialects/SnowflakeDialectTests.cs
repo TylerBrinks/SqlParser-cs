@@ -592,7 +592,7 @@ namespace SqlParser.Tests.Dialects
                 new () { FileColumnNumber = 1, Element = "index" },
                 new () { Alias = "t2", FileColumnNumber = 1 },
             }, copy.FromTransformations);
-            
+
         }
 
         [Fact]
@@ -605,12 +605,12 @@ namespace SqlParser.Tests.Dialects
                 PATTERN = '.*employees0[1-5].csv.gz' 
                 FILE_FORMAT=(COMPRESSION=AUTO BINARY_FORMAT=HEX ESCAPE='\')
                 """;
-            
+
             var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
 
-            Assert.Contains(copy!.FileFormat!, o => o is {Name: "COMPRESSION", OptionType: DataLoadingOptionType.Enum, Value: "AUTO"});
-            Assert.Contains(copy!.FileFormat!, o => o is {Name: "BINARY_FORMAT", OptionType: DataLoadingOptionType.Enum, Value: "HEX"});
-            Assert.Contains(copy!.FileFormat!, o => o is {Name: "ESCAPE", OptionType: DataLoadingOptionType.String, Value: "\\"});
+            Assert.Contains(copy!.FileFormat!, o => o is { Name: "COMPRESSION", OptionType: DataLoadingOptionType.Enum, Value: "AUTO" });
+            Assert.Contains(copy!.FileFormat!, o => o is { Name: "BINARY_FORMAT", OptionType: DataLoadingOptionType.Enum, Value: "HEX" });
+            Assert.Contains(copy!.FileFormat!, o => o is { Name: "ESCAPE", OptionType: DataLoadingOptionType.String, Value: "\\" });
         }
 
         [Fact]
@@ -647,7 +647,7 @@ namespace SqlParser.Tests.Dialects
                 var sql = $"COPY INTO {objectName} FROM 'gcs://mybucket/./../a.csv'";
 
                 var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
-                
+
                 Assert.Equal(objectName, copy.Into);
             }
         }
@@ -696,7 +696,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Position_Not_Function_Columns()
         {
-            VerifiedStatement("SELECT position FROM tbl1 WHERE position NOT IN ('first', 'last')", new Dialect[]{new SnowflakeDialect(), new GenericDialect()});
+            VerifiedStatement("SELECT position FROM tbl1 WHERE position NOT IN ('first', 'last')", new Dialect[] { new SnowflakeDialect(), new GenericDialect() });
         }
 
         [Fact]
@@ -759,6 +759,119 @@ namespace SqlParser.Tests.Dialects
             VerifiedOnlySelectWithCanonical(
                 "SELECT t1.c1, t2.c2 FROM t1, t2 WHERE t1.c1 = t2.c2(   +     )",
                 "SELECT t1.c1, t2.c2 FROM t1, t2 WHERE t1.c1 = t2.c2 (+)");
+        }
+
+        [Fact]
+        public void Parse_Snowflake_Declare_Cursor()
+        {
+            List<(string Sql, string Name, DeclareAssignment? Assignment, Sequence<Ident>? Projections)> queries =
+            [
+                ("DECLARE c1 CURSOR FOR SELECT id, price FROM invoices", "c1", null, ["id", "price"]),
+                ("DECLARE c1 CURSOR FOR res", "c1", new DeclareAssignment.For(new Identifier("res")), null),
+            ];
+
+            foreach (var query in queries)
+            {
+                var declare = (Statement.Declare)VerifiedStatement(query.Sql);
+                Assert.Single(declare.Statements);
+                var statement = declare.Statements[0];
+                Assert.Equal([query.Name], statement.Names);
+                Assert.Null(statement.DataType);
+                Assert.Equal(query.Assignment, statement.Assignment);
+
+                if (statement.ForQuery != null)
+                {
+                    var projections = statement.ForQuery.Body.AsSelect().Projection.Select(item =>
+                        ((SelectItem.UnnamedExpression)item).Expression.AsIdentifier().Ident);
+                    var sequence = new Sequence<Ident>(projections);
+                    Assert.Equal(query.Projections, sequence);
+                }
+            }
+
+            Assert.Throws<ParserException>(() => { ParseSqlStatements("DECLARE c1 CURSOR SELECT id FROM invoices"); });
+            Assert.Throws<ParserException>(() => { ParseSqlStatements("DECLARE c1 CURSOR res"); });
+        }
+
+        [Fact]
+        public void Parse_Snowflake_Declare_Result_Set()
+        {
+            List<(string Sql, string Name, DeclareAssignment? Assignment)> queries =
+            [
+                ("DECLARE res RESULTSET DEFAULT 42", "res", new DeclareAssignment.Default(new LiteralValue(new Value.Number("42")))),
+                ("DECLARE res RESULTSET := 42", "res", new DeclareAssignment.DuckAssignment(new LiteralValue(new Value.Number("42")))),
+                ("DECLARE res RESULTSET", "res", null),
+            ];
+
+            foreach (var query in queries)
+            {
+                var declare = (Statement.Declare)VerifiedStatement(query.Sql);
+                Assert.Single(declare.Statements);
+                var statement = declare.Statements[0];
+                Assert.Equal([query.Name], statement.Names);
+                Assert.Null(statement.DataType);
+                Assert.Null(statement.ForQuery);
+                Assert.Equal(DeclareType.ResultSet, statement.DeclareType);
+                Assert.Equal(query.Assignment, statement.Assignment);
+            }
+
+            VerifiedStatement("DECLARE res RESULTSET DEFAULT (SELECT price FROM invoices)");
+            Assert.Throws<ParserException>(() => { ParseSqlStatements("DECLARE res RESULTSET DEFAULT"); });
+            Assert.Throws<ParserException>(() => { ParseSqlStatements("DECLARE res RESULTSET :="); });
+        }
+
+        [Fact]
+        public void Parse_Snowflake_Declare_Exception()
+        {
+            List<(string Sql, string Name, DeclareAssignment? Assignment)> queries =
+            [
+                ("DECLARE ex EXCEPTION (42, 'ERROR')", "ex", new DeclareAssignment.DeclareExpression(
+                    new Expression.Tuple([
+                        new LiteralValue(new Value.Number("42")), 
+                        new LiteralValue(new Value.SingleQuotedString("ERROR"))
+                    ]))),
+                ("DECLARE ex EXCEPTION", "ex", null)
+            ];
+
+            foreach (var query in queries)
+            {
+                var declare = (Statement.Declare)VerifiedStatement(query.Sql);
+                Assert.Single(declare.Statements);
+                var statement = declare.Statements[0];
+                Assert.Equal([query.Name], statement.Names);
+                Assert.Null(statement.DataType);
+                Assert.Null(statement.ForQuery);
+                Assert.Equal(DeclareType.Exception, statement.DeclareType);
+                Assert.Equal(query.Assignment, statement.Assignment);
+            }
+        }
+
+        [Fact]
+        public void Parse_Snowflake_Declare_Variable()
+        {
+            List<(string Sql, string Name, DataType? DataType, DeclareAssignment? Assignment)> queries =
+            [
+                ("DECLARE profit TEXT DEFAULT 42", "profit", new DataType.Text(), new DeclareAssignment.Default(new LiteralValue(new Value.Number("42")))),
+                ("DECLARE profit DEFAULT 42", "profit", null, new DeclareAssignment.Default(new LiteralValue(new Value.Number("42")))),
+                ("DECLARE profit TEXT", "profit", new DataType.Text(), null),
+                ("DECLARE profit", "profit", null, null)
+            ];
+
+            foreach (var query in queries)
+            {
+                var declare = (Statement.Declare)VerifiedStatement(query.Sql);
+                Assert.Single(declare.Statements);
+                var statement = declare.Statements[0];
+                Assert.Equal([query.Name], statement.Names);
+                Assert.Equal(query.DataType, statement.DataType);
+                Assert.Null(statement.ForQuery);
+                Assert.Null(statement.DeclareType);
+                Assert.Equal(query.Assignment, statement.Assignment);
+            }
+
+            OneStatementParsesTo("DECLARE profit;", "DECLARE profit");
+            Assert.Throws<ParserException>(() => { ParseSqlStatements("DECLARE profit INT 2"); });
+            Assert.Throws<ParserException>(() => { ParseSqlStatements("DECLARE profit INT DEFAULT"); });
+            Assert.Throws<ParserException>(() => { ParseSqlStatements("DECLARE profit DEFAULT"); });
         }
     }
 }
