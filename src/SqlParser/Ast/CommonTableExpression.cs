@@ -9,12 +9,21 @@
 /// <param name="Alias">CTE Alias</param>
 /// <param name="Query">CTE Select</param>
 /// <param name="From">Optional From identifier</param>
-public record CommonTableExpression(TableAlias Alias, Query Query, Ident? From = null) : IWriteSql, IElement
+public record CommonTableExpression(TableAlias Alias, Query Query, Ident? From = null, CteAsMaterialized? Materialized = null) : IWriteSql, IElement
 {
     public Ident? From { get; internal set; } = From;
 
     public void ToSql(SqlTextWriter writer)
     {
+        if (Materialized == null)
+        {
+            writer.WriteSql($"{Alias} AS ({Query})");
+        }
+        else
+        {
+            writer.WriteSql($"{Alias} AS {Materialized} ({Query})");
+        }
+        
         writer.WriteSql($"{Alias} AS ({Query.ToSql()})");
 
         if (From != null)
@@ -22,4 +31,12 @@ public record CommonTableExpression(TableAlias Alias, Query Query, Ident? From =
             writer.WriteSql($" FROM {From}");
         }
     }
+}
+
+public enum CteAsMaterialized
+{
+    // The `WITH` statement specifies `AS MATERIALIZED` behavior
+    Materialized,
+    // The `WITH` statement specifies `AS NOT MATERIALIZED` behavior
+    NotMaterialized,
 }

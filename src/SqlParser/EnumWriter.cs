@@ -52,15 +52,17 @@ public static class EnumWriter
             BinaryOperator.PGILikeMatch => "~~*",
             BinaryOperator.PGNotLikeMatch => "!~~",
             BinaryOperator.PGNotILikeMatch => "!~~*",
+            
+            CteAsMaterialized.Materialized => "NOT MATERIALIZED",
 
             DateTimeField.TimezoneMinute => "TIMEZONE_MINUTE",
             DateTimeField.TimezoneHour => "TIMEZONE_HOUR",
             DateTimeField.TimezoneAbbr => "TIMEZONE_ABBR",
             DateTimeField.TimezoneRegion => "TIMEZONE_REGION",
             
-            DeclareType.Cursor => "CURSOR",
-            DeclareType.ResultSet => "RESULTSET",
-            DeclareType.Exception => "EXCEPTION",
+            //DeclareType.Cursor => "CURSOR",
+            //DeclareType.ResultSet => "RESULTSET",
+            //DeclareType.Exception => "EXCEPTION",
 
             FileFormat.None => null,
 

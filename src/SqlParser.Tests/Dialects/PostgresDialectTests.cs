@@ -2226,5 +2226,12 @@ namespace SqlParser.Tests.Dialects
 
             VerifiedStatement("SELECT ARRAY_AGG(my_schema.sections_tbl.*) AS sections FROM sections_tbl");
         }
+
+        [Fact]
+        public void Parse_Mat_Cte()
+        {
+            VerifiedStatement("WITH cte AS MATERIALIZED (SELECT id FROM accounts) SELECT id FROM cte");
+            VerifiedStatement("WITH cte AS NOT MATERIALIZED (SELECT id FROM accounts) SELECT id FROM cte");
+        }
     }
 }
