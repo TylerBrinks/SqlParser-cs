@@ -34,17 +34,18 @@ public ref struct State
         return _finished ? Symbols.EndOfFile : _characters[_index];
     }
 
-    public void Next()
+    public char? Next()
     {
+        var peeked = Peek();
         _index++;
 
         if (_index >= _characters.Length)
         {
             _finished = true;
-            return;
+            return peeked;
         }
 
-        if (Peek() == Symbols.NewLine)
+        if (peeked == Symbols.NewLine)
         {
             _location.NewLine();
         }
@@ -52,6 +53,8 @@ public ref struct State
         {
             _location.MoveCol();
         }
+
+        return peeked;
     }
 
     public char? SkipWhile(Func<char, bool> skipPredicate)

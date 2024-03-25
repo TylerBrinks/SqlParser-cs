@@ -1,4 +1,5 @@
-﻿using SqlParser.Ast;
+﻿using System.Text;
+using SqlParser.Ast;
 using SqlParser.Tokens;
 
 namespace SqlParser.Dialects;
@@ -589,7 +590,7 @@ public class SnowflakeDialect : Dialect
 
     private static Ident ParseStageNameIdentifier(Parser parser)
     {
-        var ident = new List<char>();
+        var ident = new StringBuilder();
         var loop = true;
 
         while (loop && parser.NextTokenNoSkip() is { } next)
@@ -606,23 +607,27 @@ public class SnowflakeDialect : Dialect
                     break;
 
                 case AtSign:
-                    ident.Add(Symbols.At);
+                    ident.Append(Symbols.At);
                     break;
 
                 case Tilde:
-                    ident.Add(Symbols.Tilde);
+                    ident.Append(Symbols.Tilde);
                     break;
 
                 case Modulo:
-                    ident.Add(Symbols.Percent);
+                    ident.Append(Symbols.Percent);
                     break;
 
                 case Divide:
-                    ident.Add(Symbols.Divide);
+                    ident.Append(Symbols.Divide);
                     break;
 
                 case Word w:
-                    ident.AddRange(w.Value);
+                    foreach (var c in w.Value)
+                    {
+                        ident.Append(c);
+                    }
+
                     break;
 
                 default:
@@ -630,6 +635,6 @@ public class SnowflakeDialect : Dialect
             }
         }
 
-        return new Ident(new string(ident.ToArray()));
+        return new Ident(ident.ToString());
     }
 }

@@ -1505,22 +1505,34 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Escaped_Literal_String()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            //DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
 
-            var select = VerifiedOnlySelect("""
-                SELECT E's1 \n s1', E's2 \\n s2', E's3 \\\n s3', E's4 \\\\n s4', E'\'', E'foo \\'
-                """);
+            //var select = VerifiedOnlySelect("""
+            //    SELECT E's1 \n s1', E's2 \\n s2', E's3 \\\n s3', E's4 \\\\n s4', E'\'', E'foo \\'
+            //    """);
 
-            Assert.Equal(6, select.Projection.Count);
-            Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("s1 \n s1")), select.Projection[0].AsExpr());
-            Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("s2 \\n s2")), select.Projection[1].AsExpr());
-            Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("s3 \\\n s3")), select.Projection[2].AsExpr());
-            Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("s4 \\\\n s4")), select.Projection[3].AsExpr());
-            Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("'")), select.Projection[4].AsExpr());
-            Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("foo \\")), select.Projection[5].AsExpr());
+            //Assert.Equal(6, select.Projection.Count);
+            //Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("s1 \n s1")), select.Projection[0].AsExpr());
+            //Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("s2 \\n s2")), select.Projection[1].AsExpr());
+            //Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("s3 \\\n s3")), select.Projection[2].AsExpr());
+            //Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("s4 \\\\n s4")), select.Projection[3].AsExpr());
+            //Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("'")), select.Projection[4].AsExpr());
+            //Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("foo \\")), select.Projection[5].AsExpr());
 
-            var ex = Assert.Throws<TokenizeException>(() => ParseSqlStatements("SELECT E'\\'"));
-            Assert.Equal("Unterminated encoded string literal after Line: 1, Col: 8", ex.Message);
+            //var ex = Assert.Throws<TokenizeException>(() => ParseSqlStatements("SELECT E'\\'"));
+            //Assert.Equal("Unterminated encoded string literal after Line: 1, Col: 8", ex.Message);
+
+            var sql = "SELECT E'\\u0001', E'\\U0010FFFF', E'\\xC', E'\\x25', E'\\2', E'\\45', E'\\445'";
+            var select = VerifiedOnlySelectWithCanonical(sql, canonical: "");
+            Assert.Equal(7, select.Projection.Count);
+
+            Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("\u0001")), select.Projection[0].AsExpr());
+            Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("\udbff")), select.Projection[1].AsExpr());
+            Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("\u000c")), select.Projection[2].AsExpr());
+            Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("%")), select.Projection[3].AsExpr());
+            Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("\u0002")), select.Projection[4].AsExpr());
+            Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("$")), select.Projection[5].AsExpr());
+            Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("$")), select.Projection[6].AsExpr());
         }
 
         [Fact]

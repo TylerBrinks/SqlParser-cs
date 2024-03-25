@@ -1,4 +1,5 @@
-﻿using SqlParser.Dialects;
+﻿using System.Text;
+using SqlParser.Dialects;
 using SqlParser.Tokens;
 
 namespace SqlParser;
@@ -118,7 +119,7 @@ public ref struct Tokenizer(bool unescape = true)
             Symbols.At => TokenizeAt(character),
             Symbols.QuestionMark => TokenizeQuestionMark(),
             // Identifier or keyword
-            _ when _dialect.IsIdentifierStart(character) => TokenizeIdentifierOrKeyword(new[] { character }),
+            _ when _dialect.IsIdentifierStart(character) => TokenizeIdentifierOrKeyword([character]),
             Symbols.Dollar => TokenizeDollar(),
             _ when string.IsNullOrWhiteSpace(character.ToString()) => TokenizeSingleCharacter(new Whitespace(WhitespaceKind.Space)),
             // Unknown character
@@ -174,7 +175,7 @@ public ref struct Tokenizer(bool unescape = true)
             return new EscapedStringLiteral(quoted);
         }
 
-        var word = ConcatArrays(new[] { first }, TokenizeWord());
+        var word = ConcatArrays([first], TokenizeWord());
         return new Word(new string(word), null);
     }
 
@@ -456,106 +457,21 @@ public ref struct Tokenizer(bool unescape = true)
     /// Read a single quoted string, starting with the opening quote.
     private string TokenizeEscapedSingleQuotedString(Location start)
     {
-        var s = new List<char>();
-        _state.Next();
-        // Slash escaping
-        var isEscaped = false;
-        char current;
+        var unescaped = UnescapeSingleQuotedString();
 
-        while ((current = _state.Peek()) != Symbols.EndOfFile)
+        if (unescaped != null)
         {
-            switch (current)
-            {
-                case Symbols.SingleQuote:
-                    var (escaped, continueEscape) = EscapeSingleQuote(s, current, isEscaped);
-                    isEscaped = continueEscape;
-
-                    if (escaped)
-                    {
-                        return new string(s.ToArray());
-                    }
-                    break;
-
-                case Symbols.Backslash:
-                    isEscaped = EscapeBackslash(s, isEscaped);
-                    break;
-
-                case 'r':
-                    isEscaped = EscapeControlCharacter(s, current, isEscaped, Symbols.CarriageReturn);
-                    break;
-                case 'n':
-                    isEscaped = EscapeControlCharacter(s, current, isEscaped, Symbols.NewLine);
-                    break;
-                case 't':
-                    isEscaped = EscapeControlCharacter(s, current, isEscaped, Symbols.Tab);
-                    break;
-
-                default:
-                    isEscaped = false;
-                    _state.Next();
-                    s.Add(current);
-                    break;
-
-            }
+            return unescaped;
         }
 
-        throw new TokenizeException($"Unterminated encoded string literal after {start}", start);
+        throw new TokenizeException("Unterminated encoded string literal", start);
     }
 
-    private (bool, bool) EscapeSingleQuote(ICollection<char> s, char current, bool isEscaped)
+    private string? UnescapeSingleQuotedString()
     {
-        _state.Next();
-        if (isEscaped)
-        {
-            s.Add(current);
-            return (false, false);
-        }
-
-        if (_state.Peek() == Symbols.SingleQuote)
-        {
-            s.Add(current);
-            return (false, false);
-        }
-
-        return (true, isEscaped);
+        return new Unescaper(ref _state).Unescape();
     }
-
-    private bool EscapeBackslash(ICollection<char> stringValue, bool isEscaped)
-    {
-        bool escaped;
-
-        if (isEscaped)
-        {
-            stringValue.Add(Symbols.Backslash);
-            escaped = false;
-        }
-        else
-        {
-            escaped = true;
-        }
-
-        _state.Next();
-        return escaped;
-    }
-
-    private bool EscapeControlCharacter(ICollection<char> stringValue, char current, bool isEscaped, char escaped)
-    {
-        var continueEscaped = isEscaped;
-
-        if (isEscaped)
-        {
-            stringValue.Add(escaped);
-            continueEscaped = false;
-        }
-        else
-        {
-            stringValue.Add(current);
-        }
-        _state.Next();
-
-        return continueEscaped;
-    }
-
+    
     private Token TokenizeMinus()
     {
         _state.Next();
@@ -723,12 +639,12 @@ public ref struct Tokenizer(bool unescape = true)
 
                     case Symbols.Tilde:
                         _state.Next();
-                        return _state.Peek() == Symbols.Asterisk ? 
-                            TokenizeSingleCharacter(new ExclamationMarkDoubleTildeAsterisk()) 
+                        return _state.Peek() == Symbols.Asterisk ?
+                            TokenizeSingleCharacter(new ExclamationMarkDoubleTildeAsterisk())
                             : new ExclamationMarkDoubleTilde();
 
                     default:
-                        return  new ExclamationMarkTilde();
+                        return new ExclamationMarkTilde();
                 }
 
             default:
@@ -827,13 +743,13 @@ public ref struct Tokenizer(bool unescape = true)
         {
             case Symbols.Asterisk:
                 return TokenizeSingleCharacter(new TildeAsterisk());
-           
+
             case Symbols.Tilde:
                 _state.Next();
-                return _state.Peek() == Symbols.Asterisk 
-                    ? TokenizeSingleCharacter(new DoubleTildeAsterisk()) 
+                return _state.Peek() == Symbols.Asterisk
+                    ? TokenizeSingleCharacter(new DoubleTildeAsterisk())
                     : new DoubleTilde();
-           
+
             default:
                 return new Tilde();
         }
@@ -879,7 +795,7 @@ public ref struct Tokenizer(bool unescape = true)
             Symbols.QuestionMark => TokenizeSingleCharacter(new AtQuestion()),
             Symbols.At => TokenizeAtAt(character),
             Symbols.Space => new AtSign(),
-            _ when _dialect.IsIdentifierStart(Symbols.At) => TokenizeIdentifierOrKeyword(new[] { character, _state.Peek() }),
+            _ when _dialect.IsIdentifierStart(Symbols.At) => TokenizeIdentifierOrKeyword([character, _state.Peek()]),
             _ => new AtSign()
         };
     }
@@ -894,7 +810,7 @@ public ref struct Tokenizer(bool unescape = true)
         }
 
         return _dialect.IsIdentifierStart(Symbols.At) ?
-            TokenizeIdentifierOrKeyword(new[] { character, Symbols.At, next })
+            TokenizeIdentifierOrKeyword([character, Symbols.At, next])
             : new AtAt();
     }
 
@@ -908,7 +824,7 @@ public ref struct Tokenizer(bool unescape = true)
 
     private Token TokenizeDollar()
     {
-        var s = new List<char>();
+        var builder = new StringBuilder();
         var value = new List<char>();
 
         _state.Next();
@@ -931,12 +847,12 @@ public ref struct Tokenizer(bool unescape = true)
                         break;
                     }
 
-                    s.Add(Symbols.Dollar);
-                    s.Add(current);
+                    builder.Append(Symbols.Dollar);
+                    builder.Append(current);
                 }
                 else if (current != Symbols.Dollar)
                 {
-                    s.Add(current);
+                    builder.Append(current);
                 }
 
                 prev = current;
@@ -948,7 +864,7 @@ public ref struct Tokenizer(bool unescape = true)
                 throw new TokenizeException("Unterminated dollar-quoted string", _state.CloneLocation());
             }
 
-            return new DollarQuotedString(new string(s.ToArray()));
+            return new DollarQuotedString(builder.ToString());
         }
 
         // Placeholders can be any character in the broader unicode range,
@@ -962,7 +878,11 @@ public ref struct Tokenizer(bool unescape = true)
         if (_state.Peek() == Symbols.Dollar)
         {
             _state.Next();
-            s.AddRange(_state.PeekTakeWhile(c => c != Symbols.Dollar));
+            var range = _state.PeekTakeWhile(c => c != Symbols.Dollar);
+            foreach (var r in range)
+            {
+                builder.Append(r);
+            }
 
             switch (_state.Peek())
             {
@@ -997,10 +917,10 @@ public ref struct Tokenizer(bool unescape = true)
         }
         else
         {
-            return new Placeholder(new string(ConcatArrays(new[] { Symbols.Dollar }, value.ToArray())));
+            return new Placeholder(new string(ConcatArrays([Symbols.Dollar], [.. value])));
         }
 
-        var quoted = new DollarQuotedString(new string(s.ToArray()));
+        var quoted = new DollarQuotedString(builder.ToString());
         if (value.Any())
         {
             quoted.Tag = new string(value.ToArray());
@@ -1013,7 +933,7 @@ public ref struct Tokenizer(bool unescape = true)
     {
         char? lastChar = null;
         char current;
-        var chars = new List<char>();
+        var chars = new StringBuilder();
 
         do
         {
@@ -1025,11 +945,11 @@ public ref struct Tokenizer(bool unescape = true)
                 if (_state.Peek() == quoteEnd)
                 {
                     _state.Next();
-                    chars.Add(current);
+                    chars.Append(current);
 
                     if (!unescape)
                     {
-                        chars.Add(current);
+                        chars.Append(current);
                     }
                 }
                 else
@@ -1040,11 +960,11 @@ public ref struct Tokenizer(bool unescape = true)
             }
             else
             {
-                chars.Add(current);
+                chars.Append(current);
             }
 
         } while (current != Symbols.EndOfFile);
 
-        return (new string(chars.ToArray()), lastChar);
+        return (chars.ToString(), lastChar);
     }
 }

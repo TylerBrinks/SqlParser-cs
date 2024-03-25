@@ -119,6 +119,15 @@ internal static class Extensions
         return c.IsDigit() || c is >= Symbols.CapitalA and <= Symbols.CapitalF or >= Symbols.LowerA and <= Symbols.LowerF;
     }
     /// <summary>
+    /// Checks if the character is an EOF character.
+    /// </summary>
+    /// <param name="c">Character to evaluate</param>
+    /// <returns>True if end of file (char.MaxValue); otherwise false</returns>
+    public static bool IsEoF(this char c)
+    {
+        return c == Symbols.EndOfFile;
+    }
+    /// <summary>
     /// Escapes quoted strings
     /// </summary>
     /// <param name="value">Value to escape</param>
