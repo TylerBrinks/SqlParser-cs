@@ -53,7 +53,7 @@ public static class EnumWriter
             BinaryOperator.PGNotLikeMatch => "!~~",
             BinaryOperator.PGNotILikeMatch => "!~~*",
             
-            CteAsMaterialized.Materialized => "NOT MATERIALIZED",
+            CteAsMaterialized.NotMaterialized => "NOT MATERIALIZED",
 
             DateTimeField.TimezoneMinute => "TIMEZONE_MINUTE",
             DateTimeField.TimezoneHour => "TIMEZONE_HOUR",

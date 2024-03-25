@@ -24,8 +24,6 @@ public record CommonTableExpression(TableAlias Alias, Query Query, Ident? From =
             writer.WriteSql($"{Alias} AS {Materialized} ({Query})");
         }
         
-        writer.WriteSql($"{Alias} AS ({Query.ToSql()})");
-
         if (From != null)
         {
             writer.WriteSql($" FROM {From}");
