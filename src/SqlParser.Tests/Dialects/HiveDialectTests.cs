@@ -233,7 +233,7 @@ namespace SqlParser.Tests.Dialects
                 ParseSqlStatements("CREATE TEMPORARY FUNCTION mydb.myfunc AS 'org.random.class.Name' USING JAR"));
             Assert.Equal("Expected literal string, found EOF", ex.Message);
 
-            DefaultDialects = new[] { new GenericDialect() };
+            DefaultDialects = new[] { new MsSqlDialect() };
 
             ex = Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
             Assert.Equal("Expected an object type after CREATE, found FUNCTION, Line: 1, Col: 18", ex.Message);
