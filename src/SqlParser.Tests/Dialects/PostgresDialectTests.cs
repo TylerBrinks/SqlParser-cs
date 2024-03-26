@@ -957,10 +957,10 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Execute()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             var execute = VerifiedStatement<Statement.Execute>("EXECUTE a");
-            Assert.Equal(new Statement.Execute("a"), execute);
+            Assert.Equal(new Statement.Execute("a", null, null), execute);
 
             execute = VerifiedStatement<Statement.Execute>("EXECUTE a(1, 't')");
             var parameters = new[]
@@ -968,7 +968,14 @@ namespace SqlParser.Tests.Dialects
                 new LiteralValue(Number("1")),
                 new LiteralValue(new Value.SingleQuotedString("t"))
             };
-            Assert.Equal(new Statement.Execute("a", parameters), execute);
+            Assert.Equal(new Statement.Execute("a", parameters, null), execute);
+
+            execute = VerifiedStatement<Statement.Execute>("EXECUTE a USING CAST(1337 AS SMALLINT), CAST(7331 AS SMALLINT)");
+            Assert.Equal(new Statement.Execute("a", null, new Sequence<Expression>
+            {
+                new Cast(new LiteralValue(new Value.Number("1337")), new DataType.SmallInt()),
+                new Cast(new LiteralValue(new Value.Number("7331")), new DataType.SmallInt()),
+            }), execute);
         }
 
         [Fact]

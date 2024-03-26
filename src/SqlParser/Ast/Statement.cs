@@ -1287,6 +1287,29 @@ public abstract record Statement : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// EXECUTE name [ ( parameter [, ...] ) ] [USING <expr>]
+    /// </summary>
+    public record Execute(Ident Name, Sequence<Expression>? Parameters, Sequence<Expression>? Using) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"EXECUTE {Name}");
+           
+            if (Parameters.SafeAny())
+            {
+                writer.Write("(");
+                writer.WriteDelimited(Parameters, ", ");
+                writer.Write(")");
+            }
+
+            if (Using.SafeAny())
+            {
+                writer.Write(" USING ");
+                writer.WriteDelimited(Using, ", ");
+            }
+        }
+    }
+    /// <summary>
     /// Install statement
     /// </summary>
     public record Install(Ident ExtensionName) : Statement
@@ -1397,23 +1420,6 @@ public abstract record Statement : IWriteSql, IElement
             if (Args.SafeAny())
             {
                 writer.WriteSql($"({Args})");
-            }
-        }
-    }
-    /// <summary>
-    /// Execute statement
-    /// </summary>
-    /// <param name="Name">Name identifier</param>
-    /// <param name="Parameters">Parameter expressions</param>
-    public record Execute(Ident Name, Sequence<Expression>? Parameters = null) : Statement
-    {
-        public override void ToSql(SqlTextWriter writer)
-        {
-            writer.WriteSql($"EXECUTE {Name}");
-
-            if (Parameters.SafeAny())
-            {
-                writer.WriteSql($"({Parameters})");
             }
         }
     }

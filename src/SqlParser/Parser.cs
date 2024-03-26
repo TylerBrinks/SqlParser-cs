@@ -9101,13 +9101,27 @@ public class Parser
     {
         var name = ParseIdentifier();
         Sequence<Expression>? parameters = null;
+       
         if (ConsumeToken<LeftParen>())
         {
             parameters = ParseCommaSeparated(ParseExpr);
             ExpectRightParen();
         }
 
-        return new Execute(name, parameters);
+        Sequence<Expression> usings = null;
+
+        if (ParseKeyword(Keyword.USING))
+        {
+            usings = new Sequence<Expression>();
+            usings.Add((ParseExpr()));
+
+            while (ConsumeToken<Comma>())
+            {
+                usings.Add(ParseExpr());
+            }
+        }
+
+        return new Execute(name, parameters, usings);
     }
 
     public Prepare ParsePrepare()
