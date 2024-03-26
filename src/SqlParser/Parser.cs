@@ -3347,7 +3347,7 @@ public class Parser
             };
         }
 
-        if (_dialect is PostgreSqlDialect)
+        if (_dialect is PostgreSqlDialect or GenericDialect)
         {
             var name = ParseObjectName();
 
