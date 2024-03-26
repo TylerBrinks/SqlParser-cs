@@ -2199,6 +2199,21 @@ public abstract record Statement : IWriteSql, IElement
             writer.Write("UNLOCK TABLES");
         }
     }
+
+    public record Unload(Query Query, Ident To, Sequence<SqlOption> With) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"UNLOAD({Query}) TO {To}");
+
+            if(With.SafeAny())
+            {
+                writer.Write(" WITH (");
+                writer.WriteDelimited(With, ", ");
+                writer.Write(")");
+            }
+        }
+    }
     /// <summary>
     /// Update statement
     /// </summary>

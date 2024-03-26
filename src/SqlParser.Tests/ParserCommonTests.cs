@@ -5198,5 +5198,34 @@ namespace SqlParser.Tests
             Assert.Single(select.From!);
             Assert.Equal("JSON_TABLE", select.From![0].Relation!.AsTable().Name);
         }
+
+        [Fact]
+        public void Parse_Unload()
+        {
+            var unload = (Statement.Unload)VerifiedStatement("UNLOAD(SELECT cola FROM tab) TO 's3://...' WITH (format = 'AVRO')");
+
+            var query = new Query(
+                new SetExpression.SelectExpression(new Select(new Sequence<SelectItem>
+                {
+                    new SelectItem.UnnamedExpression(new Identifier("cola"))
+                })
+                {
+                    From = new Sequence<TableWithJoins>
+                    {
+                        new (new TableFactor.Table("tab"))
+                    }
+                }));
+
+            var to = new Ident("s3://...", Symbols.SingleQuote);
+
+            var with = new Sequence<SqlOption>
+            {
+                new ("format", new LiteralValue(new Value.SingleQuotedString("AVRO")))
+            };
+
+            var expected = new Statement.Unload(query, to, with);
+
+            Assert.Equal(expected, unload);
+        }
     }
 }

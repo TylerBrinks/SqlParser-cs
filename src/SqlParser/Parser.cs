@@ -242,6 +242,7 @@ public class Parser
             Keyword.PREPARE => ParsePrepare(),
             Keyword.MERGE => ParseMerge(),
             Keyword.PRAGMA => ParsePragma(),
+            Keyword.UNLOAD => ParseUnload(),
             // `INSTALL` is duckdb specific https://duckdb.org/docs/extensions/overview
             Keyword.INSTALL when _dialect is DuckDbDialect or GenericDialect => ParseInstall(),
             // `LOAD` is duckdb specific https://duckdb.org/docs/extensions/overview
@@ -9122,6 +9123,19 @@ public class Parser
         ExpectKeyword(Keyword.AS);
         var statement = ParseStatement();
         return new Prepare(name, dataTypes, statement);
+    }
+
+    public Statement ParseUnload()
+    {
+        Query query = ExpectParens(() => ParseQuery());
+
+        ExpectKeyword(Keyword.TO);
+
+        var to = ParseIdentifier();
+
+        var withOptions = ParseOptions(Keyword.WITH) ;
+
+        return new Unload(query, to, withOptions);
     }
 
     public Sequence<MergeClause> ParseMergeClauses()

@@ -725,6 +725,7 @@ public enum Keyword
     UNION,
     UNIQUE,
     UNKNOWN,
+    UNLOAD,
     UNLOCK,
     UNLOGGED,
     UNNEST,
