@@ -859,6 +859,13 @@ public abstract record Statement : IWriteSql, IElement
                             break;
                     }
 
+                    if (HiveFormats.SerdeProperties.SafeAny())
+                    {
+                        writer.Write(" WITH SERDEPROPERTIES (");
+                        writer.WriteDelimited(HiveFormats.SerdeProperties, ", ");
+                        writer.Write(")");
+                    }
+
                     if (!External)
                     {
                         writer.WriteSql($" LOCATION '{HiveFormats.Location}'");

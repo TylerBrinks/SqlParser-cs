@@ -1425,8 +1425,7 @@ public class Parser
         return (new StructField(fieldType, fieldName), trailingBracket);
     }
 
-    public (Sequence<StructField> Fields, bool MatchingTrailingBracket) ParseStructTypeDef(
-        Func<(StructField, bool)> elementParser)
+    public (Sequence<StructField> Fields, bool MatchingTrailingBracket) ParseStructTypeDef(Func<(StructField, bool)> elementParser)
     {
         var startToken = PeekToken();
         ExpectKeyword(Keyword.STRUCT);
@@ -4026,7 +4025,7 @@ public class Parser
         while (true)
         {
             var name = ParseIdentifier();
-            
+
             DeclareType? declareType = null;
             Query? forQuery = null;
             DeclareAssignment? assignedExpression = null;
@@ -4283,7 +4282,7 @@ public class Parser
 
         while (loop)
         {
-            switch (ParseOneOfKeywords(Keyword.ROW, Keyword.STORED, Keyword.LOCATION))
+            switch (ParseOneOfKeywords(Keyword.ROW, Keyword.STORED, Keyword.LOCATION, Keyword.WITH))
             {
                 case Keyword.ROW:
                     hiveFormat ??= new HiveFormat();
@@ -4314,6 +4313,15 @@ public class Parser
                 case Keyword.LOCATION:
                     hiveFormat ??= new HiveFormat();
                     hiveFormat.Location = ParseLiteralString();
+                    break;
+
+                case Keyword.WITH:
+                    PrevToken();
+                    var properties = ParseOptionsWithKeywords(Keyword.WITH, Keyword.SERDEPROPERTIES);
+                    if (properties.SafeAny())
+                    {
+                        hiveFormat.SerdeProperties = properties;
+                    }
                     break;
 
                 default:
@@ -5100,6 +5108,16 @@ public class Parser
         }
 
         return ExpectParens(() => ParseCommaSeparated(ParseSqlOption));
+    }
+
+    public Sequence<SqlOption> ParseOptionsWithKeywords(params Keyword[] keywords)
+    {
+        if (ParseKeywordSequence(keywords))
+        {
+            return ExpectParens(() => ParseCommaSeparated(ParseSqlOption));
+        }
+
+        return [];
     }
 
     public IndexType ParseIndexType()
@@ -7111,7 +7129,7 @@ public class Parser
 
                 }
             }
-            
+
             var query = ExpectParens(() => ParseQuery());
             var alias = new TableAlias(name);
             cte = new CommonTableExpression(alias, query.Query, Materialized: isMaterialized);
@@ -9101,7 +9119,7 @@ public class Parser
     {
         var name = ParseIdentifier();
         Sequence<Expression>? parameters = null;
-       
+
         if (ConsumeToken<LeftParen>())
         {
             parameters = ParseCommaSeparated(ParseExpr);
@@ -9147,7 +9165,7 @@ public class Parser
 
         var to = ParseIdentifier();
 
-        var withOptions = ParseOptions(Keyword.WITH) ;
+        var withOptions = ParseOptions(Keyword.WITH);
 
         return new Unload(query, to, withOptions);
     }

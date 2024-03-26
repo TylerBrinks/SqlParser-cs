@@ -6,6 +6,7 @@
 public record HiveFormat: IElement
 {
     public HiveRowFormat? RowFormat { get; internal set; }
+    public Sequence<SqlOption>? SerdeProperties { get; internal set; }
     public HiveIOFormat? Storage { get; internal set; }
     public string? Location { get; internal set; }
 }

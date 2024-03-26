@@ -632,6 +632,7 @@ public enum Keyword
     SEQUENCEFILE,
     SEQUENCES,
     SERDE,
+    SERDEPROPERTIES,
     SERIALIZABLE,
     SESSION,
     SESSION_USER,
