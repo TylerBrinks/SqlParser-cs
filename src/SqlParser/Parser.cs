@@ -4322,6 +4322,11 @@ public class Parser
                     {
                         hiveFormat.SerdeProperties = properties;
                     }
+                    else
+                    {
+                        loop = false;
+                    }
+
                     break;
 
                 default:
