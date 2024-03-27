@@ -13,6 +13,7 @@ using System.Globalization;
 using System.Text;
 using static SqlParser.Ast.AlterTableOperation;
 using Declare = SqlParser.Ast.Declare;
+using HiveRowDelimiter = SqlParser.Ast.HiveRowDelimiter;
 
 namespace SqlParser;
 
@@ -4340,6 +4341,7 @@ public class Parser
 
     public HiveRowFormat ParseRowFormat()
     {
+
         ExpectKeyword(Keyword.FORMAT);
         if (ParseOneOfKeywords(Keyword.SERDE, Keyword.DELIMITED) == Keyword.SERDE)
         {
@@ -4348,7 +4350,81 @@ public class Parser
             return new HiveRowFormat.Serde(@class);
         }
 
-        return new HiveRowFormat.Delimited();
+        Sequence<HiveRowDelimiter>? rowDelimiters = null;
+
+        var loop = true;
+        while (loop)
+        {
+            var keyword = ParseOneOfKeywords(Keyword.FIELDS, Keyword.COLLECTION, Keyword.MAP, Keyword.LINES, Keyword.NULL);
+
+            switch (keyword)
+            {
+                case Keyword.FIELDS:
+                    if (ParseKeywordSequence(Keyword.TERMINATED, Keyword.BY))
+                    {
+                        rowDelimiters = new Sequence<HiveRowDelimiter>
+                        {
+                            new HiveRowDelimiter(HiveDelimiter.FieldsTerminatedBy, ParseIdentifier())
+                        };
+
+                        if (ParseKeywordSequence(Keyword.ESCAPED, Keyword.BY))
+                        {
+                            rowDelimiters.Add(new HiveRowDelimiter(HiveDelimiter.FieldsEscapedBy, ParseIdentifier()));
+                        }
+                    }
+                    else
+                    {
+                        loop = false;
+                    }
+                    break;
+                case Keyword.COLLECTION:
+                    if (ParseKeywordSequence(Keyword.ITEMS, Keyword.TERMINATED, Keyword.BY))
+                    {
+                        rowDelimiters.Add(new HiveRowDelimiter(HiveDelimiter.CollectionItemsTerminatedBy, ParseIdentifier()));
+                    }
+                    else
+                    {
+                        loop = false;
+                    }
+                    break;
+                case Keyword.MAP:
+                    if (ParseKeywordSequence(Keyword.KEYS, Keyword.TERMINATED, Keyword.BY))
+                    {
+                        rowDelimiters.Add(new HiveRowDelimiter(HiveDelimiter.MapKeysTerminatedBy, ParseIdentifier()));
+                    }
+                    else
+                    {
+                        loop = false;
+                    }
+                    break;
+                case Keyword.LINES:
+                    if (ParseKeywordSequence(Keyword.TERMINATED, Keyword.BY))
+                    {
+                        rowDelimiters.Add(new HiveRowDelimiter(HiveDelimiter.LinesTerminatedBy, ParseIdentifier()));
+                    }
+                    else
+                    {
+                        loop = false;
+                    }
+                    break;
+                case Keyword.NULL:
+                    if (ParseKeywordSequence(Keyword.DEFINED, Keyword.AS))
+                    {
+                        rowDelimiters.Add(new HiveRowDelimiter(HiveDelimiter.NullDefinedAs, ParseIdentifier()));
+                    }
+                    else
+                    {
+                        loop = false;
+                    }
+                    break;
+
+                default:
+                    loop = false;
+                    break;
+            }
+        }
+
+        return new HiveRowFormat.Delimited(rowDelimiters);
     }
 
     public CreateTable ParseCreateTable(bool orReplace, bool temporary, bool? global, bool transient)

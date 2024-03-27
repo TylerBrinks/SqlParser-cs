@@ -79,6 +79,12 @@ public static class EnumWriter
             FlushType.UserResources => "USER_RESOURCES",
             FlushType.Tables => "TABLES",
 
+            HiveDelimiter.FieldsTerminatedBy => "FIELDS TERMINATED BY",
+            HiveDelimiter.FieldsEscapedBy => "ESCAPED BY",
+            HiveDelimiter.CollectionItemsTerminatedBy => "COLLECTION ITEMS TERMINATED BY",
+            HiveDelimiter.MapKeysTerminatedBy => "MAP KEYS TERMINATED BY",
+            HiveDelimiter.LinesTerminatedBy => "LINES TERMINATED BY",
+            HiveDelimiter.NullDefinedAs => "NULL DEFINED AS",
 
             JsonOperator.Arrow => "->",
             JsonOperator.LongArrow => "->>",

@@ -368,5 +368,12 @@ namespace SqlParser.Tests.Dialects
             const string sql = "ALTER TABLE db.table ADD IF NOT EXISTS PARTITION (`a` = 'asdf', `b` = 2) PARTITION (`a` = 'asdh', `b` = 3)";
             VerifiedStatement(sql);
         }
+
+        [Fact]
+        public void Create_Delimited_Table()
+        {
+            const string sql = "CREATE TABLE tab (cola STRING, colb BIGINT) ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' ESCAPED BY '\"' MAP KEYS TERMINATED BY '\"'";
+            VerifiedStatement(sql);
+        }
     }
 }

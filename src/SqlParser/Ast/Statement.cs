@@ -840,8 +840,13 @@ public abstract record Statement : IWriteSql, IElement
                     case HiveRowFormat.Serde serde:
                         writer.WriteSql($" ROW FORMAT SERDE '{serde.Class}'");
                         break;
-                    case HiveRowFormat.Delimited:
+                    case HiveRowFormat.Delimited d:
                         writer.WriteSql($" ROW FORMAT DELIMITED");
+                        if (d.Delimiters.SafeAny())
+                        {
+                            writer.Write(" ");
+                            writer.WriteDelimited(d.Delimiters, " ");
+                        }
                         break;
                 }
 

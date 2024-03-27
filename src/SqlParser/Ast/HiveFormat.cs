@@ -3,7 +3,7 @@
 /// <summary>
 /// Hive-specific format
 /// </summary>
-public record HiveFormat: IElement
+public record HiveFormat : IElement
 {
     public HiveRowFormat? RowFormat { get; internal set; }
     public Sequence<SqlOption>? SerdeProperties { get; internal set; }
@@ -13,7 +13,7 @@ public record HiveFormat: IElement
 /// <summary>
 /// Hive row format
 /// </summary>
-public abstract record HiveRowFormat
+public abstract record HiveRowFormat : IElement
 {
     /// <summary>
     /// Hive Serde row format
@@ -23,7 +23,15 @@ public abstract record HiveRowFormat
     /// <summary>
     /// Hive delimited row format
     /// </summary>
-    public record Delimited : HiveRowFormat;
+    public record Delimited(Sequence<HiveRowDelimiter>? Delimiters) : HiveRowFormat;
+}
+
+public record HiveRowDelimiter(HiveDelimiter Delimiter, Ident Character) : IWriteSql
+{
+    public void ToSql(SqlTextWriter writer)
+    {
+        writer.WriteSql($"{Delimiter} {Character}");
+    }
 }
 /// <summary>
 /// Hive distribution style

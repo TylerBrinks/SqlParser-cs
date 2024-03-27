@@ -244,6 +244,16 @@ public enum GeneratedExpressionMode
     Sorted
 }
 
+public enum HiveDelimiter
+{
+    FieldsTerminatedBy,
+    FieldsEscapedBy,
+    CollectionItemsTerminatedBy,
+    MapKeysTerminatedBy,
+    LinesTerminatedBy,
+    NullDefinedAs,
+}
+
 public enum IndexType
 {
     None,
