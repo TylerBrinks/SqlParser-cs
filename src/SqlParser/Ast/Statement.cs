@@ -1313,7 +1313,7 @@ public abstract record Statement : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             writer.WriteSql($"EXECUTE {Name}");
-           
+
             if (Parameters.SafeAny())
             {
                 writer.Write("(");
@@ -1451,7 +1451,7 @@ public abstract record Statement : IWriteSql, IElement
         public new bool Analyze { get; set; }
 
         // If true, query used the MySQL `DESCRIBE` alias for explain
-        public bool DescribeAlias { get; init; }
+        public DescribeAlias DescribeAlias { get; init; }
 
         // Display additional information regarding the plan.
         public bool Verbose { get; init; }
@@ -1461,7 +1461,7 @@ public abstract record Statement : IWriteSql, IElement
 
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.Write(DescribeAlias ? "DESCRIBE " : "EXPLAIN ");
+            writer.WriteSql($"{DescribeAlias} ");
 
             if (Analyze)
             {
@@ -1485,13 +1485,18 @@ public abstract record Statement : IWriteSql, IElement
     /// EXPLAIN TABLE
     /// Note: this is a MySQL-specific statement. <see href="https://dev.mysql.com/doc/refman/8.0/en/explain.html"/>
     /// </summary>
-    /// <param name="DescribeAlias">If true, query used the MySQL DESCRIBE alias for explain</param>
+    /// <param name="DescribeAlias">Query used the DESCRIBE alias for explain</param>
     /// <param name="Name">Table name</param>
-    public record ExplainTable(bool DescribeAlias, ObjectName Name) : Statement
+    public record ExplainTable(DescribeAlias DescribeAlias, ObjectName Name, HiveDescribeFormat? HiveFormat) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.Write(DescribeAlias ? "DESCRIBE " : "EXPLAIN ");
+            // writer.Write(DescribeAlias ? "DESCRIBE " : "EXPLAIN ");
+            writer.WriteSql($"{DescribeAlias} ");
+            if (HiveFormat != null)
+            {
+                writer.WriteSql($"{HiveFormat} ");
+            }
             writer.Write(Name);
         }
     }
@@ -2058,23 +2063,24 @@ public abstract record Statement : IWriteSql, IElement
     /// <summary>
     /// SHOW [GLOBAL | SESSION] STATUS [LIKE 'pattern' | WHERE expr]
     /// </summary>
-    public record ShowStatus(ShowStatementFilter? Filter, bool Session, bool Global) : Statement{
+    public record ShowStatus(ShowStatementFilter? Filter, bool Session, bool Global) : Statement
+    {
         public override void ToSql(SqlTextWriter writer)
         {
             writer.Write("SHOW");
-            
-            if(Global)
+
+            if (Global)
             {
                 writer.Write(" GLOBAL");
             }
 
-            if(Session)
+            if (Session)
             {
                 writer.Write(" SESSION");
             }
             writer.Write(" STATUS");
-            
-            if(Filter != null)
+
+            if (Filter != null)
             {
                 writer.WriteSql($" {Filter}");
             }
@@ -2231,7 +2237,7 @@ public abstract record Statement : IWriteSql, IElement
         {
             writer.WriteSql($"UNLOAD({Query}) TO {To}");
 
-            if(With.SafeAny())
+            if (With.SafeAny())
             {
                 writer.Write(" WITH (");
                 writer.WriteDelimited(With, ", ");

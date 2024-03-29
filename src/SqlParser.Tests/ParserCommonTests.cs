@@ -2286,15 +2286,27 @@ namespace SqlParser.Tests
         [Fact]
         public void Parse_Explain_Table()
         {
-            Test("EXPLAIN test_identifier", false);
-            Test("DESCRIBE test_identifier", true);
+            Test("EXPLAIN test_identifier", DescribeAlias.Explain);
+            Test("DESCRIBE test_identifier", DescribeAlias.Describe);
 
-            void Test(string sql, bool expected)
+            void Test(string sql, DescribeAlias expected)
             {
                 var explain = VerifiedStatement<Statement.ExplainTable>(sql);
                 Assert.Equal(expected, explain.DescribeAlias);
                 Assert.Equal("test_identifier", explain.Name);
             }
+        }
+
+        [Fact]
+        public void Explain_Describe()
+        {
+            VerifiedStatement("DESCRIBE test.table");
+        }
+
+        [Fact]
+        public void Explain_Desc()
+        {
+            VerifiedStatement("DESC test.table");
         }
 
         [Fact]

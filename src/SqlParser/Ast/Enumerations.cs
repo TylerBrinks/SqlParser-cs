@@ -187,6 +187,13 @@ public enum DeferrableInitial
     Deferred,
 }
 
+public enum DescribeAlias
+{
+    Describe,
+    Explain,
+    Desc,
+}
+
 public enum DiscardObject
 {
     All,
@@ -252,6 +259,12 @@ public enum HiveDelimiter
     MapKeysTerminatedBy,
     LinesTerminatedBy,
     NullDefinedAs,
+}
+
+public enum HiveDescribeFormat
+{
+    Extended,
+    Formatted
 }
 
 public enum IndexType

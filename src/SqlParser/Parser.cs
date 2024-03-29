@@ -196,8 +196,9 @@ public class Parser
         {
             Keyword.KILL => ParseKill(),
             Keyword.FLUSH => ParseFlush(),
-            Keyword.DESCRIBE => ParseExplain(true),
-            Keyword.EXPLAIN => ParseExplain(false),
+            Keyword.DESC => ParseExplain(DescribeAlias.Desc),
+            Keyword.DESCRIBE => ParseExplain(DescribeAlias.Describe),
+            Keyword.EXPLAIN => ParseExplain(DescribeAlias.Explain),
             Keyword.ANALYZE => ParseAnalyze(),
             Keyword.SELECT or Keyword.WITH or Keyword.VALUES => ParseQuery(true),
             Keyword.TRUNCATE => ParseTruncate(),
@@ -6981,13 +6982,14 @@ public class Parser
 
         return new Kill(modifierKeyword, id);
     }
+
     /// <summary>
     /// KILL [CONNECTION | QUERY | MUTATION] processlist_id
     /// </summary>
     /// <param name="describeAlias"></param>
     /// <returns></returns>
     /// <exception cref="ParserException"></exception>
-    public Statement ParseExplain(bool describeAlias)
+    public Statement ParseExplain(DescribeAlias describeAlias)
     {
         var analyze = ParseKeyword(Keyword.ANALYZE);
 
@@ -7007,8 +7009,9 @@ public class Parser
                 Verbose = verbose,
                 Format = format,
             },
-            _ => new ExplainTable(describeAlias, ParseObjectName())
+            _ => ParseDescribeFormat()
         };
+
 
         AnalyzeFormat ParseAnalyzeFormat()
         {
@@ -7027,6 +7030,24 @@ public class Parser
 
             // ReSharper disable once StringLiteralTypo
             throw Expected("fileformat", token);
+        }
+
+        ExplainTable ParseDescribeFormat()
+        {
+            HiveDescribeFormat? hiveFormat = null;
+            var kwd = ParseOneOfKeywords(Keyword.EXTENDED, Keyword.FORMATTED);
+            switch (kwd)
+            {
+                case Keyword.EXTENDED:
+                    hiveFormat = HiveDescribeFormat.Extended;
+                    break;
+
+                case Keyword.FORMATTED:
+                    hiveFormat = HiveDescribeFormat.Formatted;
+                    break;
+            }
+
+            return new ExplainTable(describeAlias, ParseObjectName(), hiveFormat);
         }
     }
     /// <summary>
