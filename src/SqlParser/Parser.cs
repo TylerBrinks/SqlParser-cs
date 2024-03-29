@@ -890,7 +890,7 @@ public class Parser
                 Expression? toExpr = null;
                 var special = false;
 
-                if (_dialect.SupportsSubstringFromForExpr)
+                if (_dialect.SupportsSubstringFromForExpression)
                 {
                     // PARSE SUBSTRING (EXPR [FROM 1] [FOR 3])
                     if (ParseKeyword(Keyword.FROM) || ConsumeToken<Comma>())

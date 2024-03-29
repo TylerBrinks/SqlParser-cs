@@ -82,7 +82,6 @@ public abstract class Dialect
     {
         return null;
     }
-
     /// <summary>
     /// True if the dialect supports filtering during aggregation
     /// </summary>
@@ -100,21 +99,21 @@ public abstract class Dialect
     /// True if the dialect supports `(NOT) in ()`                                
     /// </summary>
     public virtual bool SupportsInEmptyList => false;
-
     /// <summary>
     /// True if the dialect supports 'group sets, rollup, or cube' expressions
     /// </summary>
     public virtual bool SupportsGroupByExpression => false;
-
     /// <summary>
     /// Returns true if the dialect supports `SUBSTRING(expr [FROM start] [FOR len])` expressions
     /// </summary>
-    public virtual bool SupportsSubstringFromForExpr => true;
+    public virtual bool SupportsSubstringFromForExpression => true;
     /// <summary>
     /// Returns true if the dialect has a CONVERT function which accepts a type first
     /// and an expression second, e.g. `CONVERT(varchar, 1)`
     /// </summary>
     public virtual bool ConvertTypeBeforeValue => false;
-    
+    /// <summary>
+    /// Returns true if the dialect supports `BEGIN {DEFERRED | IMMEDIATE | EXCLUSIVE} [TRANSACTION]` statements
+    /// </summary>
     public virtual bool SupportsStartTransactionModifier => false;
 }

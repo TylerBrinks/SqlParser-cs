@@ -32,7 +32,7 @@ public class MsSqlDialect : Dialect
                    or Symbols.Underscore;
     }
 
-    public override bool SupportsSubstringFromForExpr => false;
+    public override bool SupportsSubstringFromForExpression => false;
 
     public override bool ConvertTypeBeforeValue => true;
 }
