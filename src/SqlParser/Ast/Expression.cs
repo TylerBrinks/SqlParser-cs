@@ -401,7 +401,9 @@ public abstract record Expression : IWriteSql, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
+            writer.Write("{");
             writer.WriteDelimited(Fields, ", ");
+            writer.Write("}");
         }
     }
     /// <summary>
