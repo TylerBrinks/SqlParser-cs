@@ -6016,7 +6016,7 @@ public class Parser
         var token = PeekToken();
         return token switch
         {
-            DollarQuotedString s when _dialect is PostgreSqlDialect => DoubleDollar(s.Value),
+            DollarQuotedString s when _dialect is PostgreSqlDialect or GenericDialect => DoubleDollar(s.Value),
             _ => new FunctionDefinition.SingleQuotedDef(ParseLiteralString())
         };
 
