@@ -396,6 +396,14 @@ public abstract record Expression : IWriteSql, IElement
             writer.Write(")");
         }
     }
+
+    public record Dictionary(Sequence<DictionaryField> Fields) : Expression
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteDelimited(Fields, ", ");
+        }
+    }
     /// <summary>
     /// CAST an expression to a different data type
     /// <example>

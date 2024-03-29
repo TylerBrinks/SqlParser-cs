@@ -1392,6 +1392,7 @@ public class Parser
 
             LeftParen => ParseLeftParen(),
             Placeholder or Colon or AtSign => ParseTokenValue(),
+            LeftBrace when _dialect is DuckDbDialect or GenericDialect => ParseDuckDbStructLiteral(),
 
             _ => throw Expected("an expression", token)
         };
@@ -1406,6 +1407,31 @@ public class Parser
         return expr;
     }
 
+    public Dictionary ParseDuckDbStructLiteral()
+    {
+        PrevToken();
+        ExpectToken<LeftBrace>();
+        var fields = ParseCommaSeparated(ParseDuckdbDictionaryField);
+        ExpectToken<RightBrace>();
+
+        return new Dictionary(fields);
+    }
+    /// <summary>
+    /// Parse a field for a duckdb dictionary
+    ///
+    /// https://duckdb.org/docs/sql/data_types/struct#creating-structs
+    /// </summary>
+    /// <returns>DictionaryField</returns>
+    public DictionaryField ParseDuckdbDictionaryField()
+    {
+        var key = ParseIdentifier();
+
+        ExpectToken<Colon>();
+
+        var expression = ParseExpr();
+
+        return new DictionaryField(key, expression);
+    }
     /// <summary>
     /// Parse an expression value for a bigquery struct
     /// </summary>

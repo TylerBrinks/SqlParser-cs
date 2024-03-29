@@ -154,12 +154,68 @@ public class DuckDbDialectTests : ParserTestBase
     }
 
     [Fact]
-    public void Test_Duckdb_Load_Extension()
+    public void Test_DuckDb_Load_Extension()
     {
         var statement = VerifiedStatement("LOAD my_extension");
 
         var expected = new Statement.Load("my_extension");
 
         Assert.Equal(expected, statement);
+    }
+
+    [Fact]
+    public void Test_DuckDb_Struct_Literal()
+    {
+        var select = VerifiedOnlySelect("SELECT {'a': 1, 'b': 2, 'c': 3}, [{'a': 'abc'}], {'a': 1, 'b': [t.str_col]}, {'a': 1, 'b': 'abc'}, {'abc': str_col}, {'a': {'aa': 1}}");
+
+        Assert.Equal(6, select.Projection.Count);
+        var dictionary = new Expression.Dictionary([
+            new DictionaryField(new Ident("a", Symbols.SingleQuote), new Expression.LiteralValue(new Value.Number("1"))),
+            new DictionaryField(new Ident("b", Symbols.SingleQuote), new Expression.LiteralValue(new Value.Number("2"))),
+            new DictionaryField(new Ident("c", Symbols.SingleQuote), new Expression.LiteralValue(new Value.Number("3")))
+        ]);
+
+        Assert.Equal(dictionary, select.Projection[0].AsExpr());
+
+        dictionary = new Expression.Dictionary([
+            new DictionaryField(new Ident("a", Symbols.SingleQuote), new Expression.LiteralValue(new Value.SingleQuotedString("abc")))
+        ]);
+
+        Assert.Equal(dictionary, select.Projection[1].AsExpr());
+
+        dictionary = new Expression.Dictionary([
+            new DictionaryField(new Ident("a", Symbols.SingleQuote), new Expression.LiteralValue(new Value.Number("1"))),
+            new DictionaryField(new Ident("b", Symbols.SingleQuote), new Expression.Array(new ArrayExpression([
+                new Expression.CompoundIdentifier([
+                    new Ident("t"),
+                    new Ident("str_col")
+                ])
+            ])))
+        ]);
+
+        Assert.Equal(dictionary, select.Projection[2].AsExpr());
+
+
+        dictionary = new Expression.Dictionary([
+            new DictionaryField(new Ident("a", Symbols.SingleQuote), new Expression.LiteralValue(new Value.Number("1"))),
+            new DictionaryField(new Ident("b", Symbols.SingleQuote), new Expression.LiteralValue(new Value.SingleQuotedString("abc")))
+        ]);
+
+        Assert.Equal(dictionary, select.Projection[3].AsExpr());
+
+        dictionary = new Expression.Dictionary([
+            new DictionaryField(new Ident("a", Symbols.SingleQuote), new Expression.Identifier("str_col"))
+        ]);
+
+        Assert.Equal(dictionary, select.Projection[4].AsExpr());
+
+        dictionary = new Expression.Dictionary([
+            new DictionaryField(new Ident("a", Symbols.SingleQuote), new Expression.Dictionary([
+                new DictionaryField(new Ident("aa", Symbols.SingleQuote),
+                new Expression.LiteralValue(new Value.Number("1")))
+            ]))
+        ]);
+
+        Assert.Equal(dictionary, select.Projection[5].AsExpr());
     }
 }
