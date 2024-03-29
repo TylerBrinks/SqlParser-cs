@@ -5247,7 +5247,19 @@ public class Parser
                     var only = ParseKeyword(Keyword.ONLY);
                     var tableName = ParseObjectName();
                     var operations = ParseCommaSeparated(ParseAlterTableOperation);
-                    return new AlterTable(tableName, ifExists, only, operations);
+
+                    HiveSetLocation? location = null;
+
+                    if (ParseKeyword(Keyword.LOCATION))
+                    {
+                        location = new HiveSetLocation(false, ParseIdentifier());
+                    }
+                    else if (ParseKeywordSequence(Keyword.SET, Keyword.LOCATION))
+                    {
+                        location = new HiveSetLocation(true, ParseIdentifier());
+                    }
+
+                    return new AlterTable(tableName, ifExists, only, operations, location);
                 }
 
             case Keyword.INDEX:

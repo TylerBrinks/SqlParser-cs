@@ -2,6 +2,7 @@
 // ReSharper disable CommentTypo
 // ReSharper disable UnusedMember
 
+using System;
 using System.ComponentModel;
 
 namespace SqlParser.Ast;
@@ -25,7 +26,8 @@ public abstract record Statement : IWriteSql, IElement
     /// </summary>
     /// <param name="Name">Object name</param>
     /// <param name="Operations">Table operations</param>
-    public record AlterTable(ObjectName Name, bool IfExists, bool Only, Sequence<AlterTableOperation> Operations) : Statement
+    public record AlterTable(ObjectName Name, bool IfExists, bool Only, Sequence<AlterTableOperation> Operations,
+        HiveSetLocation? Location) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -42,6 +44,11 @@ public abstract record Statement : IWriteSql, IElement
 
             writer.WriteSql($"{Name} ");
             writer.WriteDelimited(Operations, ", ");
+
+            if (Location != null)
+            {
+                writer.WriteSql($" {Location}");
+            }
         }
     }
     /// <summary>

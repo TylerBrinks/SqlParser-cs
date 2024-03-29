@@ -375,5 +375,18 @@ namespace SqlParser.Tests.Dialects
             const string sql = "CREATE TABLE tab (cola STRING, colb BIGINT) ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' ESCAPED BY '\"' MAP KEYS TERMINATED BY '\"'";
             VerifiedStatement(sql);
         }
+
+        [Fact]
+        public void Test_Alter_With_Location()
+        {
+            VerifiedStatement("ALTER TABLE db.table PARTITION (a = 2) RENAME TO PARTITION (a = 1) LOCATION 's3://...'");
+        }
+
+        [Fact]
+
+        public void Test_Alter_With_Set_Location()
+        {
+            VerifiedStatement("ALTER TABLE db.table PARTITION (a = 2) RENAME TO PARTITION (a = 1) SET LOCATION 's3://...'");
+        }
     }
 }

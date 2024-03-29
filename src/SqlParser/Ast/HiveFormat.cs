@@ -84,3 +84,16 @@ public abstract record HiveIOFormat
         public Ast.FileFormat Format { get; init; }
     }
 }
+
+public record HiveSetLocation(bool HasSet, Ident Location) : IElement, IWriteSql
+{
+    public void ToSql(SqlTextWriter writer)
+    {
+        if (HasSet)
+        {
+            writer.Write("SET ");
+        }
+
+        writer.WriteSql($"LOCATION {Location}");
+    }
+}
