@@ -49,4 +49,6 @@ public class MySqlDialect : Dialect
         
         return parser.ParseKeywordSequence(Keyword.UNLOCK, Keyword.TABLES) ? new UnlockTables() : null;
     }
+
+    public override char? IdentifierQuoteStyle(string identifier) => Symbols.Backtick;
 }

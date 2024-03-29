@@ -28,6 +28,8 @@ public class PostgreSqlDialect : Dialect
 
     public override bool SupportsFilterDuringAggregation => true;
 
+    public override char? IdentifierQuoteStyle(string identifier) => Symbols.DoubleQuote;
+
     public override Statement? ParseStatement(Parser parser)
     {
         return parser.ParseKeyword(Keyword.COMMENT) ? ParseComment(parser) : null;
@@ -44,7 +46,7 @@ public class PostgreSqlDialect : Dialect
 
         switch (token)
         {
-            case Word {Keyword: Keyword.COLUMN}:
+            case Word { Keyword: Keyword.COLUMN }:
                 objectType = CommentObject.Column;
                 name = parser.ParseObjectName();
                 break;

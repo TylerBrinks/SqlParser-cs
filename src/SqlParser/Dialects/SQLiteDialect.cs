@@ -49,6 +49,7 @@ public class SQLiteDialect : Dialect
         parser.PrevToken();
         return parser.ParseInsert();
     }
+    public override char? IdentifierQuoteStyle(string identifier) => Symbols.Backtick;
 
     public override bool SupportsFilterDuringAggregation => true;
 

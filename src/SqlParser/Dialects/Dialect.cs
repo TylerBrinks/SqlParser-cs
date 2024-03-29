@@ -41,6 +41,10 @@ public abstract class Dialect
         return true;
     }
     /// <summary>
+    /// Return the character used to quote identifiers
+    /// </summary>
+    public virtual char? IdentifierQuoteStyle(string identifier) => null;
+    /// <summary>
     /// Allow dialect implementations to override statement parsing
     /// </summary>
     /// <param name="parser">Parser instance</param>
