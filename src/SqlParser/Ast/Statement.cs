@@ -1618,6 +1618,7 @@ public abstract record Statement : IWriteSql, IElement
         public bool ReplaceInto { get; set; }
         /// Only for mysql
         public MySqlInsertPriority Priority { get; init; }
+        public InsertAliases? InsertAlias { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
@@ -1665,6 +1666,18 @@ public abstract record Statement : IWriteSql, IElement
             else if (!Columns.SafeAny())
             {
                 writer.Write("DEFAULT VALUES");
+            }
+
+            if (InsertAlias != null)
+            {
+                writer.WriteSql($" AS {InsertAlias.RowAlias}");
+
+                if (InsertAlias.ColumnAliases.SafeAny())
+                {
+                    writer.Write(" (");
+                    writer.WriteDelimited(InsertAlias.ColumnAliases, ", ");
+                    writer.Write(")");
+                }
             }
 
             On?.ToSql(writer);

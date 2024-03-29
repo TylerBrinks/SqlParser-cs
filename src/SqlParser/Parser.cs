@@ -8600,6 +8600,10 @@ public class Parser
             source = ParseQuery();
         }
 
+        var insertAliases = _dialect is MySqlDialect or GenericDialect && ParseKeyword(Keyword.AS)
+            ? ParseInsertAlias()
+            : null;
+
         var on = ParseOn();
 
         var returning = ParseInit(ParseKeyword(Keyword.RETURNING), () => ParseCommaSeparated(ParseSelectItem));
@@ -8661,8 +8665,17 @@ public class Parser
             Returning = returning,
             ReplaceInto = false,
             Priority = priority,
-            Alias = tableAlias
+            Alias = tableAlias,
+            InsertAlias = insertAliases
         };
+
+        InsertAliases ParseInsertAlias()
+        {
+            var rowAlias = ParseObjectName();
+            var columnAliases = ParseParenthesizedColumnList(IsOptional.Optional, false);
+
+            return new InsertAliases(rowAlias, columnAliases);
+        }
     }
 
     public Statement ParseReplace()

@@ -1188,5 +1188,54 @@ namespace SqlParser.Tests.Dialects
             expected = new Statement.ShowStatus(new ShowStatementFilter.Where(VerifiedExpr("value = 2")), false, false);
             Assert.Equal(expected, show);
         }
+
+        [Fact]
+        public void Parse_Insert_As()
+        {
+            var statement = VerifiedStatement("INSERT INTO `table` (`date`) VALUES ('2024-01-01') AS `alias`");
+
+            var values = new Values([[new LiteralValue(new Value.SingleQuotedString("2024-01-01"))]]);
+            var source = new Statement.Select(new Query(new SetExpression.ValuesExpression(values)));
+            var expected = new Statement.Insert(new ObjectName(new Ident("table", Symbols.Backtick)), source)
+            {
+                Into = true,
+                Columns = new Sequence<Ident>
+                {
+                    new ("date", Symbols.Backtick)
+                },
+                InsertAlias = new InsertAliases(new ObjectName(new Ident("alias", Symbols.Backtick)), new Sequence<Ident>()),
+                AfterColumns = new Sequence<Ident>()
+            };
+
+            Assert.Equal(expected, statement);
+
+            Assert.Throws<ParserException>(() => ParseSqlStatements("INSERT INTO `table` (`date`) VALUES ('2024-01-01') AS `alias` ()"));
+
+            statement = VerifiedStatement("INSERT INTO `table` (`id`, `date`) VALUES (1, '2024-01-01') AS `alias` (`mek_id`, `mek_date`)");
+
+            values = new Values([[
+                new LiteralValue(new Value.Number("1")),
+                new LiteralValue(new Value.SingleQuotedString("2024-01-01")),
+            ]]);
+            source = new Statement.Select(new Query(new SetExpression.ValuesExpression(values)));
+            expected = new Statement.Insert(new ObjectName(new Ident("table", Symbols.Backtick)), source)
+            {
+                Into = true,
+                Columns = new Sequence<Ident>
+                {
+                    new ("id", Symbols.Backtick),
+                    new ("date", Symbols.Backtick)
+                },
+                InsertAlias = new InsertAliases(new ObjectName(new Ident("alias", Symbols.Backtick)),
+                    new Sequence<Ident>
+                    {
+                        new ("mek_id", Symbols.Backtick),
+                        new ("mek_date", Symbols.Backtick)
+                    }),
+                AfterColumns = new Sequence<Ident>()
+            };
+
+            Assert.Equal(expected, statement);
+        }
     }
 }
