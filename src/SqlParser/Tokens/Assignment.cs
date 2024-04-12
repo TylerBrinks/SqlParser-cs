@@ -3,4 +3,4 @@
 /// <summary>
 /// Assignment `:=` (used for keyword argument in DuckDB macros)
 /// </summary>
-public class DuckAssignment() : StringToken(":=");
+public class Assignment() : StringToken(":=");

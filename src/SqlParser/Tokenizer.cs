@@ -691,7 +691,7 @@ public ref struct Tokenizer(bool unescape = true)
         return token switch
         {
             Symbols.Colon => TokenizeSingleCharacter(new DoubleColon()),
-            Symbols.Equal => TokenizeSingleCharacter(new DuckAssignment()),
+            Symbols.Equal => TokenizeSingleCharacter(new Assignment()),
             _ => new Colon()
         };
     }

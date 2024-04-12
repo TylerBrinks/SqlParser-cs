@@ -10,7 +10,7 @@ public abstract record DeclareAssignment(Expression Expression) : IWriteSql
 {
     public record DeclareExpression(Expression Declaration) : DeclareAssignment(Declaration);
     public record Default(Expression DefaultExpression) : DeclareAssignment(DefaultExpression);
-    public record DuckAssignment(Expression AssignmentExpression) : DeclareAssignment(AssignmentExpression);
+    public record Assignment(Expression AssignmentExpression) : DeclareAssignment(AssignmentExpression);
     public record For(Expression ForExpression) : DeclareAssignment(ForExpression);
 
     public void ToSql(SqlTextWriter writer)
@@ -25,7 +25,7 @@ public abstract record DeclareAssignment(Expression Expression) : IWriteSql
                 writer.WriteSql($"DEFAULT {Expression}");
                 break;
 
-            case DuckAssignment:
+            case Assignment:
                 writer.WriteSql($":= {Expression}");
                 break;
 

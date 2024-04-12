@@ -120,6 +120,14 @@ public abstract record FunctionArgOperator : IWriteSql, IElement
         }
     }
 
+    public record Assignment : FunctionArgOperator
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write(":=");
+        }
+    }
+
     public abstract void ToSql(SqlTextWriter writer);
 }
 

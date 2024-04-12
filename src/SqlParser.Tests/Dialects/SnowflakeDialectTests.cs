@@ -798,7 +798,7 @@ namespace SqlParser.Tests.Dialects
             List<(string Sql, string Name, DeclareAssignment? Assignment)> queries =
             [
                 ("DECLARE res RESULTSET DEFAULT 42", "res", new DeclareAssignment.Default(new LiteralValue(new Value.Number("42")))),
-                ("DECLARE res RESULTSET := 42", "res", new DeclareAssignment.DuckAssignment(new LiteralValue(new Value.Number("42")))),
+                ("DECLARE res RESULTSET := 42", "res", new DeclareAssignment.Assignment(new LiteralValue(new Value.Number("42")))),
                 ("DECLARE res RESULTSET", "res", null),
             ];
 

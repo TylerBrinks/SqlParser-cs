@@ -222,4 +222,26 @@ public class DuckDbDialectTests : ParserTestBase
 
         Assert.Equal(expression, select.Projection[5].AsExpr());
     }
+
+    [Fact]
+    public void Test_DuckDb_Named_Argument_Function_With_Assignment_Operator()
+    {
+        var select = VerifiedOnlySelect("SELECT FUN(a := '1', b := '2') FROM foo");
+        var function = (Expression.Function)select.Projection.First().AsExpr();
+
+        Assert.Equal(new Expression.Function("FUN")
+        {
+           Args = new Sequence<FunctionArg>
+           {
+               new FunctionArg.Named("a",
+                   new FunctionArgExpression.FunctionExpression(
+                       new Expression.LiteralValue(new Value.SingleQuotedString("1"))),
+                            new FunctionArgOperator.Assignment()),
+               new FunctionArg.Named("b",
+                   new FunctionArgExpression.FunctionExpression(
+                       new Expression.LiteralValue(new Value.SingleQuotedString("2"))),
+                   new FunctionArgOperator.Assignment())
+           }
+        }, function);
+    }
 }

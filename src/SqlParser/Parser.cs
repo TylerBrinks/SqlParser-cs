@@ -556,7 +556,6 @@ public class Parser
         _index = index;
         var expr = ParseExpr();
         return expr;
-        //return new Expression.Expr(expr);
     }
 
     /// <summary>
@@ -3543,7 +3542,7 @@ public class Parser
         var name = ParseIdentifier();
         Expression? defaultExpression = null;
 
-        if (ConsumeToken<DuckAssignment>() || ConsumeToken<RightArrow>())
+        if (ConsumeToken<Tokens.Assignment>() || ConsumeToken<RightArrow>())
         {
             defaultExpression = ParseExpr();
         }
@@ -4141,7 +4140,7 @@ public class Parser
         return PeekToken() switch
         {
             Word w when w.Keyword == Keyword.DEFAULT => ParseDefault(),
-            DuckAssignment => ParseDuckAssignment(),
+            SqlParser.Tokens.Assignment => ParseAssignment(),
             _ => null
         };
 
@@ -4151,10 +4150,10 @@ public class Parser
             return new DeclareAssignment.Default(ParseExpr());
         }
 
-        DeclareAssignment ParseDuckAssignment()
+        DeclareAssignment ParseAssignment()
         {
             NextToken();
-            return new DeclareAssignment.DuckAssignment(ParseExpr());
+            return new DeclareAssignment.Assignment(ParseExpr());
         }
     }
     /// <summary>
@@ -8750,12 +8749,12 @@ public class Parser
     ///  Parse a `var = expr` assignment, used in an UPDATE statement
     /// </summary>
     /// <returns></returns>
-    public Assignment ParseAssignment()
+    public Statement.Assignment ParseAssignment()
     {
         var idents = ParseIdentifiers();
         ExpectToken<Equal>();
         var expr = ParseExpr();
-        return new Assignment(idents, expr);
+        return new Statement.Assignment(idents, expr);
     }
 
     public FunctionArg ParseFunctionArgs()
@@ -8764,13 +8763,21 @@ public class Parser
         {
             var name = ParseIdentifier();
             ExpectToken<RightArrow>();
-            return new FunctionArg.Named(name, WildcardToFnArg(ParseWildcardExpr()), new FunctionArgOperator.RightArrow());
+            return new FunctionArg.Named(name, WildcardToFnArg(ParseWildcardExpr()),
+                new FunctionArgOperator.RightArrow());
         }
         else if (PeekNthTokenIs<Equal>(1))
         {
             var name = ParseIdentifier();
             ExpectToken<Equal>();
             return new FunctionArg.Named(name, WildcardToFnArg(ParseWildcardExpr()), new FunctionArgOperator.Equal());
+        }
+        else if (_dialect is DuckDbDialect or GenericDialect && PeekNthTokenIs<Tokens.Assignment>(1))
+        {
+            var name = ParseIdentifier();
+            ExpectToken<Tokens.Assignment>();
+            var arg = ParseExpr();
+            return new FunctionArg.Named(name, new FunctionArgExpression.FunctionExpression(arg), new FunctionArgOperator.Assignment());
         }
         else
         {
