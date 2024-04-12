@@ -238,6 +238,21 @@ public enum FunctionBehavior
     Volatile
 }
 
+public enum FunctionCalledOnNull
+{
+    CalledOnNullInput,
+    ReturnsNullOnNullInput,
+    Strict
+}
+
+public enum FunctionParallel
+{
+    Unsafe,
+    Restricted,
+    Safe
+
+}
+
 public enum GeneratedAs
 {
     Always,

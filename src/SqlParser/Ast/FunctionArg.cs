@@ -148,6 +148,9 @@ public record CreateFunctionBody : IWriteSql, IElement
     // USING ... (Hive only)
     public CreateFunctionUsing? Using { get; internal set; }
 
+    public FunctionCalledOnNull? CalledOnNull { get; internal set; }
+    public FunctionParallel? Parallel { get; internal set; }
+
     public void ToSql(SqlTextWriter writer)
     {
         if (Language != null)
@@ -158,6 +161,16 @@ public record CreateFunctionBody : IWriteSql, IElement
         if (Behavior != null)
         {
             writer.WriteSql($" {Behavior}");
+        }
+
+        if (CalledOnNull != null)
+        {
+            writer.WriteSql($" {CalledOnNull}");
+        }
+
+        if (Parallel != null)
+        {
+            writer.WriteSql($" {Parallel}");
         }
 
         if (As != null)

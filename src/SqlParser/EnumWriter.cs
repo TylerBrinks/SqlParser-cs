@@ -52,14 +52,14 @@ public static class EnumWriter
             BinaryOperator.PGILikeMatch => "~~*",
             BinaryOperator.PGNotLikeMatch => "!~~",
             BinaryOperator.PGNotILikeMatch => "!~~*",
-            
+
             CteAsMaterialized.NotMaterialized => "NOT MATERIALIZED",
 
             DateTimeField.TimezoneMinute => "TIMEZONE_MINUTE",
             DateTimeField.TimezoneHour => "TIMEZONE_HOUR",
             DateTimeField.TimezoneAbbr => "TIMEZONE_ABBR",
             DateTimeField.TimezoneRegion => "TIMEZONE_REGION",
-            
+
             //DeclareType.Cursor => "CURSOR",
             //DeclareType.ResultSet => "RESULTSET",
             //DeclareType.Exception => "EXCEPTION",
@@ -78,6 +78,13 @@ public static class EnumWriter
             FlushType.Status => "STATUS",
             FlushType.UserResources => "USER_RESOURCES",
             FlushType.Tables => "TABLES",
+
+            FunctionCalledOnNull.CalledOnNullInput => "CALLED ON NULL INPUT",
+            FunctionCalledOnNull.ReturnsNullOnNullInput => "RETURNS NULL ON NULL INPUT",
+            FunctionCalledOnNull.Strict => "STRICT",
+            FunctionParallel.Unsafe => "PARALLEL UNSAFE",
+            FunctionParallel.Restricted => "PARALLEL RESTRICTED",
+            FunctionParallel.Safe => "PARALLEL SAFE",
 
             HiveDelimiter.FieldsTerminatedBy => "FIELDS TERMINATED BY",
             HiveDelimiter.FieldsEscapedBy => "ESCAPED BY",

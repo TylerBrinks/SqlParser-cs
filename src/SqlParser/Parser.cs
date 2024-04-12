@@ -3476,6 +3476,42 @@ public class Parser
                 EnsureNotSet(body.Behavior, immutable);
                 body.Behavior = FunctionBehavior.Volatile;
             }
+            else if (ParseKeywordSequence(Keyword.CALLED, Keyword.ON, Keyword.NULL, Keyword.INPUT))
+            {
+                EnsureNotSet(body.CalledOnNull, "CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT");
+                body.CalledOnNull = FunctionCalledOnNull.CalledOnNullInput;
+            }
+            else if (ParseKeywordSequence(Keyword.RETURNS, Keyword.NULL, Keyword.ON, Keyword.NULL, Keyword.INPUT))
+            {
+                EnsureNotSet(body.CalledOnNull, "CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT");
+                body.CalledOnNull = FunctionCalledOnNull.ReturnsNullOnNullInput;
+            }
+            else if (ParseKeyword(Keyword.STRICT))
+            {
+                EnsureNotSet(body.CalledOnNull, "CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT");
+                body.CalledOnNull = FunctionCalledOnNull.Strict;
+            }
+            else if (ParseKeyword(Keyword.PARALLEL))
+            {
+                EnsureNotSet(body.Parallel, "PARALLEL { UNSAFE | RESTRICTED | SAFE }");
+                if (ParseKeyword(Keyword.UNSAFE))
+                {
+                    body.Parallel = FunctionParallel.Unsafe;
+                }
+                else if (ParseKeyword(Keyword.RESTRICTED))
+                {
+                    body.Parallel = FunctionParallel.Restricted;
+
+                }
+                else if (ParseKeyword(Keyword.SAFE))
+                {
+                    body.Parallel = FunctionParallel.Safe;
+                }
+                else
+                {
+                    throw Expected("one of UNSAFE | RESTRICTED | SAFE", PeekToken());
+                }
+            }
             else if (ParseKeyword(Keyword.RETURN))
             {
                 EnsureNotSet(body.Return, "RETURN");

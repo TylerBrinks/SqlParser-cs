@@ -1796,7 +1796,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Create_Function()
         {
-            var create = VerifiedStatement<Statement.CreateFunction>("CREATE FUNCTION add(INTEGER, INTEGER) RETURNS INTEGER LANGUAGE SQL IMMUTABLE AS 'select $1 + $2;'");
+            var create = VerifiedStatement<Statement.CreateFunction>("CREATE FUNCTION add(INTEGER, INTEGER) RETURNS INTEGER LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE AS 'select $1 + $2;'");
             var expected = new Statement.CreateFunction("add", new CreateFunctionBody
             {
                 Language = "SQL",
@@ -1809,7 +1809,15 @@ namespace SqlParser.Tests.Dialects
                     new (ArgMode.None) { DataType = new DataType.Integer() },
                     new (ArgMode.None) { DataType = new DataType.Integer() }
                 },
-                ReturnType = new DataType.Integer()
+                ReturnType = new DataType.Integer(),
+                Parameters = new CreateFunctionBody()
+                {
+                    Language = "SQL",
+                    Behavior = FunctionBehavior.Immutable,
+                    CalledOnNull = FunctionCalledOnNull.Strict,
+                    Parallel = FunctionParallel.Safe,
+                    As = new FunctionDefinition.SingleQuotedDef("select $1 + $2;")
+                }
             };
             Assert.Equal(expected, create);
 
@@ -1848,6 +1856,12 @@ namespace SqlParser.Tests.Dialects
                 ReturnType = new DataType.Integer()
             };
             Assert.Equal(expected, create);
+        }
+
+        [Fact]
+        public void Parse_Incorrect_Create_Function_Parallel()
+        {
+            Assert.Throws<ParserException>(() => VerifiedStatement<Statement.CreateFunction>("CREATE FUNCTION add(INTEGER, INTEGER) RETURNS INTEGER LANGUAGE SQL PARALLEL BLAH AS 'select $1 + $2;'"));
         }
 
         [Fact]
