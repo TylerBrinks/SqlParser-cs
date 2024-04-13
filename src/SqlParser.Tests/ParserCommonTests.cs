@@ -220,7 +220,7 @@ namespace SqlParser.Tests
             Assert.Null(delete.Using);
             Assert.Equal(binaryOp, delete.Selection);
         }
-        
+
         [Fact]
         public void Parse_Where_Delete_With_Alias_Statement()
         {
@@ -2341,15 +2341,15 @@ namespace SqlParser.Tests
                 Args = new[]
                 {
                     new FunctionArg.Named(
-                        "a", 
-                        new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.SingleQuotedString("1"))), 
+                        "a",
+                        new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.SingleQuotedString("1"))),
                         new FunctionArgOperator.RightArrow()),
                     new FunctionArg.Named(
-                        "b", 
+                        "b",
                         new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.SingleQuotedString("2"))),
                         new FunctionArgOperator.RightArrow())
                 },
-                
+
             };
             Assert.Equal(expected, select.Projection.Single().AsExpr());
         }
@@ -2376,11 +2376,11 @@ namespace SqlParser.Tests
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
 
-           var dialects = AllDialects.Where(d => !d.SupportsNamedFunctionArgsWithEqOperator).ToList();
+            var dialects = AllDialects.Where(d => !d.SupportsNamedFunctionArgsWithEqOperator).ToList();
 
-           expected = new Function("foo")
-           {
-               Args = new Sequence<FunctionArg>
+            expected = new Function("foo")
+            {
+                Args = new Sequence<FunctionArg>
                {
                    new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(
                        new BinaryOp(
@@ -2389,9 +2389,9 @@ namespace SqlParser.Tests
                            new LiteralValue(new Value.Number("42"))
                         )))
                }
-           };
-           var actual = VerifiedExpr("foo(bar = 42)", dialects);
-           Assert.Equal(expected, actual);
+            };
+            var actual = VerifiedExpr("foo(bar = 42)", dialects);
+            Assert.Equal(expected, actual);
         }
 
         [Fact]
@@ -2425,6 +2425,44 @@ namespace SqlParser.Tests
             };
             Assert.Equal(7, select.Projection.Count);
             Assert.Equal(expected, select.Projection.First().AsExpr());
+        }
+
+        [Fact]
+        public void Parse_Named_Window_Functions()
+        {
+            var sql = """
+                    SELECT row_number() OVER (w ORDER BY dt DESC), 
+                    sum(foo) OVER (win PARTITION BY a, b ORDER BY c, d 
+                    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) 
+                    FROM foo 
+                    WINDOW w AS (PARTITION BY x), win AS (ORDER BY y)
+                    """;
+
+            List<Dialect> dialects = [new GenericDialect(), new PostgreSqlDialect(), new MySqlDialect(), new BigQueryDialect()];
+            VerifiedStatement(sql, dialects);
+
+            var select = VerifiedOnlySelect(sql);
+
+            Assert.Equal(2, select.Projection.Count);
+            var expectedWindowNames = new Sequence<string> { "w", "win" };
+            
+            foreach (var spec in select.Projection
+                         .Select(projection => (Function)projection.AsExpr())
+                         .Select(fn => (WindowType.WindowSpecType)fn.Over!))
+            {
+                Assert.Contains(spec.Spec.WindowName!.Value, expectedWindowNames);
+            }
+
+            sql = """
+                   SELECT 
+                   FIRST_VALUE(x) OVER (w ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS first, 
+                   FIRST_VALUE(x) OVER (ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS last, 
+                   SUM(y) OVER (win PARTITION BY x) AS last 
+                   FROM EMPLOYEE 
+                   WINDOW w AS (PARTITION BY x), win AS (w ORDER BY y)
+                   """;
+
+            VerifiedStatement(sql, dialects);
         }
 
         [Fact]
@@ -5209,7 +5247,7 @@ namespace SqlParser.Tests
         public void Parse_Insert_Select_Returning()
         {
             var statement = VerifiedStatement("INSERT INTO t SELECT x RETURNING x AS y");
-            
+
             Assert.Single((statement as Statement.Insert)!.Returning!);
         }
 
@@ -5222,7 +5260,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Parse_Json_Table_Is_Not_Reserve()
         {
-            var dialects = new Dialect[]{new PostgreSqlDialect(), new GenericDialect()};
+            var dialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
             var select = VerifiedOnlySelect("SELECT * FROM JSON_TABLE", dialects);
 
             Assert.Single(select.From!);

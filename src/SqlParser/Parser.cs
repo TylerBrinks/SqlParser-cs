@@ -1674,6 +1674,11 @@ public class Parser
     /// </summary>
     public WindowSpec ParseWindowSpec()
     {
+        Ident? windowName = null;
+        if (PeekToken() is Word word && word.Keyword == Keyword.undefined)
+        {
+            windowName = MaybeParse(ParseIdentifier);
+        }
         var partitionBy = ParseInit(ParseKeywordSequence(Keyword.PARTITION, Keyword.BY), () => ParseCommaSeparated(ParseExpr));
         var orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY), () => ParseCommaSeparated(ParseOrderByExpr));
         var windowFrame = ParseInit(!ConsumeToken<RightParen>(), () =>
@@ -1683,7 +1688,7 @@ public class Parser
             return windowFrame;
         });
 
-        return new WindowSpec(partitionBy, orderBy, windowFrame);
+        return new WindowSpec(partitionBy, orderBy, windowFrame, windowName);
     }
 
     public Statement ParseCreateProcedure(bool orAlter)

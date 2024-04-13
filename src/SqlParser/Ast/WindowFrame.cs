@@ -49,13 +49,25 @@ public abstract record WindowFrameBound : IWriteSql, IElement
     public abstract void ToSql(SqlTextWriter writer);
 }
 
-public record WindowSpec(Sequence<Expression>? PartitionBy = null, Sequence<OrderByExpression>? OrderBy = null, WindowFrame? WindowFrame = null) : IWriteSql, IElement
+public record WindowSpec(
+    Sequence<Expression>? PartitionBy = null, 
+    Sequence<OrderByExpression>? OrderBy = null, 
+    WindowFrame? WindowFrame = null,
+    Ident? WindowName = null) : IWriteSql, IElement
 {
     public void ToSql(SqlTextWriter writer)
     {
         var delimiter = string.Empty;
+
+        if (WindowName != null)
+        {
+            delimiter = " ";
+            writer.WriteSql($"{WindowName}");
+        }
+
         if (PartitionBy.SafeAny())
         {
+            writer.Write(delimiter);
             delimiter = " ";
             writer.WriteSql($"PARTITION BY {PartitionBy}");
         }
