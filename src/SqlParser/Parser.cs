@@ -8802,7 +8802,7 @@ public class Parser
             return new FunctionArg.Named(name, WildcardToFnArg(ParseWildcardExpr()),
                 new FunctionArgOperator.RightArrow());
         }
-        else if (PeekNthTokenIs<Equal>(1))
+        else if (_dialect.SupportsNamedFunctionArgsWithEqOperator && PeekNthTokenIs<Equal>(1))
         {
             var name = ParseIdentifier();
             ExpectToken<Equal>();

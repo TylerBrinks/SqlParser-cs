@@ -33,8 +33,10 @@ public class DuckDbDialect : Dialect
     }
 
     /// <summary>
-    /// Suports filter during aggregation is always true
+    /// Supports filter during aggregation is always true
     /// </summary>
     /// <returns>True</returns>
     public override bool SupportsFilterDuringAggregation => true;
+
+    public override bool SupportsNamedFunctionArgsWithEqOperator => true;
 }

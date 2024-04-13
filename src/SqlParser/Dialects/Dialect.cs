@@ -116,4 +116,6 @@ public abstract class Dialect
     /// Returns true if the dialect supports `BEGIN {DEFERRED | IMMEDIATE | EXCLUSIVE} [TRANSACTION]` statements
     /// </summary>
     public virtual bool SupportsStartTransactionModifier => false;
+
+    public virtual bool SupportsNamedFunctionArgsWithEqOperator => false;
 }

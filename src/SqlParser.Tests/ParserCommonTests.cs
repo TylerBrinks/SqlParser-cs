@@ -2374,6 +2374,24 @@ namespace SqlParser.Tests
 
             };
             Assert.Equal(expected, select.Projection.Single().AsExpr());
+
+
+           var dialects = AllDialects.Where(d => !d.SupportsNamedFunctionArgsWithEqOperator).ToList();
+
+           expected = new Function("foo")
+           {
+               Args = new Sequence<FunctionArg>
+               {
+                   new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(
+                       new BinaryOp(
+                           new Identifier("bar"),
+                           BinaryOperator.Eq,
+                           new LiteralValue(new Value.Number("42"))
+                        )))
+               }
+           };
+           var actual = VerifiedExpr("foo(bar = 42)", dialects);
+           Assert.Equal(expected, actual);
         }
 
         [Fact]
