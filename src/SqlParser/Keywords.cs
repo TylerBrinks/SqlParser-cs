@@ -123,6 +123,7 @@ public enum Keyword
     ACTION,
     ADD,
     ADMIN,
+    AFTER,
     AGAINST,
     ALL,
     ALLOCATE,

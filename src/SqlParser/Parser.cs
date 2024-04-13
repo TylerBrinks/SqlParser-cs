@@ -5441,7 +5441,8 @@ public class Parser
                 }
 
                 var columnDef = ParseColumnDef();
-                return new AddColumn(columnKeyword, ine, columnDef);
+                var columnPosition = ParseColumnPosition();
+                return new AddColumn(columnKeyword, ine, columnDef, columnPosition);
             }
         }
         else if (ParseKeyword(Keyword.RENAME))
@@ -5581,7 +5582,8 @@ public class Parser
                 options.Add(option);
             }
 
-            operation = new ChangeColumn(oldName, newName, dataType, options);
+            var columnPosition = ParseColumnPosition();
+            operation = new ChangeColumn(oldName, newName, dataType, options, columnPosition);
         }
         else if (ParseKeyword(Keyword.ALTER))
         {
@@ -5662,6 +5664,25 @@ public class Parser
         }
 
         return operation;
+    }
+
+    private MySqlColumnPosition? ParseColumnPosition()
+    {
+        if (_dialect is MySqlDialect or GenericDialect)
+        {
+            if (ParseKeyword(Keyword.FIRST))
+            {
+                return new MySqlColumnPosition.First();
+            }
+            else if (ParseKeyword(Keyword.AFTER))
+            {
+                return new MySqlColumnPosition.After(ParseIdentifier());
+            }
+
+            return null;
+        }
+
+        return null;
     }
 
     public Statement ParseCall()

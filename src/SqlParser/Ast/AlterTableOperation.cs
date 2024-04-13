@@ -32,7 +32,12 @@ public abstract record AlterTableOperation : IWriteSql
     /// <param name="ColumnKeyword">Contains column keyword</param>
     /// <param name="IfNotExists">Contains If Not Exists</param>
     /// <param name="ColumnDef">Column Definition</param>
-    public record AddColumn(bool ColumnKeyword, bool IfNotExists, ColumnDef ColumnDef) : AlterTableOperation, IIfNotExists, IElement
+    public record AddColumn(
+        bool ColumnKeyword, 
+        bool IfNotExists, 
+        ColumnDef ColumnDef, 
+        MySqlColumnPosition? ColumnPosition = null)
+        : AlterTableOperation, IIfNotExists, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -49,6 +54,11 @@ public abstract record AlterTableOperation : IWriteSql
             }
 
             writer.WriteSql($" {ColumnDef}");
+
+            if (ColumnPosition != null)
+            {
+                writer.WriteSql($" {ColumnPosition}");
+            }
         }
     }
 
@@ -316,7 +326,13 @@ public abstract record AlterTableOperation : IWriteSql
     /// <param name="NewName">New name</param>
     /// <param name="DataType">Data type</param>
     /// <param name="Options">Rename options</param>
-    public record ChangeColumn(Ident OldName, Ident NewName, DataType DataType, Sequence<ColumnOption> Options) : AlterTableOperation, IElement
+    public record ChangeColumn(
+        Ident OldName, 
+        Ident NewName, 
+        DataType DataType, 
+        Sequence<ColumnOption> Options,
+        MySqlColumnPosition? ColumnPosition = null) 
+        : AlterTableOperation, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -324,6 +340,11 @@ public abstract record AlterTableOperation : IWriteSql
             if (Options.Any())
             {
                 writer.WriteSql($" {Options.ToSqlDelimited(" ")}");
+            }
+
+            if (ColumnPosition != null)
+            {
+                writer.WriteSql($" {ColumnPosition}");
             }
         }
     }

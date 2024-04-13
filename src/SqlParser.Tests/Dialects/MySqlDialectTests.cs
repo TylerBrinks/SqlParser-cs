@@ -530,7 +530,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Alter_Table_Drop_Primary_Key()
         {
-            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+            DefaultDialects = [new MySqlDialect(), new GenericDialect()];
 
             var alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE tab DROP PRIMARY KEY");
 
@@ -556,7 +556,52 @@ namespace SqlParser.Tests.Dialects
                 "ALTER TABLE orders CHANGE COLUMN description desc TEXT NOT NULL");
             Assert.Equal("orders", alter.Name);
             Assert.Equal(operation, alter.Operations.First());
+
+            var expectedOperation = new AlterTableOperation.ChangeColumn(
+                "description", "desc", new DataType.Text(), [new ColumnOption.NotNull()],
+                new MySqlColumnPosition.First());
+
+            var alterTable = VerifiedStatement<Statement.AlterTable>("ALTER TABLE orders CHANGE COLUMN description desc TEXT NOT NULL FIRST");
+            Assert.Equal(expectedOperation, alterTable.Operations.First());
+
+
+            alterTable = VerifiedStatement<Statement.AlterTable>("ALTER TABLE orders CHANGE COLUMN description desc TEXT NOT NULL AFTER foo");
+            expectedOperation = new AlterTableOperation.ChangeColumn(
+                "description", "desc", new DataType.Text(), [new ColumnOption.NotNull()],
+                new MySqlColumnPosition.After("foo"));
+            Assert.Equal(expectedOperation, alterTable.Operations.First());
         }
+
+        [Fact]
+        public void Parse_Alter_Table_Change_Column_With_Column_Position()
+        {
+            AlterTableOperation expectedOperation = new AlterTableOperation.ChangeColumn("description", "desc",
+                new DataType.Text(),
+                [new ColumnOption.NotNull()], new MySqlColumnPosition.First());
+            var sql1 = "ALTER TABLE orders CHANGE COLUMN description desc TEXT NOT NULL FIRST";
+
+            var operation = VerifiedStatement<Statement.AlterTable>(sql1).Operations.First();
+            Assert.Equal(expectedOperation, operation);
+
+            expectedOperation = new AlterTableOperation.ChangeColumn("description", "desc", new DataType.Text(),
+                [new ColumnOption.NotNull()], new MySqlColumnPosition.First());
+
+            var sql2 = "ALTER TABLE orders CHANGE description desc TEXT NOT NULL FIRST";
+            operation = OneStatementParsesTo<Statement.AlterTable>(sql2, sql1).Operations.First();
+            Assert.Equal(expectedOperation, operation);
+
+            expectedOperation = new AlterTableOperation.ChangeColumn("description", "desc", new DataType.Text(),
+                [new ColumnOption.NotNull()], new MySqlColumnPosition.After("total_count"));
+
+            sql1 = "ALTER TABLE orders CHANGE COLUMN description desc TEXT NOT NULL AFTER total_count";
+            operation = VerifiedStatement<Statement.AlterTable>(sql1).Operations.First();
+            Assert.Equal(expectedOperation, operation);
+
+            sql2 = "ALTER TABLE orders CHANGE description desc TEXT NOT NULL AFTER total_count";
+            operation = OneStatementParsesTo<Statement.AlterTable>(sql2, sql1).Operations.First();
+            Assert.Equal(expectedOperation, operation);
+        }
+
 
         [Fact]
         public void Parse_Substring_In_Select()
@@ -1105,7 +1150,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Flush()
         {
-            var flush = (Statement.Flush) VerifiedStatement("FLUSH OPTIMIZER_COSTS");
+            var flush = (Statement.Flush)VerifiedStatement("FLUSH OPTIMIZER_COSTS");
             var expected = new Statement.Flush(FlushType.OptimizerCosts, null, null, false, false, null);
             Assert.Equal(expected, flush);
 
@@ -1130,12 +1175,12 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal(expected, flush);
 
             flush = (Statement.Flush)VerifiedStatement("FLUSH TABLES `mek`.`table1`, table2");
-            expected = new Statement.Flush(FlushType.Tables, null, null, false, false, 
+            expected = new Statement.Flush(FlushType.Tables, null, null, false, false,
                 new Sequence<ObjectName>
                 {
                     new (new Ident[]
                     {
-                        new ("mek", Symbols.Backtick), 
+                        new ("mek", Symbols.Backtick),
                         new ("table1", Symbols.Backtick),
                     }),
                     new ("table2")
@@ -1147,7 +1192,7 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal(expected, flush);
 
             flush = (Statement.Flush)VerifiedStatement("FLUSH TABLES `mek`.`table1`, table2 WITH READ LOCK");
-            expected = new Statement.Flush(FlushType.Tables, null, null, true, false, 
+            expected = new Statement.Flush(FlushType.Tables, null, null, true, false,
                 new Sequence<ObjectName>
                 {
                     new (new Ident[]
@@ -1176,11 +1221,11 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Show_Status()
         {
-            var show = (Statement.ShowStatus) VerifiedStatement("SHOW SESSION STATUS LIKE 'ssl_cipher'");
+            var show = (Statement.ShowStatus)VerifiedStatement("SHOW SESSION STATUS LIKE 'ssl_cipher'");
             var expected = new Statement.ShowStatus(new ShowStatementFilter.Like("ssl_cipher"), true, false);
             Assert.Equal(expected, show);
 
-            show = (Statement.ShowStatus)VerifiedStatement("SHOW GLOBAL STATUS LIKE 'ssl_cipher'"); 
+            show = (Statement.ShowStatus)VerifiedStatement("SHOW GLOBAL STATUS LIKE 'ssl_cipher'");
             expected = new Statement.ShowStatus(new ShowStatementFilter.Like("ssl_cipher"), false, true);
             Assert.Equal(expected, show);
 
@@ -1236,6 +1281,26 @@ namespace SqlParser.Tests.Dialects
             };
 
             Assert.Equal(expected, statement);
+        }
+
+
+        [Fact]
+        public void Parse_Alter_Table_Add_Column()
+        {
+            var alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE tab ADD COLUMN b INT FIRST");
+
+            var expected = new Statement.AlterTable("tab", false, false, [
+                new AlterTableOperation.AddColumn(
+                    true, false, new ColumnDef("b", new DataType.Int()), new MySqlColumnPosition.First())
+            ], null);
+            Assert.Equal(expected, alter);
+
+            alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE tab ADD COLUMN b INT AFTER foo");
+            expected = new Statement.AlterTable("tab", false, false, [
+                new AlterTableOperation.AddColumn(
+                    true, false, new ColumnDef("b", new DataType.Int()), new MySqlColumnPosition.After("foo"))
+            ], null);
+            Assert.Equal(expected, alter);
         }
     }
 }
