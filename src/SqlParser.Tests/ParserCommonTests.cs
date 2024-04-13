@@ -1,8 +1,6 @@
-﻿using System.Data;
-using System.Text;
+﻿using System.Text;
 using SqlParser.Ast;
 using SqlParser.Dialects;
-using static SqlParser.Ast.CopyOption;
 using static SqlParser.Ast.DataType;
 using static SqlParser.Ast.Expression;
 using Action = SqlParser.Ast.Action;
@@ -133,7 +131,7 @@ namespace SqlParser.Tests
                 {
                     new(new TableFactor.Table("t1"))
                 },
-                GroupBy = new GroupByExpression.Expressions(new Sequence<Expression> { new Identifier("id") })
+                GroupBy = new GroupByExpression.Expressions([new Identifier("id")])
             });
             var subQuery = new Query(body);
             var derived = new TableFactor.Derived(subQuery)
@@ -194,7 +192,7 @@ namespace SqlParser.Tests
         public void Parse_Quoted_Delete_Statement()
         {
             var delete = (Statement.Delete)VerifiedStatement("DELETE FROM \"table\"");
-            var relation = (delete.From as FromTable.WithFromKeyword).From.First().Relation;
+            var relation = ((delete.From as FromTable.WithFromKeyword)!).From.First().Relation;
 
             var expected = new TableFactor.Table(new ObjectName(new Ident("table", Symbols.DoubleQuote)));
 
@@ -216,7 +214,7 @@ namespace SqlParser.Tests
             var binaryOp = new BinaryOp(new Identifier("name"), BinaryOperator.Eq, new LiteralValue(Number("5")));
 
             var delete = statement.AsDelete();
-            Assert.Equal(table, (delete.From as FromTable.WithFromKeyword).From.First().Relation);
+            Assert.Equal(table, ((delete.From as FromTable.WithFromKeyword)!).From.First().Relation);
             Assert.Null(delete.Using);
             Assert.Equal(binaryOp, delete.Selection);
         }
@@ -233,7 +231,7 @@ namespace SqlParser.Tests
                 BinaryOperator.Lt,
                 new CompoundIdentifier(new Ident[] { "b", "id" }));
 
-            Assert.Equal(table, (delete.From as FromTable.WithFromKeyword).From.First().Relation);
+            Assert.Equal(table, ((delete.From as FromTable.WithFromKeyword)!).From.First().Relation);
             Assert.Equal(@using, delete.Using);
             Assert.Equal(binaryOp, delete.Selection);
             Assert.Null(delete.Returning);
@@ -1091,16 +1089,15 @@ namespace SqlParser.Tests
 
             var select = VerifiedOnlySelect("SELECT brand, size, sum(sales) FROM items_sold GROUP BY size, GROUPING SETS ((brand), (size), ())", dialects);
 
-            var expected = new GroupByExpression.Expressions(new Sequence<Expression>
-            {
+            var expected = new GroupByExpression.Expressions([
                 new Identifier("size"),
                 new GroupingSets(new Sequence<Expression>[]
                 {
-                    new(){ new Identifier("brand")},
-                    new(){ new Identifier("size")},
+                    new() { new Identifier("brand") },
+                    new() { new Identifier("size") },
                     new()
                 })
-            });
+            ]);
 
             Assert.Equal(expected, select.GroupBy!);
         }
@@ -1140,15 +1137,14 @@ namespace SqlParser.Tests
 
             var select = VerifiedOnlySelect("SELECT brand, size, sum(sales) FROM items_sold GROUP BY size, CUBE (brand, size)", dialects);
 
-            var expected = new GroupByExpression.Expressions(new Sequence<Expression>
-            {
+            var expected = new GroupByExpression.Expressions([
                 new Identifier("size"),
                 new Cube(new Sequence<Expression>[]
                 {
-                    new(){ new Identifier("brand")},
-                    new(){ new Identifier("size")}
+                    new() { new Identifier("brand") },
+                    new() { new Identifier("size") }
                 })
-            });
+            ]);
 
             Assert.Equal(expected, select.GroupBy!);
         }
@@ -2890,7 +2886,7 @@ namespace SqlParser.Tests
             // 1. both Alias and WITH OFFSET clauses.
             Test(true, true, false, new[]
             {
-                new TableWithJoins(new TableFactor.UnNest(new Sequence<Expression>{ new Identifier("expr") })
+                new TableWithJoins(new TableFactor.UnNest([new Identifier("expr")])
                 {
                     Alias = new TableAlias("numbers"),
                     WithOffset = true
@@ -2900,13 +2896,13 @@ namespace SqlParser.Tests
             // 2. neither Alias nor WITH OFFSET clause.
             Test(false, false, false, new[]
             {
-                new TableWithJoins(new TableFactor.UnNest(new Sequence<Expression>{ new Identifier("expr") }))
+                new TableWithJoins(new TableFactor.UnNest([new Identifier("expr")]))
             });
 
             // 3. Alias but no WITH OFFSET clause.
             Test(false, true, false, new[]
             {
-                new TableWithJoins(new TableFactor.UnNest(new Sequence<Expression>{ new Identifier("expr") })
+                new TableWithJoins(new TableFactor.UnNest([new Identifier("expr")])
                 {
                     WithOffset = true
                 })
@@ -2915,7 +2911,7 @@ namespace SqlParser.Tests
             // 4. WITH OFFSET but no Alias.
             Test(true, false, false, new[]
             {
-                new TableWithJoins(new TableFactor.UnNest(new Sequence<Expression>{ new Identifier("expr") })
+                new TableWithJoins(new TableFactor.UnNest([new Identifier("expr")])
                 {
                     Alias = new TableAlias("numbers"),
                 })
@@ -3037,9 +3033,9 @@ namespace SqlParser.Tests
 
 
             select = VerifiedOnlySelect("SELECT * FROM t1a NATURAL JOIN t1b, t2a NATURAL JOIN t2b");
-            expected = new TableWithJoins[]
-            {
-                new (new TableFactor.Table("t1a"))
+            expected =
+            [
+                new TableWithJoins(new TableFactor.Table("t1a"))
                 {
                     Joins = new Join[]
                     {
@@ -3050,7 +3046,7 @@ namespace SqlParser.Tests
                         }
                     }
                 },
-                new (new TableFactor.Table("t2a"))
+                new TableWithJoins(new TableFactor.Table("t2a"))
                 {
                     Joins = new Join[]
                     {
@@ -3060,8 +3056,8 @@ namespace SqlParser.Tests
                             JoinOperator = new JoinOperator.Inner(new JoinConstraint.Natural())
                         }
                     }
-                },
-            };
+                }
+            ];
             Assert.Equal(expected, select.From!);
         }
 
@@ -3658,7 +3654,7 @@ namespace SqlParser.Tests
             var create = VerifiedStatement<Statement.CreateView>("CREATE VIEW v (has, cols) AS SELECT 1, 2");
 
             Assert.Equal("v", create.Name);
-            Assert.Equal(new Sequence<ViewColumnDef> { new ViewColumnDef("has"), new ViewColumnDef("cols") }, create.Columns);
+            Assert.Equal(new Sequence<ViewColumnDef> { new ("has"), new ("cols") }, create.Columns);
             Assert.Equal("SELECT 1, 2", create.Query.Query.ToSql());
             Assert.False(create.Materialized);
             Assert.False(create.OrReplace);
@@ -3671,12 +3667,11 @@ namespace SqlParser.Tests
         public void Parse_Create_View_With_Options()
         {
             var create = VerifiedStatement<Statement.CreateView>("CREATE VIEW v WITH (foo = 'bar', a = 123) AS SELECT 1");
-            var expected = new CreateTableOptions.With(new Sequence<SqlOption>
-            {
-                new ("foo", new LiteralValue(new Value.SingleQuotedString("bar"))),
-                new ("a", new LiteralValue(Number("123")))
-            });
-            Assert.Equal(expected, create.Options!);
+            var expected = new CreateTableOptions.With([
+                new SqlOption("foo", new LiteralValue(new Value.SingleQuotedString("bar"))),
+                new SqlOption("a", new LiteralValue(Number("123")))
+            ]);
+            Assert.Equal(expected, create.Options);
         }
 
         [Fact]
@@ -3900,29 +3895,27 @@ namespace SqlParser.Tests
         [Fact]
         public void Test_Function()
         {
-            var sql = "SELECT * FROM customer LEFT JOIN LATERAL generate_series(1, customer.id)";
+            const string sql = "SELECT * FROM customer LEFT JOIN LATERAL generate_series(1, customer.id)";
             var select = VerifiedOnlySelect(sql);
 
-            var expected = new Select(new Sequence<SelectItem>
+            var expected = new Select([new SelectItem.Wildcard(new WildcardAdditionalOptions())])
             {
-                new SelectItem.Wildcard(new WildcardAdditionalOptions())
-            })
-            {
-                From = new Sequence<TableWithJoins>
-                {
-                    new (new TableFactor.Table("customer"))
+                From =
+                [
+                    new TableWithJoins(new TableFactor.Table("customer"))
                     {
-                        Joins = new Sequence<Join>
-                        {
-                            new (new TableFactor.Function(true, "generate_series", new Sequence<FunctionArg>
-                            {
-                                new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.Number("1")))),
-                                new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new CompoundIdentifier(
-                                    new Sequence<Ident>{ "customer", "id" }))),
-                            }), new JoinOperator.LeftOuter(new JoinConstraint.None()))
-                        }
+                        Joins =
+                        [
+                            new Join(new TableFactor.Function(true, "generate_series", [
+                                new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(
+                                        new LiteralValue(new Value.Number("1")))),
+                                new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(
+                                    new CompoundIdentifier(["customer", "id"])))
+
+                            ]), new JoinOperator.LeftOuter(new JoinConstraint.None()))
+                        ]
                     }
-                }
+                ]
             };
 
             Assert.Equal(expected, select);
@@ -4295,12 +4288,11 @@ namespace SqlParser.Tests
                     new Ident[]{"A", "B", "C"},
                     new Values(new Sequence<Expression>[]
                     {
-                        new ()
-                        {
-                            new CompoundIdentifier(new Ident[] {"stg", "A"}),
-                            new CompoundIdentifier(new Ident[] {"stg", "B"}),
-                            new CompoundIdentifier(new Ident[] {"stg", "C"}),
-                        }
+                        [
+                            new CompoundIdentifier(new Ident[] { "stg", "A" }),
+                            new CompoundIdentifier(new Ident[] { "stg", "B" }),
+                            new CompoundIdentifier(new Ident[] { "stg", "C" })
+                        ]
                     })
                 ),
                 new MergeClause.MatchedUpdate(
@@ -4311,7 +4303,7 @@ namespace SqlParser.Tests
                     },
                     new BinaryOp(
                         new CompoundIdentifier(new Ident[]{"dest", "A"}),
-                       BinaryOperator.Eq,
+                        BinaryOperator.Eq,
                         new LiteralValue(new Value.SingleQuotedString("a"))
                     )
                 ),
@@ -4905,7 +4897,7 @@ namespace SqlParser.Tests
             {
                 Alias = new TableAlias("s")
             };
-            var expected = new TableFactor.Unpivot(table, "quantity", "quarter", new Sequence<Ident> { "Q1", "Q2", "Q3", "Q4" })
+            var expected = new TableFactor.Unpivot(table, "quantity", "quarter", ["Q1", "Q2", "Q3", "Q4"])
             {
                 PivotAlias = new TableAlias("u", new Sequence<Ident> { "product", "quarter", "quantity" })
             };
@@ -5096,13 +5088,13 @@ namespace SqlParser.Tests
                 new SnowflakeDialect()
             };
 
-            queries = new[]
-            {
+            queries =
+            [
                 "SELECT column1, column2, FIRST_VALUE(column2) IGNORE NULLS OVER (PARTITION BY column1 ORDER BY column2 NULLS LAST) AS column2_first FROM t1",
                 "SELECT column1, column2, FIRST_VALUE(column2) RESPECT NULLS OVER (PARTITION BY column1 ORDER BY column2 NULLS LAST) AS column2_first FROM t1",
                 "SELECT LAG(col_2, 1, 0) IGNORE NULLS OVER (ORDER BY col_1) FROM t1",
                 "SELECT LAG(col_2, 1, 0) RESPECT NULLS OVER (ORDER BY col_1) FROM t1"
-            };
+            ];
 
             foreach (var sql in queries)
             {
@@ -5273,15 +5265,13 @@ namespace SqlParser.Tests
             var unload = (Statement.Unload)VerifiedStatement("UNLOAD(SELECT cola FROM tab) TO 's3://...' WITH (format = 'AVRO')");
 
             var query = new Query(
-                new SetExpression.SelectExpression(new Select(new Sequence<SelectItem>
+                new SetExpression.SelectExpression(new Select(
+                    [new SelectItem.UnnamedExpression(new Identifier("cola"))])
                 {
-                    new SelectItem.UnnamedExpression(new Identifier("cola"))
-                })
-                {
-                    From = new Sequence<TableWithJoins>
-                    {
-                        new (new TableFactor.Table("tab"))
-                    }
+                    From =
+                    [
+                        new TableWithJoins(new TableFactor.Table("tab"))
+                    ]
                 }));
 
             var to = new Ident("s3://...", Symbols.SingleQuote);
@@ -5294,6 +5284,24 @@ namespace SqlParser.Tests
             var expected = new Statement.Unload(query, to, with);
 
             Assert.Equal(expected, unload);
+        }
+
+        [Fact]
+        public void Test_Comment_Hash_Syntax()
+        {
+            List<Dialect> dialects = [new BigQueryDialect(), new SnowflakeDialect()];
+
+            const string sql = """
+                    # comment
+                    SELECT a, b, c # , d, e
+                    FROM T
+                    ####### comment #################
+                    WHERE true
+                    # comment
+                    """;
+
+            var canonical = "SELECT a, b, c FROM T WHERE true";
+            VerifiedOnlySelectWithCanonical(sql, canonical, dialects);
         }
     }
 }

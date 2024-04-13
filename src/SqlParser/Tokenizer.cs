@@ -113,7 +113,7 @@ public ref struct Tokenizer(bool unescape = true)
             Symbols.CurlyBracketOpen => TokenizeSingleCharacter(new LeftBrace()),
             Symbols.CurlyBracketClose => TokenizeSingleCharacter(new RightBrace()),
 
-            Symbols.Num when _dialect is SnowflakeDialect => TokenizeSnowflakeComment(),
+            Symbols.Num when _dialect is SnowflakeDialect or BigQueryDialect => TokenizeSnowflakeComment(),
             Symbols.Tilde => TokenizeTilde(),
             Symbols.Num => TokenizeHash(character),
             Symbols.At => TokenizeAt(character),
