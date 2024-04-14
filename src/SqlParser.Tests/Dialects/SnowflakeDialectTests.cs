@@ -600,10 +600,10 @@ namespace SqlParser.Tests.Dialects
         public void Test_Copy_Into_File_Format()
         {
             const string sql = """
-                               COPY INTO my_company.emp_basic
-                               FROM 'gcs://mybucket/./../a.csv'
-                               FILES = ('file1.json', 'file2.json')
-                               PATTERN = '.*employees0[1-5].csv.gz'
+                               COPY INTO my_company.emp_basic 
+                               FROM 'gcs://mybucket/./../a.csv' 
+                               FILES = ('file1.json', 'file2.json') 
+                               PATTERN = '.*employees0[1-5].csv.gz' 
                                FILE_FORMAT=(COMPRESSION=AUTO BINARY_FORMAT=HEX ESCAPE='\')
                                """;
 
@@ -618,10 +618,10 @@ namespace SqlParser.Tests.Dialects
         public void Test_Copy_Into_Copy_Format()
         {
             const string sql = """
-                               COPY INTO my_company.emp_basic
-                               FROM 'gcs://mybucket/./../a.csv'
-                               FILES = ('file1.json', 'file2.json')
-                               PATTERN = '.*employees0[1-5].csv.gz'
+                               COPY INTO my_company.emp_basic 
+                               FROM 'gcs://mybucket/./../a.csv' 
+                               FILES = ('file1.json', 'file2.json') 
+                               PATTERN = '.*employees0[1-5].csv.gz' 
                                COPY_OPTIONS=(ON_ERROR=CONTINUE FORCE=TRUE)
                                """;
 
@@ -895,6 +895,12 @@ namespace SqlParser.Tests.Dialects
 
             Assert.Equal(into, copy.Into);
             Assert.Equal(fromStage, copy.FromStage);
+        }
+
+        [Fact]
+        public void Test_Sf_Trailing_Commas()
+        {
+            VerifiedOnlySelectWithCanonical("SELECT 1, 2, FROM t", "SELECT 1, 2 FROM t");
         }
     }
 }

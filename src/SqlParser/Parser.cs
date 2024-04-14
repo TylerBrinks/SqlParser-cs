@@ -2850,7 +2850,7 @@ public class Parser
         // code to add for just one case, so we'll just do it manually here.
         var oldValue = _options.TrailingCommas;
 
-        _options.TrailingCommas |= _dialect is BigQueryDialect;
+        _options.TrailingCommas |= _dialect is BigQueryDialect or SnowflakeDialect;
 
         var result = ParseCommaSeparated(ParseSelectItem);
         _options.TrailingCommas = oldValue;
