@@ -244,4 +244,81 @@ public class DuckDbDialectTests : ParserTestBase
            }
         }, function);
     }
+
+    [Fact]
+    public void Test_Create_Secret()
+    {
+        var create = VerifiedStatement<Statement.CreateSecret>("CREATE OR REPLACE PERSISTENT SECRET IF NOT EXISTS name IN storage ( TYPE type, key1 value1, key2 value2 )");
+
+        var expected = new Statement.CreateSecret(true, false, true, "name", "storage", "type",
+            [new SecretOption("key1", "value1"), new SecretOption("key2", "value2")]);
+
+        Assert.Equal(expected, create);
+    }
+
+    [Fact]
+    public void Test_Drop_Secret()
+    {
+        var create = VerifiedStatement<Statement.DropSecret>("DROP PERSISTENT SECRET IF EXISTS secret FROM storage");
+
+        var expected = new Statement.DropSecret(true, false, "secret", "storage");
+
+        Assert.Equal(expected, create);
+    }
+
+    [Fact]
+    public void Test_Drop_Secret_Simple()
+    {
+        var create = VerifiedStatement<Statement.DropSecret>("DROP SECRET secret");
+
+        var expected = new Statement.DropSecret(false, null, "secret",null);
+
+        Assert.Equal(expected, create);
+    }
+
+    [Fact]
+    public void Test_Attach_Database()
+    {
+        var create = VerifiedStatement<Statement.AttachDuckDbDatabase>("ATTACH DATABASE IF NOT EXISTS 'sqlite_file.db' AS sqlite_db (READ_ONLY false, TYPE SQLITE)");
+
+        var expected = new Statement.AttachDuckDbDatabase(true, true, new Ident("sqlite_file.db", Symbols.SingleQuote), "sqlite_db",
+            [new AttachDuckDbDatabaseOption.ReadOnly(false), new AttachDuckDbDatabaseOption.Type("SQLITE")]);
+
+        Assert.Equal(expected, create);
+    }
+
+    [Fact]
+    public void Test_Attach_Database_Simple()
+    {
+        var create = VerifiedStatement<Statement.AttachDuckDbDatabase>("ATTACH 'postgres://user.name:pass-word@some.url.com:5432/postgres'");
+
+        var expected = new Statement.AttachDuckDbDatabase(
+            false, 
+            false, 
+            new Ident("postgres://user.name:pass-word@some.url.com:5432/postgres", Symbols.SingleQuote), 
+            null,
+            null);
+
+        Assert.Equal(expected, create);
+    }
+
+    [Fact]
+    public void Test_Detach_Database()
+    {
+        var create = VerifiedStatement<Statement.DetachDuckDbDatabase>("DETACH DATABASE IF EXISTS db_name");
+
+        var expected = new Statement.DetachDuckDbDatabase(true, true, "db_name");
+
+        Assert.Equal(expected, create);
+    }
+
+    [Fact]
+    public void Test_Detach_Database_Simple()
+    {
+        var create = VerifiedStatement<Statement.DetachDuckDbDatabase>("DETACH db_name");
+
+        var expected = new Statement.DetachDuckDbDatabase(false, false, "db_name");
+
+        Assert.Equal(expected, create);
+    }
 }

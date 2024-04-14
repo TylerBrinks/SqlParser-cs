@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using SqlParser.Ast;
 using SqlParser.Dialects;
@@ -202,7 +203,8 @@ public class Parser
             Keyword.ANALYZE => ParseAnalyze(),
             Keyword.SELECT or Keyword.WITH or Keyword.VALUES => ParseQuery(true),
             Keyword.TRUNCATE => ParseTruncate(),
-            Keyword.ATTACH => ParseAttachDatabase(),
+            Keyword.ATTACH => _dialect is DuckDbDialect ? ParseAttachDuckDbDatabase() : ParseAttachDatabase(),
+            Keyword.DETACH when _dialect is DuckDbDialect or GenericDialect => ParseDetachDuckDbDatabase(),
             Keyword.MSCK => ParseMsck(),
             Keyword.CREATE => ParseCreate(),
             Keyword.CACHE => ParseCacheTable(),
@@ -447,6 +449,68 @@ public class Parser
         var schemaName = ParseIdentifier();
 
         return new AttachDatabase(schemaName, databaseFileName, database);
+    }
+
+    public AttachDuckDbDatabase ParseAttachDuckDbDatabase()
+    {
+        var database = ParseKeyword(Keyword.DATABASE);
+        var ifNotExists = ParseIfNotExists();
+        var path = ParseIdentifier();
+        Ident? alias = null;
+
+        if (ParseKeyword(Keyword.AS))
+        {
+            alias = ParseIdentifier();
+        }
+
+        var attachOptions = ParseAttachDuckDbDatabaseOptions();
+        return new AttachDuckDbDatabase(ifNotExists, database, path, alias, attachOptions);
+    }
+
+    public Sequence<AttachDuckDbDatabaseOption>? ParseAttachDuckDbDatabaseOptions()
+    {
+        if (!ConsumeToken<LeftParen>())
+        {
+            return null;
+        }
+
+        var options = new Sequence<AttachDuckDbDatabaseOption>();
+        while (true)
+        {
+            if (ParseKeyword(Keyword.READ_ONLY))
+            {
+                bool? boolean = ParseKeyword(Keyword.TRUE) ? true : ParseKeyword(Keyword.FALSE) ? false : null;
+                options.Add(new AttachDuckDbDatabaseOption.ReadOnly(boolean));
+            }
+            else if (ParseKeyword(Keyword.TYPE))
+            {
+                var ident = ParseIdentifier();
+                options.Add(new AttachDuckDbDatabaseOption.Type(ident));
+            }
+            else
+            {
+                throw Expected("expected one of: ), READ_ONLY, TYPE", PeekToken());
+            }
+
+            if (ConsumeToken<RightParen>())
+            {
+                return options;
+            }
+            else if (ConsumeToken<Comma>())
+            {
+                continue;
+            }
+
+            throw Expected("expected one of: ')', ','", PeekToken());
+        }
+    }
+
+    public DetachDuckDbDatabase ParseDetachDuckDbDatabase()
+    {
+        var database = ParseKeyword(Keyword.DATABASE);
+        var ifExists = ParseIfExists();
+        var alias = ParseIdentifier();
+        return new DetachDuckDbDatabase(ifExists, database, alias);
     }
 
     public Statement ParseAnalyze()
@@ -3037,6 +3101,7 @@ public class Parser
         }
 
         var temporary = ParseOneOfKeywords(Keyword.TEMP, Keyword.TEMPORARY) != Keyword.undefined;
+        var persistent = _dialect is DuckDbDialect && ParseKeyword(Keyword.PERSISTENT);
 
         if (ParseKeyword(Keyword.TABLE))
         {
@@ -3062,6 +3127,11 @@ public class Parser
         if (ParseKeyword(Keyword.MACRO))
         {
             return ParseCreateMacro(orReplace, temporary);
+        }
+
+        if (ParseKeyword(Keyword.SECRET))
+        {
+            return ParseCreateSecret(orReplace, temporary, persistent);
         }
 
         if (orReplace)
@@ -3120,6 +3190,55 @@ public class Parser
         }
 
         throw Expected("Expected an object type after CREATE", PeekToken());
+    }
+
+    public Statement ParseCreateSecret(bool orReplace, bool temporary, bool persistent)
+    {
+        var ifNotExists = ParseIfNotExists();
+        Ident? storateSpecifier = null;
+        Ident? name = null;
+
+        if (!PeekTokenIs<LeftParen>())
+        {
+            if (ParseKeyword(Keyword.IN))
+            {
+                storateSpecifier = ParseIdentifier();
+            }
+            else
+            {
+                name = ParseIdentifier();
+            }
+
+            if (storateSpecifier == null && !PeekTokenIs<LeftParen>() && ParseKeyword(Keyword.IN))
+            {
+                storateSpecifier = ParseIdentifier();
+            }
+        }
+
+        ExpectToken<LeftParen>();
+        ExpectKeyword(Keyword.TYPE);
+        var secretType = ParseIdentifier();
+        var options = new Sequence<SecretOption>();
+
+        if (ConsumeToken<Comma>())
+        {
+            options.AddRange(ParseCommaSeparated(() =>
+            {
+                return new SecretOption(ParseIdentifier(), ParseIdentifier());
+            }));
+        }
+
+        ExpectToken<RightParen>();
+
+        bool? temp = (temporary, persistent) switch
+        {
+            (true, false) => true,
+            (false, true) => false,
+            (false, false) => null,
+            _ => throw Expected("TEMPORARY or PERSISTENT", PeekToken())
+        };
+
+        return new CreateSecret(orReplace, temp, ifNotExists, name, storateSpecifier, secretType, options);
     }
 
     /// <summary>
@@ -3905,17 +4024,50 @@ public class Parser
             return ParseDropFunction();
         }
 
-        var temporary = _dialect is MySqlDialect or GenericDialect && ParseKeyword(Keyword.TEMPORARY);
+        var temporary = _dialect is MySqlDialect or DuckDbDialect or GenericDialect &&
+                        ParseKeyword(Keyword.TEMPORARY);
 
-        var objectType =
-            ParseKeyword(Keyword.TABLE) ? ObjectType.Table :
-            ParseKeyword(Keyword.VIEW) ? ObjectType.View :
-            ParseKeyword(Keyword.INDEX) ? ObjectType.Index :
-            ParseKeyword(Keyword.ROLE) ? ObjectType.Role :
-            ParseKeyword(Keyword.SCHEMA) ? ObjectType.Schema :
-            ParseKeyword(Keyword.SEQUENCE) ? ObjectType.Sequence :
-            ParseKeyword(Keyword.STAGE) ? ObjectType.Stage :
+        var persistent = _dialect is DuckDbDialect && ParseKeyword(Keyword.PERSISTENT);
+
+        ObjectType? objectType = null;
+        if (ParseKeyword(Keyword.TABLE))
+        {
+            objectType = ObjectType.Table;
+        }
+        else if (ParseKeyword(Keyword.VIEW))
+        {
+            objectType = ObjectType.View;
+        }
+        else if (ParseKeyword(Keyword.INDEX))
+        {
+            objectType = ObjectType.Index;
+        }
+        if (ParseKeyword(Keyword.ROLE)){
+            objectType = ObjectType.Role;
+        }
+        else if (ParseKeyword(Keyword.SCHEMA)){
+            objectType = ObjectType.Schema;
+        }
+        else if (ParseKeyword(Keyword.SEQUENCE)){
+            objectType = ObjectType.Sequence;
+        }
+        else if (ParseKeyword(Keyword.STAGE))
+        {
+            objectType = ObjectType.Stage;
+        }
+        else if (ParseKeyword(Keyword.FUNCTION))
+        {
+            return ParseDropFunction();
+        }
+        else if (ParseKeyword(Keyword.SECRET))
+        {
+            return ParseDropSecret(temporary, persistent);
+        }
+        
+        if(objectType == null)
+        {
             throw Expected("TABLE, VIEW, INDEX, ROLE, SCHEMA, FUNCTION or SEQUENCE after DROP", PeekToken());
+        }
 
         // Many dialects support the non standard `IF EXISTS` clause and allow
         // specifying multiple objects to delete in a single statement
@@ -3937,13 +4089,34 @@ public class Parser
 
         return new Drop(names)
         {
-            ObjectType = objectType,
+            ObjectType = objectType.Value,
             IfExists = ifExists,
             Cascade = cascade,
             Restrict = restrict,
             Purge = purge,
             Temporary = temporary
         };
+    }
+
+    private DropSecret ParseDropSecret(bool temporary, bool persistent)
+    {
+        var ifExists = ParseIfExists();
+        var name = ParseIdentifier();
+        Ident? storageSpecifier = null;
+        if (ParseKeyword(Keyword.FROM))
+        {
+            storageSpecifier = ParseIdentifier();
+        }
+
+        bool? temp = (temporary, persistent) switch
+        {
+            (true, false) => true,
+            (false, true) => false,
+            (false, false) => null,
+            _ => throw Expected("TEMPORARY or PERSISTENT", PeekToken())
+        };
+
+        return new DropSecret(ifExists, temp, name, storageSpecifier);
     }
 
     /// <summary>

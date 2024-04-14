@@ -181,6 +181,32 @@ public abstract record Statement : IWriteSql, IElement
             writer.WriteSql($"ATTACH {keyword}{DatabaseFileName} AS {SchemaName}");
         }
     }
+    public record AttachDuckDbDatabase(
+        bool IfNotExists,
+        bool Database,
+        Ident DatabasePath,
+        Ident? DatabaseAlias,
+        Sequence<AttachDuckDbDatabaseOption>? AttachOption) : Statement, IIfNotExists
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            var ifNot = IfNotExists ? $" {IIfNotExists.IfNotExistsPhrase} " : null;
+            var keyword = Database ? "DATABASE" : "";
+            writer.WriteSql($"ATTACH {keyword}{ifNot}{DatabasePath}");
+
+            if (DatabaseAlias != null)
+            {
+                writer.WriteSql($" AS {DatabaseAlias}");
+            }
+
+            if (AttachOption.SafeAny())
+            {
+                writer.Write(" (");
+                writer.WriteDelimited(AttachOption, ", ");
+                writer.Write(")");
+            }
+        }
+    }
     /// <summary>
     /// Cache statement
     /// See Spark SQL docs for more details.
@@ -447,7 +473,6 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
-
     /// <summary>
     /// Create Database statement
     /// </summary>
@@ -674,6 +699,48 @@ public abstract record Statement : IWriteSql, IElement
             {
                 writer.WriteSql($" AS TABLE {t}");
             }
+        }
+    }
+    public record CreateSecret(
+        bool OrReplace,
+        bool? Temporary,
+        bool IfNotExists,
+        Ident? Name,
+        Ident? StorageIdentifier,
+        Ident SecretType,
+        Sequence<SecretOption> Options) : Statement, IIfNotExists
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            var orReplace = OrReplace ? "OR REPLACE " : null;
+            writer.WriteSql($"CREATE {orReplace}");
+
+            if (Temporary != null)
+            {
+                var temp = Temporary.Value ? "TEMPORARY " : "PERSISTENT ";
+                writer.Write(temp);
+            }
+
+            var ifNotExists = IfNotExists ? $" {IIfNotExists.IfNotExistsPhrase}" : null;
+            writer.WriteSql($"SECRET{ifNotExists} ");
+
+            if (Name != null)
+            {
+                writer.WriteSql($"{Name} ");
+            }
+
+            if (StorageIdentifier != null)
+            {
+                writer.WriteSql($"IN {StorageIdentifier} ");
+            }
+
+            writer.WriteSql($"( TYPE {SecretType}");
+            if (Options.SafeAny())
+            {
+                writer.Write(", ");
+                writer.WriteDelimited(Options, ", ");
+            }
+            writer.Write(" )");
         }
     }
     /// <summary>
@@ -1305,6 +1372,44 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
+    public record DetachDuckDbDatabase(
+        bool IfExists,
+        bool Database,
+        Ident DatabaseAlias) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            var ifNot = IfExists ? $" {IIfNotExists.IfExistsPhrase}" : null;
+            var keyword = Database ? " DATABASE" : "";
+
+            writer.WriteSql($"DETACH{keyword}{ifNot} {DatabaseAlias}");
+        }
+    }
+    public record DropSecret(
+        bool IfExists,
+        bool? Temporary,
+        Ident Name,
+        Ident? StorageSpecifier) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"DROP ");
+            if (Temporary != null)
+            {
+                var temp = Temporary.Value ? "TEMPORARY " : "PERSISTENT ";
+                writer.Write(temp);
+            }
+
+            var ifNotExists = IfExists ? $" {IIfNotExists.IfExistsPhrase}" : null;
+            writer.WriteSql($"SECRET{ifNotExists} {Name}");
+
+            if (StorageSpecifier != null)
+            {
+                writer.WriteSql($" FROM {StorageSpecifier}");
+            }
+        }
+    }
+
     /// <summary>
     /// EXECUTE name [ ( parameter [, ...] ) ] [USING <expr>]
     /// </summary>
