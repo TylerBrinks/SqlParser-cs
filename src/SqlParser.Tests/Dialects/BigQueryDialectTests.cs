@@ -613,5 +613,28 @@ namespace SqlParser.Tests.Dialects
             Assert.Throws<ParserException>(() => { ParseSqlStatements("DECLARE x"); });
             Assert.Throws<ParserException>(() => { ParseSqlStatements("DECLARE x 42"); });
         }
+
+        [Fact]
+        public void Parse_Create_View_With_Unquoted_Hyphen()
+        {
+            var create = VerifiedStatement< Statement.CreateView>("CREATE VIEW IF NOT EXISTS my-pro-ject.mydataset.myview AS SELECT 1");
+            Assert.Equal("my-pro-ject.mydataset.myview", create.Name);
+            Assert.Equal("SELECT 1", create.Query.ToSql());
+        }
+
+        [Fact]
+        public void Parse_Create_Table_With_Unquoted_Hyphen()
+        {
+            var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE my-pro-ject.mydataset.mytable (x INT64)");
+
+            var name = new ObjectName(["my-pro-ject", "mydataset", "mytable"]);
+            var columns = new Sequence<ColumnDef>
+            {
+                new ("x", new DataType.Int64())
+            };
+
+            Assert.Equal(name, create.Name);
+            Assert.Equal(columns, create.Columns);
+        }
     }
 }

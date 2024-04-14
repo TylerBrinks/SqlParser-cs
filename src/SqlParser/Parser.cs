@@ -3768,7 +3768,7 @@ public class Parser
 
         var ifNotExists = _dialect is BigQueryDialect or SQLiteDialect or GenericDialect && ParseIfNotExists();
 
-        var name = ParseObjectName();
+        var name = ParseObjectName(_dialect is BigQueryDialect);
         var columns = ParseViewColumns();
         CreateTableOptions options = new CreateTableOptions.None();
         var withOptions = ParseOptions(Keyword.WITH);
@@ -4669,8 +4669,9 @@ public class Parser
 
     public CreateTable ParseCreateTable(bool orReplace, bool temporary, bool? global, bool transient)
     {
+        var allowUnquotedHyphen = _dialect is BigQueryDialect;
         var ifNotExists = ParseIfNotExists();
-        var tableName = ParseObjectName();
+        var tableName = ParseObjectName(allowUnquotedHyphen);
 
         // Clickhouse has `ON CLUSTER 'cluster'` syntax for DDLs
         string? onCluster = null;
@@ -4685,9 +4686,9 @@ public class Parser
             };
         }
 
-        var like = ParseInit<ObjectName?>(ParseKeyword(Keyword.LIKE) || ParseKeyword(Keyword.ILIKE), ParseObjectName);
+        var like = ParseInit<ObjectName?>(ParseKeyword(Keyword.LIKE) || ParseKeyword(Keyword.ILIKE), () => ParseObjectName(allowUnquotedHyphen));
 
-        var clone = ParseInit<ObjectName?>(ParseKeyword(Keyword.CLONE), ParseObjectName);
+        var clone = ParseInit<ObjectName?>(ParseKeyword(Keyword.CLONE), () => ParseObjectName(allowUnquotedHyphen));
 
         var (columns, constraints) = ParseColumns();
 
@@ -6696,10 +6697,15 @@ public class Parser
 
         return null;
     }
-
+    
     public ObjectName ParseObjectName()
     {
         return ParseObjectNameWithClause(false);
+    }
+
+    public ObjectName ParseObjectName(bool inTableClause)
+    {
+        return ParseObjectNameWithClause(inTableClause);
     }
     /// <summary>
     ///  Parse a possibly qualified, possibly quoted identifier, e.g.
@@ -6789,10 +6795,10 @@ public class Parser
             if (_dialect is BigQueryDialect && word.QuoteStyle == null && inTableClause)
             {
                 var requireWhitespace = false;
-                var peek = PeekTokenNoSkip();
                 var text = new StringBuilder(word.Value);
+                // var peek = PeekTokenNoSkip();
 
-                if (peek is Minus)
+                while (PeekTokenNoSkip() is Minus minus)
                 {
                     NextToken();
                     text.Append("-");
