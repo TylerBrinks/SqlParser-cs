@@ -55,8 +55,8 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal(expected, tokens);
 
             tokens = tokenizer.Tokenize("CREATE TABLE// this is a comment \ntable_1", new SnowflakeDialect());
-            expected = new List<Token>
-            {
+            expected =
+            [
                 new Word("CREATE"),
                 new Whitespace(WhitespaceKind.Space),
                 new Word("TABLE"),
@@ -65,8 +65,9 @@ namespace SqlParser.Tests.Dialects
                     Prefix = "//",
                     Value = " this is a comment \n"
                 },
+
                 new Word("table_1")
-            };
+            ];
             Assert.Equal(expected, tokens);
         }
 
@@ -495,7 +496,7 @@ namespace SqlParser.Tests.Dialects
         }
 
         [Fact]
-        public void Test_Coppy_Into()
+        public void Test_Copy_Into()
         {
             const string sql = "COPY INTO my_company.emp_basic FROM 'gcs://mybucket/./../a.csv'";
 
@@ -598,36 +599,36 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Test_Copy_Into_File_Format()
         {
-            var sql = """
-                COPY INTO my_company.emp_basic 
-                FROM 'gcs://mybucket/./../a.csv' 
-                FILES = ('file1.json', 'file2.json') 
-                PATTERN = '.*employees0[1-5].csv.gz' 
-                FILE_FORMAT=(COMPRESSION=AUTO BINARY_FORMAT=HEX ESCAPE='\')
-                """;
+            const string sql = """
+                               COPY INTO my_company.emp_basic
+                               FROM 'gcs://mybucket/./../a.csv'
+                               FILES = ('file1.json', 'file2.json')
+                               PATTERN = '.*employees0[1-5].csv.gz'
+                               FILE_FORMAT=(COMPRESSION=AUTO BINARY_FORMAT=HEX ESCAPE='\')
+                               """;
 
             var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
 
-            Assert.Contains(copy!.FileFormat!, o => o is { Name: "COMPRESSION", OptionType: DataLoadingOptionType.Enum, Value: "AUTO" });
-            Assert.Contains(copy!.FileFormat!, o => o is { Name: "BINARY_FORMAT", OptionType: DataLoadingOptionType.Enum, Value: "HEX" });
-            Assert.Contains(copy!.FileFormat!, o => o is { Name: "ESCAPE", OptionType: DataLoadingOptionType.String, Value: "\\" });
+            Assert.Contains(copy.FileFormat!, o => o is { Name: "COMPRESSION", OptionType: DataLoadingOptionType.Enum, Value: "AUTO" });
+            Assert.Contains(copy.FileFormat!, o => o is { Name: "BINARY_FORMAT", OptionType: DataLoadingOptionType.Enum, Value: "HEX" });
+            Assert.Contains(copy.FileFormat!, o => o is { Name: "ESCAPE", OptionType: DataLoadingOptionType.String, Value: "\\" });
         }
 
         [Fact]
         public void Test_Copy_Into_Copy_Format()
         {
-            var sql = """
-                      COPY INTO my_company.emp_basic 
-                      FROM 'gcs://mybucket/./../a.csv' 
-                      FILES = ('file1.json', 'file2.json') 
-                      PATTERN = '.*employees0[1-5].csv.gz' 
-                      COPY_OPTIONS=(ON_ERROR=CONTINUE FORCE=TRUE)
-                      """;
+            const string sql = """
+                               COPY INTO my_company.emp_basic
+                               FROM 'gcs://mybucket/./../a.csv'
+                               FILES = ('file1.json', 'file2.json')
+                               PATTERN = '.*employees0[1-5].csv.gz'
+                               COPY_OPTIONS=(ON_ERROR=CONTINUE FORCE=TRUE)
+                               """;
 
             var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
 
-            Assert.Contains(copy!.CopyOptions!, o => o is { Name: "ON_ERROR", OptionType: DataLoadingOptionType.Enum, Value: "CONTINUE" });
-            Assert.Contains(copy!.CopyOptions!, o => o is { Name: "FORCE", OptionType: DataLoadingOptionType.Boolean, Value: "TRUE" });
+            Assert.Contains(copy.CopyOptions!, o => o is { Name: "ON_ERROR", OptionType: DataLoadingOptionType.Enum, Value: "CONTINUE" });
+            Assert.Contains(copy.CopyOptions!, o => o is { Name: "FORCE", OptionType: DataLoadingOptionType.Boolean, Value: "TRUE" });
         }
 
         [Fact]
@@ -682,7 +683,7 @@ namespace SqlParser.Tests.Dialects
             // Snowflake allows passing an unparenthesized subquery as the single argument to a function.
             OneStatementParsesTo("SELECT parse_json(SELECT '{}')", "SELECT parse_json((SELECT '{}'))");
 
-            // Subqueries that begin with WITH work too.
+            // Subqueries that begin with 'WITH' work too.
             OneStatementParsesTo(
                 "SELECT parse_json(WITH q AS (SELECT '{}' AS foo) SELECT foo FROM q)",
                 "SELECT parse_json((WITH q AS (SELECT '{}' AS foo) SELECT foo FROM q))"
@@ -872,6 +873,28 @@ namespace SqlParser.Tests.Dialects
             Assert.Throws<ParserException>(() => { ParseSqlStatements("DECLARE profit INT 2"); });
             Assert.Throws<ParserException>(() => { ParseSqlStatements("DECLARE profit INT DEFAULT"); });
             Assert.Throws<ParserException>(() => { ParseSqlStatements("DECLARE profit DEFAULT"); });
+        }
+
+        [Fact]
+        public void Test_Snowflake_Copy_Into()
+        {
+            var copy = VerifiedStatement<Statement.CopyIntoSnowflake>("COPY INTO a.b FROM @namespace.stage_name");
+            var into = new ObjectName(["a", "b"]);
+            var fromStage = new ObjectName(["@namespace", "stage_name"]);
+
+            Assert.Equal(into, copy.Into);
+            Assert.Equal(fromStage, copy.FromStage);
+        }
+
+        [Fact]
+        public void Test_Snowflake_Copy_Into_Stage_Name_Ends_With_Parens()
+        {
+            var copy = VerifiedStatement<Statement.CopyIntoSnowflake>("COPY INTO SCHEMA.SOME_MONITORING_SYSTEM FROM (SELECT t.$1:st AS st FROM @schema.general_finished)");
+            var into = new ObjectName(["SCHEMA", "SOME_MONITORING_SYSTEM"]);
+            var fromStage = new ObjectName(["@schema", "general_finished"]);
+
+            Assert.Equal(into, copy.Into);
+            Assert.Equal(fromStage, copy.FromStage);
         }
     }
 }

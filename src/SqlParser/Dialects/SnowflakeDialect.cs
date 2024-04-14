@@ -279,7 +279,8 @@ public class SnowflakeDialect : Dialect
 
             default:
                 parser.PrevToken();
-                fromStage = parser.ParseObjectName();
+                //fromStage = parser.ParseObjectName();
+                fromStage = ParseSnowflakeStageName(parser);
                 stageParams = ParseStageParams(parser);
 
                 // As
@@ -602,6 +603,7 @@ public class SnowflakeDialect : Dialect
                     break;
 
                 case Period:
+                case RightParen:
                     parser.PrevToken();
                     loop = false;
                     break;
