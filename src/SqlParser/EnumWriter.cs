@@ -55,11 +55,6 @@ public static class EnumWriter
 
             CteAsMaterialized.NotMaterialized => "NOT MATERIALIZED",
 
-            DateTimeField.TimezoneMinute => "TIMEZONE_MINUTE",
-            DateTimeField.TimezoneHour => "TIMEZONE_HOUR",
-            DateTimeField.TimezoneAbbr => "TIMEZONE_ABBR",
-            DateTimeField.TimezoneRegion => "TIMEZONE_REGION",
-
             //DeclareType.Cursor => "CURSOR",
             //DeclareType.ResultSet => "RESULTSET",
             //DeclareType.Exception => "EXCEPTION",

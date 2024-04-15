@@ -1288,7 +1288,7 @@ namespace SqlParser.Tests
         {
             var select = VerifiedOnlySelect("SELECT EXTRACT(YEAR FROM d)");
 
-            var expected = new Extract(new Identifier("d"), DateTimeField.Year);
+            var expected = new Extract(new Identifier("d"), new DateTimeField.Year());
 
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
@@ -1298,6 +1298,7 @@ namespace SqlParser.Tests
             VerifiedStatement("SELECT EXTRACT(DAYOFWEEK FROM d)");
             VerifiedStatement("SELECT EXTRACT(DAYOFYEAR FROM d)");
             VerifiedStatement("SELECT EXTRACT(DATE FROM d)");
+            VerifiedStatement("SELECT EXTRACT(DATETIME FROM d)");
             VerifiedStatement("SELECT EXTRACT(HOUR FROM d)");
             VerifiedStatement("SELECT EXTRACT(MINUTE FROM d)");
             VerifiedStatement("SELECT EXTRACT(SECOND FROM d)");
@@ -1330,6 +1331,8 @@ namespace SqlParser.Tests
             var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT EXTRACT(JIFFY FROM d)"));
 
             Assert.Equal("Expected date/time field, found JIFFY, Line: 1, Col: 16", ex.Message);
+
+            VerifiedStatement("SELECT EXTRACT(JIFFY FROM d)", [new SnowflakeDialect(), new GenericDialect()]);
         }
 
         [Fact]
@@ -1350,7 +1353,7 @@ namespace SqlParser.Tests
         public void Parse_Ceil_Datetime()
         {
             var select = VerifiedOnlySelect("SELECT CEIL(d TO DAY)");
-            var expected = new Ceil(new Identifier("d"), DateTimeField.Day);
+            var expected = new Ceil(new Identifier("d"), new DateTimeField.Day());
 
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
@@ -1363,13 +1366,15 @@ namespace SqlParser.Tests
 
             var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT CEIL(d TO JIFFY) FROM df"));
             Assert.Equal("Expected date/time field, found JIFFY, Line: 1, Col: 18", ex.Message);
+
+            VerifiedStatement("SELECT CEIL(d TO JIFFY) FROM df", [new SnowflakeDialect(), new GenericDialect()]);
         }
 
         [Fact]
         public void Parse_Floor_Datetime()
         {
             var select = VerifiedOnlySelect("SELECT FLOOR(d TO DAY)");
-            var expected = new Floor(new Identifier("d"), DateTimeField.Day);
+            var expected = new Floor(new Identifier("d"), new DateTimeField.Day());
 
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
@@ -1382,6 +1387,8 @@ namespace SqlParser.Tests
 
             var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT FLOOR(d TO JIFFY) FROM df"));
             Assert.Equal("Expected date/time field, found JIFFY, Line: 1, Col: 19", ex.Message);
+
+            VerifiedStatement("SELECT FLOOR(d TO JIFFY) FROM df", [new SnowflakeDialect(), new GenericDialect()]);
         }
 
         [Fact]
@@ -2584,15 +2591,15 @@ namespace SqlParser.Tests
             var select = VerifiedOnlySelect("SELECT INTERVAL '1-1' YEAR TO MONTH");
             var interval = new Expression.Interval(
                 new LiteralValue(new Value.SingleQuotedString("1-1")),
-                DateTimeField.Year,
-                DateTimeField.Month);
+                new DateTimeField.Year(),
+                new DateTimeField.Month());
             Assert.Equal(interval, select.Projection[0].AsExpr());
 
             select = VerifiedOnlySelect("SELECT INTERVAL '01:01.01' MINUTE (5) TO SECOND (5)");
             interval = new Expression.Interval(
                     new LiteralValue(new Value.SingleQuotedString("01:01.01")),
-                    DateTimeField.Minute,
-                    DateTimeField.Second)
+                    new DateTimeField.Minute(),
+                    new DateTimeField.Second())
             {
                 LeadingPrecision = 5,
                 FractionalSecondsPrecision = 5
@@ -2602,14 +2609,14 @@ namespace SqlParser.Tests
             select = VerifiedOnlySelect("SELECT INTERVAL '10' HOUR");
             interval = new Expression.Interval(
                 new LiteralValue(new Value.SingleQuotedString("10")),
-                DateTimeField.Hour);
+                new DateTimeField.Hour());
             Assert.Equal(interval, select.Projection[0].AsExpr());
 
 
             select = VerifiedOnlySelect("SELECT INTERVAL 5 DAY");
             interval = new Expression.Interval(
                 new LiteralValue(Number("5")),
-                DateTimeField.Day);
+                new DateTimeField.Day());
             Assert.Equal(interval, select.Projection[0].AsExpr());
 
 
@@ -2617,15 +2624,15 @@ namespace SqlParser.Tests
             interval = new Expression.Interval(
                 new BinaryOp(
                     new LiteralValue(Number("1")),
-                   BinaryOperator.Plus,
+                    BinaryOperator.Plus,
                     new LiteralValue(Number("1"))),
-                DateTimeField.Day);
+                new DateTimeField.Day());
             Assert.Equal(interval, select.Projection[0].AsExpr());
 
             select = VerifiedOnlySelect("SELECT INTERVAL '10' HOUR (1)");
             interval = new Expression.Interval(
                 new LiteralValue(new Value.SingleQuotedString("10")),
-                DateTimeField.Hour)
+                new DateTimeField.Hour())
             {
                 LeadingPrecision = 1
             };

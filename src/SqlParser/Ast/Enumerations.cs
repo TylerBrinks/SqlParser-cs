@@ -140,47 +140,6 @@ public enum DataLoadingOptionType
     Enum
 }
 
-public enum DateTimeField
-{
-    None,
-    Year,
-    Month,
-    Week,
-    Day,
-    DayOfWeek,
-    DayOfYear,
-    Date,
-    Hour,
-    Minute,
-    Second,
-    Century,
-    Decade,
-    Dow,
-    Doy,
-    Epoch,
-    Isodow,
-    IsoWeek,
-    Isoyear,
-    Julian,
-    Microsecond,
-    Microseconds,
-    // ReSharper disable once IdentifierTypo
-    Millenium,
-    Millennium,
-    Millisecond,
-    Milliseconds,
-    Nanosecond,
-    Nanoseconds,
-    Quarter,
-    Time,
-    Timezone,
-    TimezoneAbbr,
-    TimezoneHour,
-    TimezoneMinute,
-    TimezoneRegion,
-    NoDateTime
-}
-
 public enum DeferrableInitial
 {
     Immediate,

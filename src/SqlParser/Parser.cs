@@ -914,7 +914,7 @@ public class Parser
             {
                 var expr = ParseExpr();
                 // Parse `CEIL/FLOOR(expr)`
-                var field = DateTimeField.NoDateTime;
+                DateTimeField field = new DateTimeField.NoDateTime();
                 var keywordTo = ParseKeyword(Keyword.TO);
                 if (keywordTo)
                 {
@@ -1948,42 +1948,63 @@ public class Parser
 
         return word.Keyword switch
         {
-            Keyword.YEAR => DateTimeField.Year,
-            Keyword.MONTH => DateTimeField.Month,
-            Keyword.WEEK => DateTimeField.Week,
-            Keyword.DAY => DateTimeField.Day,
-            Keyword.DAYOFWEEK => DateTimeField.DayOfWeek,
-            Keyword.DAYOFYEAR => DateTimeField.DayOfYear,
-            Keyword.DATE => DateTimeField.Date,
-            Keyword.HOUR => DateTimeField.Hour,
-            Keyword.MINUTE => DateTimeField.Minute,
-            Keyword.SECOND => DateTimeField.Second,
-            Keyword.CENTURY => DateTimeField.Century,
-            Keyword.DECADE => DateTimeField.Decade,
-            Keyword.DOY => DateTimeField.Doy,
-            Keyword.DOW => DateTimeField.Dow,
-            Keyword.EPOCH => DateTimeField.Epoch,
-            Keyword.ISODOW => DateTimeField.Isodow,
-            Keyword.ISOYEAR => DateTimeField.Isoyear,
-            Keyword.ISOWEEK => DateTimeField.IsoWeek,
-            Keyword.JULIAN => DateTimeField.Julian,
-            Keyword.MICROSECOND => DateTimeField.Microsecond,
-            Keyword.MICROSECONDS => DateTimeField.Microseconds,
-            Keyword.MILLENIUM => DateTimeField.Millenium,
-            Keyword.MILLENNIUM => DateTimeField.Millennium,
-            Keyword.MILLISECOND => DateTimeField.Millisecond,
-            Keyword.MILLISECONDS => DateTimeField.Milliseconds,
-            Keyword.NANOSECOND => DateTimeField.Nanosecond,
-            Keyword.NANOSECONDS => DateTimeField.Nanoseconds,
-            Keyword.QUARTER => DateTimeField.Quarter,
-            Keyword.TIME => DateTimeField.Time,
-            Keyword.TIMEZONE => DateTimeField.Timezone,
-            Keyword.TIMEZONE_ABBR => DateTimeField.TimezoneAbbr,
-            Keyword.TIMEZONE_HOUR => DateTimeField.TimezoneHour,
-            Keyword.TIMEZONE_MINUTE => DateTimeField.TimezoneMinute,
-            Keyword.TIMEZONE_REGION => DateTimeField.TimezoneRegion,
+            Keyword.YEAR => new DateTimeField.Year(),
+            Keyword.MONTH => new DateTimeField.Month(),
+            Keyword.WEEK => ParseWeek(),
+            Keyword.DAY => new DateTimeField.Day(),
+            Keyword.DAYOFWEEK => new DateTimeField.DayOfWeek(),
+            Keyword.DAYOFYEAR => new DateTimeField.DayOfYear(),
+            Keyword.DATE => new DateTimeField.Date(),
+            Keyword.DATETIME => new DateTimeField.DateTime(),
+            Keyword.HOUR => new DateTimeField.Hour(),
+            Keyword.MINUTE => new DateTimeField.Minute(),
+            Keyword.SECOND => new DateTimeField.Second(),
+            Keyword.CENTURY => new DateTimeField.Century(),
+            Keyword.DECADE => new DateTimeField.Decade(),
+            Keyword.DOY => new DateTimeField.Doy(),
+            Keyword.DOW => new DateTimeField.Dow(),
+            Keyword.EPOCH => new DateTimeField.Epoch(),
+            Keyword.ISODOW => new DateTimeField.Isodow(),
+            Keyword.ISOYEAR => new DateTimeField.Isoyear(),
+            Keyword.ISOWEEK => new DateTimeField.IsoWeek(),
+            Keyword.JULIAN => new DateTimeField.Julian(),
+            Keyword.MICROSECOND => new DateTimeField.Microsecond(),
+            Keyword.MICROSECONDS => new DateTimeField.Microseconds(),
+            Keyword.MILLENIUM => new DateTimeField.Millenium(),
+            Keyword.MILLENNIUM => new DateTimeField.Millennium(),
+            Keyword.MILLISECOND => new DateTimeField.Millisecond(),
+            Keyword.MILLISECONDS => new DateTimeField.Milliseconds(),
+            Keyword.NANOSECOND => new DateTimeField.Nanosecond(),
+            Keyword.NANOSECONDS => new DateTimeField.Nanoseconds(),
+            Keyword.QUARTER => new DateTimeField.Quarter(),
+            Keyword.TIME => new DateTimeField.Time(),
+            Keyword.TIMEZONE => new DateTimeField.Timezone(),
+            Keyword.TIMEZONE_ABBR => new DateTimeField.TimezoneAbbr(),
+            Keyword.TIMEZONE_HOUR => new DateTimeField.TimezoneHour(),
+            Keyword.TIMEZONE_MINUTE => new DateTimeField.TimezoneMinute(),
+            Keyword.TIMEZONE_REGION => new DateTimeField.TimezoneRegion(),
+            _ when _dialect is SnowflakeDialect or GenericDialect => ParseCustomDate(),
             _ => throw Expected("date/time field", token)
         };
+
+        DateTimeField ParseWeek()
+        {
+            Ident weekday = null;
+
+            if (_dialect is BigQueryDialect or GenericDialect && ConsumeToken<LeftParen>())
+            {
+                weekday = ParseIdentifier();
+                ExpectToken<RightParen>();
+            }
+
+            return new DateTimeField.Week(weekday);
+        }
+
+        DateTimeField ParseCustomDate()
+        {
+            PrevToken();
+            return new DateTimeField.Custom(ParseIdentifier());
+        }
     }
 
     public Expression ParseInterval()
@@ -2009,9 +2030,9 @@ public class Parser
 
         ulong? leadingPrecision;
         ulong? fractionalPrecision = null;
-        var lastField = DateTimeField.None;
+        DateTimeField lastField = new DateTimeField.None();
 
-        if (leadingField == DateTimeField.Second)
+        if (leadingField is DateTimeField.Second)
         {
             // SQL mandates special syntax for `SECOND TO SECOND` literals.
             // Instead of
@@ -2026,7 +2047,7 @@ public class Parser
             if (ParseKeyword(Keyword.TO))
             {
                 lastField = ParseDateTimeField();
-                if (lastField == DateTimeField.Second)
+                if (lastField is DateTimeField.Second)
                 {
                     fractionalPrecision = ParseOptionalPrecision();
                 }
@@ -2044,7 +2065,7 @@ public class Parser
 
     public DateTimeField GetDateTimeField(Keyword keyword)
     {
-        return Extensions.DateTimeFields.Any(kwd => kwd == keyword) ? ParseDateTimeField() : DateTimeField.None;
+        return Extensions.DateTimeFields.Any(kwd => kwd == keyword) ? ParseDateTimeField() : new DateTimeField.None();
     }
 
     /// <summary>
@@ -4042,13 +4063,16 @@ public class Parser
         {
             objectType = ObjectType.Index;
         }
-        if (ParseKeyword(Keyword.ROLE)){
+        if (ParseKeyword(Keyword.ROLE))
+        {
             objectType = ObjectType.Role;
         }
-        else if (ParseKeyword(Keyword.SCHEMA)){
+        else if (ParseKeyword(Keyword.SCHEMA))
+        {
             objectType = ObjectType.Schema;
         }
-        else if (ParseKeyword(Keyword.SEQUENCE)){
+        else if (ParseKeyword(Keyword.SEQUENCE))
+        {
             objectType = ObjectType.Sequence;
         }
         else if (ParseKeyword(Keyword.STAGE))
@@ -4063,8 +4087,8 @@ public class Parser
         {
             return ParseDropSecret(temporary, persistent);
         }
-        
-        if(objectType == null)
+
+        if (objectType == null)
         {
             throw Expected("TABLE, VIEW, INDEX, ROLE, SCHEMA, FUNCTION or SEQUENCE after DROP", PeekToken());
         }
@@ -6697,7 +6721,7 @@ public class Parser
 
         return null;
     }
-    
+
     public ObjectName ParseObjectName()
     {
         return ParseObjectNameWithClause(false);

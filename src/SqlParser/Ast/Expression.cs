@@ -269,7 +269,7 @@ public abstract record Expression : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
-            if (Field == DateTimeField.NoDateTime)
+            if (Field is DateTimeField.NoDateTime)
             {
                 writer.WriteSql($"CEIL({Expression})");
             }
@@ -454,7 +454,7 @@ public abstract record Expression : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
-            if (Field == DateTimeField.NoDateTime)
+            if (Field is DateTimeField.NoDateTime)
             {
                 writer.WriteSql($"FLOOR({Expression})");
             }
@@ -635,18 +635,29 @@ public abstract record Expression : IWriteSql, IElement
     /// The parser does not validate the `value`, nor does it ensure
     /// that the `leading_field` units >= the units in `last_field`,
     /// so the user will have to reject intervals like `HOUR TO YEAR`
-    ///
     /// <example>
     /// <c>
     /// INTERVAL '123:45.67' MINUTE(3) TO SECOND(2)
     /// </c>
     /// </example>.
     /// </summary>
-    /// <param name="Value">Value</param>
-    /// <param name="LeadingField">Date time leading field</param>
-    /// <param name="LastField">Date time last field</param>
-    public record Interval(Expression Value, DateTimeField LeadingField = DateTimeField.None, DateTimeField LastField = DateTimeField.None) : Expression
+   
+    public record Interval : Expression
     {
+        /// <param name="value">Value</param>
+        /// <param name="leadingField">Date time leading field</param>
+        /// <param name="lastField">Date time last field</param>
+        public Interval(Expression value, DateTimeField? leadingField = null, DateTimeField? lastField = null)
+        {
+            Value = value;
+            LeadingField = leadingField ?? new DateTimeField.None();
+            LastField = lastField ?? new DateTimeField.None();
+        }
+        
+        public Expression Value { get; }
+        public DateTimeField LeadingField { get; }
+        public DateTimeField LastField { get; }
+
         public ulong? LeadingPrecision { get; init; }
         /// The seconds precision can be specified in SQL source as
         /// `INTERVAL '__' SECOND(_, x)` (in which case the `leading_field`
@@ -657,7 +668,7 @@ public abstract record Expression : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             // Length the leading field is SECOND, the parser guarantees that the last field is None.
-            if (LeadingField == DateTimeField.Second && LeadingPrecision != null)
+            if (LeadingField is DateTimeField.Second && LeadingPrecision != null)
             {
                 writer.WriteSql($"INTERVAL {Value} SECOND ({LeadingPrecision}, {FractionalSecondsPrecision})");
             }
@@ -665,7 +676,7 @@ public abstract record Expression : IWriteSql, IElement
             {
                 writer.WriteSql($"INTERVAL {Value}");
 
-                if (LeadingField != DateTimeField.None)
+                if (LeadingField is not DateTimeField.None)
                 {
                     writer.WriteSql($" {LeadingField}");
                 }
@@ -675,7 +686,7 @@ public abstract record Expression : IWriteSql, IElement
                     writer.WriteSql($" ({LeadingPrecision})");
                 }
 
-                if (LastField != DateTimeField.None)
+                if (LastField is not DateTimeField.None)
                 {
                     writer.WriteSql($" TO {LastField}");
                 }

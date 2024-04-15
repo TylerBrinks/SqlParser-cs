@@ -902,5 +902,15 @@ namespace SqlParser.Tests.Dialects
         {
             VerifiedOnlySelectWithCanonical("SELECT 1, 2, FROM t", "SELECT 1, 2 FROM t");
         }
+
+        [Fact]
+        public void Parse_Extract_Custom_Part()
+        {
+            var select = VerifiedOnlySelect("SELECT EXTRACT(eod FROM d)");
+
+            var expected = new Extract(new Identifier("d"), new DateTimeField.Custom("eod"));
+
+            Assert.Equal(expected, select.Projection.First().AsExpr());
+        }
     }
 }

@@ -636,5 +636,15 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal(name, create.Name);
             Assert.Equal(columns, create.Columns);
         }
+
+        [Fact]
+        public void Parse_Exact_Weekday()
+        {
+            var select = VerifiedOnlySelect("SELECT EXTRACT(WEEK(MONDAY) FROM d)");
+
+            var expected = new Extract(new Identifier("d"), new DateTimeField.Week("MONDAY"));
+
+            Assert.Equal(expected, select.Projection.First().AsExpr());
+        }
     }
 }
