@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text;
 using SqlParser.Ast;
 using SqlParser.Dialects;
 using static SqlParser.Ast.DataType;
@@ -5309,6 +5310,32 @@ namespace SqlParser.Tests
 
             var canonical = "SELECT a, b, c FROM T WHERE true";
             VerifiedOnlySelectWithCanonical(sql, canonical, dialects);
+        }
+
+        [Fact]
+        public void Parse_Map_Access_Expr()
+        {
+            IEnumerable<Dialect> dialects = [new BigQueryDialect(), new ClickHouseDialect()];
+
+            var expr = VerifiedExpr("users[-1][safe_offset(2)]", dialects);
+
+            var expected = new MapAccess(
+                new Identifier("users"),
+                [
+                    new MapAccessKey(new UnaryOp(new LiteralValue(new Value.Number("1")), UnaryOperator.Minus), MapAccessSyntax.Bracket),
+                    new MapAccessKey(new Function("safe_offset")
+                    {
+                        Args = [
+                            new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.Number("2"))))
+                        ]
+                    }, MapAccessSyntax.Bracket)
+                ]
+            );
+
+            Assert.Equal(expected, expr);
+
+            VerifiedExpr("users[1]");
+            VerifiedExpr("a[array_length(b) - 1 + 2][c + 3][d * 4]");
         }
     }
 }

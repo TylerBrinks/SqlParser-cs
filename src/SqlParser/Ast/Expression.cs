@@ -918,23 +918,26 @@ public abstract record Expression : IWriteSql, IElement
     /// column['field'] or column
     /// </c>
     /// </example>
-    public record MapAccess(Expression Column, Sequence<Expression> Keys) : Expression
+    public record MapAccess(Expression Column, Sequence<MapAccessKey> Keys) : Expression
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            Column.ToSql(writer);
+            writer.WriteSql($"{Column}");
+            writer.WriteDelimited(Keys, string.Empty);
+        }
+    }
 
-            foreach (var key in Keys)
+    public record MapAccessKey(Expression Key, MapAccessSyntax Syntax) : Expression
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            if (Syntax == MapAccessSyntax.Bracket)
             {
-                // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
-                if (key is LiteralValue { Value: Value.SingleQuotedString s })
-                {
-                    writer.WriteSql($"[\"{s.Value}\"]");
-                }
-                else
-                {
-                    writer.WriteSql($"[{key}]");
-                }
+                writer.WriteSql($"[{Key}]");
+            }
+            else
+            {
+                writer.WriteSql($".{Key}");
             }
         }
     }

@@ -2415,23 +2415,37 @@ public class Parser
 
     public Expression ParseMapAccess(Expression expr)
     {
-        var key = ParseMapKey();
-
+        var key = ParseExpr();
         ConsumeToken<RightBracket>();
-        var keyParts = new Sequence<Expression> { key };
-        while (ConsumeToken<LeftBracket>())
+
+        var keys = new Sequence<MapAccessKey>
         {
-            var innerKey = ParseMapKey();
-            ConsumeToken<RightBracket>();
-            keyParts.Add(innerKey);
+            new(key, MapAccessSyntax.Bracket)
+        };
+
+        while (true)
+        {
+            var token = PeekToken();
+       
+            if (token is LeftBracket)
+            {
+                NextToken();
+                var parsed = ParseExpr();
+                ExpectToken<RightBracket>();
+                keys.Add(new MapAccessKey(parsed, MapAccessSyntax.Bracket));
+            }
+            else if (token is Period && _dialect is BigQueryDialect)
+            {
+                NextToken();
+                keys.Add(new MapAccessKey(ParseExpr(), MapAccessSyntax.Period));
+            }
+            else
+            {
+                break;
+            }
         }
 
-        if (expr is Identifier or CompoundIdentifier)
-        {
-            return new MapAccess(expr, keyParts);
-        }
-
-        return expr;
+        return new MapAccess(expr, keys);
     }
 
     /// <summary>
@@ -6328,27 +6342,6 @@ public class Parser
             _ => throw Expected("literal string", token)
         };
     }
-    /// <summary>
-    /// Parse a map key string
-    /// </summary>
-    /// <returns></returns>
-    public Expression ParseMapKey()
-    {
-        var token = NextToken();
-        return token switch
-        {
-            // handle BigQuery offset subscript operator which overlaps with OFFSET operator
-            Word { Keyword: Keyword.OFFSET } w when _dialect is BigQueryDialect => ParseFunction(new ObjectName(new Ident(w.Value))),
-            Word { Keyword: Keyword.undefined } w => PeekToken() is LeftParen
-                ? ParseFunction(new ObjectName(new Ident(w.Value)))
-                : new LiteralValue(new Value.SingleQuotedString(w.Value)),
-
-            SingleQuotedString s => new LiteralValue(new Value.SingleQuotedString(s.Value)),
-            Number n => new LiteralValue(new Value.Number(n.Value)),
-            _ => throw Expected("literal string, number, or function", token)
-        };
-    }
-
 
     public DataType ParseDataType()
     {

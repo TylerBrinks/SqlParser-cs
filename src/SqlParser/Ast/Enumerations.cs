@@ -314,6 +314,12 @@ public enum LockType
     Update
 }
 
+public enum MapAccessSyntax
+{
+    Bracket,
+    Period
+}
+
 public enum MySqlInsertPriority
 {
     None,
