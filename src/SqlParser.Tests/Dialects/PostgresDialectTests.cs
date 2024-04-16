@@ -1931,7 +1931,7 @@ namespace SqlParser.Tests.Dialects
         }
 
         [Fact]
-        public void Parse_Dollar_Quoted_string()
+        public void Parse_Dollar_Quoted_String()
         {
             var statements = ParseSqlStatements("SELECT $$hello$$, $tag_name$world$tag_name$, $$Foo$Bar$$, $$Foo$Bar$$col_name, $$$$, $tag_name$$tag_name$");
 

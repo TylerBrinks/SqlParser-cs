@@ -661,5 +661,64 @@ namespace SqlParser.Tests
 
             Assert.Equal(expected, tokens);
         }
+
+        [Fact]
+        public void Tokenize_Dollar_Quoted_String_Tagged()
+        {
+            const string sql = """
+                       SELECT $tag$dollar '$' quoted strings have $tags like this$ or like this $$$tag$
+                       """;
+
+            var tokens = new Tokenizer().Tokenize(sql, new GenericDialect());
+
+            var expected = new Sequence<Token>
+            {
+                new Word("SELECT"),
+                new Whitespace(WhitespaceKind.Space),
+                new DollarQuotedString("dollar '$' quoted strings have $tags like this$ or like this $$"){Tag = "tag"}
+            };
+
+            Assert.Equal(expected, tokens);
+        }
+
+        [Fact]
+        public void Tokenize_Dollar_Quoted_String_Tagged_Unterminated()
+        {
+            const string sql = """
+                       SELECT $tag$dollar '$' quoted strings have $tags like this$ or like this $$$different tag$
+                       """;
+
+            Assert.Throws<TokenizeException>(()=> new Tokenizer().Tokenize(sql, new GenericDialect()));
+        }
+
+        [Fact]
+        public void Tokenize_Dollar_Quoted_String_Untagged()
+        {
+            const string sql = """
+                       SELECT $$within dollar '$' quoted strings have $tags like this$ $$
+                       """;
+
+            var tokens = new Tokenizer().Tokenize(sql, new GenericDialect());
+
+            var expected = new Sequence<Token>
+            {
+                new Word("SELECT"),
+                new Whitespace(WhitespaceKind.Space),
+                new DollarQuotedString("within dollar '$' quoted strings have $tags like this$ ")
+            };
+
+            Assert.Equal(expected, tokens);
+        }
+
+        [Fact]
+        public void Tokenize_Dollar_Quoted_String_Untagged_Unterminated()
+        {
+            const string sql = """
+                       SELECT $$dollar '$' quoted strings have $tags like this$ or like this $different tag$
+                       """;
+
+            Assert.Throws<TokenizeException>(() => new Tokenizer().Tokenize(sql, new GenericDialect()));
+
+        }
     }
 }

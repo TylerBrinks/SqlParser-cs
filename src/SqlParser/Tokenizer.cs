@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Reflection.Metadata.Ecma335;
+using System.Text;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
 
@@ -870,7 +871,7 @@ public ref struct Tokenizer(bool unescape = true)
         // Placeholders can be any character in the broader unicode range,
         // not just ASCII letters and numbers.  As such, the tokenizer needs
         // to read every unicode alphanumeric character, hence the use of
-        // the built in IsLetterOrDigit method.
+        // the built-in IsLetterOrDigit method.
         var word = _state.PeekTakeWhile(c => char.IsLetterOrDigit(c) || c == Symbols.Underscore);
 
         value.AddRange(word);
@@ -878,41 +879,63 @@ public ref struct Tokenizer(bool unescape = true)
         if (_state.Peek() == Symbols.Dollar)
         {
             _state.Next();
-            var range = _state.PeekTakeWhile(c => c != Symbols.Dollar);
-            foreach (var r in range)
+            var loop = true;
+            while (loop)
             {
-                builder.Append(r);
-            }
+                var range = _state.PeekTakeWhile(c => c != Symbols.Dollar);
+                foreach (var r in range)
+                {
+                    builder.Append(r);
+                }
 
-            switch (_state.Peek())
-            {
-                case Symbols.Dollar:
-                    _state.Next();
+                var breakToLoop = false;
 
-                    foreach (var _ in value)
-                    {
+                switch (_state.Peek())
+                {
+                    case Symbols.Dollar:
                         _state.Next();
-                        var next = _state.Peek();
-
-                        if (next == Symbols.EndOfFile)
+                        var intermediate = new StringBuilder("$");
+                        
+                        foreach (var c in value)
                         {
-                            throw new TokenizeException($"Unterminated dollar-quoted string at or near {new string(value.ToArray())}", _state.CloneLocation());
+                            var nextChar = _state.Next();
+                            if (nextChar != null)
+                            {
+                                intermediate.Append(nextChar);
+                                if (nextChar != c)
+                                {
+                                    builder.Append(intermediate.ToString());
+                                    breakToLoop = true;
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                throw new TokenizeException(
+                                    $"Unterminated dollar-quoted string at or near {new string(value.ToArray())}",
+                                    _state.CloneLocation());
+                            }
                         }
-                    }
 
-                    if (_state.Peek() == Symbols.Dollar)
-                    {
-                        _state.Next();
-                    }
-                    else
-                    {
+                        if (breakToLoop)
+                        {
+                            continue;
+                        }
+
+                        if (_state.Peek() == Symbols.Dollar)
+                        {
+                            _state.Next();
+                            intermediate.Append("$");
+                            loop = false;
+                            break;
+                        }
+                        
+                        builder.Append(intermediate.ToString());
+                        continue;
+
+                    default:
                         throw new TokenizeException("Unterminated dollar-quoted, expected $", _state.CloneLocation());
-                    }
-
-                    break;
-
-                default:
-                    throw new TokenizeException("Unterminated dollar-quoted, expected $", _state.CloneLocation());
+                }
             }
         }
         else
