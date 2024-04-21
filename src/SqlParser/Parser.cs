@@ -9178,7 +9178,11 @@ public class Parser
         }
 
         ReplaceSelectItem? optReplace = null;
-        if (_dialect is GenericDialect or BigQueryDialect or ClickHouseDialect)
+        if (_dialect is GenericDialect 
+            or BigQueryDialect 
+            or ClickHouseDialect
+            or DuckDbDialect 
+            or SnowflakeDialect)
         {
             optReplace = ParseOptionalSelectItemReplace();
         }

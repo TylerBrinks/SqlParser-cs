@@ -344,38 +344,6 @@ public class BigQueryDialectTests : ParserTestBase
     }
 
     [Fact]
-    public void Test_Select_Wildcard_With_Replace()
-    {
-        var select = VerifiedOnlySelect("SELECT * REPLACE ('widget' AS item_name) FROM orders");
-        var expected = new SelectItem.Wildcard(new WildcardAdditionalOptions
-        {
-            ReplaceOption = new ReplaceSelectItem(new ReplaceSelectElement[]
-            {
-                new(new LiteralValue(new Value.SingleQuotedString("widget")), "item_name", true)
-            })
-        });
-
-        Assert.Equal(expected, select.Projection[0]);
-
-        select = VerifiedOnlySelect("SELECT * REPLACE (quantity / 2 AS quantity, 3 AS order_id) FROM orders");
-        expected = new SelectItem.Wildcard(new WildcardAdditionalOptions
-        {
-            ReplaceOption = new ReplaceSelectItem(new ReplaceSelectElement[]
-            {
-                new (new BinaryOp(
-                    new Identifier("quantity"),
-                    BinaryOperator.Divide,
-                    new LiteralValue(Number("2"))
-                ), "quantity", true),
-
-                new(new LiteralValue(Number("3")), "order_id", true)
-            })
-        });
-
-        Assert.Equal(expected, select.Projection[0]);
-    }
-
-    [Fact]
     public void Parse_Map_Access_Expr()
     {
         var expr = VerifiedExpr("users[-1][safe_offset(2)].a.b");
