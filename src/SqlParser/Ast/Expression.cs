@@ -10,34 +10,6 @@ public abstract record Expression : IWriteSql, IElement
 
         string? NegatedText => Negated ? "NOT " : null;
     }
-
-    /// <summary>
-    /// Case-based expression and data type
-    /// </summary>
-    /// <param name="Expression">Expression</param>
-    /// <param name="DataType">Data type</param>
-    public abstract record CastBase(Expression Expression, DataType DataType, CastFormat? Format) : Expression
-    {
-        public override void ToSql(SqlTextWriter writer)
-        {
-            var cast = this switch
-            {
-                Cast => "CAST",
-                SafeCast => "SAFE_CAST",
-                TryCast => "TRY_CAST",
-                _ => string.Empty
-            };
-
-            writer.WriteSql($"{cast}({Expression} AS {DataType}");
-
-            if (Format != null)
-            {
-                writer.WriteSql($" FORMAT {Format}");
-            }
-
-            writer.Write(")");
-        }
-    }
     /// <summary>
     /// Aggregate function with filter
     /// </summary>
@@ -255,10 +227,37 @@ public abstract record Expression : IWriteSql, IElement
             writer.Write(" END");
         }
     }
+
     /// <summary>
     /// CAST an expression to a different data type e.g. `CAST(foo AS VARCHAR(123))`
     /// </summary>
-    public record Cast(Expression Expression, DataType DataType, CastFormat? Format = null) : CastBase(Expression, DataType, Format);
+    public record Cast(Expression Expression, DataType DataType, CastKind Kind, CastFormat? Format = null) : Expression
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            if (Kind == CastKind.DoubleColon)
+            {
+                writer.WriteSql($"{Expression}::{DataType}");
+                return;
+            }
+
+            var kind = Kind switch
+            {
+                CastKind.Cast => "CAST",
+                CastKind.TryCast => "TRY_CAST",
+                CastKind.SafeCast => "SAFE_CAST"
+            };
+          
+            if (Format != null)
+            {
+                writer.WriteSql($"{kind}({Expression} as {DataType} FORMAT {Format})");
+            }
+            else
+            {
+                writer.WriteSql($"{kind}({Expression} as {DataType})");
+            }
+        }
+    }
     /// <summary>
     /// CEIL(Expression [TO DateTimeField])
     /// </summary>
@@ -1139,7 +1138,7 @@ public abstract record Expression : IWriteSql, IElement
     /// </summary>
     /// <param name="Expression">Expression</param>
     /// <param name="DataType"></param>
-    public record SafeCast(Expression Expression, DataType DataType, CastFormat? Format = null) : CastBase(Expression, DataType, Format);
+    //public record SafeCast(Expression Expression, DataType DataType, CastFormat? Format = null) : CastBase(Expression, DataType, Format);
     /// <summary>
     /// SimilarTo regex
     /// </summary>
@@ -1296,7 +1295,7 @@ public abstract record Expression : IWriteSql, IElement
     /// </summary>
     /// <param name="Expression">Expression</param>
     /// <param name="DataType">Cast data type</param>
-    public record TryCast(Expression Expression, DataType DataType, CastFormat? Format = null) : CastBase(Expression, DataType, Format);
+    //public record TryCast(Expression Expression, DataType DataType, CastFormat? Format = null) : CastBase(Expression, DataType, Format);
     /// <summary>
     /// ROW / TUPLE a single value, such as `SELECT (1, 2)`
     /// </summary>

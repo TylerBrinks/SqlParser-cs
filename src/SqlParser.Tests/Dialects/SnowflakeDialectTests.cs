@@ -131,7 +131,8 @@ namespace SqlParser.Tests.Dialects
         public void Parse_Array()
         {
             var select = VerifiedOnlySelect("SELECT CAST(a AS ARRAY) FROM customer");
-            Assert.Equal(new Cast(new Identifier("a"), new DataType.Array(new ArrayElementTypeDef.None())), select.Projection.Single().AsExpr());
+            Assert.Equal(new Cast(new Identifier("a"), new DataType.Array(new ArrayElementTypeDef.None()), CastKind.Cast), 
+                select.Projection.Single().AsExpr());
         }
 
         [Fact]
@@ -187,6 +188,8 @@ namespace SqlParser.Tests.Dialects
             };
 
             Assert.Equal(projection, select.Projection);
+
+            VerifiedStatement("SELECT a:b::INT FROM t");
         }
 
         [Fact]

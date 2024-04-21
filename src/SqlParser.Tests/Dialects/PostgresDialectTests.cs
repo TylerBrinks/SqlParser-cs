@@ -399,17 +399,17 @@ namespace SqlParser.Tests.Dialects
             DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
 
             var sql = """
-                CREATE TABLE public.customer (
-                customer_id integer DEFAULT nextval(public.customer_customer_id_seq),
-                store_id smallint NOT NULL,
-                first_name character varying(45) NOT NULL,
-                last_name character varying(45) COLLATE "es_ES" NOT NULL,
-                email character varying(50),
-                address_id smallint NOT NULL,
-                activebool boolean DEFAULT true NOT NULL,
-                create_date date DEFAULT now()::text NOT NULL,
-                last_update timestamp without time zone DEFAULT now() NOT NULL,
-                active int NOT NULL
+                CREATE TABLE public.customer ( 
+                customer_id integer DEFAULT nextval(public.customer_customer_id_seq), 
+                store_id smallint NOT NULL, 
+                first_name character varying(45) NOT NULL, 
+                last_name character varying(45) COLLATE "es_ES" NOT NULL, 
+                email character varying(50), 
+                address_id smallint NOT NULL, 
+                activebool boolean DEFAULT true NOT NULL, 
+                create_date date DEFAULT now()::text NOT NULL, 
+                last_update timestamp without time zone DEFAULT now() NOT NULL, 
+                active int NOT NULL 
                 ) WITH (fillfactor = 20, user_catalog_table = true, autovacuum_vacuum_threshold = 100)
                 """;
 
@@ -456,7 +456,7 @@ namespace SqlParser.Tests.Dialects
 
                 new("create_date", new DataType.Date(), Options: new ColumnOptionDef[]
                 {
-                    new(new ColumnOption.Default(VerifiedExpr("CAST(now() AS TEXT)"))),
+                    new(new ColumnOption.Default(VerifiedExpr("now()::TEXT)"))),
                     new(new ColumnOption.NotNull())
                 }),
 
@@ -498,15 +498,15 @@ namespace SqlParser.Tests.Dialects
                 """;
             var canonical = """
                 CREATE TABLE public.customer (
-                customer_id INTEGER DEFAULT nextval(CAST('public.customer_customer_id_seq' AS REGCLASS)) NOT NULL,
+                customer_id INTEGER DEFAULT nextval('public.customer_customer_id_seq'::REGCLASS) NOT NULL,
                  store_id SMALLINT NOT NULL,
                  first_name CHARACTER VARYING(45) NOT NULL,
                  last_name CHARACTER VARYING(45) NOT NULL,
                  info TEXT[],
                  address_id SMALLINT NOT NULL,
                  activebool BOOLEAN DEFAULT true NOT NULL,
-                 create_date DATE DEFAULT CAST(now() AS DATE) NOT NULL,
-                 create_date1 DATE DEFAULT CAST(CAST('now' AS TEXT) AS DATE) NOT NULL,
+                 create_date DATE DEFAULT now()::DATE NOT NULL,
+                 create_date1 DATE DEFAULT 'now'::TEXT::DATE NOT NULL,
                  last_update TIMESTAMP WITHOUT TIME ZONE DEFAULT now(),
                  release_year public.year,
                  active INT
@@ -973,8 +973,8 @@ namespace SqlParser.Tests.Dialects
             execute = VerifiedStatement<Statement.Execute>("EXECUTE a USING CAST(1337 AS SMALLINT), CAST(7331 AS SMALLINT)");
             Assert.Equal(new Statement.Execute("a", null, new Sequence<Expression>
             {
-                new Cast(new LiteralValue(new Value.Number("1337")), new DataType.SmallInt()),
-                new Cast(new LiteralValue(new Value.Number("7331")), new DataType.SmallInt()),
+                new Cast(new LiteralValue(new Value.Number("1337")), new DataType.SmallInt(), CastKind.Cast),
+                new Cast(new LiteralValue(new Value.Number("7331")), new DataType.SmallInt(), CastKind.Cast),
             }), execute);
         }
 
@@ -1223,13 +1223,13 @@ namespace SqlParser.Tests.Dialects
                                     )
                                 )
                             }, true)
-                        )
-                        ,
+                        ),
                         new DataType.Array(
                             new ArrayElementTypeDef.SquareBracket(
                                 new DataType.Array(
                                     new ArrayElementTypeDef.SquareBracket(
-                                        new DataType.Int()))))
+                                        new DataType.Int())))), 
+                        CastKind.Cast
                     )
                 //new DataType.Array(new DataType.Array(new DataType.Int())))
                 ),

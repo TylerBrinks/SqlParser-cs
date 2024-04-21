@@ -1217,11 +1217,11 @@ namespace SqlParser.Tests
         public void Parse_Cast()
         {
             var select = VerifiedOnlySelect("SELECT CAST(id AS BIGINT) FROM customer");
-            var expected = new Cast(new Identifier("id"), new BigInt());
+            var expected = new Cast(new Identifier("id"), new BigInt(), CastKind.Cast);
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
             select = VerifiedOnlySelect("SELECT CAST(id AS TINYINT) FROM customer");
-            expected = new Cast(new Identifier("id"), new TinyInt());
+            expected = new Cast(new Identifier("id"), new TinyInt(), CastKind.Cast);
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
             OneStatementParsesTo(
@@ -1237,35 +1237,35 @@ namespace SqlParser.Tests
             VerifiedStatement("SELECT CAST(id AS DECIMAL) FROM customer");
 
             select = VerifiedOnlySelect("SELECT CAST(id AS NVARCHAR(50)) FROM customer");
-            expected = new Cast(new Identifier("id"), new Nvarchar(50));
+            expected = new Cast(new Identifier("id"), new Nvarchar(50), CastKind.Cast);
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
             select = VerifiedOnlySelect("SELECT CAST(id AS CLOB) FROM customer");
-            expected = new Cast(new Identifier("id"), new Clob());
+            expected = new Cast(new Identifier("id"), new Clob(), CastKind.Cast);
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
             select = VerifiedOnlySelect("SELECT CAST(id AS CLOB(50)) FROM customer");
-            expected = new Cast(new Identifier("id"), new Clob(50));
+            expected = new Cast(new Identifier("id"), new Clob(50), CastKind.Cast);
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
             select = VerifiedOnlySelect("SELECT CAST(id AS BINARY(50)) FROM customer");
-            expected = new Cast(new Identifier("id"), new Binary(50));
+            expected = new Cast(new Identifier("id"), new Binary(50), CastKind.Cast);
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
             select = VerifiedOnlySelect("SELECT CAST(id AS VARBINARY(50)) FROM customer");
-            expected = new Cast(new Identifier("id"), new Varbinary(50));
+            expected = new Cast(new Identifier("id"), new Varbinary(50), CastKind.Cast);
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
             select = VerifiedOnlySelect("SELECT CAST(id AS BLOB) FROM customer");
-            expected = new Cast(new Identifier("id"), new Blob());
+            expected = new Cast(new Identifier("id"), new Blob(), CastKind.Cast);
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
             select = VerifiedOnlySelect("SELECT CAST(id AS BLOB(50)) FROM customer");
-            expected = new Cast(new Identifier("id"), new Blob(50));
+            expected = new Cast(new Identifier("id"), new Blob(50), CastKind.Cast);
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
             select = VerifiedOnlySelect("SELECT CAST(details AS JSONB) FROM customer");
-            expected = new Cast(new Identifier("details"), new JsonB());
+            expected = new Cast(new Identifier("details"), new JsonB(), CastKind.Cast);
             Assert.Equal(expected, select.Projection.Single().AsExpr());
         }
 
@@ -1274,7 +1274,7 @@ namespace SqlParser.Tests
         {
             var select = VerifiedOnlySelect("SELECT TRY_CAST(id AS BIGINT) FROM customer");
 
-            var expected = new TryCast(new Identifier("id"), new BigInt());
+            var expected = new Cast(new Identifier("id"), new BigInt(), CastKind.TryCast);
 
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 

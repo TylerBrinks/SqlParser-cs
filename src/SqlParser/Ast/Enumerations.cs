@@ -103,6 +103,13 @@ public enum BinaryOperator
     // No binary operation
 }
 
+public enum CastKind
+{
+    Cast,
+    TryCast,
+    SafeCast,
+    DoubleColon
+}
 /// <summary>
 /// Possible units for characters, initially based on 2016 ANSI.
 ///

@@ -869,7 +869,7 @@ public class Parser
             return null;
         }
 
-        Expression ParseCastExpression(Func<Expression, DataType, CastFormat?, Expression> create)
+        Expression ParseCastExpression(CastKind kind /*Func<Expression, DataType, CastFormat?, Expression> create*/)
         {
             return ExpectParens(() =>
             {
@@ -877,19 +877,21 @@ public class Parser
                 ExpectKeyword(Keyword.AS);
                 var dataType = ParseDataType();
                 var format = ParseOptionalCastFormat();
-                return create(expr, dataType, format);
+                //return create(expr, dataType, format);
+
+                return new Cast(expr, dataType, kind, format);
             });
         }
 
-        Expression ParseTryCastExpr()
-        {
-            return ParseCastExpression((expr, dataType, format) => new TryCast(expr, dataType, format));
-        }
+        //Expression ParseTryCastExpr()
+        //{
+        //    return ParseCastExpression((expr, dataType, format) => new TryCast(expr, dataType, format));
+        //}
 
-        Expression ParseSafeCastExpr()
-        {
-            return ParseCastExpression((expr, dataType, format) => new SafeCast(expr, dataType, format));
-        }
+        //Expression ParseSafeCastExpr()
+        //{
+        //    return ParseCastExpression((expr, dataType, format) => new SafeCast(expr, dataType, format));
+        //}
 
         // Parse a SQL EXISTS expression e.g. `WHERE EXISTS(SELECT ...)`.
         Exists ParseExistsExpr(bool negated)
@@ -1402,10 +1404,9 @@ public class Parser
 
             Word { Keyword: Keyword.CASE } => ParseCaseExpr(),
             Word { Keyword: Keyword.CONVERT } => ParseConvertExpr(),
-            Word { Keyword: Keyword.CAST } => ParseCastExpression((expr, dataType, format) =>
-                new Cast(expr, dataType, format)),
-            Word { Keyword: Keyword.TRY_CAST } => ParseTryCastExpr(),
-            Word { Keyword: Keyword.SAFE_CAST } => ParseSafeCastExpr(),
+            Word { Keyword: Keyword.CAST } => ParseCastExpression(CastKind.Cast /*(expr, dataType, format) => new Cast(expr, dataType, format)*/),
+            Word { Keyword: Keyword.TRY_CAST } => ParseCastExpression(CastKind.TryCast),
+            Word { Keyword: Keyword.SAFE_CAST } => ParseCastExpression(CastKind.SafeCast),
             Word { Keyword: Keyword.EXISTS } => ParseExistsExpr(false),
             Word { Keyword: Keyword.EXTRACT } => ParseExtractExpr(),
             Word { Keyword: Keyword.CEIL } => ParseCeilFloorExpr(true),
@@ -2274,7 +2275,8 @@ public class Parser
 
         if (token is DoubleColon)
         {
-            return ParsePgCast(expr);
+            //return ParsePgCast(expr);
+            return new Cast(expr, ParseDataType(), CastKind.DoubleColon);
         }
 
         if (token is ExclamationMark)
@@ -2499,10 +2501,10 @@ public class Parser
     /// </summary>
     /// <param name="expr"></param>
     /// <returns></returns>
-    public Expression ParsePgCast(Expression expr)
-    {
-        return new Cast(expr, ParseDataType());
-    }
+    //public Expression ParsePgCast(Expression expr)
+    //{
+    //    return new Cast(expr, ParseDataType(), CastKind.DoubleColon);
+    //}
 
     /// <summary>
     /// Get the precedence of the next token
