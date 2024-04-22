@@ -5799,6 +5799,21 @@ public class Parser
             var columnPosition = ParseColumnPosition();
             operation = new ChangeColumn(oldName, newName, dataType, options, columnPosition);
         }
+        else if (ParseKeyword(Keyword.MODIFY))
+        {
+            _ = ParseKeyword(Keyword.COLUMN);
+
+            var columnName = ParseIdentifier();
+            var dataType = ParseDataType();
+            var options = new Sequence<ColumnOption>();
+            while (ParseOptionalColumnOption() is { } option)
+            {
+                options.Add(option);
+            }
+
+            var position = ParseColumnPosition();
+            return new AlterTableOperation.ModifyColumn(columnName, dataType, options, position);
+        }
         else if (ParseKeyword(Keyword.ALTER))
         {
             ParseKeyword(Keyword.COLUMN);

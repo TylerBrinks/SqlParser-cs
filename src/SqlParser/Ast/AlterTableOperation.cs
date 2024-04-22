@@ -61,7 +61,43 @@ public abstract record AlterTableOperation : IWriteSql
             }
         }
     }
+    /// <summary>
+    ///  Add partitions table operation
+    /// <example>
+    /// <c>
+    /// ADD PARTITION
+    /// </c>
+    /// </example>
+    /// </summary>
+    /// <param name="IfNotExists"></param>
+    /// <param name="NewPartitions"></param>
+    public record AddPartitions(bool IfNotExists, Sequence<Partition> NewPartitions) : AlterTableOperation, IIfNotExists, IElement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            var ifNot = IfNotExists ? $" {IIfNotExists.IfNotExistsPhrase}" : null;
 
+            writer.WriteSql($"ADD{ifNot} ");
+            writer.WriteDelimited(NewPartitions, " ");
+        }
+    }
+    /// <summary>
+    /// Alter column table operation
+    /// <example>
+    /// <c>
+    /// ALTER [ COLUMN ]
+    /// </c>
+    /// </example>
+    /// </summary>
+    /// <param name="ColumnName">Column Name</param>
+    /// <param name="Operation">Alter column operation</param>
+    public record AlterColumn(Ident ColumnName, AlterColumnOperation Operation) : AlterTableOperation, IElement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"ALTER COLUMN {ColumnName} {Operation}");
+        }
+    }
     /// <summary>
     /// DISABLE ROW LEVEL SECURITY
     /// Note: this is a PostgreSQL-specific operation.
@@ -149,6 +185,24 @@ public abstract record AlterTableOperation : IWriteSql
     /// </c>
     /// </example>
     /// </summary>
+    /// <summary>
+    /// Drop partitions table operation
+    /// <example>
+    /// <c>
+    /// DROP PARTITION
+    /// </c>
+    /// </example>
+    /// </summary>
+    /// <param name="Partitions">Partitions sto drop</param>
+    /// <param name="IfExists">Contains If Not Exists</param>
+    public record DropPartitions(Sequence<Expression> Partitions, bool IfExists) : AlterTableOperation, IElement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            var ie = IfExists ? " IF EXISTS" : null;
+            writer.WriteSql($"DROP{ie} PARTITION ({Partitions})");
+        }
+    }
     public record DropPrimaryKey : AlterTableOperation
     {
         public override void ToSql(SqlTextWriter writer)
@@ -226,6 +280,34 @@ public abstract record AlterTableOperation : IWriteSql
             writer.WriteSql($"ENABLE TRIGGER {Name}");
         }
     }
+
+    /// <summary>
+    /// CHANGE [ COLUMN ] col_name data_type [ options ]
+    /// </summary>
+    public record ModifyColumn(
+        Ident ColumnName,
+        DataType DataType,
+        Sequence<ColumnOption> Options,
+        MySqlColumnPosition? ColumnPosition)
+        : AlterTableOperation
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"MODIFY COLUMN {ColumnName} {DataType}");
+
+            if (Options.SafeAny())
+            {
+                writer.Write(" ");
+                writer.WriteDelimited(Options, " ");
+            }
+
+            if (ColumnPosition != null)
+            {
+                writer.WriteSql($" {ColumnPosition}");
+            }
+        }
+    }
+    
     /// <summary>
     /// Rename partitions table operation
     /// <example>
@@ -241,44 +323,6 @@ public abstract record AlterTableOperation : IWriteSql
         public override void ToSql(SqlTextWriter writer)
         {
             writer.WriteSql($"PARTITION ({OldPartitions}) RENAME TO PARTITION ({NewPartitions})");
-        }
-    }
-    /// <summary>
-    /// Add partitions table operation
-    /// <example>
-    /// <c>
-    /// ADD PARTITION
-    /// </c>
-    /// </example>
-    /// </summary>
-    /// <param name="IfNotExists"></param>
-    /// <param name="NewPartitions"></param>
-    public record AddPartitions(bool IfNotExists, Sequence<Partition> NewPartitions) : AlterTableOperation, IIfNotExists, IElement
-    {
-        public override void ToSql(SqlTextWriter writer)
-        {
-            var ifNot = IfNotExists ? $" {IIfNotExists.IfNotExistsPhrase}" : null;
-
-            writer.WriteSql($"ADD{ifNot} ");
-            writer.WriteDelimited(NewPartitions, " ");
-        }
-    }
-    /// <summary>
-    /// Drop partitions table operation
-    /// <example>
-    /// <c>
-    /// DROP PARTITION
-    /// </c>
-    /// </example>
-    /// </summary>
-    /// <param name="Partitions">Partitions sto drop</param>
-    /// <param name="IfExists">Contains If Not Exists</param>
-    public record DropPartitions(Sequence<Expression> Partitions, bool IfExists) : AlterTableOperation, IElement
-    {
-        public override void ToSql(SqlTextWriter writer)
-        {
-            var ie = IfExists ? " IF EXISTS" : null;
-            writer.WriteSql($"DROP{ie} PARTITION ({Partitions})");
         }
     }
     /// <summary>
@@ -365,23 +409,6 @@ public abstract record AlterTableOperation : IWriteSql
         public override void ToSql(SqlTextWriter writer)
         {
             writer.WriteSql($"RENAME CONSTRAINT {OldName} TO {NewName}");
-        }
-    }
-    /// <summary>
-    /// Alter column table operation
-    /// <example>
-    /// <c>
-    /// ALTER [ COLUMN ]
-    /// </c>
-    /// </example>
-    /// </summary>
-    /// <param name="ColumnName">Column Name</param>
-    /// <param name="Operation">Alter column operation</param>
-    public record AlterColumn(Ident ColumnName, AlterColumnOperation Operation) : AlterTableOperation, IElement
-    {
-        public override void ToSql(SqlTextWriter writer)
-        {
-            writer.WriteSql($"ALTER COLUMN {ColumnName} {Operation}");
         }
     }
     /// <summary>

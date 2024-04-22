@@ -1302,5 +1302,57 @@ namespace SqlParser.Tests.Dialects
             ], null);
             Assert.Equal(expected, alter);
         }
+
+
+        [Fact]
+        public void Parse_Alter_Table_Modify_Column()
+        {
+            var sql1 = "ALTER TABLE orders MODIFY COLUMN description TEXT NOT NULL";
+            var expectedName = new ObjectName("orders");
+            var expectedOperation = new AlterTableOperation.ModifyColumn("description", new DataType.Text(), [new ColumnOption.NotNull()], null);
+            var operation = AlterTableOpWithName(VerifiedStatement(sql1), expectedName);
+            Assert.Equal(expectedOperation, operation);
+
+            operation = AlterTableOpWithName(OneStatementParsesTo("ALTER TABLE orders MODIFY description TEXT NOT NULL", sql1), expectedName);
+            Assert.Equal(expectedOperation, operation);
+
+            operation = AlterTableOpWithName(VerifiedStatement("ALTER TABLE orders MODIFY COLUMN description TEXT NOT NULL FIRST"), expectedName);
+            expectedOperation = new AlterTableOperation.ModifyColumn("description", new DataType.Text(), [new ColumnOption.NotNull()], 
+                new MySqlColumnPosition.First());
+            Assert.Equal(expectedOperation, operation);
+
+            expectedOperation = new AlterTableOperation.ModifyColumn("description", new DataType.Text(),
+                [new ColumnOption.NotNull()],
+                new MySqlColumnPosition.After("foo"));
+
+            operation = AlterTableOpWithName(VerifiedStatement("ALTER TABLE orders MODIFY COLUMN description TEXT NOT NULL AFTER foo"), expectedName);
+            Assert.Equal(expectedOperation, operation);
+        }
+
+        [Fact]
+        public void Parse_Alter_Table_Modify_Column_With_Column_Position()
+        {
+            var sql1 = "ALTER TABLE orders MODIFY COLUMN description TEXT NOT NULL FIRST";
+            var expectedName = new ObjectName("orders");
+            var expectedOperation = new AlterTableOperation.ModifyColumn("description", new DataType.Text(), [new ColumnOption.NotNull()],
+                new MySqlColumnPosition.First());
+            var operation = AlterTableOpWithName(VerifiedStatement(sql1), expectedName);
+            Assert.Equal(expectedOperation, operation);
+
+            operation = AlterTableOpWithName(OneStatementParsesTo("ALTER TABLE orders MODIFY description TEXT NOT NULL FIRST", sql1), expectedName);
+            expectedOperation = new AlterTableOperation.ModifyColumn("description", new DataType.Text(), [new ColumnOption.NotNull()], 
+                new MySqlColumnPosition.First());
+            Assert.Equal(expectedOperation, operation);
+
+            sql1 = "ALTER TABLE orders MODIFY COLUMN description TEXT NOT NULL AFTER total_count";
+            expectedOperation = new AlterTableOperation.ModifyColumn("description", new DataType.Text(),
+                [new ColumnOption.NotNull()],
+                new MySqlColumnPosition.After("total_count"));
+            operation = AlterTableOpWithName(VerifiedStatement(sql1), expectedName);
+            Assert.Equal(expectedOperation, operation);
+
+            operation = AlterTableOpWithName(OneStatementParsesTo("ALTER TABLE orders MODIFY description TEXT NOT NULL AFTER total_count", sql1), expectedName);
+            Assert.Equal(expectedOperation, operation);
+        }
     }
 }

@@ -479,6 +479,7 @@ public enum Keyword
     MOD,
     MODE,
     MODIFIES,
+    MODIFY,
     MODULE,
     MONTH,
     MSCK,
