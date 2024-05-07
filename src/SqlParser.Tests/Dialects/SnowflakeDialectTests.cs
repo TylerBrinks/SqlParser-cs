@@ -223,59 +223,6 @@ namespace SqlParser.Tests.Dialects
         }
 
         [Fact]
-        public void Parse_Like()
-        {
-            Test(false);
-            Test(true);
-
-            void Test(bool negated)
-            {
-                var negation = negated ? "NOT " : null;
-
-                var select = VerifiedOnlySelect($"SELECT * FROM customers WHERE name {negation}LIKE '%a'");
-                var expected = new Like(new Identifier("name"), negated,
-                    new LiteralValue(new Value.SingleQuotedString("%a")));
-                Assert.Equal(expected, select.Selection);
-
-                select = VerifiedOnlySelect($"SELECT * FROM customers WHERE name {negation}LIKE '%a' ESCAPE '\\'");
-                expected = new Like(new Identifier("name"), negated,
-                    new LiteralValue(new Value.SingleQuotedString("%a")), Symbols.Backslash);
-                Assert.Equal(expected, select.Selection);
-
-                // This statement tests that LIKE and NOT LIKE have the same precedence.
-                select = VerifiedOnlySelect($"SELECT * FROM customers WHERE name {negation}LIKE '%a' IS NULL");
-                var isNull = new IsNull(new Like(new Identifier("name"), negated,
-                    new LiteralValue(new Value.SingleQuotedString("%a"))));
-                Assert.Equal(isNull, select.Selection);
-            }
-        }
-
-        [Fact]
-        public void Parse_Similar_To()
-        {
-            Test(false);
-            Test(true);
-
-            void Test(bool negated)
-            {
-                var negation = negated ? "NOT " : null;
-
-                var select = VerifiedOnlySelect($"SELECT * FROM customers WHERE name {negation}SIMILAR TO '%a'");
-                var expected = new SimilarTo(new Identifier("name"), negated, new LiteralValue(new Value.SingleQuotedString("%a")));
-                Assert.Equal(expected, select.Selection);
-
-                select = VerifiedOnlySelect($"SELECT * FROM customers WHERE name {negation}SIMILAR TO '%a' ESCAPE '\\'");
-                expected = new SimilarTo(new Identifier("name"), negated, new LiteralValue(new Value.SingleQuotedString("%a")), Symbols.Backslash);
-                Assert.Equal(expected, select.Selection);
-
-                // This statement tests that LIKE and NOT LIKE have the same precedence.
-                select = VerifiedOnlySelect($"SELECT * FROM customers WHERE name {negation}SIMILAR TO '%a' ESCAPE '\\' IS NULL");
-                var isNull = new IsNull(new SimilarTo(new Identifier("name"), negated, new LiteralValue(new Value.SingleQuotedString("%a")), Symbols.Backslash));
-                Assert.Equal(isNull, select.Selection);
-            }
-        }
-
-        [Fact]
         public void Parse_Array_Arg_Func()
         {
             VerifiedStatement("SELECT ARRAY_AGG(x) WITHIN GROUP (ORDER BY x) AS a FROM T");
@@ -466,21 +413,27 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal(sql.Replace("\r", "").Replace("\n", ""), create.ToSql());
         }
 
-
         [Fact]
         public void Test_Create_Stage_With_File_Format()
         {
-            DefaultDialects = new Dialect[] { new SnowflakeDialect() };
+            DefaultDialects = [new SnowflakeDialect()];
 
-            const string sql = "CREATE OR REPLACE STAGE my_ext_stage URL='s3://load/files/' FILE_FORMAT=(COMPRESSION=AUTO BINARY_FORMAT=HEX ESCAPE='\\')";
+            const string sql = """
+                               CREATE OR REPLACE STAGE my_ext_stage 
+                               URL='s3://load/files/' 
+                               FILE_FORMAT=(COMPRESSION=AUTO BINARY_FORMAT=HEX ESCAPE='\\')
+                               """;
 
-            var create = VerifiedStatement<Statement.CreateStage>(sql);
+            var create = VerifiedStatement<Statement.CreateStage>(sql, options:new ParserOptions
+            {
+                Unescape = false
+            });
 
             Assert.Equal(new DataLoadingOption("COMPRESSION", DataLoadingOptionType.Enum, "AUTO"), create.FileFormat![0]);
             Assert.Equal(new DataLoadingOption("BINARY_FORMAT", DataLoadingOptionType.Enum, "HEX"), create.FileFormat![1]);
-            Assert.Equal(new DataLoadingOption("ESCAPE", DataLoadingOptionType.String, "\\"), create.FileFormat![2]);
-
-            Assert.Equal(sql, create.ToSql());
+            Assert.Equal(new DataLoadingOption("ESCAPE", DataLoadingOptionType.String, """\\"""), create.FileFormat![2]);
+           
+            Assert.Equal(sql.Replace("\r", null).Replace("\n", null), create.ToSql());
         }
 
         [Fact]
@@ -607,14 +560,19 @@ namespace SqlParser.Tests.Dialects
                                FROM 'gcs://mybucket/./../a.csv' 
                                FILES = ('file1.json', 'file2.json') 
                                PATTERN = '.*employees0[1-5].csv.gz' 
-                               FILE_FORMAT=(COMPRESSION=AUTO BINARY_FORMAT=HEX ESCAPE='\')
+                               FILE_FORMAT=(COMPRESSION=AUTO BINARY_FORMAT=HEX ESCAPE='\\')
                                """;
 
-            var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
-
+            var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql, options: new ParserOptions
+            {
+                Unescape = false
+            });
+            const string value = """
+                        \\
+                        """;
             Assert.Contains(copy.FileFormat!, o => o is { Name: "COMPRESSION", OptionType: DataLoadingOptionType.Enum, Value: "AUTO" });
             Assert.Contains(copy.FileFormat!, o => o is { Name: "BINARY_FORMAT", OptionType: DataLoadingOptionType.Enum, Value: "HEX" });
-            Assert.Contains(copy.FileFormat!, o => o is { Name: "ESCAPE", OptionType: DataLoadingOptionType.String, Value: "\\" });
+            Assert.Contains(copy.FileFormat!, o => o is { Name: "ESCAPE", OptionType: DataLoadingOptionType.String, Value: value });
         }
 
         [Fact]

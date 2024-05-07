@@ -2363,11 +2363,11 @@ public class Parser
     /// <summary>
     /// Parse the ESCAPE CHAR portion of LIKE, ILIKE, and SIMILAR TO
     /// </summary>
-    public char? ParseEscapeChar()
+    public string? ParseEscapeChar()
     {
         if (ParseKeyword(Keyword.ESCAPE))
         {
-            return ParseLiteralChar();
+            return ParseLiteralString();
         }
 
         return null;

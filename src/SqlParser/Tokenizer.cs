@@ -73,11 +73,13 @@ public ref struct Tokenizer(bool unescape = true)
             // string, but PostgreSQL, at least, allows a lowercase 'x' too.
             'X' or 'x' => TokenizeHex(),
 
-            Symbols.SingleQuote => new SingleQuotedString(new string(TokenizeQuotedString(Symbols.SingleQuote))),
+            Symbols.SingleQuote => new SingleQuotedString(
+                new string(TokenizeQuotedString(Symbols.SingleQuote, _dialect.SupportsStringLiteralBackslashEscape))),
+            
             Symbols.DoubleQuote when
                 !_dialect.IsDelimitedIdentifierStart(character) &&
-                !_dialect.IsIdentifierStart(character)
-                    => new DoubleQuotedString(new string(TokenizeQuotedString(Symbols.DoubleQuote))),
+                !_dialect.IsIdentifierStart(character) => new DoubleQuotedString(
+                    new string(TokenizeQuotedString(Symbols.DoubleQuote, _dialect.SupportsStringLiteralBackslashEscape))),
 
             // Delimited (quoted) identifier
             _ when
@@ -159,7 +161,7 @@ public ref struct Tokenizer(bool unescape = true)
         _state.Next();
         return _state.Peek() switch
         {
-            Symbols.SingleQuote => new NationalStringLiteral(new string(TokenizeQuotedString(Symbols.SingleQuote))),
+            Symbols.SingleQuote => new NationalStringLiteral(new string(TokenizeQuotedString(Symbols.SingleQuote, true))),
             _ => new Word(new string(TokenizeWord(first)), null)
         };
     }
@@ -190,7 +192,7 @@ public ref struct Tokenizer(bool unescape = true)
             return new Word(new string(TokenizeWord(first)), null);
         }
 
-        var hex = TokenizeQuotedString(Symbols.SingleQuote);
+        var hex = TokenizeQuotedString(Symbols.SingleQuote, true);
         return new HexStringLiteral(new string(hex));
 
     }
@@ -229,7 +231,7 @@ public ref struct Tokenizer(bool unescape = true)
             : word;
     }
 
-    private char[] TokenizeQuotedString(char quoteStyle)
+    private char[] TokenizeQuotedString(char quoteStyle, bool allowEscape)
     {
         var errorLocation = _state.CloneLocation();
         var word = new List<char>();
@@ -263,12 +265,12 @@ public ref struct Tokenizer(bool unescape = true)
                 }
 
             }
-            else if (current == Symbols.Backslash)
+            else if (current == Symbols.Backslash && allowEscape)
             {
                 _state.Next();
 
-                if (_dialect is MySqlDialect)
-                {
+                //if (_dialect is MySqlDialect)
+                //{
                     var next = _state.Peek();
                     if (!unescape)
                     {
@@ -280,14 +282,16 @@ public ref struct Tokenizer(bool unescape = true)
                     {
                         var symbol = next switch
                         {
-                            Symbols.SingleQuote
-                                or Symbols.DoubleQuote
-                                or Symbols.Backslash
-                                or Symbols.Percent
-                                or Symbols.Underscore
-                                => next,
+                            //Symbols.SingleQuote
+                            //    or Symbols.DoubleQuote
+                            //    or Symbols.Backslash
+                            //    or Symbols.Percent
+                            //    or Symbols.Underscore
+                            //    => next,
                             '0' => Symbols.Null,
+                            'a' => Symbols.Bel,
                             'b' => Symbols.Backspace,
+                            'f' => Symbols.FormFeed,
                             'n' => Symbols.NewLine,
                             'r' => Symbols.CarriageReturn,
                             't' => Symbols.Tab,
@@ -297,11 +301,11 @@ public ref struct Tokenizer(bool unescape = true)
                         word.Add(symbol);
                         _state.Next();
                     }
-                }
-                else
-                {
-                    word.Add(current);
-                }
+                //}
+                //else
+                //{
+                //    word.Add(current);
+                //}
             }
             else
             {
@@ -437,8 +441,8 @@ public ref struct Tokenizer(bool unescape = true)
         _state.Next();
         return _state.Peek() switch
         {
-            Symbols.SingleQuote => new SingleQuotedByteStringLiteral(new string(TokenizeQuotedString(Symbols.SingleQuote))),
-            Symbols.DoubleQuote => new DoubleQuotedByteStringLiteral(new string(TokenizeQuotedString(Symbols.DoubleQuote))),
+            Symbols.SingleQuote => new SingleQuotedByteStringLiteral(new string(TokenizeQuotedString(Symbols.SingleQuote, false))),
+            Symbols.DoubleQuote => new DoubleQuotedByteStringLiteral(new string(TokenizeQuotedString(Symbols.DoubleQuote, false))),
             _ => new Word(new string(TokenizeWord(current)), null)
         };
     }
@@ -449,8 +453,8 @@ public ref struct Tokenizer(bool unescape = true)
         _state.Next();
         return _state.Peek() switch
         {
-            Symbols.SingleQuote => new RawStringLiteral(new string(TokenizeQuotedString(Symbols.SingleQuote))),
-            Symbols.DoubleQuote => new RawStringLiteral(new string(TokenizeQuotedString(Symbols.DoubleQuote))),
+            Symbols.SingleQuote => new RawStringLiteral(new string(TokenizeQuotedString(Symbols.SingleQuote, false))),
+            Symbols.DoubleQuote => new RawStringLiteral(new string(TokenizeQuotedString(Symbols.DoubleQuote, false))),
             _ => new Word(new string(TokenizeWord(current)), null)
         };
     }

@@ -179,7 +179,6 @@ public class ClickhouseDialectTests : ParserTestBase
             """);
     }
 
-
     [Fact]
     public void Parse_Select_Star_Except()
     {
@@ -203,5 +202,4 @@ public class ClickhouseDialectTests : ParserTestBase
     {
         VerifiedStatement("SELECT * REPLACE (i + 1 AS i) FROM columns_transformers");
     }
-
 }

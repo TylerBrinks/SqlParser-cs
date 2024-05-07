@@ -1,4 +1,6 @@
-﻿namespace SqlParser.Ast;
+﻿using System.Runtime.CompilerServices;
+
+namespace SqlParser.Ast;
 
 // ReSharper disable CommentTypo
 
@@ -23,7 +25,7 @@ public abstract record Expression : IWriteSql, IElement
         }
     }
     /// <summary>
-    /// ALL operation e.g. `1 ALL (1)` or `foo > ALL(bar)`, It will be wrapped in the right side of BinaryExpr
+    /// ALL operation e.g. `1 ALL (1)` or `foo > ALL(bar)`, It will be wrapped on the right side of BinaryExpr
     /// </summary>
     /// <param name="Left">Expression</param>
     /// <param name="CompareOp">Operator</param>
@@ -580,8 +582,14 @@ public abstract record Expression : IWriteSql, IElement
     /// ILIKE (case-insensitive LIKE)
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    public record ILike(Expression Expression, bool Negated, Expression Pattern, char? EscapeChar = null) : Expression, INegated
+    public record ILike(Expression Expression, bool Negated, Expression Pattern, string? EscapeChar = null) : Expression, INegated
     {
+        public ILike(Expression expression, bool negated, Expression pattern, char? escapeChar = null)
+            : this(expression, negated, pattern, escapeChar?.ToString()) { }
+
+        public ILike(Expression? expression, bool negated, Expression pattern)
+            : this(expression, negated, pattern, (string?)null) { }
+        
         public override void ToSql(SqlTextWriter writer)
         {
             // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
@@ -863,8 +871,14 @@ public abstract record Expression : IWriteSql, IElement
     /// <param name="Negated">Negated</param>
     /// <param name="Pattern">pattern expression</param>
     /// <param name="EscapeChar">Escape character</param>
-    public record Like(Expression? Expression, bool Negated, Expression Pattern, char? EscapeChar = null) : Expression, INegated
+    public record Like(Expression? Expression, bool Negated, Expression Pattern, string? EscapeChar = null) : Expression, INegated
     {
+        public Like(Expression? expression, bool negated, Expression pattern, char? escapeChar = null)
+            : this(expression, negated, pattern, escapeChar?.ToString()) { }
+
+        public Like(Expression? expression, bool negated, Expression pattern)
+            : this(expression, negated, pattern, (string?)null) { }
+
         public override void ToSql(SqlTextWriter writer)
         {
             // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
@@ -1126,24 +1140,16 @@ public abstract record Expression : IWriteSql, IElement
         }
     }
     /// <summary>
-    /// SAFE_CAST an expression to a different data type
-    ///
-    /// only available for BigQuery: <see href="https://cloud.google.com/bigquery/docs/reference/standard-sql/functions-and-operators#safe_casting"/>
-    /// Works the same as `TRY_CAST`
-    /// <example>
-    /// <c>
-    /// SAFE_CAST(foo AS FLOAT64)
-    /// </c>
-    /// </example>
-    /// </summary>
-    /// <param name="Expression">Expression</param>
-    /// <param name="DataType"></param>
-    //public record SafeCast(Expression Expression, DataType DataType, CastFormat? Format = null) : CastBase(Expression, DataType, Format);
-    /// <summary>
     /// SimilarTo regex
     /// </summary>
-    public record SimilarTo(Expression Expression, bool Negated, Expression Pattern, char? EscapeChar = null) : Expression, INegated
+    public record SimilarTo(Expression Expression, bool Negated, Expression Pattern, string? EscapeChar = null) : Expression, INegated
     {
+        public SimilarTo(Expression expression, bool negated, Expression pattern, char? escapeChar = null)
+            : this(expression, negated, pattern, escapeChar?.ToString()){ }
+
+        public SimilarTo(Expression expression, bool negated, Expression pattern)
+            : this(expression, negated, pattern, (string?) null) { }
+
         public override void ToSql(SqlTextWriter writer)
         {
             // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
@@ -1283,19 +1289,6 @@ public abstract record Expression : IWriteSql, IElement
             writer.Write(")");
         }
     }
-    /// <summary>
-    /// TRY_CAST an expression to a different data type
-    ///
-    /// this differs from CAST in the choice of how to implement invalid conversions
-    /// <example>
-    /// <c>
-    /// TRY_CAST(foo AS VARCHAR(123))
-    /// </c>
-    /// </example>
-    /// </summary>
-    /// <param name="Expression">Expression</param>
-    /// <param name="DataType">Cast data type</param>
-    //public record TryCast(Expression Expression, DataType DataType, CastFormat? Format = null) : CastBase(Expression, DataType, Format);
     /// <summary>
     /// ROW / TUPLE a single value, such as `SELECT (1, 2)`
     /// </summary>

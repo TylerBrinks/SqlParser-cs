@@ -118,4 +118,7 @@ public abstract class Dialect
     public virtual bool SupportsStartTransactionModifier => false;
 
     public virtual bool SupportsNamedFunctionArgsWithEqOperator => false;
+    
+    public virtual bool SupportsStringLiteralBackslashEscape => false;
+
 }

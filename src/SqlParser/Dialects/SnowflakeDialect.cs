@@ -12,17 +12,15 @@ namespace SqlParser.Dialects;
 public class SnowflakeDialect : Dialect
 {
     public override bool IsIdentifierStart(char character)
-    {
-        return character.IsLetter() || character is Symbols.Underscore;
-    }
+        => character.IsLetter() || character is Symbols.Underscore;
+    
 
     public override bool IsIdentifierPart(char character)
-    {
-        return character.IsAlphaNumeric() || character is Symbols.Dollar or Symbols.Underscore;
-    }
+        => character.IsAlphaNumeric() || character is Symbols.Dollar or Symbols.Underscore;
 
     public override bool SupportsFilterDuringAggregation => true;
     public override bool SupportsWithinAfterArrayAggregation => true;
+    public override bool SupportsStringLiteralBackslashEscape => true;
 
     public override Statement? ParseStatement(Parser parser)
     {

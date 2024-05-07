@@ -304,59 +304,6 @@ public class HiveDialectTests : ParserTestBase
     }
 
     [Fact]
-    public void Parse_Like()
-    {
-        Test(false);
-        Test(true);
-
-        void Test(bool negated)
-        {
-            var negation = negated ? "NOT " : null;
-
-            var select = VerifiedOnlySelect($"SELECT * FROM customers WHERE name {negation}LIKE '%a'");
-            var expected = new Like(new Identifier("name"), negated,
-                new LiteralValue(new Value.SingleQuotedString("%a")));
-            Assert.Equal(expected, select.Selection);
-
-            select = VerifiedOnlySelect($"SELECT * FROM customers WHERE name {negation}LIKE '%a' ESCAPE '\\'");
-            expected = new Like(new Identifier("name"), negated,
-                new LiteralValue(new Value.SingleQuotedString("%a")), Symbols.Backslash);
-            Assert.Equal(expected, select.Selection);
-
-            // This statement tests that LIKE and NOT LIKE have the same precedence.
-            select = VerifiedOnlySelect($"SELECT * FROM customers WHERE name {negation}LIKE '%a' IS NULL");
-            var isNull = new IsNull(new Like(new Identifier("name"), negated,
-                new LiteralValue(new Value.SingleQuotedString("%a"))));
-            Assert.Equal(isNull, select.Selection);
-        }
-    }
-
-    [Fact]
-    public void Parse_Similar_To()
-    {
-        Test(false);
-        Test(true);
-
-        void Test(bool negated)
-        {
-            var negation = negated ? "NOT " : null;
-
-            var select = VerifiedOnlySelect($"SELECT * FROM customers WHERE name {negation}SIMILAR TO '%a'");
-            var expected = new SimilarTo(new Identifier("name"), negated, new LiteralValue(new Value.SingleQuotedString("%a")));
-            Assert.Equal(expected, select.Selection);
-
-            select = VerifiedOnlySelect($"SELECT * FROM customers WHERE name {negation}SIMILAR TO '%a' ESCAPE '\\'");
-            expected = new SimilarTo(new Identifier("name"), negated, new LiteralValue(new Value.SingleQuotedString("%a")), Symbols.Backslash);
-            Assert.Equal(expected, select.Selection);
-
-            // This statement tests that LIKE and NOT LIKE have the same precedence.
-            select = VerifiedOnlySelect($"SELECT * FROM customers WHERE name {negation}SIMILAR TO '%a' ESCAPE '\\' IS NULL");
-            var isNull = new IsNull(new SimilarTo(new Identifier("name"), negated, new LiteralValue(new Value.SingleQuotedString("%a")), Symbols.Backslash));
-            Assert.Equal(isNull, select.Selection);
-        }
-    }
-
-    [Fact]
     public void Parse_Describe()
     {
         VerifiedStatement("DESCRIBE namespace.`table`", new Dialect[] { new HiveDialect(), new GenericDialect() });

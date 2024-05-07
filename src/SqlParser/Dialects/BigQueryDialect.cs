@@ -12,26 +12,19 @@ public class BigQueryDialect : Dialect
     /// </summary>
     /// <param name="character"></param>
     /// <returns>True if an identifier; otherwise false</returns>
-    public override bool IsIdentifierStart(char character)
-    {
-        return character.IsLetter() || character == Symbols.Underscore;
-    }
+    public override bool IsIdentifierStart(char character) =>  character.IsLetter() || character == Symbols.Underscore;
     /// <summary>
     /// Checks if a given character is an ASCII letter, number, underscore, or minus
     /// </summary>
     /// <param name="character"></param>
     /// <returns>True if an identifier part; otherwise false</returns>
-    public override bool IsIdentifierPart(char character)
-    {
-        return character.IsAlphaNumeric() || character is Symbols.Underscore;// or Symbols.Minus;
-    }
+    public override bool IsIdentifierPart(char character) => character.IsAlphaNumeric() || character is Symbols.Underscore;
     /// <summary>
     /// Checks if a character is a
     /// </summary>
     /// <param name="character"></param>
     /// <returns></returns>
-    public override bool IsDelimitedIdentifierStart(char character)
-    {
-        return character == Symbols.Backtick;
-    }
+    public override bool IsDelimitedIdentifierStart(char character) => character == Symbols.Backtick;
+
+    public override bool SupportsStringLiteralBackslashEscape => true;
 }

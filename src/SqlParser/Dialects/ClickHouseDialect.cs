@@ -7,13 +7,9 @@
 /// </summary>
 public class ClickHouseDialect : Dialect
 {
-    public override bool IsIdentifierStart(char character)
-    {
-        return character.IsLetter() || character == Symbols.Underscore;
-    }
+    public override bool IsIdentifierStart(char character) => character.IsLetter() || character == Symbols.Underscore;
 
-    public override bool IsIdentifierPart(char character)
-    {
-        return IsIdentifierStart(character) || character.IsDigit();
-    }
+    public override bool IsIdentifierPart(char character) =>  IsIdentifierStart(character) || character.IsDigit();
+    
+    public override bool SupportsStringLiteralBackslashEscape => true;
 }
