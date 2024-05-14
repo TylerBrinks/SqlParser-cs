@@ -181,6 +181,7 @@ public abstract record Statement : IWriteSql, IElement
             writer.WriteSql($"ATTACH {keyword}{DatabaseFileName} AS {SchemaName}");
         }
     }
+   
     public record AttachDuckDbDatabase(
         bool IfNotExists,
         bool Database,
@@ -701,6 +702,7 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
+   
     public record CreateSecret(
         bool OrReplace,
         bool? Temporary,
@@ -1325,53 +1327,47 @@ public abstract record Statement : IWriteSql, IElement
     /// <param name="Using">Using</param>
     /// <param name="Selection">Selection expression</param>
     /// <param name="Returning">Select items to return</param>
-    public record Delete(
-        Sequence<ObjectName>? Tables,
-        FromTable From,
-        Sequence<OrderByExpression>? OrderBy = null,
-        TableFactor? Using = null,
-        Expression? Selection = null,
-        Sequence<SelectItem>? Returning = null,
-        Expression? Limit = null) : Statement
+    public record Delete(DeleteOperation DeleteOperation) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
             writer.Write("DELETE ");
 
-            if (Tables is { Count: > 0 })
+            if (DeleteOperation.Tables is { Count: > 0 })
             {
-                writer.WriteDelimited(Tables, ", ");
+                writer.WriteDelimited(DeleteOperation.Tables, ", ");
             }
 
-            writer.WriteSql($"{From}");
+            writer.WriteSql($"{DeleteOperation.From}");
 
-            if (Using != null)
+            if (DeleteOperation.Using != null)
             {
-                writer.WriteSql($" USING {Using}");
+                writer.WriteSql($" USING {DeleteOperation.Using}");
             }
 
-            if (Selection != null)
+            if (DeleteOperation.Selection != null)
             {
-                writer.WriteSql($" WHERE {Selection}");
+                writer.WriteSql($" WHERE {DeleteOperation.Selection}");
             }
 
-            if (Returning != null)
+            if (DeleteOperation.Returning != null)
             {
-                writer.WriteSql($" RETURNING {Returning}");
+                writer.WriteSql($" RETURNING {DeleteOperation.Returning}");
             }
 
-            if (OrderBy.SafeAny())
+            if (DeleteOperation.OrderBy.SafeAny())
             {
                 writer.Write(" ORDER BY ");
-                writer.WriteDelimited(OrderBy, ", ");
+                writer.WriteDelimited(DeleteOperation.OrderBy, ", ");
             }
 
-            if (Limit != null)
+            if (DeleteOperation.Limit != null)
             {
-                writer.WriteSql($" LIMIT {Limit}");
+                writer.WriteSql($" LIMIT {DeleteOperation.Limit}");
             }
         }
     }
+   
     public record DetachDuckDbDatabase(
         bool IfExists,
         bool Database,
@@ -1409,7 +1405,6 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
-
     /// <summary>
     /// EXECUTE name [ ( parameter [, ...] ) ] [USING <expr>]
     /// </summary>
@@ -1694,102 +1689,74 @@ public abstract record Statement : IWriteSql, IElement
     /// <summary>
     /// Insert statement
     /// </summary>
-    /// <param name="Name">Object name</param>
-    /// <param name="Source">Source query</param>
-    public record Insert([property: Visit(0)] ObjectName Name, [property: Visit(1)] Select? Source) : Statement
+    /// <param name="InsertOperation">Insert operation</param>
+    public record Insert(InsertOperation InsertOperation) : Statement
     {
-        /// Only for Sqlite
-        public SqliteOnConflict Or { get; init; }
-        /// Only for MySql
-        public bool Ignore { get; init; }
-        /// INTO - optional keyword
-        public bool Into { get; init; }
-        /// table_name as foo (for PostgreSQL)
-        public Ident? Alias { get; init; }
-        /// COLUMNS
-        public Sequence<Ident>? Columns { get; init; }
-        /// Overwrite (Hive)
-        public bool Overwrite { get; init; }
-        /// partitioned insert (Hive)
-        [Visit(2)] public Sequence<Expression>? Partitioned { get; init; }
-        /// Columns defined after PARTITION
-        public Sequence<Ident>? AfterColumns { get; init; }
-        /// whether the insert has the table keyword (Hive)
-        public bool Table { get; init; }
-        public OnInsert? On { get; init; }
-        /// RETURNING
-        [Visit(3)] public Sequence<SelectItem>? Returning { get; init; }
-        /// Only for mysql
-        public bool ReplaceInto { get; set; }
-        /// Only for mysql
-        public MySqlInsertPriority Priority { get; init; }
-        public InsertAliases? InsertAlias { get; init; }
-
         public override void ToSql(SqlTextWriter writer)
         {
-            var tableName = Alias != null ? $"{Name.ToSql()} as {Alias.ToSql()}" : $"{Name.ToSql()}";
+            var tableName = InsertOperation.Alias != null ? $"{InsertOperation.Name.ToSql()} as {InsertOperation.Alias.ToSql()}" : $"{InsertOperation.Name.ToSql()}";
 
-            if (Or != SqliteOnConflict.None)
+            if (InsertOperation.Or != SqliteOnConflict.None)
             {
-                writer.WriteSql($"INSERT OR {Or} INTO {tableName} ");
+                writer.WriteSql($"INSERT OR {InsertOperation.Or} INTO {tableName} ");
             }
             else
             {
-                writer.Write(ReplaceInto ? "REPLACE" : "INSERT");
+                writer.Write(InsertOperation.ReplaceInto ? "REPLACE" : "INSERT");
 
-                if (Priority != MySqlInsertPriority.None)
+                if (InsertOperation.Priority != MySqlInsertPriority.None)
                 {
-                    writer.WriteSql($" {Priority}");
+                    writer.WriteSql($" {InsertOperation.Priority}");
                 }
 
-                var over = Overwrite ? " OVERWRITE" : null;
-                var into = Into ? " INTO" : null;
-                var table = Table ? " TABLE" : null;
-                var ignore = Ignore ? " IGNORE" : null;
+                var over = InsertOperation.Overwrite ? " OVERWRITE" : null;
+                var into = InsertOperation.Into ? " INTO" : null;
+                var table = InsertOperation.Table ? " TABLE" : null;
+                var ignore = InsertOperation.Ignore ? " IGNORE" : null;
                 writer.Write($"{ignore}{over}{into}{table} {tableName} ");
             }
 
-            if (Columns.SafeAny())
+            if (InsertOperation.Columns.SafeAny())
             {
-                writer.WriteSql($"({Columns}) ");
+                writer.WriteSql($"({InsertOperation.Columns}) ");
             }
 
-            if (Partitioned.SafeAny())
+            if (InsertOperation.Partitioned.SafeAny())
             {
-                writer.WriteSql($"PARTITION ({Partitioned}) ");
+                writer.WriteSql($"PARTITION ({InsertOperation.Partitioned}) ");
             }
 
-            if (AfterColumns.SafeAny())
+            if (InsertOperation.AfterColumns.SafeAny())
             {
-                writer.WriteSql($"({AfterColumns}) ");
+                writer.WriteSql($"({InsertOperation.AfterColumns}) ");
             }
 
-            if (Source != null)
+            if (InsertOperation.Source != null)
             {
-                Source.ToSql(writer);
+                InsertOperation.Source.ToSql(writer);
             }
-            else if (!Columns.SafeAny())
+            else if (!InsertOperation.Columns.SafeAny())
             {
                 writer.Write("DEFAULT VALUES");
             }
 
-            if (InsertAlias != null)
+            if (InsertOperation.InsertAlias != null)
             {
-                writer.WriteSql($" AS {InsertAlias.RowAlias}");
+                writer.WriteSql($" AS {InsertOperation.InsertAlias.RowAlias}");
 
-                if (InsertAlias.ColumnAliases.SafeAny())
+                if (InsertOperation.InsertAlias.ColumnAliases.SafeAny())
                 {
                     writer.Write(" (");
-                    writer.WriteDelimited(InsertAlias.ColumnAliases, ", ");
+                    writer.WriteDelimited(InsertOperation.InsertAlias.ColumnAliases, ", ");
                     writer.Write(")");
                 }
             }
 
-            On?.ToSql(writer);
+            InsertOperation.On?.ToSql(writer);
 
-            if (Returning.SafeAny())
+            if (InsertOperation.Returning.SafeAny())
             {
-                writer.WriteSql($" RETURNING {Returning}");
+                writer.WriteSql($" RETURNING {InsertOperation.Returning}");
             }
         }
     }

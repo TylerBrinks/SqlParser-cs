@@ -380,9 +380,9 @@ namespace SqlParser.Tests.Dialects
             }));
             var expected = new Query(body);
 
-            Assert.Equal("tasks", insert.Name);
-            Assert.Equal(new Ident[] { "title", "priority" }, insert.Columns!);
-            Assert.Equal(expected, insert.Source!.Query);
+            Assert.Equal("tasks", insert.InsertOperation.Name);
+            Assert.Equal(new Ident[] { "title", "priority" }, insert.InsertOperation.Columns!);
+            Assert.Equal(expected, insert.InsertOperation.Source!.Query);
         }
 
         [Fact]
@@ -395,14 +395,14 @@ namespace SqlParser.Tests.Dialects
                 "INSERT INTO tb () VALUES (), ()",
                 "INSERT INTO tb VALUES (), ()");
 
-            Assert.Equal("tb", insert.Name);
+            Assert.Equal("tb", insert.InsertOperation.Name);
             Assert.Equal(new Statement.Select(
                     new Query(new SetExpression.ValuesExpression(new Values(new Sequence<Expression>[]
                     {
                         new(),
                         new()
                     }))))
-                , insert.Source);
+                , insert.InsertOperation.Source);
         }
 
         [Fact]
@@ -413,9 +413,9 @@ namespace SqlParser.Tests.Dialects
 
             var insert = VerifiedStatement<Statement.Insert>(sql);
 
-            Assert.Equal("permission_groups", insert.Name);
+            Assert.Equal("permission_groups", insert.InsertOperation.Name);
             Assert.Equal(new Ident[] { "name", "description", "perm_create", "perm_read", "perm_update", "perm_delete" },
-                insert.Columns!);
+                insert.InsertOperation.Columns!);
 
             var rows = new Sequence<Expression>[]
             {
@@ -429,7 +429,7 @@ namespace SqlParser.Tests.Dialects
                 ]
             };
 
-            Assert.Equal(new Query(new SetExpression.ValuesExpression(new Values(rows))), (Query)insert.Source!);
+            Assert.Equal(new Query(new SetExpression.ValuesExpression(new Values(rows))), (Query)insert.InsertOperation.Source!);
 
             var update = new OnInsert.DuplicateKeyUpdate(new Statement.Assignment[]
             {
@@ -479,7 +479,7 @@ namespace SqlParser.Tests.Dialects
                 })
             });
 
-            Assert.Equal(update, insert.On);
+            Assert.Equal(update, insert.InsertOperation.On);
         }
 
         [Fact]
@@ -955,12 +955,11 @@ namespace SqlParser.Tests.Dialects
             var delete = VerifiedStatement(sql);
 
             var from = new FromTable.WithFromKeyword([new(new TableFactor.Table("customers"))]);
-            var expected = new Statement.Delete(null, from,
+            var expected = new Statement.Delete(new DeleteOperation(null, from,
                 OrderBy: new Sequence<OrderByExpression>
                 {
                     new (new Identifier("id"), Asc:false)
-                }
-            );
+                }));
 
             Assert.Equal(expected, delete);
         }
@@ -971,9 +970,9 @@ namespace SqlParser.Tests.Dialects
             const string sql = "DELETE FROM customers LIMIT 100";
             var delete = VerifiedStatement(sql);
             var from = new FromTable.WithFromKeyword([new(new TableFactor.Table("customers"))]);
-            var expected = new Statement.Delete(null, from,
+            var expected = new Statement.Delete(new DeleteOperation(null, from,
                 Limit: new LiteralValue(new Value.Number("100"))
-            );
+            ));
             Assert.Equal(expected, delete);
         }
 
@@ -1010,7 +1009,7 @@ namespace SqlParser.Tests.Dialects
                 ]
             ])));
 
-            var expected = new Statement.Insert("tasks", new Statement.Select(query))
+            var expected = new Statement.Insert(new InsertOperation("tasks", new Statement.Select(query))
             {
                 Ignore = true,
                 Into = true,
@@ -1020,7 +1019,7 @@ namespace SqlParser.Tests.Dialects
                     "title",
                     "priority"
                 }
-            };
+            });
 
             Assert.Equal(expected, insert);
         }
@@ -1136,13 +1135,13 @@ namespace SqlParser.Tests.Dialects
                     ]
                 ]))));
 
-            var expected = new Statement.Insert("tasks", select)
+            var expected = new Statement.Insert(new InsertOperation("tasks", select)
             {
                 Into = true,
                 Columns = new Sequence<Ident> { "title", "priority" },
                 AfterColumns = new Sequence<Ident>(),
                 Priority = MySqlInsertPriority.HighPriority
-            };
+            });
 
             Assert.Equal(expected, insert);
         }
@@ -1241,7 +1240,8 @@ namespace SqlParser.Tests.Dialects
 
             var values = new Values([[new LiteralValue(new Value.SingleQuotedString("2024-01-01"))]]);
             var source = new Statement.Select(new Query(new SetExpression.ValuesExpression(values)));
-            var expected = new Statement.Insert(new ObjectName(new Ident("table", Symbols.Backtick)), source)
+            var expected = new Statement.Insert(new InsertOperation(
+                new ObjectName(new Ident("table", Symbols.Backtick)), source)
             {
                 Into = true,
                 Columns = new Sequence<Ident>
@@ -1250,7 +1250,7 @@ namespace SqlParser.Tests.Dialects
                 },
                 InsertAlias = new InsertAliases(new ObjectName(new Ident("alias", Symbols.Backtick)), new Sequence<Ident>()),
                 AfterColumns = new Sequence<Ident>()
-            };
+            });
 
             Assert.Equal(expected, statement);
 
@@ -1263,22 +1263,23 @@ namespace SqlParser.Tests.Dialects
                 new LiteralValue(new Value.SingleQuotedString("2024-01-01")),
             ]]);
             source = new Statement.Select(new Query(new SetExpression.ValuesExpression(values)));
-            expected = new Statement.Insert(new ObjectName(new Ident("table", Symbols.Backtick)), source)
-            {
-                Into = true,
-                Columns = new Sequence<Ident>
+            expected = new Statement.Insert(
+                new InsertOperation(new ObjectName(new Ident("table", Symbols.Backtick)), source)
+                {
+                    Into = true,
+                    Columns = new Sequence<Ident>
                 {
                     new ("id", Symbols.Backtick),
                     new ("date", Symbols.Backtick)
                 },
-                InsertAlias = new InsertAliases(new ObjectName(new Ident("alias", Symbols.Backtick)),
+                    InsertAlias = new InsertAliases(new ObjectName(new Ident("alias", Symbols.Backtick)),
                     new Sequence<Ident>
                     {
                         new ("mek_id", Symbols.Backtick),
                         new ("mek_date", Symbols.Backtick)
                     }),
-                AfterColumns = new Sequence<Ident>()
-            };
+                    AfterColumns = new Sequence<Ident>()
+                });
 
             Assert.Equal(expected, statement);
         }
@@ -1317,7 +1318,7 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal(expectedOperation, operation);
 
             operation = AlterTableOpWithName(VerifiedStatement("ALTER TABLE orders MODIFY COLUMN description TEXT NOT NULL FIRST"), expectedName);
-            expectedOperation = new AlterTableOperation.ModifyColumn("description", new DataType.Text(), [new ColumnOption.NotNull()], 
+            expectedOperation = new AlterTableOperation.ModifyColumn("description", new DataType.Text(), [new ColumnOption.NotNull()],
                 new MySqlColumnPosition.First());
             Assert.Equal(expectedOperation, operation);
 
@@ -1340,7 +1341,7 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal(expectedOperation, operation);
 
             operation = AlterTableOpWithName(OneStatementParsesTo("ALTER TABLE orders MODIFY description TEXT NOT NULL FIRST", sql1), expectedName);
-            expectedOperation = new AlterTableOperation.ModifyColumn("description", new DataType.Text(), [new ColumnOption.NotNull()], 
+            expectedOperation = new AlterTableOperation.ModifyColumn("description", new DataType.Text(), [new ColumnOption.NotNull()],
                 new MySqlColumnPosition.First());
             Assert.Equal(expectedOperation, operation);
 

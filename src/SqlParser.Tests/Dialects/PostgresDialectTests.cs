@@ -985,7 +985,7 @@ namespace SqlParser.Tests.Dialects
 
             var prepare = VerifiedStatement<Statement.Prepare>("PREPARE a AS INSERT INTO customers VALUES (a1, a2, a3)");
             var insert = (Statement.Insert)prepare.Statement;
-            var source = (Query)insert.Source;
+            var source = (Query)insert.InsertOperation.Source;
             var values = (SetExpression.ValuesExpression)source.Body;
             Assert.Equal("a", prepare.Name);
 
@@ -1022,7 +1022,7 @@ namespace SqlParser.Tests.Dialects
                 ConflictTarget = new ConflictTarget.Column(new Ident[] { "did" })
             });
 
-            Assert.Equal(on, insert.On);
+            Assert.Equal(on, insert.InsertOperation.On);
 
 
             insert = VerifiedStatement<Statement.Insert>("""
@@ -1055,7 +1055,7 @@ namespace SqlParser.Tests.Dialects
                 })
             });
 
-            Assert.Equal(on, insert.On);
+            Assert.Equal(on, insert.InsertOperation.On);
         }
 
         [Fact]
@@ -1064,7 +1064,7 @@ namespace SqlParser.Tests.Dialects
             var sql = "INSERT INTO distributors (did, dname) VALUES (DEFAULT, 'XYZ Widgets') RETURNING did";
             var insert = VerifiedStatement<Statement.Insert>(sql);
 
-            Assert.Equal("did", ((Identifier)((SelectItem.UnnamedExpression)insert.Returning![0]).Expression).Ident);
+            Assert.Equal("did", ((Identifier)((SelectItem.UnnamedExpression)insert.InsertOperation.Returning![0]).Expression).Ident);
 
             sql = """
                 UPDATE weather SET temp_lo = temp_lo + 1, temp_hi = temp_lo + 15, prcp = DEFAULT
@@ -1086,11 +1086,11 @@ namespace SqlParser.Tests.Dialects
             sql = "DELETE FROM tasks WHERE status = 'DONE' RETURNING *";
             var delete = VerifiedStatement<Statement.Delete>(sql);
 
-            expected = new []
-            {
-                new SelectItem.Wildcard(new WildcardAdditionalOptions()),
-            };
-            Assert.Equal(expected, delete.Returning!);
+            expected =
+            [
+                new SelectItem.Wildcard(new WildcardAdditionalOptions())
+            ];
+            Assert.Equal(expected, delete.DeleteOperation.Returning!);
         }
 
         [Fact]
@@ -2132,14 +2132,14 @@ namespace SqlParser.Tests.Dialects
 
             var columns = new Sequence<Ident> {"id", "a"};
 
-            var expected = new Statement.Insert("test_tables",
+            var expected = new Statement.Insert(new InsertOperation("test_tables",
                 new Statement.Select(new Query(new SetExpression.ValuesExpression(values))))
             {
                 Columns = columns,
                 Into = true,
                 Alias = new Ident("test_table"),
                 AfterColumns = new Sequence<Ident>()
-            };
+            });
 
             Assert.Equal(expected, insert);
         }
@@ -2160,14 +2160,14 @@ namespace SqlParser.Tests.Dialects
 
             var columns = new Sequence<Ident> { "id", "a" };
 
-            var expected = new Statement.Insert("test_tables",
+            var expected = new Statement.Insert(new InsertOperation("test_tables",
                 new Statement.Select(new Query(new SetExpression.ValuesExpression(values))))
             {
                 Columns = columns,
                 Into = true,
                 Alias = new Ident("Test_Table", Symbols.DoubleQuote),
                 AfterColumns = new Sequence<Ident>()
-            };
+            });
 
             Assert.Equal(expected, insert);
         }

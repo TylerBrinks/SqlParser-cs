@@ -38,14 +38,14 @@ namespace SqlParser.Tests
 
                 if (statement is Statement.Insert insert)
                 {
-                    Assert.Equal(insert.Name, expectedTableName);
-                    Assert.Equal(insert.Columns!.Count, expectedColumns.Count);
+                    Assert.Equal(insert.InsertOperation.Name, expectedTableName);
+                    Assert.Equal(insert.InsertOperation.Columns!.Count, expectedColumns.Count);
                     foreach (var column in expectedColumns)
                     {
                         Assert.Equal(column, new Ident(column));
                     }
 
-                    if (insert.Source!.Query.Body is SetExpression.ValuesExpression v)
+                    if (insert.InsertOperation.Source!.Query.Body is SetExpression.ValuesExpression v)
                     {
                         Assert.Equal(v.Values.Rows, expectedRows);
                     }
@@ -72,7 +72,7 @@ namespace SqlParser.Tests
             {
                 var statements = new Parser().ParseSql(sql, new SQLiteDialect());
                 var insert = statements[0] as Statement.Insert;
-                Assert.Equal(expected, insert!.Or);
+                Assert.Equal(expected, insert!.InsertOperation.Or);
             }
         }
 
@@ -193,7 +193,7 @@ namespace SqlParser.Tests
         public void Parse_Quoted_Delete_Statement()
         {
             var delete = (Statement.Delete)VerifiedStatement("DELETE FROM \"table\"");
-            var relation = ((delete.From as FromTable.WithFromKeyword)!).From.First().Relation;
+            var relation = ((delete.DeleteOperation.From as FromTable.WithFromKeyword)!).From.First().Relation;
 
             var expected = new TableFactor.Table(new ObjectName(new Ident("table", Symbols.DoubleQuote)));
 
@@ -215,9 +215,9 @@ namespace SqlParser.Tests
             var binaryOp = new BinaryOp(new Identifier("name"), BinaryOperator.Eq, new LiteralValue(Number("5")));
 
             var delete = statement.AsDelete();
-            Assert.Equal(table, ((delete.From as FromTable.WithFromKeyword)!).From.First().Relation);
-            Assert.Null(delete.Using);
-            Assert.Equal(binaryOp, delete.Selection);
+            Assert.Equal(table, ((delete.DeleteOperation.From as FromTable.WithFromKeyword)!).From.First().Relation);
+            Assert.Null(delete.DeleteOperation.Using);
+            Assert.Equal(binaryOp, delete.DeleteOperation.Selection);
         }
 
         [Fact]
@@ -232,10 +232,10 @@ namespace SqlParser.Tests
                 BinaryOperator.Lt,
                 new CompoundIdentifier(new Ident[] { "b", "id" }));
 
-            Assert.Equal(table, ((delete.From as FromTable.WithFromKeyword)!).From.First().Relation);
-            Assert.Equal(@using, delete.Using);
-            Assert.Equal(binaryOp, delete.Selection);
-            Assert.Null(delete.Returning);
+            Assert.Equal(table, ((delete.DeleteOperation.From as FromTable.WithFromKeyword)!).From.First().Relation);
+            Assert.Equal(@using, delete.DeleteOperation.Using);
+            Assert.Equal(binaryOp, delete.DeleteOperation.Selection);
+            Assert.Null(delete.DeleteOperation.Returning);
         }
 
         [Fact]
@@ -5184,14 +5184,14 @@ namespace SqlParser.Tests
         public void Parse_Insert_Default_Values()
         {
             var insert = (Statement.Insert)VerifiedStatement("INSERT INTO test_table DEFAULT VALUES");
-            var expected = new Statement.Insert("test_table", null) { Into = true };
+            var expected = new Statement.Insert(new InsertOperation("test_table", null) { Into = true });
             Assert.Equal(expected, insert);
 
             insert = (Statement.Insert)VerifiedStatement("INSERT INTO test_table DEFAULT VALUES RETURNING test_column");
-            Assert.NotEmpty(insert.Returning!);
+            Assert.NotEmpty(insert.InsertOperation.Returning!);
 
             insert = (Statement.Insert)VerifiedStatement("INSERT INTO test_table DEFAULT VALUES ON CONFLICT DO NOTHING");
-            Assert.NotNull(insert.On);
+            Assert.NotNull(insert.InsertOperation.On);
 
             Assert.Throws<ParserException>(() => ParseSqlStatements("INSERT INTO test_table (test_col) DEFAULT VALUES"));
             Assert.Throws<ParserException>(() => ParseSqlStatements("INSERT INTO test_table DEFAULT VALUES (some_column)"));
@@ -5248,7 +5248,7 @@ namespace SqlParser.Tests
         {
             var statement = VerifiedStatement("INSERT INTO t SELECT x RETURNING x AS y");
 
-            Assert.Single((statement as Statement.Insert)!.Returning!);
+            Assert.Single((statement as Statement.Insert)!.InsertOperation.Returning!);
         }
 
         [Fact]

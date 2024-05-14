@@ -7249,7 +7249,7 @@ public class Parser
 
         FromTable fromTable = withFromKeyword ? new FromTable.WithFromKeyword(from) : new FromTable.WithoutKeyword(from);
 
-        return new Delete(tables, fromTable, orderBy, @using, selection, returning, limit);
+        return new Delete(new DeleteOperation(tables, fromTable, orderBy, @using, selection, returning, limit));
     }
     /// <summary>
     /// KILL[CONNECTION | QUERY | MUTATION] processlist_id
@@ -8951,7 +8951,7 @@ public class Parser
             return null;
         }
 
-        return new Insert(tableName, source)
+        return new Insert(new InsertOperation(tableName, source)
         {
             Or = orConflict,
             Ignore = ignore,
@@ -8967,7 +8967,7 @@ public class Parser
             Priority = priority,
             Alias = tableAlias,
             InsertAlias = insertAliases
-        };
+        });
 
         InsertAliases ParseInsertAlias()
         {
@@ -8988,7 +8988,7 @@ public class Parser
         var insert = ParseInsert();
         if (insert is Insert i)
         {
-            i.ReplaceInto = true;
+            i.InsertOperation.ReplaceInto = true;
         }
 
         return insert;

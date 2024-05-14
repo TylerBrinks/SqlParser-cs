@@ -441,7 +441,7 @@ public class BigQueryDialectTests : ParserTestBase
     public void Parse_Delete_Statement()
     {
         var delete = (Statement.Delete)VerifiedStatement("DELETE \"table\" WHERE 1");
-        var relation = (delete.From as FromTable.WithoutKeyword).From.First().Relation;
+        var relation = (delete.DeleteOperation.From as FromTable.WithoutKeyword).From.First().Relation;
 
         var expected = new TableFactor.Table(new ObjectName(new Ident("table", Symbols.DoubleQuote)));
 
