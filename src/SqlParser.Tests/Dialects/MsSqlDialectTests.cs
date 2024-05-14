@@ -12,7 +12,7 @@ namespace SqlParser.Tests.Dialects
         {
             DefaultDialects = new[] { new MsSqlDialect() };
         }
-
+        
         [Fact]
         public void Parse_MsSql_Identifiers()
         {
