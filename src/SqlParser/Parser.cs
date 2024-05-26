@@ -3044,6 +3044,21 @@ public class Parser
         return default;
     }
 
+    public T? MaybeParseNullable<T>(Func<T> action) where T : struct
+    {
+        var index = _index;
+
+        try
+        {
+            return action();
+        }
+        catch (ParserException)
+        {
+            _index = index;
+            return null;
+        }
+    }
+
     /// <summary>
     /// Run a parser method reverting back to the current position if unsuccessful.
     /// The result is checked against the default value for genetic type T. The
@@ -6445,10 +6460,13 @@ public class Parser
         // Keyword.ARRAY syntax from above
         while (ConsumeToken<LeftBracket>())
         {
-            long? size = _dialect is GenericDialect or DuckDbDialect or PostgreSqlDialect
-                ? (long)MaybeParse(ParseLiteralUnit)
-                : null;
+            long? size = null;
 
+            if (_dialect is GenericDialect or DuckDbDialect or PostgreSqlDialect)
+            {
+                size = (long?)MaybeParseNullable(ParseLiteralUnit);
+            }
+            
             ExpectToken<RightBracket>();
             data = new DataType.Array(new ArrayElementTypeDef.SquareBracket(data, size));
         }
@@ -9166,7 +9184,12 @@ public class Parser
             {
                 partitioned = ExpectParens(() => ParseCommaSeparated(ParseExpr));
             }
-            afterColumns = ParseParenthesizedColumnList(IsOptional.Optional, false);
+
+            if (_dialect is HiveDialect)
+            {
+                afterColumns = ParseParenthesizedColumnList(IsOptional.Optional, false);
+            }
+
             source = ParseQuery();
         }
 

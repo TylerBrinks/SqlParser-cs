@@ -723,7 +723,7 @@ namespace SqlParser.Tests.Dialects
 
             var copy = OneStatementParsesTo(sql, "");
 
-            var source = new CopySource.Table(new ObjectName("table"), new Sequence<Ident> { "a", "b" });
+            var source = new CopySource.Table(new ObjectName("table"), ["a", "b"]);
 
             var expected = new Statement.Copy(
                 source,
@@ -1206,10 +1206,10 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
 
-            sql = "SELECT (CAST(ARRAY[ARRAY[2, 3]] AS INT[][]))[1][2]";
-            select = VerifiedOnlySelect(sql);
+           sql = "SELECT (CAST(ARRAY[ARRAY[2, 3]] AS INT[][]))[1][2]";
+           select = VerifiedOnlySelect(sql);
 
-            expected = new ArrayIndex(new Nested(
+           expected = new ArrayIndex(new Nested(
                     new Cast(
                         new Expression.Array(
                             new ArrayExpression(new[]
@@ -1668,7 +1668,6 @@ namespace SqlParser.Tests.Dialects
             Assert.True(role.Login);
 
 
-            //role = VerifiedStatement<Statement.CreateRole>("CREATE ROLE magician WITH SUPERUSER CREATEROLE NOCREATEDB BYPASSRLS INHERIT PASSWORD 'abcdef' LOGIN VALID UNTIL '2025-01-01' IN ROLE role1, role2 ROLE role3 ADMIN role4, role5 REPLICATION");
             role = (Statement.CreateRole)ParseSqlStatements("CREATE ROLE magician WITH SUPERUSER CREATEROLE NOCREATEDB BYPASSRLS INHERIT PASSWORD 'abcdef' LOGIN VALID UNTIL '2025-01-01' IN ROLE role1, role2 ROLE role3 ADMIN role4, role5 REPLICATION").First()!;
 
             Assert.Equal(new ObjectName[] { "magician" }, role.Names);
@@ -1944,8 +1943,8 @@ namespace SqlParser.Tests.Dialects
 
             sql = "ALTER ROLE role_name WITH NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS PASSWORD NULL";
             statement = VerifiedStatement(sql, dialect);
-            options = new Sequence<RoleOption>
-            {
+            options =
+            [
                 new RoleOption.SuperUser(false),
                 new RoleOption.CreateDb(false),
                 new RoleOption.CreateRole(false),
@@ -1953,8 +1952,8 @@ namespace SqlParser.Tests.Dialects
                 new RoleOption.Login(false),
                 new RoleOption.Replication(false),
                 new RoleOption.BypassRls(false),
-                new RoleOption.PasswordOption(new Password.NullPassword()),
-            };
+                new RoleOption.PasswordOption(new Password.NullPassword())
+            ];
             expected = new Statement.AlterRole("role_name", new AlterRoleOperation.WithOptions(options));
             Assert.Equal(expected, statement);
 
@@ -2036,7 +2035,7 @@ namespace SqlParser.Tests.Dialects
 
             var expected = new Join[]
             {
-                new (new TableFactor.UnNest(new Sequence<Expression>{ new CompoundIdentifier(new Ident[]{"t1","a"}) })
+                new (new TableFactor.UnNest([new CompoundIdentifier(new Ident[] { "t1", "a" })])
                     {
                         Alias = new TableAlias("f"),
                     },
@@ -2121,14 +2120,13 @@ namespace SqlParser.Tests.Dialects
         {
             var insert = (Statement.Insert)VerifiedStatement("INSERT INTO test_tables AS test_table (id, a) VALUES (DEFAULT, 123)");
 
-            var values = new Values(new Sequence<Sequence<Expression>>
-            {
+            var values = new Values([
                 new()
                 {
                     new Identifier("DEFAULT"),
                     new LiteralValue(new Value.Number("123"))
                 }
-            });
+            ]);
 
             var columns = new Sequence<Ident> {"id", "a"};
 
@@ -2137,8 +2135,7 @@ namespace SqlParser.Tests.Dialects
             {
                 Columns = columns,
                 Into = true,
-                Alias = new Ident("test_table"),
-                AfterColumns = new Sequence<Ident>()
+                Alias = new Ident("test_table")
             });
 
             Assert.Equal(expected, insert);
@@ -2149,14 +2146,13 @@ namespace SqlParser.Tests.Dialects
         {
             var insert = (Statement.Insert)VerifiedStatement("INSERT INTO test_tables AS \"Test_Table\" (id, a) VALUES (DEFAULT, '0123')");
 
-            var values = new Values(new Sequence<Sequence<Expression>>
-            {
+            var values = new Values([
                 new()
                 {
                     new Identifier("DEFAULT"),
                     new LiteralValue(new Value.SingleQuotedString("0123"))
                 }
-            });
+            ]);
 
             var columns = new Sequence<Ident> { "id", "a" };
 
@@ -2165,8 +2161,7 @@ namespace SqlParser.Tests.Dialects
             {
                 Columns = columns,
                 Into = true,
-                Alias = new Ident("Test_Table", Symbols.DoubleQuote),
-                AfterColumns = new Sequence<Ident>()
+                Alias = new Ident("Test_Table", Symbols.DoubleQuote)
             });
 
             Assert.Equal(expected, insert);

@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Text;
+﻿using System.Text;
 using SqlParser.Ast;
 using SqlParser.Dialects;
 using static SqlParser.Ast.DataType;
@@ -1745,7 +1744,7 @@ namespace SqlParser.Tests
                 var syntax = angleBracketSyntax ? "ARRAY<INT>" : "INT[]";
                 var sql = $"CREATE TABLE IF NOT EXISTS something (name INT, val {syntax})";
 
-                var create = (Statement.CreateTable)OneStatementParsesTo(sql, sql, new[] { dialect });
+                var create = (Statement.CreateTable)OneStatementParsesTo(sql, sql, [dialect]);
 
                 ArrayElementTypeDef expected = new ArrayElementTypeDef.SquareBracket(new Int());
                 if (angleBracketSyntax)
@@ -5664,6 +5663,14 @@ namespace SqlParser.Tests
             VerifiedStatement("CREATE TABLE embeddings (data FLOAT[1536])");
             VerifiedStatement("CREATE TABLE embeddings (data FLOAT[1536][3])");
             VerifiedStatement("SELECT data::FLOAT[1536] FROM embeddings");
+        }
+
+        [Fact]
+        public void Insert_Into_With_Parentheses()
+        {
+            DefaultDialects = [new SnowflakeDialect(), new RedshiftDialect(), new GenericDialect()];
+
+            VerifiedStatement("INSERT INTO t1 (id, name) (SELECT t2.id, t2.name FROM t2)");
         }
     }
 }

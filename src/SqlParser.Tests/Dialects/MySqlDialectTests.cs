@@ -1013,7 +1013,6 @@ namespace SqlParser.Tests.Dialects
             {
                 Ignore = true,
                 Into = true,
-                AfterColumns = new Sequence<Ident>(),
                 Columns = new Sequence<Ident>
                 {
                     "title",
@@ -1139,7 +1138,6 @@ namespace SqlParser.Tests.Dialects
             {
                 Into = true,
                 Columns = new Sequence<Ident> { "title", "priority" },
-                AfterColumns = new Sequence<Ident>(),
                 Priority = MySqlInsertPriority.HighPriority
             });
 
@@ -1248,8 +1246,7 @@ namespace SqlParser.Tests.Dialects
                 {
                     new ("date", Symbols.Backtick)
                 },
-                InsertAlias = new InsertAliases(new ObjectName(new Ident("alias", Symbols.Backtick)), new Sequence<Ident>()),
-                AfterColumns = new Sequence<Ident>()
+                InsertAlias = new InsertAliases(new ObjectName(new Ident("alias", Symbols.Backtick)), new Sequence<Ident>())
             });
 
             Assert.Equal(expected, statement);
@@ -1277,8 +1274,7 @@ namespace SqlParser.Tests.Dialects
                     {
                         new ("mek_id", Symbols.Backtick),
                         new ("mek_date", Symbols.Backtick)
-                    }),
-                    AfterColumns = new Sequence<Ident>()
+                    })
                 });
 
             Assert.Equal(expected, statement);
