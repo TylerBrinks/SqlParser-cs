@@ -110,7 +110,9 @@ internal static class Keywords
         Keyword.WINDOW,
         Keyword.END,
         Keyword.FOR,
-        Keyword.AS // TODO remove?
+        Keyword.AS, // TODO remove?
+        // Reserved for snowflake MATCH_RECOGNIZE
+        Keyword.MATCH_RECOGNIZE,
     };
 }
 
@@ -262,6 +264,7 @@ public enum Keyword
     DEFAULT,
     DEFERRABLE,
     DEFERRED,
+    DEFINE,
     DEFINED,
     DELAYED,
     DELETE,
@@ -459,9 +462,12 @@ public enum Keyword
     MAP,
     MATCH,
     MATCHED,
+    MATCHES,
+    MATCH_RECOGNIZE,
     MATERIALIZED,
     MAX,
     MAXVALUE,
+    MEASURES,
     MEDIUMINT,
     MEMBER,
     MERGE,
@@ -523,7 +529,9 @@ public enum Keyword
     OF,
     OFFSET,
     OLD,
+    OMIT,
     ON,
+    ONE,
     ONLY,
     OPEN,
     OPERATOR,
@@ -549,8 +557,10 @@ public enum Keyword
     PARTITIONED,
     PARTITIONS,
     PASSWORD,
+    PAST,
     PATH,
     PATTERN,
+    PER,
     PERCENT,
     PERCENT_RANK,
     PERCENTILE_CONT,
@@ -748,6 +758,7 @@ public enum Keyword
     UNLOAD,
     UNLOCK,
     UNLOGGED,
+    UNMATCHED,
     UNNEST,
     UNPIVOT,
     UNSAFE,

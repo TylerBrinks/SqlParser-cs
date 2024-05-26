@@ -637,4 +637,6 @@ public class SnowflakeDialect : Dialect
 
         return new Ident(ident.ToString());
     }
+   
+    public override bool SupportsMatchRecognize => true;
 }

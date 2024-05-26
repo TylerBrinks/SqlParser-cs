@@ -58,6 +58,9 @@ public static class EnumWriter
             //DeclareType.Cursor => "CURSOR",
             //DeclareType.ResultSet => "RESULTSET",
             //DeclareType.Exception => "EXCEPTION",
+            EmptyMatchesMode.Show => "SHOW EMPTY MATCHES",
+            EmptyMatchesMode.Omit => "OMIT EMPTY MATCHES",
+            EmptyMatchesMode.WithUnmatched => "WITH UNMATCHED ROWS",
 
             FileFormat.None => null,
 

@@ -116,9 +116,16 @@ public abstract class Dialect
     /// Returns true if the dialect supports `BEGIN {DEFERRED | IMMEDIATE | EXCLUSIVE} [TRANSACTION]` statements
     /// </summary>
     public virtual bool SupportsStartTransactionModifier => false;
-
+    /// <summary>
+    /// Returns true if the dialect supports function arguments with equals operator
+    /// </summary>
     public virtual bool SupportsNamedFunctionArgsWithEqOperator => false;
-    
+    /// <summary>
+    /// Returns true if the dialect supports backslash escaping
+    /// </summary>
     public virtual bool SupportsStringLiteralBackslashEscape => false;
-
+    /// <summary>
+    /// Returns true if the dialect supports match recognize
+    /// </summary>
+    public virtual bool SupportsMatchRecognize => false;
 }

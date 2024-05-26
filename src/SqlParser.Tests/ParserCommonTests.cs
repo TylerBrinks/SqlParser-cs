@@ -2449,7 +2449,7 @@ namespace SqlParser.Tests
 
             Assert.Equal(2, select.Projection.Count);
             var expectedWindowNames = new Sequence<string> { "w", "win" };
-            
+
             foreach (var spec in select.Projection
                          .Select(projection => (Function)projection.AsExpr())
                          .Select(fn => (WindowType.WindowSpecType)fn.Over!))
@@ -3662,7 +3662,7 @@ namespace SqlParser.Tests
             var create = VerifiedStatement<Statement.CreateView>("CREATE VIEW v (has, cols) AS SELECT 1, 2");
 
             Assert.Equal("v", create.Name);
-            Assert.Equal(new Sequence<ViewColumnDef> { new ("has"), new ("cols") }, create.Columns);
+            Assert.Equal(new Sequence<ViewColumnDef> { new("has"), new("cols") }, create.Columns);
             Assert.Equal("SELECT 1, 2", create.Query.Query.ToSql());
             Assert.False(create.Materialized);
             Assert.False(create.OrReplace);
@@ -5345,7 +5345,7 @@ namespace SqlParser.Tests
             {
                 new GenericDialect(), new BigQueryDialect(), new ClickHouseDialect(), new SnowflakeDialect(), new DuckDbDialect()
             };
-            
+
             var select = VerifiedOnlySelect("SELECT * REPLACE ('widget' AS item_name) FROM orders", dialects);
             var expected = new SelectItem.Wildcard(new WildcardAdditionalOptions
             {
@@ -5382,7 +5382,7 @@ namespace SqlParser.Tests
             {
                 new GenericDialect(), new BigQueryDialect(), new ClickHouseDialect(), new SnowflakeDialect(), new DuckDbDialect()
             };
-            
+
             VerifiedStatement("SELECT * REPLACE (i + 1 AS i) FROM columns_transformers", dialects);
         }
 
@@ -5464,6 +5464,196 @@ namespace SqlParser.Tests
             }
         }
 
+        [Fact]
+        public void Test_Match_Recognize()
+        {
+            var table = new TableFactor.Table("my_table");
 
+            var dialects = AllDialects.Where(d => d.SupportsMatchRecognize).ToList();
+
+            var expected = new TableFactor.MatchRecognize(
+                table,
+                [new Identifier("company")],
+                [new(new Identifier("price_date"))],
+                [
+                    new(Call("MATCH_NUMBER", []), new Ident("match_number")),
+                    new(Call("FIRST", [new Identifier("price_date")]), "start_date"),
+                    new(Call("LAST", [new Identifier("price_date")]), new Ident("end_date"))
+                ],
+                new RowsPerMatch.OneRow(),
+                new AfterMatchSkip.ToLast("row_with_price_increase"),
+                new MatchRecognizePattern.Concat([
+                    new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Named("row_before_decrease")),
+
+                    new MatchRecognizePattern.Repetition(
+                        new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Named("row_with_price_decrease")),
+                        new RepetitionQualifier.OneOrMore()),
+
+                    new MatchRecognizePattern.Repetition(
+                        new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Named("row_with_price_increase")),
+                        new RepetitionQualifier.OneOrMore())
+                ]),
+                new Sequence<SymbolDefinition>([
+                    new SymbolDefinition("row_with_price_decrease", new BinaryOp(
+                        new Identifier("price"),
+                        BinaryOperator.Lt,
+                        Call("LAG", [new Identifier("price")])
+                    )),
+                    new SymbolDefinition("row_with_price_increase", new BinaryOp(
+                        new Identifier("price"),
+                        BinaryOperator.Gt,
+                        Call("LAG", [new Identifier("price")])
+                    ))
+                ]),
+                null
+            );
+
+            var options = string.Join(" ", [
+                "PARTITION BY company",
+                "ORDER BY price_date",
+                "MEASURES",
+                "MATCH_NUMBER() AS match_number,",
+                "FIRST(price_date) AS start_date,",
+                "LAST(price_date) AS end_date",
+                "ONE ROW PER MATCH",
+                "AFTER MATCH SKIP TO LAST row_with_price_increase",
+                "PATTERN (row_before_decrease row_with_price_decrease+ row_with_price_increase+)",
+                "DEFINE",
+                "row_with_price_decrease AS price < LAG(price),",
+                "row_with_price_increase AS price > LAG(price)"
+            ]);
+
+            var select = VerifiedOnlySelect($"SELECT * FROM my_table MATCH_RECOGNIZE({options})", dialects);
+
+            Assert.Equal(select.From![0].Relation, expected);
+
+            static Expression Call(string function, IEnumerable<Expression> args)
+            {
+                Sequence<FunctionArg>? functionArgs = null;
+
+                if (args.Any())
+                {
+                    functionArgs = new Sequence<FunctionArg>(args.Select(arg =>
+                        new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(arg))));
+                }
+
+                return new Function(new ObjectName(new Ident(function)))
+                {
+                    Args = functionArgs
+                };
+            }
+        }
+
+        [Fact]
+        public void Test_Match_Recognize_Patterns()
+        {
+            var dialects = AllDialects.Where(d => d.SupportsMatchRecognize).ToList();
+
+            Check("FOO", new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Named("FOO")));
+
+            Check("^ FOO $", new MatchRecognizePattern.Concat([
+                    new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Start()),
+                    new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Named("FOO")),
+                    new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.End())
+            ]));
+
+            // exclusion
+            Check("{- FOO -}", new MatchRecognizePattern.Exclude(new MatchRecognizeSymbol.Named("FOO")));
+
+            Check("PERMUTE(A, B, C)",
+                new MatchRecognizePattern.Permute([
+                    new MatchRecognizeSymbol.Named("A"),
+                    new MatchRecognizeSymbol.Named("B"),
+                    new MatchRecognizeSymbol.Named("C"),
+                ]));
+
+            // various identifiers
+            Check(
+                "FOO | \"BAR\" | baz42",
+                new MatchRecognizePattern.Alternation([
+                    new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Named("FOO")),
+                    new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Named(new Ident("BAR", Symbols.DoubleQuote))),
+                    new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Named("baz42"))
+
+                ]));
+
+            // concatenated basic quantifiers
+            Check("S1* S2+ S3?",
+                new MatchRecognizePattern.Concat([
+                    new MatchRecognizePattern.Repetition(new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Named("S1")), new RepetitionQualifier.ZeroOrMore()),
+                    new MatchRecognizePattern.Repetition(new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Named("S2")), new RepetitionQualifier.OneOrMore()),
+                    new MatchRecognizePattern.Repetition(new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Named("S3")), new RepetitionQualifier.AtMostOne())
+                ]));
+
+            // double repetition
+            Check("S2*?", new MatchRecognizePattern.Repetition(
+                new MatchRecognizePattern.Repetition(
+                    new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Named("S2")),
+                    new RepetitionQualifier.ZeroOrMore()),
+                new RepetitionQualifier.AtMostOne()));
+
+            // range quantifiers in an alternation
+            Check("S1{1} | S2{2,3} | S3{4,} | S4{,5}",
+                new MatchRecognizePattern.Alternation([
+                    new MatchRecognizePattern.Repetition(new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Named("S1")), new RepetitionQualifier.Exactly(1)),
+                    new MatchRecognizePattern.Repetition(new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Named("S2")), new RepetitionQualifier.Range(2, 3)),
+                    new MatchRecognizePattern.Repetition(new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Named("S3")), new RepetitionQualifier.AtLeast(4)),
+                    new MatchRecognizePattern.Repetition(new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Named("S4")), new RepetitionQualifier.AtMost(5)),
+                ]));
+
+            // grouping case 1
+            Check("S1 ( S2 )", new MatchRecognizePattern.Concat([
+                    new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Named("S1")),
+                    new MatchRecognizePattern.Group(new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Named("S2")))
+                ]));
+
+            // grouping case 2
+            Check("( {- S3 -} S4 )+", new MatchRecognizePattern.Repetition(
+                new MatchRecognizePattern.Group(new MatchRecognizePattern.Concat([
+                    new MatchRecognizePattern.Exclude(new MatchRecognizeSymbol.Named("S3")),
+                    new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Named("S4"))
+                    ])),
+                new RepetitionQualifier.OneOrMore()));
+
+            Check("^ S1 S2*? ( {- S3 -} S4 )+ | PERMUTE(S1, S2){1,2} $",
+                new MatchRecognizePattern.Alternation([
+                    new MatchRecognizePattern.Concat([
+                        new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Start()),
+                        new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Named("S1")),
+                        new MatchRecognizePattern.Repetition(
+                            new MatchRecognizePattern.Repetition(
+                                new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Named("S2")),
+                                new RepetitionQualifier.ZeroOrMore()
+                            ),
+                            new RepetitionQualifier.AtMostOne()
+                        ),
+                        new MatchRecognizePattern.Repetition(
+                            new MatchRecognizePattern.Group(new MatchRecognizePattern.Concat([
+                                new MatchRecognizePattern.Exclude(new MatchRecognizeSymbol.Named("S3")),
+                                new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Named("S4")),
+                            ])),
+                            new RepetitionQualifier.OneOrMore()
+                        )
+                    ]),
+                    new MatchRecognizePattern.Concat([
+                        new MatchRecognizePattern.Repetition(
+                            new MatchRecognizePattern.Permute([
+                                new MatchRecognizeSymbol.Named("S1"),
+                                new MatchRecognizeSymbol.Named("S2"),
+                            ]),
+                            new RepetitionQualifier.Range(1, 2)
+                        ),
+                        new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.End())
+                    ])
+                ]));
+
+            void Check(string pattern, MatchRecognizePattern expected)
+            {
+                var select = VerifiedOnlySelect($"SELECT * FROM my_table MATCH_RECOGNIZE(PATTERN ({pattern}) DEFINE DUMMY AS true)", dialects);
+
+                var actual = ((TableFactor.MatchRecognize)select.From![0].Relation!).Pattern;
+                Assert.Equal(expected, actual);
+            }
+        }
     }
 }

@@ -254,6 +254,76 @@ public abstract record TableFactor : IWriteSql, IElement
             }
         }
     }
+    /// <summary>
+    /// Match_Recognize operation on a table
+    /// </summary>
+    /// <param name="MatchTable">Table factor</param>
+    /// <param name="PartitionBy">Partition By expression</param>
+    /// <param name="OrderBy">Order By expression</param>
+    /// <param name="Measures">Measures expression</param>
+    /// <param name="RowsPerMatch"></param>
+    /// <param name="AfterMatchSkip">ONE ROW PER MATCH | ALL ROWS PER MATCH</param>
+    /// <param name="Pattern">Pattern</param>
+    /// <param name="Symbols">Define Symbols</param>
+    /// <param name="Alias">Define Alias</param>
+    public record MatchRecognize(
+        TableFactor MatchTable,
+        Sequence<Expression> PartitionBy,
+        Sequence<OrderByExpression> OrderBy,
+        Sequence<Measure> Measures,
+        RowsPerMatch? RowsPerMatch,
+        AfterMatchSkip? AfterMatchSkip,
+        MatchRecognizePattern Pattern,
+        Sequence<SymbolDefinition> Symbols,
+        TableAlias? Alias
+    ) : TableFactor
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{MatchTable} MATCH_RECOGNIZE(");
+
+            if (PartitionBy.SafeAny())
+            {
+                writer.Write("PARTITION BY ");
+                writer.WriteDelimited(PartitionBy, ",");
+                writer.Write(" ");
+            }
+
+            if (OrderBy.SafeAny())
+            {
+                writer.Write("ORDER BY ");
+                writer.WriteDelimited(OrderBy, ",");
+                writer.Write(" ");
+            }
+
+            if (Measures.SafeAny())
+            {
+                writer.Write("MEASURES ");
+                writer.WriteDelimited(Measures, ", ");
+                writer.Write(" ");
+            }
+
+            if (RowsPerMatch != null)
+            {
+                writer.WriteSql($"{RowsPerMatch} ");
+            }
+
+            if (AfterMatchSkip != null)
+            {
+                writer.WriteSql($"{AfterMatchSkip} ");
+            }
+
+            writer.WriteSql($"PATTERN ({Pattern}) ");
+            writer.WriteSql($"DEFINE ");
+            writer.WriteDelimited(Symbols, ", ");
+            writer.Write(")");
+
+            if (Alias != null)
+            {
+                writer.WriteSql($" AS {Alias}");
+            }
+        }
+    }
 
     public T As<T>() where T : TableFactor
     {

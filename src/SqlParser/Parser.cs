@@ -2428,7 +2428,7 @@ public class Parser
         while (true)
         {
             var token = PeekToken();
-       
+
             if (token is LeftBracket)
             {
                 NextToken();
@@ -8458,6 +8458,7 @@ public class Parser
                             or TableFactor.TableFunction
                             or TableFactor.Pivot
                             or TableFactor.Unpivot
+                            or TableFactor.MatchRecognize
                             or TableFactor.NestedJoin:
 
                             if (tableAndJoins.Relation.Alias != null)
@@ -8494,7 +8495,6 @@ public class Parser
             };
         }
 
-        //if (ParseKeyword(Keyword.JSON_TABLE))
         var nextToken = PeekToken();
         if (nextToken is Word w && w.Keyword == Keyword.JSON_TABLE && PeekNthTokenIs<LeftParen>(1))
         {
@@ -8520,7 +8520,6 @@ public class Parser
         var args = ParseInit(ConsumeToken<LeftParen>(), ParseOptionalArgs);
 
         var optionalAlias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
-
 
         Sequence<Expression>? withHints = null;
         if (ParseKeyword(Keyword.WITH))
@@ -8555,7 +8554,274 @@ public class Parser
             };
         }
 
+        if (_dialect.SupportsMatchRecognize && ParseKeyword(Keyword.MATCH_RECOGNIZE))
+        {
+            table = ParseMatchRecognize(table);
+        }
+
         return table;
+    }
+
+    public TableFactor ParseMatchRecognize(TableFactor table)
+    {
+        MatchRecognizePattern pattern = null!;
+        Sequence<Expression>? partitionBy = null;
+        Sequence<OrderByExpression>? orderBy = null;
+        Sequence<Measure>? measures = null;
+        RowsPerMatch? rowsPerMatch = null;
+        AfterMatchSkip? afterMatchSkip = null;
+        Sequence<SymbolDefinition> symbols = ExpectParens<Sequence<SymbolDefinition>>(() =>
+        {
+            partitionBy = ParseKeywordSequence(Keyword.PARTITION, Keyword.BY)
+                ? ParseCommaSeparated(ParseExpr)
+                : new Sequence<Expression>();
+
+            orderBy = ParseKeywordSequence(Keyword.ORDER, Keyword.BY)
+                ? ParseCommaSeparated(ParseOrderByExpr)
+                : new Sequence<OrderByExpression>();
+
+            measures = ParseKeyword(Keyword.MEASURES)
+                ? ParseCommaSeparated(() =>
+                {
+                    var measure = ParseExpr();
+                    ParseKeyword(Keyword.AS);
+                    var alias = ParseIdentifier();
+                    return new Measure(measure, alias);
+                })
+                : new Sequence<Measure>();
+
+            if (ParseKeywordSequence(Keyword.ONE, Keyword.ROW, Keyword.PER, Keyword.MATCH))
+            {
+                rowsPerMatch = new RowsPerMatch.OneRow();
+            }
+            else if (ParseKeywordSequence(Keyword.ALL, Keyword.ROW, Keyword.PER, Keyword.MATCH))
+            {
+                EmptyMatchesMode? mode = null;
+
+                if (ParseKeywordSequence(Keyword.SHOW, Keyword.EMPTY, Keyword.MATCHES))
+                {
+                    mode = EmptyMatchesMode.Show;
+                }
+                else if (ParseKeywordSequence(Keyword.OMIT, Keyword.EMPTY, Keyword.MATCHES))
+                {
+                    mode = EmptyMatchesMode.Omit;
+                }
+                else if (ParseKeywordSequence(Keyword.WITH, Keyword.UNMATCHED, Keyword.ROWS))
+                {
+                    mode = EmptyMatchesMode.WithUnmatched;
+                }
+
+                rowsPerMatch = new RowsPerMatch.AllRows(mode);
+            }
+
+            if (ParseKeywordSequence(Keyword.AFTER, Keyword.MATCH, Keyword.SKIP))
+            {
+                if(ParseKeywordSequence(Keyword.PAST, Keyword.LAST, Keyword.ROW))
+                {
+                    afterMatchSkip = new AfterMatchSkip.PastLastRow();
+                }
+                else if (ParseKeywordSequence(Keyword.TO, Keyword.NEXT, Keyword.ROW))
+                {
+                    afterMatchSkip = new AfterMatchSkip.ToNextRow();
+                }
+                else if (ParseKeywordSequence(Keyword.TO, Keyword.FIRST))
+                {
+                    afterMatchSkip = new AfterMatchSkip.ToFirst(ParseIdentifier());
+                }
+                else if (ParseKeywordSequence(Keyword.TO, Keyword.LAST))
+                {
+                    afterMatchSkip = new AfterMatchSkip.ToLast(ParseIdentifier());
+                }
+                else
+                {
+                    throw Expected("after match skip otoin", NextToken());
+                }
+            }
+            
+
+            ExpectKeyword(Keyword.PATTERN);
+            pattern = ExpectParens(ParsePattern);
+            ExpectKeyword(Keyword.DEFINE);
+
+            return ParseCommaSeparated(() =>
+            {
+                var symbol = ParseIdentifier();
+                ExpectKeyword(Keyword.AS);
+                var definition = ParseExpr();
+                return new SymbolDefinition(symbol, definition);
+            });
+        });
+
+        var alias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
+
+        return new TableFactor.MatchRecognize(table,
+            partitionBy,
+            orderBy,
+            measures,
+            rowsPerMatch,
+            afterMatchSkip,
+            pattern,
+            symbols,
+            alias);
+    }
+
+    public MatchRecognizePattern ParseBasePattern()
+    {
+        var nextToken = NextToken();
+
+        if (nextToken is Caret)
+        {
+            return new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.Start());
+        }
+
+        if (nextToken is Placeholder)
+        {
+            return new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.End());
+        }
+
+        if (nextToken is LeftBrace)
+        {
+            ExpectToken<Minus>();
+            var symbol = new MatchRecognizeSymbol.Named(ParseIdentifier());
+            ExpectToken<Minus>();
+            ExpectToken<RightBrace>();
+            return new MatchRecognizePattern.Exclude(symbol);
+        }
+
+        if (nextToken is Word w && w.Value == "PERMUTE")
+        {
+            Sequence<MatchRecognizeSymbol> symbols = ExpectParens(() =>
+                ParseCommaSeparated<MatchRecognizeSymbol>(() => new MatchRecognizeSymbol.Named(ParseIdentifier())));
+            return new MatchRecognizePattern.Permute(symbols);
+        }
+
+        if (nextToken is LeftParen)
+        {
+            var pattern = ParsePattern();
+            ExpectRightParen();
+            return new MatchRecognizePattern.Group(pattern);
+        }
+
+        PrevToken();
+        var ident = ParseIdentifier();
+        var named = new MatchRecognizeSymbol.Named(ident);
+        return new MatchRecognizePattern.Symbol(named);
+    }
+
+    public MatchRecognizePattern ParseRepetitionPattern()
+    {
+        var pattern = ParseBasePattern();
+        var loop = true;
+
+        while (loop)
+        {
+            var token = NextToken();
+
+            var quantifier = token switch
+            {
+                Multiply => new RepetitionQualifier.ZeroOrMore(),
+                Plus => new RepetitionQualifier.OneOrMore(),
+                Placeholder p when p.Value == "?" => new RepetitionQualifier.AtMostOne(),
+                LeftBrace => ParseLeftBrace(),
+                _ => Break()
+            };
+
+            if (!loop && quantifier == null)
+            {
+                break;
+            }
+
+            pattern = new MatchRecognizePattern.Repetition(pattern, quantifier);
+        }
+
+        return pattern;
+
+        RepetitionQualifier ParseLeftBrace()
+        {
+            var next = NextToken();
+            switch (next)
+            {
+                case Comma:
+                    var t = NextToken();
+                    if (t is not Number n)
+                    {
+                        throw Expected("literal number", t);
+                    }
+
+                    ExpectToken<RightBrace>();
+                    return new RepetitionQualifier.AtMost(int.Parse(n.Value));
+
+                case Number num when ConsumeToken<Comma>():
+                    var tn = NextToken();
+
+                    if (tn is Number m)
+                    {
+                        ExpectToken<RightBrace>();
+                        return new RepetitionQualifier.Range(int.Parse(num.Value), int.Parse(m.Value));
+                    }
+
+                    if (tn is RightBrace)
+                    {
+                        return new RepetitionQualifier.AtLeast(int.Parse(num.Value));
+                    }
+
+                    throw Expected("} or upper bound", tn);
+
+                case Number nu:
+                    ExpectToken<RightBrace>();
+                    return new RepetitionQualifier.Exactly(int.Parse(nu.Value));
+
+                default:
+                    throw Expected("qualifier range", next);
+            }
+        }
+
+        RepetitionQualifier? Break()
+        {
+            PrevToken();
+            loop = false;
+            return null;
+        }
+    }
+
+    public MatchRecognizePattern ParsePattern()
+    {
+        var pattern = ParseConcatPattern();
+
+        if (ConsumeToken<Pipe>())
+        {
+            var next = ParsePattern();
+            if (next is MatchRecognizePattern.Alternation alt)
+            {
+                alt.Patterns.Insert(0, pattern);
+                return new MatchRecognizePattern.Alternation(alt.Patterns);
+            }
+            else
+            {
+                return new MatchRecognizePattern.Alternation([pattern, next]);
+            }
+        }
+        else
+        {
+            return pattern;
+        }
+    }
+
+    public MatchRecognizePattern ParseConcatPattern()
+    {
+        var patterns = new Sequence<MatchRecognizePattern> { ParseRepetitionPattern() };
+
+        while (PeekToken() is not RightParen and not Pipe)
+        {
+            patterns.Add(ParseRepetitionPattern());
+        }
+
+        if (patterns.Count == 1)
+        {
+            return patterns[0];
+        }
+
+        return new MatchRecognizePattern.Concat(patterns);
     }
 
     public JsonTableColumn ParseJsonTableColumnDef()
@@ -9195,10 +9461,10 @@ public class Parser
         }
 
         ReplaceSelectItem? optReplace = null;
-        if (_dialect is GenericDialect 
-            or BigQueryDialect 
+        if (_dialect is GenericDialect
+            or BigQueryDialect
             or ClickHouseDialect
-            or DuckDbDialect 
+            or DuckDbDialect
             or SnowflakeDialect)
         {
             optReplace = ParseOptionalSelectItemReplace();
