@@ -6,7 +6,7 @@ public abstract record ArrayElementTypeDef : IWriteSql
 
     public record AngleBracket(DataType DataType) : ArrayElementTypeDef;
     
-    public record SquareBracket(DataType DataType) : ArrayElementTypeDef;
+    public record SquareBracket(DataType DataType, long? Size = null) : ArrayElementTypeDef;
     
     public void ToSql(SqlTextWriter writer)
     {

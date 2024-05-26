@@ -1,18 +1,18 @@
 ﻿using System.Data;
-using System.Diagnostics;
 using System.Text.RegularExpressions;
 using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
+using System.Globalization;
+using System.Text;
 using static SqlParser.Ast.ExactNumberInfo;
 using static SqlParser.Ast.Statement;
 using static SqlParser.Ast.GrantObjects;
 using static SqlParser.Ast.Expression;
+using static SqlParser.Ast.AlterTableOperation;
+
 using DataType = SqlParser.Ast.DataType;
 using Select = SqlParser.Ast.Select;
-using System.Globalization;
-using System.Text;
-using static SqlParser.Ast.AlterTableOperation;
 using Declare = SqlParser.Ast.Declare;
 using HiveRowDelimiter = SqlParser.Ast.HiveRowDelimiter;
 
@@ -6445,8 +6445,12 @@ public class Parser
         // Keyword.ARRAY syntax from above
         while (ConsumeToken<LeftBracket>())
         {
+            long? size = _dialect is GenericDialect or DuckDbDialect or PostgreSqlDialect
+                ? (long)MaybeParse(ParseLiteralUnit)
+                : null;
+
             ExpectToken<RightBracket>();
-            data = new DataType.Array(new ArrayElementTypeDef.SquareBracket(data));
+            data = new DataType.Array(new ArrayElementTypeDef.SquareBracket(data, size));
         }
 
         return (data, trailingBracket);

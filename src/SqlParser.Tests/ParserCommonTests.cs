@@ -5655,5 +5655,15 @@ namespace SqlParser.Tests
                 Assert.Equal(expected, actual);
             }
         }
+
+        [Fact]
+        public void Parse_Size_List()
+        {
+            DefaultDialects =[new GenericDialect(), new PostgreSqlDialect(), new DuckDbDialect()];
+
+            VerifiedStatement("CREATE TABLE embeddings (data FLOAT[1536])");
+            VerifiedStatement("CREATE TABLE embeddings (data FLOAT[1536][3])");
+            VerifiedStatement("SELECT data::FLOAT[1536] FROM embeddings");
+        }
     }
 }

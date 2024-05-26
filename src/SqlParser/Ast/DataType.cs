@@ -94,8 +94,8 @@ public abstract record DataType : IWriteSql
                     writer.Write("ARRAY");
                     break;
 
-                case ArrayElementTypeDef.SquareBracket:
-                    writer.WriteSql($"{DataType}[]");
+                case ArrayElementTypeDef.SquareBracket sb:
+                    writer.WriteSql($"{DataType}[{sb.Size}]");
                     break;
 
                 case ArrayElementTypeDef.AngleBracket:
@@ -396,7 +396,7 @@ public abstract record DataType : IWriteSql
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            FormatTypeWithOptionalLength(writer, "DATETIME", Length);
+            FormatTypeWithOptionalLength(writer, "FLOAT", Length);
         }
     }
     /// <summary>
