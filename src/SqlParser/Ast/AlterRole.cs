@@ -137,8 +137,7 @@ public abstract record AlterRoleOperation : IWriteSql
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.Write("WITH ");
-            writer.WriteDelimited(Options, " ");
+            writer.Write($"WITH {Options.ToSqlDelimited(Symbols.Space)}");
         }
     }
 

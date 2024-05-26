@@ -42,8 +42,7 @@ public abstract record Statement : IWriteSql, IElement
                 writer.Write("ONLY ");
             }
 
-            writer.WriteSql($"{Name} ");
-            writer.WriteDelimited(Operations, ", ");
+            writer.WriteSql($"{Name} {Operations.ToSqlDelimited()}");
 
             if (Location != null)
             {
@@ -66,16 +65,12 @@ public abstract record Statement : IWriteSql, IElement
 
             if (WithOptions.SafeAny())
             {
-                writer.Write(" WITH (");
-                writer.WriteDelimited(WithOptions, ", ");
-                writer.Write(")");
+                writer.Write($" WITH ({WithOptions.ToSqlDelimited()})");
             }
 
             if (Columns.SafeAny())
             {
-                writer.Write(" (");
-                writer.WriteDelimited(Columns, ", ");
-                writer.Write(")");
+                writer.Write($" ({Columns.ToSqlDelimited()})");
             }
 
             writer.WriteSql($" AS {Query}");
@@ -163,8 +158,7 @@ public abstract record Statement : IWriteSql, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteDelimited(Id, ".");
-            writer.WriteSql($" = {Value}");
+            writer.WriteSql($"{Id.ToSqlDelimited('.')} = {Value}");
         }
     }
     /// <summary>
@@ -202,9 +196,7 @@ public abstract record Statement : IWriteSql, IElement
 
             if (AttachOption.SafeAny())
             {
-                writer.Write(" (");
-                writer.WriteDelimited(AttachOption, ", ");
-                writer.Write(")");
+                writer.Write($" ({AttachOption.ToSqlDelimited()})");
             }
         }
     }
@@ -348,9 +340,7 @@ public abstract record Statement : IWriteSql, IElement
 
                 if (table.Columns.SafeAny())
                 {
-                    writer.Write("(");
-                    writer.WriteDelimited(table.Columns, ", ");
-                    writer.Write(")");
+                    writer.Write($"({table.Columns.ToSqlDelimited()})");
                 }
             }
 
@@ -364,8 +354,7 @@ public abstract record Statement : IWriteSql, IElement
 
             if (LegacyOptions.SafeAny())
             {
-                writer.Write(" ");
-                writer.WriteDelimited(LegacyOptions, " ");
+                writer.Write($" {LegacyOptions.ToSqlDelimited(Symbols.Space)}");
             }
 
             if (Values.SafeAny())
@@ -430,9 +419,7 @@ public abstract record Statement : IWriteSql, IElement
             }
             else
             {
-                writer.WriteSql($" FROM (SELECT ");
-                writer.WriteDelimited(FromTransformations, ", ");
-                writer.WriteSql($" FROM {FromStage}{StageParams}");
+                writer.WriteSql($" FROM (SELECT {FromTransformations.ToSqlDelimited()} FROM {FromStage}{StageParams}");
 
                 if (FromStageAlias != null)
                 {
@@ -456,16 +443,12 @@ public abstract record Statement : IWriteSql, IElement
 
             if (FileFormat != null && FileFormat.Count != 0)
             {
-                writer.WriteSql($" FILE_FORMAT=(");
-                writer.WriteDelimited(FileFormat, " ");
-                writer.Write(")");
+                writer.WriteSql($" FILE_FORMAT=({FileFormat.ToSqlDelimited(Symbols.Space)})");
             }
 
             if (CopyOptions != null && CopyOptions.Count != 0)
             {
-                writer.WriteSql($" COPY_OPTIONS=(");
-                writer.WriteDelimited(CopyOptions, " ");
-                writer.Write(")");
+                writer.WriteSql($" COPY_OPTIONS=({CopyOptions.ToSqlDelimited(Symbols.Space)})");
             }
 
             if (ValidationMode != null)
@@ -610,15 +593,11 @@ public abstract record Statement : IWriteSql, IElement
                 writer.WriteSql($" USING {Using}");
             }
 
-            writer.Write("(");
-            writer.WriteDelimited(Columns, ",");
-            writer.Write(")");
+            writer.Write($"({Columns.ToSqlDelimited(Symbols.Comma)})");
 
             if (Include.SafeAny())
             {
-                writer.Write(" INCLUDE (");
-                writer.WriteDelimited(Include, ",");
-                writer.Write(")");
+                writer.Write($" INCLUDE ({Include.ToSqlDelimited(Symbols.Comma)})");
             }
 
             if (NullsDistinct.HasValue)
@@ -630,18 +609,6 @@ public abstract record Statement : IWriteSql, IElement
             {
                 writer.WriteSql($" WHERE {Predicate}");
             }
-
-            //if (Include.SafeAny())
-            //{
-            //    writer.WriteDelimited();
-            //}
-
-            //if (Using != null)
-            //{
-            //    writer.WriteSql($" USING {Using} ");
-            //}
-
-            //
         }
     }
     /// <summary>
@@ -661,9 +628,7 @@ public abstract record Statement : IWriteSql, IElement
 
             if (ProcedureParams.SafeAny())
             {
-                writer.Write(" (");
-                writer.WriteDelimited(ProcedureParams, ", ");
-                writer.Write(")");
+                writer.Write($" ({ProcedureParams.ToSqlDelimited()})");
             }
 
             writer.WriteSql($" AS BEGIN {Body} END");
@@ -687,9 +652,7 @@ public abstract record Statement : IWriteSql, IElement
 
             if (Args.SafeAny())
             {
-                writer.Write("(");
-                writer.WriteDelimited(Args, ", ");
-                writer.Write(")");
+                writer.Write($"({Args.ToSqlDelimited()})");
             }
 
             if (Definition is MacroDefinition.MacroExpression e)
@@ -739,8 +702,7 @@ public abstract record Statement : IWriteSql, IElement
             writer.WriteSql($"( TYPE {SecretType}");
             if (Options.SafeAny())
             {
-                writer.Write(", ");
-                writer.WriteDelimited(Options, ", ");
+                writer.Write($", {Options.ToSqlDelimited()}");
             }
             writer.Write(" )");
         }
@@ -772,15 +734,15 @@ public abstract record Statement : IWriteSql, IElement
 
             if (DirectoryTableParams.SafeAny())
             {
-                writer.WriteSql($" DIRECTORY=({DirectoryTableParams.ToSqlDelimited(" ")})");
+                writer.WriteSql($" DIRECTORY=({DirectoryTableParams.ToSqlDelimited(Symbols.Space)})");
             }
             if (FileFormat.SafeAny())
             {
-                writer.WriteSql($" FILE_FORMAT=({FileFormat.ToSqlDelimited(" ")})");
+                writer.WriteSql($" FILE_FORMAT=({FileFormat.ToSqlDelimited(Symbols.Space)})");
             }
             if (CopyOptions.SafeAny())
             {
-                writer.WriteSql($" COPY_OPTIONS=({CopyOptions.ToSqlDelimited(" ")})");
+                writer.WriteSql($" COPY_OPTIONS=({CopyOptions.ToSqlDelimited(Symbols.Space)})");
             }
             if (Comment != null)
             {
@@ -920,8 +882,7 @@ public abstract record Statement : IWriteSql, IElement
                         writer.WriteSql($" ROW FORMAT DELIMITED");
                         if (d.Delimiters.SafeAny())
                         {
-                            writer.Write(" ");
-                            writer.WriteDelimited(d.Delimiters, " ");
+                            writer.Write($" {d.Delimiters.ToSqlDelimited(Symbols.Space)}");
                         }
                         break;
                 }
@@ -942,9 +903,7 @@ public abstract record Statement : IWriteSql, IElement
 
                     if (HiveFormats.SerdeProperties.SafeAny())
                     {
-                        writer.Write(" WITH SERDEPROPERTIES (");
-                        writer.WriteDelimited(HiveFormats.SerdeProperties, ", ");
-                        writer.Write(")");
+                        writer.Write($" WITH SERDEPROPERTIES ({HiveFormats.SerdeProperties.ToSqlDelimited()})");
                     }
 
                     if (!External)
@@ -1001,9 +960,7 @@ public abstract record Statement : IWriteSql, IElement
 
             if (Options.SafeAny())
             {
-                writer.Write("OPTIONS(");
-                writer.WriteDelimited(Options, ", ");
-                writer.Write(")");
+                writer.Write($"OPTIONS({Options.ToSqlDelimited()})");
             }
 
             if (Query != null)
@@ -1315,8 +1272,7 @@ public abstract record Statement : IWriteSql, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"DECLARE ");
-            writer.WriteDelimited(Statements, "; ");
+            writer.WriteSql($"DECLARE {Statements.ToSqlDelimited("; ")}");
         }
     }
     /// <summary>
@@ -1357,8 +1313,7 @@ public abstract record Statement : IWriteSql, IElement
 
             if (DeleteOperation.OrderBy.SafeAny())
             {
-                writer.Write(" ORDER BY ");
-                writer.WriteDelimited(DeleteOperation.OrderBy, ", ");
+                writer.Write($" ORDER BY {DeleteOperation.OrderBy.ToSqlDelimited()}");
             }
 
             if (DeleteOperation.Limit != null)
@@ -1416,15 +1371,12 @@ public abstract record Statement : IWriteSql, IElement
 
             if (Parameters.SafeAny())
             {
-                writer.Write("(");
-                writer.WriteDelimited(Parameters, ", ");
-                writer.Write(")");
+                writer.Write($"({Parameters.ToSqlDelimited()})");
             }
 
             if (Using.SafeAny())
             {
-                writer.Write(" USING ");
-                writer.WriteDelimited(Using, ", ");
+                writer.Write($" USING {Using.ToSqlDelimited()}");
             }
         }
     }
@@ -1649,8 +1601,7 @@ public abstract record Statement : IWriteSql, IElement
 
             if (Tables.SafeAny())
             {
-                writer.Write(" ");
-                writer.WriteDelimited(Tables, ", ");
+                writer.Write($" {Tables.ToSqlDelimited()}");
             }
 
             var export = Export ? " FOR EXPORT" : null;
@@ -1746,9 +1697,7 @@ public abstract record Statement : IWriteSql, IElement
 
                 if (InsertOperation.InsertAlias.ColumnAliases.SafeAny())
                 {
-                    writer.Write(" (");
-                    writer.WriteDelimited(InsertOperation.InsertAlias.ColumnAliases, ", ");
-                    writer.Write(")");
+                    writer.Write($" ({InsertOperation.InsertAlias.ColumnAliases.ToSqlDelimited()})");
                 }
             }
 
@@ -1790,8 +1739,7 @@ public abstract record Statement : IWriteSql, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"LOCK TABLES ");
-            writer.WriteDelimited(Tables, ", ");
+            writer.WriteSql($"LOCK TABLES {Tables.ToSqlDelimited()}");
         }
     }
     /// <summary>
@@ -1807,7 +1755,7 @@ public abstract record Statement : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             var into = Into ? " INTO" : null;
-            writer.WriteSql($"MERGE{into} {Table} USING {Source} ON {On} {Clauses.ToSqlDelimited(" ")}");
+            writer.WriteSql($"MERGE{into} {Table} USING {Source} ON {On} {Clauses.ToSqlDelimited(Symbols.Space)}");
         }
     }
     /// <summary>
@@ -2183,7 +2131,7 @@ public abstract record Statement : IWriteSql, IElement
 
             if (Variable.SafeAny())
             {
-                writer.WriteSql($" {Variable.ToSqlDelimited(" ")}");
+                writer.WriteSql($" {Variable.ToSqlDelimited(Symbols.Space)}");
             }
         }
     }
@@ -2324,9 +2272,7 @@ public abstract record Statement : IWriteSql, IElement
 
             if (With.SafeAny())
             {
-                writer.Write(" WITH (");
-                writer.WriteDelimited(With, ", ");
-                writer.Write(")");
+                writer.Write($" WITH ({With.ToSqlDelimited()})");
             }
         }
     }

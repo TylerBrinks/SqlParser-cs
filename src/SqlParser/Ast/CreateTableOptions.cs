@@ -12,15 +12,11 @@ public abstract record CreateTableOptions : IWriteSql
         switch (this)
         {
             case With w:
-                writer.Write("WITH (");
-                writer.WriteDelimited(w.OptionsList, ", ");
-                writer.Write(")");
+                writer.Write($"WITH ({w.OptionsList.ToSqlDelimited()})");
                 break;
 
             case Options o:
-                writer.Write("OPTIONS (");
-                writer.WriteDelimited(o.OptionsList, ", ");
-                writer.Write(")");
+                writer.Write($"OPTIONS ({o.OptionsList.ToSqlDelimited()})");
                 break;
         }
     }

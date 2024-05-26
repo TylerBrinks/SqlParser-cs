@@ -8,9 +8,7 @@ public  record ViewColumnDef(Ident Name, Sequence<SqlOption>? Options = null) : 
 
         if (Options.SafeAny())
         {
-            writer.Write(" OPTIONS(");
-            writer.WriteDelimited(Options, ", ");
-            writer.Write(")");
+            writer.Write($" OPTIONS({Options.ToSqlDelimited()})");
         }
     }
 }

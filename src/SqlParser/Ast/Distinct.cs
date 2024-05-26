@@ -14,9 +14,7 @@ public abstract record DistinctFilter : IWriteSql
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.Write("DISTINCT ON (");
-            writer.WriteDelimited(ColumnNames, ", ");
-            writer.Write(")");
+            writer.Write($"DISTINCT ON ({ColumnNames.ToSqlDelimited()})");
         }
     }
 

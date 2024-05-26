@@ -8,9 +8,7 @@ public abstract record UserDefinedTypeRepresentation : IWriteSql
     {
         if (this is Composite c)
         {
-            writer.Write("(");
-            writer.WriteDelimited(c.Attributes, ", ");
-            writer.Write(")");
+            writer.Write($"({c.Attributes.ToSqlDelimited()})");
         }
     }
 }

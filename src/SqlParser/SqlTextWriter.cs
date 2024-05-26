@@ -51,6 +51,17 @@ public class SqlTextWriter : StringWriter
         }
     }
     /// <summary>
+    /// Writes a given IEnumerable IWriteSql list with a specified
+    /// delimiter between each item in the list
+    /// </summary>
+    /// <typeparam name="T">IWriteSql Type</typeparam>
+    /// <param name="enumerable">IWriteSql enumerable list</param>
+    /// <param name="delimiter">Character delimiter between each object</param>
+    public void WriteDelimited<T>(IEnumerable<T>? enumerable, char delimiter) where T : IWriteSql
+    {
+        WriteDelimited<T>(enumerable, delimiter.ToString());
+    }
+    /// <summary>
     /// Writes a given IEnumerable IWriteSql list with no
     /// spaces between each item in the list
     /// </summary>
@@ -122,6 +133,23 @@ public static class SqlWritingExtensions
         using (var writer = new SqlTextWriter(builder))
         {
             writer.WriteDelimited(list, delimiter);
+        }
+
+        return StringBuilderPool.Return(builder);
+    }
+
+    public static string ToSqlDelimited<T>(this IEnumerable<T>? list, char delimiter) where T : IWriteSql
+    {
+        if (list == null)
+        {
+            return string.Empty;
+        }
+
+        var builder = StringBuilderPool.Get();
+
+        using (var writer = new SqlTextWriter(builder))
+        {
+            writer.WriteDelimited(list, delimiter.ToString());
         }
 
         return StringBuilderPool.Return(builder);

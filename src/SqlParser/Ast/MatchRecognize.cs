@@ -121,12 +121,10 @@ public abstract record MatchRecognizePattern : IWriteSql
                 writer.WriteSql($"{{- {e.ExcludeSymbol} -}}");
                 break;
             case Permute p:
-                writer.Write("PERMUTE(");
-                writer.WriteDelimited(p.Symbols, ", ");
-                writer.Write(")");
+                writer.Write($"PERMUTE({p.Symbols.ToSqlDelimited()})");
                 break;
             case Concat c:
-                writer.WriteDelimited(c.Patterns, " ");
+                writer.WriteDelimited(c.Patterns, Symbols.Space);
                 break;
             case Group g:
                 writer.WriteSql($"( {g.Pattern} )");

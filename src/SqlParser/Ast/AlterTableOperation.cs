@@ -77,8 +77,7 @@ public abstract record AlterTableOperation : IWriteSql
         {
             var ifNot = IfNotExists ? $" {IIfNotExists.IfNotExistsPhrase}" : null;
 
-            writer.WriteSql($"ADD{ifNot} ");
-            writer.WriteDelimited(NewPartitions, " ");
+            writer.WriteSql($"ADD{ifNot} {NewPartitions.ToSqlDelimited(Symbols.Space)}");
         }
     }
     /// <summary>
@@ -297,8 +296,7 @@ public abstract record AlterTableOperation : IWriteSql
 
             if (Options.SafeAny())
             {
-                writer.Write(" ");
-                writer.WriteDelimited(Options, " ");
+                writer.Write($" {Options.ToSqlDelimited(Symbols.Space)}");
             }
 
             if (ColumnPosition != null)
@@ -383,7 +381,7 @@ public abstract record AlterTableOperation : IWriteSql
             writer.WriteSql($"CHANGE COLUMN {OldName} {NewName} {DataType}");
             if (Options.Any())
             {
-                writer.WriteSql($" {Options.ToSqlDelimited(" ")}");
+                writer.WriteSql($" {Options.ToSqlDelimited(Symbols.Space)}");
             }
 
             if (ColumnPosition != null)

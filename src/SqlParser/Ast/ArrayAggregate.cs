@@ -30,8 +30,7 @@ public record ArrayAggregate([property:Visit(0)]Expression Expression) : IWriteS
         {
             if (OrderBy != null)
             {
-                writer.WriteSql($" ORDER BY ");
-                writer.WriteDelimited(OrderBy, ", ");
+                writer.WriteSql($" ORDER BY {OrderBy.ToSqlDelimited()}");
             }
             if (Limit != null)
             {
@@ -45,9 +44,7 @@ public record ArrayAggregate([property:Visit(0)]Expression Expression) : IWriteS
         {
             if (OrderBy != null)
             {
-                writer.WriteSql($" WITHIN GROUP (ORDER BY ");
-                writer.WriteDelimited(OrderBy, ", ");
-                writer.Write(")");
+                writer.WriteSql($" WITHIN GROUP (ORDER BY {OrderBy.ToSqlDelimited()})");
             }
         }
     }

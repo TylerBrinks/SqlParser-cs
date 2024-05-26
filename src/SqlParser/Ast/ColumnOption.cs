@@ -231,9 +231,7 @@ public abstract record ColumnOption : IWriteSql
                 {
                     if (SequenceOptions.Any())
                     {
-                        writer.Write(" (");
-                        writer.WriteDelimited(SequenceOptions, string.Empty);
-                        writer.Write(" )");
+                        writer.Write($" ({SequenceOptions.ToSqlDelimited(string.Empty)})");
                     }
                 }
             }
@@ -249,9 +247,7 @@ public abstract record ColumnOption : IWriteSql
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.Write("OPTIONS(");
-            writer.WriteDelimited(OptionList, ", ");
-            writer.Write(")");
+            writer.Write($"OPTIONS({OptionList.ToSqlDelimited()})");
         }
     }
 

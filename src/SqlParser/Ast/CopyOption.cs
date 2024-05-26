@@ -283,8 +283,7 @@ public abstract record CopyLegacyOption : IWriteSql
                 break;
 
             case Csv c:
-                writer.Write("CSV ");
-                writer.WriteDelimited(c.Options, " ");
+                writer.Write($"CSV {c.Options.ToSqlDelimited(Symbols.Space)}");
                 break;
         }
     }

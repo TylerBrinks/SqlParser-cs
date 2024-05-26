@@ -644,9 +644,7 @@ public abstract record DataType : IWriteSql
 
             if (Fields.SafeAny())
             {
-                writer.Write("<");
-                writer.WriteDelimited(Fields, ", ");
-                writer.Write(">");
+                writer.Write($"<{Fields.ToSqlDelimited()}>");
             }
         }
     }

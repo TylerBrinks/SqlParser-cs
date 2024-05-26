@@ -50,7 +50,7 @@ public class Sequence<T> : List<T>, IWriteSql, IElement
     /// The parser uses the sequence of elements to determine uniqueness.
     /// This would otherwise cause issues when T is a type where the
     /// underlying hash code is not fixed for similar values (e.g. strings).
-    /// However for the for the purposes of the parser, virtually all
+    /// However for the purposes of the parser, virtually all
     /// equality checking is limited to records that check value equality.
     /// </summary>
     /// <returns>Generated hash code</returns>

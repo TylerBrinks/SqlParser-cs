@@ -51,8 +51,7 @@ public record Query([Visit(1)] SetExpression Body) : IWriteSql, IElement
 
         if (LimitBy.SafeAny())
         {
-            writer.Write(" BY ");
-            writer.WriteDelimited(LimitBy, ", ");
+            writer.Write($" BY {LimitBy.ToSqlDelimited()}");
         }
 
         if (Fetch != null)
@@ -62,7 +61,7 @@ public record Query([Visit(1)] SetExpression Body) : IWriteSql, IElement
 
         if (Locks != null && Locks.Any())
         {
-            writer.WriteSql($" {Locks.ToSqlDelimited(Symbols.Space.ToString())}");
+            writer.WriteSql($" {Locks.ToSqlDelimited(Symbols.Space)}");
         }
 
         if (ForClause != null)

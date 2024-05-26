@@ -9,14 +9,14 @@ public abstract record GroupByExpression : IWriteSql
 
     public void ToSql(SqlTextWriter writer)
     {
-        if (this is All all)
+        switch (this)
         {
-            writer.Write("GROUP BY ALL");
-        }
-        else if (this is Expressions expressions)
-        {
-            writer.Write("GROUP BY ");
-            writer.WriteDelimited(expressions.ColumnNames, ", ");
+            case All:
+                writer.Write("GROUP BY ALL");
+                break;
+            case Expressions expressions:
+                writer.Write($"GROUP BY {expressions.ColumnNames.ToSqlDelimited()}");
+                break;
         }
     }
 }

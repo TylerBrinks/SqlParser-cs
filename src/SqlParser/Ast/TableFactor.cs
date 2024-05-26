@@ -41,10 +41,7 @@ public abstract record TableFactor : IWriteSql, IElement
                 writer.Write("LATERAL ");
             }
 
-            writer.WriteSql($"{Name}");
-            writer.Write("(");
-            writer.WriteDelimited(Args, ", ");
-            writer.Write(")");
+            writer.WriteSql($"{Name}({Args.ToSqlDelimited()})");
 
             if (Alias != null)
             {
@@ -89,9 +86,7 @@ public abstract record TableFactor : IWriteSql, IElement
         {
             var cols = new Expression.CompoundIdentifier(ValueColumns);
 
-            writer.WriteSql($"{TableFactor} PIVOT({AggregateFunction} FOR {cols} IN (");
-            writer.WriteDelimited(PivotValues, ", ");
-            writer.Write("))");
+            writer.WriteSql($"{TableFactor} PIVOT({AggregateFunction} FOR {cols} IN ({PivotValues.ToSqlDelimited()}))");
 
             if (PivotAlias != null)
             {
@@ -108,9 +103,7 @@ public abstract record TableFactor : IWriteSql, IElement
 
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"{TableFactor} UNPIVOT({Value} FOR {Name} IN (");
-            writer.WriteDelimited(Columns, ", ");
-            writer.Write("))");
+            writer.WriteSql($"{TableFactor} UNPIVOT({Value} FOR {Name} IN ({Columns.ToSqlDelimited()}))");
 
             if (PivotAlias != null)
             {
@@ -205,9 +198,7 @@ public abstract record TableFactor : IWriteSql, IElement
 
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.Write("UNNEST(");
-            writer.WriteDelimited(ArrayExpressions, ", ");
-            writer.Write(")");
+            writer.Write($"UNNEST({ArrayExpressions.ToSqlDelimited()})");
 
             if (Alias != null)
             {
@@ -244,9 +235,7 @@ public abstract record TableFactor : IWriteSql, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"JSON_TABLE({JsonExpression}, {JsonPath} COLUMNS(");
-            writer.WriteDelimited(Columns, ", ");
-            writer.Write("))");
+            writer.WriteSql($"JSON_TABLE({JsonExpression}, {JsonPath} COLUMNS({Columns.ToSqlDelimited()}))");
 
             if (Alias != null)
             {
@@ -284,23 +273,17 @@ public abstract record TableFactor : IWriteSql, IElement
 
             if (PartitionBy.SafeAny())
             {
-                writer.Write("PARTITION BY ");
-                writer.WriteDelimited(PartitionBy, ",");
-                writer.Write(" ");
+                writer.Write($"PARTITION BY {PartitionBy.ToSqlDelimited(SqlParser.Symbols.Comma)} ");
             }
 
             if (OrderBy.SafeAny())
             {
-                writer.Write("ORDER BY ");
-                writer.WriteDelimited(OrderBy, ",");
-                writer.Write(" ");
+                writer.Write($"ORDER BY {OrderBy.ToSqlDelimited()} ");
             }
 
             if (Measures.SafeAny())
             {
-                writer.Write("MEASURES ");
-                writer.WriteDelimited(Measures, ", ");
-                writer.Write(" ");
+                writer.Write($"MEASURES {Measures.ToSqlDelimited()} ");
             }
 
             if (RowsPerMatch != null)
@@ -313,10 +296,7 @@ public abstract record TableFactor : IWriteSql, IElement
                 writer.WriteSql($"{AfterMatchSkip} ");
             }
 
-            writer.WriteSql($"PATTERN ({Pattern}) ");
-            writer.WriteSql($"DEFINE ");
-            writer.WriteDelimited(Symbols, ", ");
-            writer.Write(")");
+            writer.WriteSql($"PATTERN ({Pattern}) DEFINE {Symbols.ToSqlDelimited()})");
 
             if (Alias != null)
             {

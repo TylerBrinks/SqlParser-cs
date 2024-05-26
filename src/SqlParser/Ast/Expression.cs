@@ -402,9 +402,7 @@ public abstract record Expression : IWriteSql, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.Write("{");
-            writer.WriteDelimited(Fields, ", ");
-            writer.Write("}");
+            writer.Write($"{{{Fields.ToSqlDelimited()}}}");
         }
     }
     /// <summary>
@@ -522,8 +520,7 @@ public abstract record Expression : IWriteSql, IElement
                 if (ordered)
                 {
                     var orderBy = ordered ? " ORDER BY " : string.Empty;
-                    writer.Write(orderBy);
-                    writer.WriteDelimited(OrderBy, ", ");
+                    writer.Write($"{orderBy}{OrderBy.ToSqlDelimited()}");
                 }
 
                 writer.Write(")");
@@ -935,8 +932,7 @@ public abstract record Expression : IWriteSql, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"{Column}");
-            writer.WriteDelimited(Keys, string.Empty);
+            writer.WriteSql($"{Column}{Keys.ToSqlDelimited(string.Empty)}");
         }
     }
 
@@ -1172,17 +1168,11 @@ public abstract record Expression : IWriteSql, IElement
         {
             if (Fields.SafeAny())
             {
-                writer.Write("STRUCT<");
-                writer.WriteDelimited(Fields, ", ");
-                writer.Write(">(");
-                writer.WriteDelimited(Values, ", ");
-                writer.Write(")");
+                writer.Write($"STRUCT<{Fields.ToSqlDelimited()}>({Values.ToSqlDelimited()})");
             }
             else
             {
-                writer.Write("STRUCT(");
-                writer.WriteDelimited(Values, ", ");
-                writer.Write(")");
+                writer.Write($"STRUCT({Values.ToSqlDelimited()})");
             }
         }
     }
@@ -1282,8 +1272,7 @@ public abstract record Expression : IWriteSql, IElement
 
             if (TrimCharacters.SafeAny())
             {
-                writer.Write(", ");
-                writer.WriteDelimited(TrimCharacters, ", ");
+                writer.Write($", {TrimCharacters.ToSqlDelimited()}");
             }
 
             writer.Write(")");

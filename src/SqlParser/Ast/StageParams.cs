@@ -30,12 +30,12 @@ public record StageParams : IWriteSql
 
         if (Credentials != null)
         {
-            writer.WriteSql($" CREDENTIALS=({Credentials.ToSqlDelimited(" ")})");
+            writer.WriteSql($" CREDENTIALS=({Credentials.ToSqlDelimited(Symbols.Space)})");
         }
 
         if (Encryption != null)
         {
-            writer.WriteSql($" ENCRYPTION=({Encryption.ToSqlDelimited(" ")})");
+            writer.WriteSql($" ENCRYPTION=({Encryption.ToSqlDelimited(Symbols.Space)})");
         }
     }
 }

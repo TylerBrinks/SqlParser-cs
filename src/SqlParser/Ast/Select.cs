@@ -94,8 +94,7 @@ public record Select([Visit(1)] Sequence<SelectItem> Projection) : IWriteSql, IE
 
         if (NamedWindow.SafeAny())
         {
-            writer.Write(" WINDOW ");
-            writer.WriteDelimited(NamedWindow, ", ");
+            writer.Write($" WINDOW {NamedWindow.ToSqlDelimited()}");
         }
 
         if (QualifyBy != null)
