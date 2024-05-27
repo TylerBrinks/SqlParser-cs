@@ -565,11 +565,11 @@ public abstract record DataType : IWriteSql
     /// <summary>
     /// Variable-length character type e.g. NVARCHAR(10)
     /// </summary>
-    public record Nvarchar(ulong? Length = null) : LengthDataType(Length)
+    public record Nvarchar(CharacterLength? Length = null) : CharacterLengthDataType(Length)
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            FormatTypeWithOptionalLength(writer, "NVARCHAR", Length);
+            FormatCharacterStringType(writer, "NVARCHAR", IntegerLength);
         }
     }
     /// <summary>

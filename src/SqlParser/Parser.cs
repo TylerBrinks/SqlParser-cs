@@ -6419,7 +6419,7 @@ public class Parser
             Word { Keyword: Keyword.INT8 } => ParseInt8(),
 
             Word { Keyword: Keyword.VARCHAR } => new DataType.Varchar(ParseOptionalCharacterLength()),
-            Word { Keyword: Keyword.NVARCHAR } => new DataType.Nvarchar(ParseOptionalPrecision()),
+            Word { Keyword: Keyword.NVARCHAR } => new DataType.Nvarchar(ParseOptionalCharacterLength()),
             Word { Keyword: Keyword.CHARACTER } => ParseCharacter(),
             Word { Keyword: Keyword.CHAR } => ParseChar(),
             Word { Keyword: Keyword.CLOB } => new DataType.Clob(ParseOptionalPrecision()),

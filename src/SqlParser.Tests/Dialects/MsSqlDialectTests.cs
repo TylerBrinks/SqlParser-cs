@@ -168,7 +168,8 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Cast_Varchar_Max()
         {
-            VerifiedExpr("CAST('foo' AS VARCHAR(MAX))", new Dialect[]{new MsSqlDialect(), new GenericDialect()});
+            VerifiedExpr("CAST('foo' AS VARCHAR(MAX))", [new MsSqlDialect(), new GenericDialect()]);
+            VerifiedExpr("CAST('foo' AS NVARCHAR(MAX))", [new MsSqlDialect(), new GenericDialect()]);
         }
 
         [Fact]

@@ -1236,7 +1236,7 @@ namespace SqlParser.Tests
             VerifiedStatement("SELECT CAST(id AS DECIMAL) FROM customer");
 
             select = VerifiedOnlySelect("SELECT CAST(id AS NVARCHAR(50)) FROM customer");
-            expected = new Cast(new Identifier("id"), new Nvarchar(50), CastKind.Cast);
+            expected = new Cast(new Identifier("id"), new Nvarchar(new CharacterLength.IntegerLength(50)), CastKind.Cast);
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
             select = VerifiedOnlySelect("SELECT CAST(id AS CLOB) FROM customer");
