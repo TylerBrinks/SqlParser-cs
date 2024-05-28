@@ -27,7 +27,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_MsSql_Single_Quoted_Identifiers()
         {
-            DefaultDialects = new Dialect[] { new MsSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new MsSqlDialect(), new GenericDialect()];
 
             OneStatementParsesTo("SELECT foo 'alias'", "SELECT foo AS 'alias'");
         }
@@ -43,7 +43,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_MsSql_Top_Paren()
         {
-            DefaultDialects = new Dialect[] { new MsSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new MsSqlDialect(), new GenericDialect()];
 
             var select = VerifiedOnlySelect("SELECT TOP (5) * FROM foo");
             Assert.Equal(new TopQuantity.TopExpression(new LiteralValue(new Value.Number("5"))), select.Top!.Quantity);
@@ -53,7 +53,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_MsSql_Top_Percent()
         {
-            DefaultDialects = new Dialect[] { new MsSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new MsSqlDialect(), new GenericDialect()];
 
             var select = VerifiedOnlySelect("SELECT TOP (5) PERCENT * FROM foo");
             Assert.Equal(new TopQuantity.TopExpression(new LiteralValue(new Value.Number("5"))), select.Top!.Quantity);
@@ -63,7 +63,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_MsSql_Top_With_Ties()
         {
-            DefaultDialects = new Dialect[] { new MsSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new MsSqlDialect(), new GenericDialect()];
 
             var select = VerifiedOnlySelect("SELECT TOP (10) PERCENT WITH TIES * FROM foo");
             Assert.Equal(new TopQuantity.TopExpression(new LiteralValue(new Value.Number("10"))), select.Top!.Quantity);
@@ -73,7 +73,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_MsSql_Top()
         {
-            DefaultDialects = new Dialect[] { new MsSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new MsSqlDialect(), new GenericDialect()];
 
             OneStatementParsesTo("SELECT TOP 5 bar, baz FROM foo", "SELECT TOP 5 bar, baz FROM foo");
         }
@@ -81,7 +81,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_MsSql_Bin_Literal()
         {
-            DefaultDialects = new Dialect[] { new MsSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new MsSqlDialect(), new GenericDialect()];
 
             OneStatementParsesTo("SELECT 0xdeadBEEF", "SELECT X'deadBEEF'");
         }
@@ -130,10 +130,10 @@ namespace SqlParser.Tests.Dialects
 
             var create = VerifiedStatement(sql);
 
-            var select = new Select(new Sequence<SelectItem>
-            {
+            var select = new Select(
+            [
                 new SelectItem.UnnamedExpression(new LiteralValue(one))
-            });
+            ]);
 
             var selectExpr = new SetExpression.SelectExpression(select);
             var query = new Query(selectExpr);
@@ -144,7 +144,7 @@ namespace SqlParser.Tests.Dialects
                 new ("@bar", new DataType.Varchar(new CharacterLength.IntegerLength(256))),
             };
 
-            var expected = new Statement.CreateProcedure(true, "test", parameters, new Sequence<Statement>{query});
+            var expected = new Statement.CreateProcedure(true, "test", parameters, [query]);
 
             Assert.Equal(expected, create);
         }
@@ -156,11 +156,11 @@ namespace SqlParser.Tests.Dialects
 
             var table = (TableFactor.Table)select.From!.Single().Relation!;
 
-            Assert.Equal(new ObjectName(new []
-            {
+            Assert.Equal(new ObjectName(
+            [
                 new Ident("a schema", '['),
                 new Ident("a table", '['),
-            } ), table.Name);
+            ] ), table.Name);
 
             Assert.Equal(new Identifier(new Ident("a column", '[')), select.Projection.First().AsExpr());
         }

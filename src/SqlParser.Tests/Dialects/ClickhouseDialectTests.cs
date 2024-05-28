@@ -15,23 +15,22 @@ public class ClickhouseDialectTests : ParserTestBase
     {
         var select = VerifiedOnlySelect("SELECT string_values[indexOf(string_names, 'endpoint')] FROM foos WHERE id = 'test' AND string_value[indexOf(string_name, 'app')] <> 'foo'");
 
-        var expected = new Select(new Sequence<SelectItem>
-        {
+        var expected = new Select([
             new SelectItem.UnnamedExpression(new Expression.MapAccess(new Expression.Identifier("string_values"),
             [
                 new(new Expression.Function("indexOf")
                 {
-                    Args = new Sequence<FunctionArg>
-                    {
+                    Args =
+                    [
                         new FunctionArg.Unnamed(
                             new FunctionArgExpression.FunctionExpression(new Expression.Identifier("string_names"))),
                         new FunctionArg.Unnamed(
                             new FunctionArgExpression.FunctionExpression(
                                 new Expression.LiteralValue(new Value.SingleQuotedString("endpoint"))))
-                    }
+                    ]
                 }, MapAccessSyntax.Bracket)
             ]))
-        })
+        ])
         {
             From = new Sequence<TableWithJoins>
             {
@@ -91,11 +90,11 @@ public class ClickhouseDialectTests : ParserTestBase
         var select = VerifiedOnlySelect("SELECT array(x1, x2) FROM foo");
         var expected = new Expression.Function("array")
         {
-            Args = new Sequence<FunctionArg>
-            {
+            Args =
+            [
                 new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.Identifier("x1"))),
                 new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.Identifier("x2")))
-            }
+            ]
         };
 
         Assert.Equal(expected, select.Projection.First().AsExpr());
@@ -170,13 +169,7 @@ public class ClickhouseDialectTests : ParserTestBase
     [Fact]
     public void Parse_Double_Equal()
     {
-        OneStatementParsesTo(
-            """
-            SELECT foo FROM bar WHERE buz == 'buz'
-            """,
-            """
-            SELECT foo FROM bar WHERE buz = 'buz'
-            """);
+        OneStatementParsesTo("SELECT foo FROM bar WHERE buz == 'buz'", "SELECT foo FROM bar WHERE buz = 'buz'");
     }
 
     [Fact]
@@ -188,13 +181,7 @@ public class ClickhouseDialectTests : ParserTestBase
     [Fact]
     public void Parse_Select_Star_Except_No_Parens()
     {
-        OneStatementParsesTo(
-            """
-            SELECT * EXCEPT prev_status FROM anomalies
-            """,
-            """
-            SELECT * EXCEPT (prev_status) FROM anomalies
-            """);
+        OneStatementParsesTo("SELECT * EXCEPT prev_status FROM anomalies", "SELECT * EXCEPT (prev_status) FROM anomalies");
     }
 
     [Fact]

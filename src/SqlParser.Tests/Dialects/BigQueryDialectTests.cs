@@ -140,7 +140,7 @@ public class BigQueryDialectTests : ParserTestBase
 
         var expected = new Join[]
         {
-            new (new TableFactor.UnNest(new Sequence<Expression>{ new CompoundIdentifier(new Ident[]{"t1","a"}) })
+            new (new TableFactor.UnNest([new CompoundIdentifier(new Ident[] { "t1", "a" })])
                 {
                     Alias = new TableAlias("f"),
                 },
@@ -270,19 +270,20 @@ public class BigQueryDialectTests : ParserTestBase
     [Fact]
     public void Parse_Map_Access_Expr()
     {
-        var expr = VerifiedExpr("users[-1][safe_offset(2)].a.b");
-        var expected = new MapAccess(new Identifier("users"), new Sequence<MapAccessKey>
-        {
-            new (new UnaryOp(new LiteralValue(new Value.Number("1")), UnaryOperator.Minus), MapAccessSyntax.Bracket),
-            new (new Function("safe_offset")
+        _ = VerifiedExpr("users[-1][safe_offset(2)].a.b");
+        _ = new MapAccess(new Identifier("users"), [
+            new(new UnaryOp(new LiteralValue(new Value.Number("1")), UnaryOperator.Minus), MapAccessSyntax.Bracket),
+            new(new Function("safe_offset")
             {
                 Args = new Sequence<FunctionArg>
                 {
-                    new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.Number("2"))))
+                    new FunctionArg.Unnamed(
+                        new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.Number("2"))))
                 }
             }, MapAccessSyntax.Bracket),
-            new (new CompoundIdentifier(["a", "b"]), MapAccessSyntax.Period)
-        });
+
+            new(new CompoundIdentifier(["a", "b"]), MapAccessSyntax.Period)
+        ]);
 
         VerifiedOnlySelect("SELECT myfunc()[-1].a[SAFE_OFFSET(2)].b");
     }
@@ -291,7 +292,7 @@ public class BigQueryDialectTests : ParserTestBase
     public void Parse_Table_Time_Travel()
     {
         var dialect = new[] { new BigQueryDialect() };
-        var version = "2023-08-18 23:08:18";
+        const string version = "2023-08-18 23:08:18";
         var sql = $"SELECT 1 FROM t1 FOR SYSTEM_TIME AS OF '{version}'";
         var select = VerifiedOnlySelect(sql, dialect);
 
@@ -325,10 +326,10 @@ public class BigQueryDialectTests : ParserTestBase
         var select = VerifiedOnlySelect(sql, new[] { new BigQueryDialect() });
         var expected = new Trim(new LiteralValue(new Value.SingleQuotedString("xyz")),
             TrimWhereField.None,
-            TrimCharacters: new Sequence<Expression>
-            {
+            TrimCharacters:
+            [
                 new LiteralValue(new Value.SingleQuotedString("a"))
-            });
+            ]);
 
         Assert.Equal(expected, select.Projection.First().AsExpr());
 
@@ -338,21 +339,19 @@ public class BigQueryDialectTests : ParserTestBase
     [Fact]
     public void Parse_Nested_Data_Type()
     {
-        var sql = "CREATE TABLE table (x STRUCT<a ARRAY<INT64>, b BYTES(42)>, y ARRAY<STRUCT<INT64>>)";
+        const string sql = "CREATE TABLE table (x STRUCT<a ARRAY<INT64>, b BYTES(42)>, y ARRAY<STRUCT<INT64>>)";
 
         var create = (Statement.CreateTable)OneStatementParsesTo(sql, sql, new[] { new BigQueryDialect() });
 
         var columns = new Sequence<ColumnDef>
         {
-            new ("x", new DataType.Struct(new Sequence<StructField>
-            {
-                new (new DataType.Array(new ArrayElementTypeDef.AngleBracket(new DataType.Int64())), "a"),
+            new ("x", new DataType.Struct([
+                new(new DataType.Array(new ArrayElementTypeDef.AngleBracket(new DataType.Int64())), "a"),
                 new(new DataType.Bytes(42), "b")
-            })),
-            new("y", new DataType.Array(new ArrayElementTypeDef.AngleBracket(new DataType.Struct(new Sequence<StructField>
-            {
-                new (new DataType.Int64())
-            }))))
+            ])),
+            new("y", new DataType.Array(new ArrayElementTypeDef.AngleBracket(new DataType.Struct([
+                new(new DataType.Int64())
+            ]))))
         };
         var expected = new Statement.CreateTable("table", columns);
         Assert.Equal(expected, create);
@@ -374,24 +373,22 @@ public class BigQueryDialectTests : ParserTestBase
     [Fact]
     public void Parse_Tuple_Struct_Literal()
     {
-        var sql = "SELECT (1, 2, 3), (1, 1.0, '123', true)";
+        const string sql = "SELECT (1, 2, 3), (1, 1.0, '123', true)";
         var select = VerifiedOnlySelect(sql);
 
-        var expected = new Expression.Tuple(new Sequence<Expression>
-        {
+        var expected = new Expression.Tuple([
             new LiteralValue(new Value.Number("1")),
             new LiteralValue(new Value.Number("2")),
-            new LiteralValue(new Value.Number("3")),
-        });
+            new LiteralValue(new Value.Number("3"))
+        ]);
         Assert.Equal(expected, select.Projection.First().AsExpr());
 
-        expected = new Expression.Tuple(new Sequence<Expression>
-        {
+        expected = new Expression.Tuple([
             new LiteralValue(new Value.Number("1")),
             new LiteralValue(new Value.Number("1.0")),
             new LiteralValue(new Value.SingleQuotedString("123")),
-            new LiteralValue(new Value.Boolean(true)),
-        });
+            new LiteralValue(new Value.Boolean(true))
+        ]);
 
         Assert.Equal(expected, select.Projection.Skip(1).First().AsExpr());
     }
@@ -402,38 +399,31 @@ public class BigQueryDialectTests : ParserTestBase
         var sql = "SELECT STRUCT(1, 2, 3), STRUCT('abc'), STRUCT(1, t.str_col), STRUCT(1 AS a, 'abc' AS b), STRUCT(str_col AS abc)";
         var select = VerifiedOnlySelect(sql);
 
-        Expression expected = new Struct(new Sequence<Expression>
-        {
+        Expression expected = new Struct([
             new LiteralValue(new Value.Number("1")),
             new LiteralValue(new Value.Number("2")),
             new LiteralValue(new Value.Number("3"))
-        }, new Sequence<StructField>());
+        ], new Sequence<StructField>());
         Assert.Equal(expected, select.Projection.First().AsExpr());
 
-        expected = new Struct(new Sequence<Expression>
-        {
-            new LiteralValue(new Value.SingleQuotedString("abc")),
-        }, new Sequence<StructField>());
+        expected = new Struct([
+            new LiteralValue(new Value.SingleQuotedString("abc"))
+        ], []);
         Assert.Equal(expected, select.Projection.Skip(1).First().AsExpr());
 
-        expected = new Struct(new Sequence<Expression>
-        {
+        expected = new Struct([
             new LiteralValue(new Value.Number("1")),
-            new CompoundIdentifier(new Sequence<Ident> {"t", "str_col"})
-        }, new Sequence<StructField>());
+            new CompoundIdentifier(["t", "str_col"])
+        ], []);
         Assert.Equal(expected, select.Projection.Skip(2).First().AsExpr());
 
-        expected = new Struct(new Sequence<Expression>
-        {
+        expected = new Struct([
             new Named(new LiteralValue(new Value.Number("1")), "a"),
             new Named(new LiteralValue(new Value.SingleQuotedString("abc")), "b")
-        }, new Sequence<StructField>());
+        ], []);
         Assert.Equal(expected, select.Projection.Skip(3).First().AsExpr());
 
-        expected = new Struct(new Sequence<Expression>
-        {
-            new Named(new Identifier("str_col"), "abc")
-        }, new Sequence<StructField>());
+        expected = new Struct([new Named(new Identifier("str_col"), "abc")], new Sequence<StructField>());
         Assert.Equal(expected, select.Projection.Skip(4).First().AsExpr());
     }
 
@@ -441,7 +431,7 @@ public class BigQueryDialectTests : ParserTestBase
     public void Parse_Delete_Statement()
     {
         var delete = (Statement.Delete)VerifiedStatement("DELETE \"table\" WHERE 1");
-        var relation = (delete.DeleteOperation.From as FromTable.WithoutKeyword).From.First().Relation;
+        var relation = (delete.DeleteOperation.From as FromTable.WithoutKeyword)?.From.First().Relation;
 
         var expected = new TableFactor.Table(new ObjectName(new Ident("table", Symbols.DoubleQuote)));
 
@@ -451,7 +441,7 @@ public class BigQueryDialectTests : ParserTestBase
     [Fact]
     public void Parse_Create_View_If_Not_Exists()
     {
-        var sql = "CREATE VIEW IF NOT EXISTS mydataset.newview AS SELECT foo FROM bar";
+        const string sql = "CREATE VIEW IF NOT EXISTS mydataset.newview AS SELECT foo FROM bar";
         var create = (Statement.CreateView)VerifiedStatement(sql);
 
 

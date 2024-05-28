@@ -55,9 +55,6 @@ public static class EnumWriter
 
             CteAsMaterialized.NotMaterialized => "NOT MATERIALIZED",
 
-            //DeclareType.Cursor => "CURSOR",
-            //DeclareType.ResultSet => "RESULTSET",
-            //DeclareType.Exception => "EXCEPTION",
             EmptyMatchesMode.Show => "SHOW EMPTY MATCHES",
             EmptyMatchesMode.Omit => "OMIT EMPTY MATCHES",
             EmptyMatchesMode.WithUnmatched => "WITH UNMATCHED ROWS",

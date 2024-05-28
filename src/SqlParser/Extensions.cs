@@ -29,7 +29,7 @@ internal static class Extensions
     /// <summary>
     /// Fields reserved for data/time operations
     /// </summary>
-    public static readonly Keyword[] DateTimeFields = {
+    public static readonly Keyword[] DateTimeFields = [
         Keyword.YEAR,
         Keyword.MONTH,
         Keyword.WEEK,
@@ -57,7 +57,7 @@ internal static class Extensions
         Keyword.TIMEZONE,
         Keyword.TIMEZONE_HOUR,
         Keyword.TIMEZONE_MINUTE
-    };
+    ];
 
     /// <summary>
     /// Checks if a character is a digit or letter

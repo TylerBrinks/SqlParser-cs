@@ -17,7 +17,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Test_Snowflake_Create_Table()
         {
-            DefaultDialects = new Dialect[] { new SnowflakeDialect(), new GenericDialect() };
+            DefaultDialects = [new SnowflakeDialect(), new GenericDialect()];
 
             var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE _my_$table (am00unt number)");
 
@@ -27,7 +27,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Test_Snowflake_Create_Transient_Table()
         {
-            DefaultDialects = new Dialect[] { new SnowflakeDialect(), new GenericDialect() };
+            DefaultDialects = [new SnowflakeDialect(), new GenericDialect()];
 
             var create = VerifiedStatement<Statement.CreateTable>("CREATE TRANSIENT TABLE CUSTOMER (id INT, name VARCHAR(255))");
 
@@ -74,7 +74,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Tess_Snowflake_Derived_Table_In_Parenthesis()
         {
-            DefaultDialects = new Dialect[] { new SnowflakeDialect(), new GenericDialect() };
+            DefaultDialects = [new SnowflakeDialect(), new GenericDialect()];
             OneStatementParsesTo(
                  "SELECT * FROM ((SELECT 1) AS t)",
                  "SELECT * FROM (SELECT 1) AS t");
@@ -86,7 +86,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Test_Single_Table_In_Parenthesis()
         {
-            DefaultDialects = new Dialect[] { new SnowflakeDialect(), new GenericDialect() };
+            DefaultDialects = [new SnowflakeDialect(), new GenericDialect()];
             OneStatementParsesTo(
                 "SELECT * FROM (a NATURAL JOIN (b))",
                 "SELECT * FROM (a NATURAL JOIN b)");
@@ -98,7 +98,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Test_Single_Table_In_Parenthesis_With_Alias()
         {
-            DefaultDialects = new Dialect[] { new SnowflakeDialect(), new GenericDialect() };
+            DefaultDialects = [new SnowflakeDialect(), new GenericDialect()];
 
             OneStatementParsesTo(
                 "SELECT * FROM (a NATURAL JOIN (b) c )",
@@ -122,7 +122,7 @@ namespace SqlParser.Tests.Dialects
                 "SELECT * FROM (a NATURAL JOIN b) c",
                 "SELECT * FROM (a NATURAL JOIN b) AS c");
 
-            DefaultDialects = new Dialect[] { new SnowflakeDialect() };
+            DefaultDialects = [new SnowflakeDialect()];
             var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT * FROM (a b) c"));
             Assert.Equal("Duplicate alias b", ex.Message);
         }
@@ -230,13 +230,12 @@ namespace SqlParser.Tests.Dialects
 
             var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("select array_agg(x order by x) as a from T"));
             Assert.Equal("Expected ), found order, Line: 1, Col: 20", ex.Message);
-
         }
 
         [Fact]
         public void Test_Select_Wildcard_With_Exclude()
         {
-            DefaultDialects = new Dialect[] { new SnowflakeDialect(), new GenericDialect() };
+            DefaultDialects = [new SnowflakeDialect(), new GenericDialect()];
 
             var select = VerifiedOnlySelect("SELECT * EXCLUDE (col_a) FROM data");
             SelectItem expected = new SelectItem.Wildcard(new WildcardAdditionalOptions
@@ -267,7 +266,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Test_Select_Wildcard_With_Rename()
         {
-            DefaultDialects = new Dialect[] { new SnowflakeDialect(), new GenericDialect() };
+            DefaultDialects = [new SnowflakeDialect(), new GenericDialect()];
 
             var select = VerifiedOnlySelect("SELECT * RENAME col_a AS col_b FROM data");
 
@@ -295,7 +294,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Test_Select_Wildcard_With_Exclude_And_Rename()
         {
-            DefaultDialects = new Dialect[] { new SnowflakeDialect(), new GenericDialect() };
+            DefaultDialects = [new SnowflakeDialect(), new GenericDialect()];
 
             var select = VerifiedOnlySelect("SELECT * EXCLUDE col_z RENAME col_a AS col_b FROM data");
 
@@ -315,7 +314,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Test_Alter_Table_Swap_With()
         {
-            DefaultDialects = new Dialect[] { new SnowflakeDialect(), new GenericDialect() };
+            DefaultDialects = [new SnowflakeDialect(), new GenericDialect()];
 
             var alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE tab1 SWAP WITH tab2");
 
@@ -326,7 +325,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Test_Drop_Stage()
         {
-            DefaultDialects = new Dialect[] { new SnowflakeDialect(), new GenericDialect() };
+            DefaultDialects = [new SnowflakeDialect(), new GenericDialect()];
 
             var drop = VerifiedStatement<Statement.Drop>("DROP STAGE s1");
 
@@ -344,7 +343,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Test_Create_Stage()
         {
-            DefaultDialects = new Dialect[] { new SnowflakeDialect() };
+            DefaultDialects = [new SnowflakeDialect()];
 
             var sql = "CREATE STAGE s1.s2";
             var create = VerifiedStatement<Statement.CreateStage>(sql);
@@ -369,16 +368,16 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Test_Create_Stage_With_Stage_Params()
         {
-            DefaultDialects = new Dialect[] { new SnowflakeDialect() };
+            DefaultDialects = [new SnowflakeDialect()];
 
-            var sql = """
-                CREATE OR REPLACE STAGE my_ext_stage 
-                URL='s3://load/files/' 
-                STORAGE_INTEGRATION=myint 
-                ENDPOINT='<s3_api_compatible_endpoint>' 
-                CREDENTIALS=(AWS_KEY_ID='1a2b3c' AWS_SECRET_KEY='4x5y6z') 
-                ENCRYPTION=(MASTER_KEY='key' TYPE='AWS_SSE_KMS')
-                """;
+            const string sql = """
+                               CREATE OR REPLACE STAGE my_ext_stage 
+                               URL='s3://load/files/' 
+                               STORAGE_INTEGRATION=myint 
+                               ENDPOINT='<s3_api_compatible_endpoint>' 
+                               CREDENTIALS=(AWS_KEY_ID='1a2b3c' AWS_SECRET_KEY='4x5y6z') 
+                               ENCRYPTION=(MASTER_KEY='key' TYPE='AWS_SSE_KMS')
+                               """;
 
             var create = VerifiedStatement<Statement.CreateStage>(sql);
 
@@ -397,12 +396,12 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Test_Create_Stage_With_Directory_Table_Params()
         {
-            DefaultDialects = new Dialect[] { new SnowflakeDialect() };
+            DefaultDialects = [new SnowflakeDialect()];
 
-            var sql = """
-                CREATE OR REPLACE STAGE my_ext_stage URL='s3://load/files/' 
-                DIRECTORY=(ENABLE=TRUE REFRESH_ON_CREATE=FALSE NOTIFICATION_INTEGRATION='some-string')
-                """;
+            const string sql = """
+                               CREATE OR REPLACE STAGE my_ext_stage URL='s3://load/files/' 
+                               DIRECTORY=(ENABLE=TRUE REFRESH_ON_CREATE=FALSE NOTIFICATION_INTEGRATION='some-string')
+                               """;
 
             var create = VerifiedStatement<Statement.CreateStage>(sql);
 
@@ -439,7 +438,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Test_Create_Stage_With_Options()
         {
-            DefaultDialects = new Dialect[] { new SnowflakeDialect() };
+            DefaultDialects = [new SnowflakeDialect()];
 
             const string sql = "CREATE OR REPLACE STAGE my_ext_stage URL='s3://load/files/' COPY_OPTIONS=(ON_ERROR=CONTINUE FORCE=TRUE)";
 
@@ -459,7 +458,7 @@ namespace SqlParser.Tests.Dialects
             var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
 
             var expected = new Statement.CopyIntoSnowflake(
-                new ObjectName(new[] { new Ident("my_company"), new Ident("emp_basic") }),
+                new ObjectName([new Ident("my_company"), new Ident("emp_basic")]),
                 new ObjectName(new Ident("gcs://mybucket/./../a.csv", Symbols.SingleQuote)));
 
             Assert.Equal(expected, copy);
@@ -480,22 +479,22 @@ namespace SqlParser.Tests.Dialects
             var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
 
             var expected = new Statement.CopyIntoSnowflake(
-                new ObjectName(new[] { new Ident("my_company"), new Ident("emp_basic") }),
+                new ObjectName([new Ident("my_company"), new Ident("emp_basic")]),
                 new ObjectName(new Ident("s3://load/files/", Symbols.SingleQuote)),
                 StageParams: new StageParams
                 {
                     Endpoint = "<s3_api_compatible_endpoint>",
                     StorageIntegration = "myint",
-                    Credentials = new Sequence<DataLoadingOption>
-                    {
+                    Credentials =
+                    [
                         new ("AWS_KEY_ID", DataLoadingOptionType.String, "1a2b3c"),
                         new ("AWS_SECRET_KEY", DataLoadingOptionType.String, "4x5y6z"),
-                    },
-                    Encryption = new Sequence<DataLoadingOption>
-                    {
+                    ],
+                    Encryption =
+                    [
                         new ("MASTER_KEY", DataLoadingOptionType.String, "key"),
                         new ("TYPE", DataLoadingOptionType.String, "AWS_SSE_KMS"),
-                    }
+                    ]
                 });
 
             Assert.Equal(expected, copy);
@@ -514,17 +513,17 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Test_Copy_Into_With_Fies_And_Pattern_And_Verification()
         {
-            var sql = """
-                      COPY INTO my_company.emp_basic 
-                      FROM 'gcs://mybucket/./../a.csv' AS some_alias 
-                      FILES = ('file1.json', 'file2.json') 
-                      PATTERN = '.*employees0[1-5].csv.gz' 
-                      VALIDATION_MODE = RETURN_7_ROWS
-                      """;
+            const string sql = """
+                               COPY INTO my_company.emp_basic 
+                               FROM 'gcs://mybucket/./../a.csv' AS some_alias 
+                               FILES = ('file1.json', 'file2.json') 
+                               PATTERN = '.*employees0[1-5].csv.gz' 
+                               VALIDATION_MODE = RETURN_7_ROWS
+                               """;
 
             var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
 
-            Assert.Equal(new Sequence<string> { "file1.json", "file2.json" }, copy.Files);
+            Assert.Equal(["file1.json", "file2.json"], copy.Files);
             Assert.Equal(".*employees0[1-5].csv.gz", copy.Pattern);
             Assert.Equal("RETURN_7_ROWS", copy.ValidationMode);
             Assert.Equal(new Ident("some_alias"), copy.FromStageAlias);
@@ -533,22 +532,22 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Test_Copy_Into_With_Transformations()
         {
-            var sql = """
-                    COPY INTO my_company.emp_basic 
-                    FROM (SELECT t1.$1:st AS st, $1:index, t2.$1 FROM @schema.general_finished AS T) 
-                    FILES = ('file1.json', 'file2.json') PATTERN = '.*employees0[1-5].csv.gz' 
-                    VALIDATION_MODE = RETURN_7_ROW
-                    """;
+            const string sql = """
+                               COPY INTO my_company.emp_basic 
+                               FROM (SELECT t1.$1:st AS st, $1:index, t2.$1 FROM @schema.general_finished AS T) 
+                               FILES = ('file1.json', 'file2.json') PATTERN = '.*employees0[1-5].csv.gz' 
+                               VALIDATION_MODE = RETURN_7_ROW
+                               """;
 
             var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
 
-            Assert.Equal(new ObjectName(new Ident[] { "@schema", "general_finished" }), copy.FromStage);
-            Assert.Equal(new Sequence<StageLoadSelectItem>
-            {
+            Assert.Equal(new ObjectName(["@schema", "general_finished"]), copy.FromStage);
+            Assert.Equal(
+            [
                 new () { Alias = "t1", FileColumnNumber = 1, Element = "st", ItemAs = "st" },
                 new () { FileColumnNumber = 1, Element = "index" },
                 new () { Alias = "t2", FileColumnNumber = 1 },
-            }, copy.FromTransformations);
+            ], copy.FromTransformations);
 
         }
 
@@ -597,10 +596,10 @@ namespace SqlParser.Tests.Dialects
         {
             var allowedObjectNames = new List<ObjectName>
             {
-                new (new Ident[]{ "my_compan", "emp_basic"}),
-                new (new Ident[]{ "@namespace", "%table_name"}),
-                new (new Ident[]{ "@namespace", "%table_name/path"}),
-                new (new Ident[]{ "@namespace", "stage_name/path"}),
+                new (["my_compan", "emp_basic"]),
+                new (["@namespace", "%table_name"]),
+                new (["@namespace", "%table_name/path"]),
+                new (["@namespace", "stage_name/path"]),
                 new (new Ident("@~/path")),
             };
 
@@ -664,7 +663,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Test_Number_Placeholder()
         {
-            var sql = "SELECT :1";
+            const string sql = "SELECT :1";
             var select = VerifiedOnlySelect(sql);
             Assert.Equal(new LiteralValue(new Value.Placeholder(":1")), select.Projection.Single().AsExpr());
 
@@ -705,14 +704,14 @@ namespace SqlParser.Tests.Dialects
             left = new Identifier("c1");
             right = new Function("myudf")
             {
-                Args = new Sequence<FunctionArg>
-                {
+                Args =
+                [
                     new FunctionArg.Unnamed(
                         new FunctionArgExpression.FunctionExpression(
                             new UnaryOp(
                                 new LiteralValue(
                                     new Value.Number("42")), UnaryOperator.Plus)))
-                }
+                ]
             };
             Assert.Equal(select.Selection!.AsBinaryOp().Left, left);
             Assert.Equal(select.Selection.AsBinaryOp().Right, right);

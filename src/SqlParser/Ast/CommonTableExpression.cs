@@ -36,5 +36,5 @@ public enum CteAsMaterialized
     // The `WITH` statement specifies `AS MATERIALIZED` behavior
     Materialized,
     // The `WITH` statement specifies `AS NOT MATERIALIZED` behavior
-    NotMaterialized,
+    NotMaterialized
 }

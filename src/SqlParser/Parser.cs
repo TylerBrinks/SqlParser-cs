@@ -869,7 +869,7 @@ public class Parser
             return null;
         }
 
-        Expression ParseCastExpression(CastKind kind /*Func<Expression, DataType, CastFormat?, Expression> create*/)
+        Expression ParseCastExpression(CastKind kind)
         {
             return ExpectParens(() =>
             {
@@ -877,21 +877,10 @@ public class Parser
                 ExpectKeyword(Keyword.AS);
                 var dataType = ParseDataType();
                 var format = ParseOptionalCastFormat();
-                //return create(expr, dataType, format);
 
                 return new Cast(expr, dataType, kind, format);
             });
         }
-
-        //Expression ParseTryCastExpr()
-        //{
-        //    return ParseCastExpression((expr, dataType, format) => new TryCast(expr, dataType, format));
-        //}
-
-        //Expression ParseSafeCastExpr()
-        //{
-        //    return ParseCastExpression((expr, dataType, format) => new SafeCast(expr, dataType, format));
-        //}
 
         // Parse a SQL EXISTS expression e.g. `WHERE EXISTS(SELECT ...)`.
         Exists ParseExistsExpr(bool negated)
@@ -1404,7 +1393,7 @@ public class Parser
 
             Word { Keyword: Keyword.CASE } => ParseCaseExpr(),
             Word { Keyword: Keyword.CONVERT } => ParseConvertExpr(),
-            Word { Keyword: Keyword.CAST } => ParseCastExpression(CastKind.Cast /*(expr, dataType, format) => new Cast(expr, dataType, format)*/),
+            Word { Keyword: Keyword.CAST } => ParseCastExpression(CastKind.Cast),
             Word { Keyword: Keyword.TRY_CAST } => ParseCastExpression(CastKind.TryCast),
             Word { Keyword: Keyword.SAFE_CAST } => ParseCastExpression(CastKind.SafeCast),
             Word { Keyword: Keyword.EXISTS } => ParseExistsExpr(false),
@@ -2157,11 +2146,6 @@ public class Parser
                     Keyword.ANY => new AnyOp(expr, regularBinaryOperator, right),
                     _ => right
                 };
-
-                //return new BinaryOp(expr, regularBinaryOperator, right)
-                //{
-                //    PgOptions = pgOptions
-                //};
             }
 
             return new BinaryOp(expr, regularBinaryOperator, ParseSubExpression(precedence))
@@ -2495,17 +2479,6 @@ public class Parser
 
         return new Between(expr, negated, low, high);
     }
-
-    /// <summary>
-    /// Parse a postgresql casting style which is in the form of `expr::datatype`
-    /// </summary>
-    /// <param name="expr"></param>
-    /// <returns></returns>
-    //public Expression ParsePgCast(Expression expr)
-    //{
-    //    return new Cast(expr, ParseDataType(), CastKind.DoubleColon);
-    //}
-
     /// <summary>
     /// Get the precedence of the next token
     /// </summary>

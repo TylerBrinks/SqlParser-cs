@@ -41,7 +41,6 @@ public class HiveDialectTests : ParserTestBase
         VerifiedStatement("ANALYZE TABLE db.table_name PARTITION (a = '1234', b) COMPUTE STATISTICS NOSCAN CACHE METADATA");
     }
 
-
     [Fact]
     public void Parse_Analyze_For_Columns()
     {
@@ -156,8 +155,8 @@ public class HiveDialectTests : ParserTestBase
     [Fact]
     public void Create_Temp_Table()
     {
-        var query = "CREATE TEMPORARY TABLE db.table (a INT NOT NULL)";
-        var query2 = "CREATE TEMP TABLE db.table (a INT NOT NULL)";
+        const string query = "CREATE TEMPORARY TABLE db.table (a INT NOT NULL)";
+        const string query2 = "CREATE TEMP TABLE db.table (a INT NOT NULL)";
 
         VerifiedStatement(query);
         OneStatementParsesTo(query2, query);
@@ -205,7 +204,7 @@ public class HiveDialectTests : ParserTestBase
         var variable = VerifiedStatement<Statement.SetVariable>("SET hive.tez.java.opts = -Xmx4g");
 
         var expected = new Statement.SetVariable(false, false,
-            new ObjectName(new List<Ident> { "hive", "tez", "java", "opts" }),
+            new ObjectName(["hive", "tez", "java", "opts"]),
             new[]
             {
                 new UnaryOp(new Identifier("Xmx4g"), UnaryOperator.Minus)
@@ -253,8 +252,7 @@ public class HiveDialectTests : ParserTestBase
     {
         // check that quoted identifiers in any position remain quoted after serialization
         var select =
-            VerifiedOnlySelect(
-                "SELECT \"alias\".\"bar baz\", \"myfun\"(), \"simple id\" AS \"column alias\" FROM \"a table\" AS \"alias\"");
+            VerifiedOnlySelect("SELECT \"alias\".\"bar baz\", \"myfun\"(), \"simple id\" AS \"column alias\" FROM \"a table\" AS \"alias\"");
 
         var table = (TableFactor.Table)select.From!.Single().Relation!;
 
@@ -282,7 +280,7 @@ public class HiveDialectTests : ParserTestBase
     [Fact]
     public void Parse_Describe()
     {
-        VerifiedStatement("DESCRIBE namespace.`table`", new Dialect[] { new HiveDialect(), new GenericDialect() });
+        VerifiedStatement("DESCRIBE namespace.`table`", [new HiveDialect(), new GenericDialect()]);
     }
 
     [Fact]

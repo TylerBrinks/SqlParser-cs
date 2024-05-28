@@ -59,7 +59,7 @@ public record ColumnOptionDef(ColumnOption Option, Ident? Name = null) : IWriteS
 {
     public void ToSql(SqlTextWriter writer)
     {
-        if (Name!=null) 
+        if (Name != null) 
         {
             writer.Write($"CONSTRAINT {Name} ");
         }

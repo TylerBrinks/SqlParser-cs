@@ -17,7 +17,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Create_Table_Without_Rowid()
         {
-            DefaultDialects = new Dialect[] {new SQLiteDialect(), new GenericDialect()};
+            DefaultDialects = [new SQLiteDialect(), new GenericDialect()];
 
             var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE t (a INT) WITHOUT ROWID");
 
@@ -27,7 +27,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Create_Virtual_Table()
         {
-            DefaultDialects = new Dialect[] {new SQLiteDialect(), new GenericDialect()};
+            DefaultDialects = [new SQLiteDialect(), new GenericDialect()];
 
             var create =
                 VerifiedStatement<Statement.CreateVirtualTable>(
@@ -43,7 +43,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Create_Table_Auto_Increment()
         {
-            DefaultDialects = new Dialect[] {new SQLiteDialect(), new GenericDialect()};
+            DefaultDialects = [new SQLiteDialect(), new GenericDialect()];
 
             var create =
                 VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (bar INT PRIMARY KEY AUTOINCREMENT)");
@@ -116,9 +116,9 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Window_Function_With_Filter()
         {
-            var functioNames = new[] {"row_number", "rank", "max", "count", "user_defined_function"};
+            var functionNames = new[] {"row_number", "rank", "max", "count", "user_defined_function"};
 
-            foreach (var fn in functioNames)
+            foreach (var fn in functionNames)
             {
                 var sql = $"SELECT {fn}(x) FILTER (WHERE y) OVER () FROM t";
 
@@ -139,7 +139,7 @@ namespace SqlParser.Tests.Dialects
         {
             const string sql = "PRAGMA cache_size";
 
-            var pragma = VerifiedStatement(sql, new Dialect[] {new SQLiteDialect(), new GenericDialect()});
+            var pragma = VerifiedStatement(sql, [new SQLiteDialect(), new GenericDialect()]);
             var expected = new Statement.Pragma("cache_size", null, false);
             Assert.Equal(expected, pragma);
         }
@@ -149,7 +149,7 @@ namespace SqlParser.Tests.Dialects
         {
             const string sql = "PRAGMA cache_size = 10";
 
-            var pragma = VerifiedStatement(sql, new Dialect[] {new SQLiteDialect(), new GenericDialect()});
+            var pragma = VerifiedStatement(sql, [new SQLiteDialect(), new GenericDialect()]);
             var expected = new Statement.Pragma("cache_size", new Value.Number("10"), true);
             Assert.Equal(expected, pragma);
         }
@@ -159,7 +159,7 @@ namespace SqlParser.Tests.Dialects
         {
             const string sql = "PRAGMA cache_size(10)";
 
-            var pragma = VerifiedStatement(sql, new Dialect[] {new SQLiteDialect(), new GenericDialect()});
+            var pragma = VerifiedStatement(sql, [new SQLiteDialect(), new GenericDialect()]);
             var expected = new Statement.Pragma("cache_size", new Value.Number("10"), false);
             Assert.Equal(expected, pragma);
         }
@@ -173,7 +173,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Where_In_Empty_List()
         {
-            var sql = "SELECT * FROM t1 WHERE a IN ()";
+            const string sql = "SELECT * FROM t1 WHERE a IN ()";
             var select = VerifiedOnlySelect(sql);
 
             var inList = (InList) select.Selection!;

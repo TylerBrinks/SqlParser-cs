@@ -22,11 +22,11 @@ namespace SqlParser.Tests.Dialects
 
             Assert.Equal(expected, select.Projection[0]);
 
-            var from = new TableWithJoins(new TableFactor.Table(new ObjectName(new Ident[]
-            {
+            var from = new TableWithJoins(new TableFactor.Table(new ObjectName(
+            [
                 new("test_schema", Symbols.SquareBracketOpen),
                 new("test_table", Symbols.SquareBracketOpen)
-            })));
+            ])));
 
             Assert.Equal(from, select.From!.Single());
         }
@@ -40,11 +40,11 @@ namespace SqlParser.Tests.Dialects
 
             Assert.Equal(expected, select.Projection[0]);
 
-            var from = new TableWithJoins(new TableFactor.Table(new ObjectName(new Ident[]
-            {
+            var from = new TableWithJoins(new TableFactor.Table(new ObjectName(
+            [
                 new("test_schema", Symbols.DoubleQuote),
                 new("test_table", Symbols.DoubleQuote)
-            })));
+            ])));
 
             Assert.Equal(from, select.From!.Single());
         }
@@ -145,7 +145,7 @@ namespace SqlParser.Tests.Dialects
         public void Test_Create_View_With_No_Schema_Binding()
         {
             VerifiedStatement("CREATE VIEW myevent AS SELECT eventname FROM event WITH NO SCHEMA BINDING",
-                new Dialect[]{new RedshiftDialect(), new GenericDialect()});
+                [new RedshiftDialect(), new GenericDialect()]);
         }
     }
 }

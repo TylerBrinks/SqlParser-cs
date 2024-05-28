@@ -2,7 +2,7 @@
 
 /// <summary>
 /// Produced by the depth guard class, this facade handles
-/// scope for depth trakcing and increments the parent
+/// scope for depth tracking and increments the parent
 /// guard's remaining depth value when the instance goes
 /// out of scope and is disposed.
 /// </summary>

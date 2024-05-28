@@ -30,14 +30,14 @@ internal static class Keywords
             }
         }
 
-        All = keywords.ToArray();
+        All = [.. keywords];
     }
 
     internal static readonly string[] All;
 
     /// These keywords can't be used as a table alias, so that `FROM table_name alias`
     /// can be parsed unambiguously without looking ahead.
-    internal static readonly Keyword[] ReservedForColumnAlias = {
+    internal static readonly Keyword[] ReservedForColumnAlias = [
         // Reserved as both a table and a column alias:
         Keyword.WITH,
         Keyword.EXPLAIN,
@@ -64,12 +64,12 @@ internal static class Keywords
         Keyword.FROM,
         Keyword.INTO,
         Keyword.END,
-    };
+    ];
 
     /// Can't be used as a column alias, so that `SELECT Expression alias`
     /// can be parsed unambiguously without looking ahead.
     internal static readonly Keyword[] ReservedForTableAlias =
-    {
+    [
         // Reserved as both a table and a column alias:
         Keyword.WITH,
         Keyword.EXPLAIN,
@@ -113,7 +113,7 @@ internal static class Keywords
         Keyword.AS, // TODO remove?
         // Reserved for snowflake MATCH_RECOGNIZE
         Keyword.MATCH_RECOGNIZE,
-    };
+    ];
 }
 
 // ReSharper disable InconsistentNaming

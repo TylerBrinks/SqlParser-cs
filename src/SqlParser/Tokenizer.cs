@@ -1,5 +1,4 @@
-﻿using System.Reflection.Metadata.Ecma335;
-using System.Text;
+﻿using System.Text;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
 
@@ -75,7 +74,7 @@ public ref struct Tokenizer(bool unescape = true)
 
             Symbols.SingleQuote => new SingleQuotedString(
                 new string(TokenizeQuotedString(Symbols.SingleQuote, _dialect.SupportsStringLiteralBackslashEscape))),
-            
+
             Symbols.DoubleQuote when
                 !_dialect.IsDelimitedIdentifierStart(character) &&
                 !_dialect.IsIdentifierStart(character) => new DoubleQuotedString(
@@ -269,43 +268,30 @@ public ref struct Tokenizer(bool unescape = true)
             {
                 _state.Next();
 
-                //if (_dialect is MySqlDialect)
-                //{
-                    var next = _state.Peek();
-                    if (!unescape)
+                var next = _state.Peek();
+                if (!unescape)
+                {
+                    word.Add(current);
+                    word.Add(next);
+                    _state.Next();
+                }
+                else
+                {
+                    var symbol = next switch
                     {
-                        word.Add(current);
-                        word.Add(next);
-                        _state.Next();
-                    }
-                    else
-                    {
-                        var symbol = next switch
-                        {
-                            //Symbols.SingleQuote
-                            //    or Symbols.DoubleQuote
-                            //    or Symbols.Backslash
-                            //    or Symbols.Percent
-                            //    or Symbols.Underscore
-                            //    => next,
-                            '0' => Symbols.Null,
-                            'a' => Symbols.Bel,
-                            'b' => Symbols.Backspace,
-                            'f' => Symbols.FormFeed,
-                            'n' => Symbols.NewLine,
-                            'r' => Symbols.CarriageReturn,
-                            't' => Symbols.Tab,
-                            'Z' => Symbols.Sub,
-                            _ => next
-                        };
-                        word.Add(symbol);
-                        _state.Next();
-                    }
-                //}
-                //else
-                //{
-                //    word.Add(current);
-                //}
+                        '0' => Symbols.Null,
+                        'a' => Symbols.Bel,
+                        'b' => Symbols.Backspace,
+                        'f' => Symbols.FormFeed,
+                        'n' => Symbols.NewLine,
+                        'r' => Symbols.CarriageReturn,
+                        't' => Symbols.Tab,
+                        'Z' => Symbols.Sub,
+                        _ => next
+                    };
+                    word.Add(symbol);
+                    _state.Next();
+                }
             }
             else
             {
@@ -392,7 +378,7 @@ public ref struct Tokenizer(bool unescape = true)
                 var exponentNumber = _state.PeekTakeWhile(c => c.IsDigit());
                 exponent.AddRange(exponentNumber);
 
-                number = ConcatArrays(number, exponent.ToArray());
+                number = ConcatArrays(number, [.. exponent]);
             }
         }
 
@@ -427,12 +413,7 @@ public ref struct Tokenizer(bool unescape = true)
             return new Modulo();
         }
 
-        if (_dialect.IsIdentifierStart(Symbols.Percent))
-        {
-            return TokenizeIdentifierOrKeyword([character, next]);
-        }
-
-        return new Modulo();
+        return _dialect.IsIdentifierStart(Symbols.Percent) ? TokenizeIdentifierOrKeyword([character, next]) : new Modulo();
     }
 
     private Token TokenizeByteStringLiteral()
@@ -476,7 +457,7 @@ public ref struct Tokenizer(bool unescape = true)
     {
         return new Unescaper(ref _state).Unescape();
     }
-    
+
     private Token TokenizeMinus()
     {
         _state.Next();
@@ -720,12 +701,7 @@ public ref struct Tokenizer(bool unescape = true)
         _state.Next();
         var token = _state.Peek();
 
-        if (token is Symbols.At)
-        {
-            return TokenizeSingleCharacter(new CaretAt());
-        }
-
-        return new Caret();
+        return token is Symbols.At ? TokenizeSingleCharacter(new CaretAt()) : new Caret();
     }
 
     private Whitespace TokenizeSnowflakeComment()
@@ -782,12 +758,7 @@ public ref struct Tokenizer(bool unescape = true)
                 return new Hash();
 
             default:
-                if (_dialect.IsIdentifierStart(Symbols.Num))
-                {
-                    return TokenizeIdentifierOrKeyword([character, _state.Peek()]);
-                }
-
-                return new Hash();
+                return _dialect.IsIdentifierStart(Symbols.Num) ? TokenizeIdentifierOrKeyword([character, _state.Peek()]) : new Hash();
         }
     }
 
@@ -899,7 +870,7 @@ public ref struct Tokenizer(bool unescape = true)
                     case Symbols.Dollar:
                         _state.Next();
                         var intermediate = new StringBuilder("$");
-                        
+
                         foreach (var c in value)
                         {
                             var nextChar = _state.Next();
@@ -933,7 +904,7 @@ public ref struct Tokenizer(bool unescape = true)
                             loop = false;
                             break;
                         }
-                        
+
                         builder.Append(intermediate.ToString());
                         continue;
 
@@ -948,7 +919,7 @@ public ref struct Tokenizer(bool unescape = true)
         }
 
         var quoted = new DollarQuotedString(builder.ToString());
-        if (value.Any())
+        if (value.Count != 0)
         {
             quoted.Tag = new string(value.ToArray());
         }

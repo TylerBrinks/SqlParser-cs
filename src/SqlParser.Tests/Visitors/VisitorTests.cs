@@ -42,19 +42,18 @@ namespace SqlParser.Tests.Visitors
             var queries = new Dictionary<string, List<string>>
             {
                 {
-                    "SELECT * from table_name as my_table", new List<string>
-                    {
+                    "SELECT * from table_name as my_table", [
                         "PRE: STATEMENT: SELECT * FROM table_name AS my_table",
                         "PRE: TABLE FACTOR: table_name AS my_table",
                         "PRE: RELATION: table_name",
                         "POST: RELATION: table_name",
                         "POST: TABLE FACTOR: table_name AS my_table",
-                        "POST: STATEMENT: SELECT * FROM table_name AS my_table",
-                    }
+                        "POST: STATEMENT: SELECT * FROM table_name AS my_table"
+                    ]
                 },
                 {
                     "SELECT * from t1 join t2 on t1.id = t2.t1_id",
-                    new List<string>{
+                    [
                         "PRE: STATEMENT: SELECT * FROM t1 JOIN t2 ON t1.id = t2.t1_id",
                         "PRE: TABLE FACTOR: t1",
                         "PRE: RELATION: t1",
@@ -70,12 +69,12 @@ namespace SqlParser.Tests.Visitors
                         "PRE: EXPR: t2.t1_id",
                         "POST: EXPR: t2.t1_id",
                         "POST: EXPR: t1.id = t2.t1_id",
-                        "POST: STATEMENT: SELECT * FROM t1 JOIN t2 ON t1.id = t2.t1_id",
-                    }
+                        "POST: STATEMENT: SELECT * FROM t1 JOIN t2 ON t1.id = t2.t1_id"
+                    ]
                 },
                 {
                     "SELECT * from t1 where EXISTS(SELECT column from t2)",
-                    new List<string>{
+                    [
                         "PRE: STATEMENT: SELECT * FROM t1 WHERE EXISTS (SELECT column FROM t2)",
                         "PRE: TABLE FACTOR: t1",
                         "PRE: RELATION: t1",
@@ -89,12 +88,12 @@ namespace SqlParser.Tests.Visitors
                         "POST: RELATION: t2",
                         "POST: TABLE FACTOR: t2",
                         "POST: EXPR: EXISTS (SELECT column FROM t2)",
-                        "POST: STATEMENT: SELECT * FROM t1 WHERE EXISTS (SELECT column FROM t2)",
-                    }
+                        "POST: STATEMENT: SELECT * FROM t1 WHERE EXISTS (SELECT column FROM t2)"
+                    ]
                 },
                 {
                     "SELECT * from t1 where EXISTS(SELECT column from t2) UNION SELECT * from t3",
-                    new List<string>{
+                    [
                         "PRE: STATEMENT: SELECT * FROM t1 WHERE EXISTS (SELECT column FROM t2) UNION SELECT * FROM t3",
                         "PRE: TABLE FACTOR: t1",
                         "PRE: RELATION: t1",
@@ -112,8 +111,8 @@ namespace SqlParser.Tests.Visitors
                         "PRE: RELATION: t3",
                         "POST: RELATION: t3",
                         "POST: TABLE FACTOR: t3",
-                        "POST: STATEMENT: SELECT * FROM t1 WHERE EXISTS (SELECT column FROM t2) UNION SELECT * FROM t3",
-                    }
+                        "POST: STATEMENT: SELECT * FROM t1 WHERE EXISTS (SELECT column FROM t2) UNION SELECT * FROM t3"
+                    ]
                 }
             };
             #endregion

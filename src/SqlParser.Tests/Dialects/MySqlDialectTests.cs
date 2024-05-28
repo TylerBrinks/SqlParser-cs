@@ -33,13 +33,13 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Show_Columns()
         {
-            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+            DefaultDialects = [new MySqlDialect(), new GenericDialect()];
 
             var tableName = new ObjectName("mytable");
             Assert.Equal(new Statement.ShowColumns(false, false, tableName),
                 VerifiedStatement("SHOW COLUMNS FROM mytable"));
 
-            tableName = new ObjectName(new Ident[] { "mydb", "mytable" });
+            tableName = new ObjectName(["mydb", "mytable"]);
             Assert.Equal(new Statement.ShowColumns(false, false, tableName),
                 VerifiedStatement("SHOW COLUMNS FROM mydb.mytable"));
 
@@ -66,7 +66,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Show_Tables()
         {
-            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+            DefaultDialects = [new MySqlDialect(), new GenericDialect()];
 
             var show = VerifiedStatement<Statement.ShowTables>("SHOW TABLES");
             Assert.Equal(new Statement.ShowTables(false, false), show);
@@ -89,7 +89,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Show_Extended_Full()
         {
-            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+            DefaultDialects = [new MySqlDialect(), new GenericDialect()];
 
             ParseSqlStatements("SHOW EXTENDED FULL TABLES");
             ParseSqlStatements("SHOW EXTENDED FULL COLUMNS FROM mytable");
@@ -101,7 +101,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Show_Create()
         {
-            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+            DefaultDialects = [new MySqlDialect(), new GenericDialect()];
 
             var name = new ObjectName("myident");
 
@@ -123,7 +123,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Show_Collation()
         {
-            DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+            DefaultDialects = [new MySqlDialect(), new GenericDialect()];
 
             Assert.Equal(new Statement.ShowCollation(), VerifiedStatement("SHOW COLLATION"));
             Assert.Equal(new Statement.ShowCollation(new ShowStatementFilter.Like("pattern")),

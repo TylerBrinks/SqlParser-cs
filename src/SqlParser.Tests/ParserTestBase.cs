@@ -135,7 +135,7 @@ public class ParserTestBase
 
     public Sequence<Statement?> ParseSqlStatements(string sql, bool unescape = false, ParserOptions? options = null)
     {
-        return ParseSqlStatements(sql, Dialects);
+        return ParseSqlStatements(sql, Dialects, unescape, options);
     }
 
     // Ensures that `sql` parses as a single statement and returns it.

@@ -73,7 +73,7 @@ namespace SqlParser.Tests
                 Assert.Equal(sql, query.ToSql());
             });
 
-            dialects = new Dialect[] { new MsSqlDialect() };
+            dialects = [new MsSqlDialect()];
 
             sql = "SELECT * FROM user LIMIT ? OFFSET ?";
             dialects.RunParserMethod(sql, parser =>
@@ -87,7 +87,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Test_Parse_Data_Type()
         {
-            DefaultDialects = new Dialect[] { new GenericDialect(), new AnsiDialect() };
+            DefaultDialects = [new GenericDialect(), new AnsiDialect()];
 
             TestDataType("CHARACTER", new DataType.Character());
             TestDataType("CHARACTER(20)", new DataType.Character(new CharacterLength.IntegerLength(20)));
@@ -109,7 +109,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Test_Ansi_Character_Large_Object_Types()
         {
-            DefaultDialects = new Dialect[] { new GenericDialect(), new AnsiDialect() };
+            DefaultDialects = [new GenericDialect(), new AnsiDialect()];
 
             TestDataType("CHARACTER LARGE OBJECT", new DataType.CharacterLargeObject());
             TestDataType("CHARACTER LARGE OBJECT(20)", new DataType.CharacterLargeObject(20));
@@ -122,7 +122,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Test_Parse_Custom_Types()
         {
-            DefaultDialects = new Dialect[] { new GenericDialect(), new AnsiDialect() };
+            DefaultDialects = [new GenericDialect(), new AnsiDialect()];
 
             TestDataType("GEOMETRY", new DataType.Custom("GEOMETRY"));
             TestDataType("GEOMETRY(POINT)", new DataType.Custom("GEOMETRY", new Sequence<string> { "POINT" }));
@@ -132,7 +132,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Test_Ansi_Exact_Numeric_Types()
         {
-            DefaultDialects = new Dialect[] { new GenericDialect(), new AnsiDialect() };
+            DefaultDialects = [new GenericDialect(), new AnsiDialect()];
 
             TestDataType("NUMERIC", new DataType.Numeric(new ExactNumberInfo.None()));
             TestDataType("NUMERIC(2)", new DataType.Numeric(new ExactNumberInfo.Precision(2)));
@@ -148,7 +148,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Test_Ansi_Date_Types()
         {
-            DefaultDialects = new Dialect[] { new GenericDialect(), new AnsiDialect() };
+            DefaultDialects = [new GenericDialect(), new AnsiDialect()];
 
             TestDataType("DATE", new DataType.Date());
             TestDataType("TIME", new DataType.Time(TimezoneInfo.None));
@@ -184,7 +184,7 @@ namespace SqlParser.Tests
         [Fact]
         public void MySql_Parse_Index_Table_Constraint()
         {
-            DefaultDialects = new Dialect[] { new GenericDialect(), new MySqlDialect() };
+            DefaultDialects = [new GenericDialect(), new MySqlDialect()];
 
             TestTableConstraint("INDEX (c1)", new TableConstraint.Index(new Ident[] { "c1" }));
             TestTableConstraint("KEY (c1)", new TableConstraint.Index(new Ident[] { "c1" }) { DisplayAsKey = true });
@@ -210,6 +210,8 @@ namespace SqlParser.Tests
                 IndexType = IndexType.Hash,
                 Name = "idx_name"
             });
+            return;
+
             void TestTableConstraint(string sql, TableConstraint constraint)
             {
                 DefaultDialects!.RunParserMethod(sql, parser =>
@@ -224,16 +226,16 @@ namespace SqlParser.Tests
         [Fact]
         public void Test_Update_Has_Keyword()
         {
-            var sql = """
-                UPDATE test SET name=$1,
-                value=$2,
-                where=$3,
-                create=$4,
-                is_default=$5,
-                classification=$6,
-                sort=$7
-                WHERE id=$8
-                """;
+            const string sql = """
+                               UPDATE test SET name=$1,
+                               value=$2,
+                               where=$3,
+                               create=$4,
+                               is_default=$5,
+                               classification=$6,
+                               sort=$7
+                               WHERE id=$8
+                               """;
 
             var ast = new Parser().ParseSql(sql, new PostgreSqlDialect());
             Assert.Equal("UPDATE test SET name = $1, value = $2, where = $3, create = $4, is_default = $5, classification = $6, sort = $7 WHERE id = $8",
@@ -309,4 +311,3 @@ namespace SqlParser.Tests
         }
     }
 }
-

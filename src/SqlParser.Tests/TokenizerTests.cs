@@ -280,8 +280,8 @@ namespace SqlParser.Tests
         [Fact]
         public void Tokenize_Invalid_String()
         {
-            var symbol = '\ud83d';
-            var sql = "\n\ud83dمصطفىh";
+            const char symbol = '\ud83d';
+            const string sql = "\n\ud83dمصطفىh";
 
             var dialect = new GenericDialect();
             var tokens = new Tokenizer().Tokenize(sql, dialect);
@@ -329,7 +329,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Tokenize_Invalid_String_Cols()
         {
-            var symbol = '\ud83d';
+            const char symbol = '\ud83d';
 
             // ReSharper disable once StringLiteralTypo
             var tokens = new Tokenizer().Tokenize($"\n\nSELECT * FROM table\t{symbol}مصطفىh");
@@ -574,7 +574,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Tokenize_Quoted_Identifier_With_No_Escape()
         {
-            var sql = """"""
+            const string sql = """"""
                        "a "" b" "a """ "c """"" 
                       """""";
 
@@ -624,7 +624,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Tokenize_Pg_Like_Match()
         {
-            var sql = "SELECT col ~~ '_a%', col ~~* '_a%', col !~~ '_a%', col !~~* '_a%'";
+            const string sql = "SELECT col ~~ '_a%', col ~~* '_a%', col !~~ '_a%', col !~~* '_a%'";
             var tokens = new Tokenizer().Tokenize(sql, new GenericDialect());
 
             var expected = new Sequence<Token>
@@ -665,9 +665,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Tokenize_Dollar_Quoted_String_Tagged()
         {
-            const string sql = """
-                       SELECT $tag$dollar '$' quoted strings have $tags like this$ or like this $$$tag$
-                       """;
+            const string sql = "SELECT $tag$dollar '$' quoted strings have $tags like this$ or like this $$$tag$";
 
             var tokens = new Tokenizer().Tokenize(sql, new GenericDialect());
 
@@ -684,9 +682,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Tokenize_Dollar_Quoted_String_Tagged_Unterminated()
         {
-            const string sql = """
-                       SELECT $tag$dollar '$' quoted strings have $tags like this$ or like this $$$different tag$
-                       """;
+            const string sql = "SELECT $tag$dollar '$' quoted strings have $tags like this$ or like this $$$different tag$";
 
             Assert.Throws<TokenizeException>(()=> new Tokenizer().Tokenize(sql, new GenericDialect()));
         }
@@ -694,9 +690,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Tokenize_Dollar_Quoted_String_Untagged()
         {
-            const string sql = """
-                       SELECT $$within dollar '$' quoted strings have $tags like this$ $$
-                       """;
+            const string sql = "SELECT $$within dollar '$' quoted strings have $tags like this$ $$";
 
             var tokens = new Tokenizer().Tokenize(sql, new GenericDialect());
 
@@ -713,9 +707,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Tokenize_Dollar_Quoted_String_Untagged_Unterminated()
         {
-            const string sql = """
-                       SELECT $$dollar '$' quoted strings have $tags like this$ or like this $different tag$
-                       """;
+            const string sql = "SELECT $$dollar '$' quoted strings have $tags like this$ or like this $different tag$";
 
             Assert.Throws<TokenizeException>(() => new Tokenizer().Tokenize(sql, new GenericDialect()));
 

@@ -19,7 +19,6 @@ public class RedshiftDialect : Dialect
     public override bool IsIdentifierPart(char character)
     {
         return char.IsLetterOrDigit(character) || character is Symbols.Dollar or Symbols.Underscore or Symbols.Num;
-
     }
 
     public override bool IsDelimitedIdentifierStart(char character)
@@ -35,12 +34,7 @@ public class RedshiftDialect : Dialect
         state.Next();
         var notWhiteChar = state.SkipWhile(c => string.IsNullOrWhiteSpace(c.ToString()));
 
-        if (notWhiteChar != null)
-        {
-            return IsIdentifierPart(notWhiteChar.Value);
-        }
-
-        return false;
+        return notWhiteChar != null && IsIdentifierPart(notWhiteChar.Value);
     }
 
     public override bool ConvertTypeBeforeValue => true;

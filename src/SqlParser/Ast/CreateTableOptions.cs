@@ -6,7 +6,6 @@ public abstract record CreateTableOptions : IWriteSql
     public record With(Sequence<SqlOption> OptionsList) : CreateTableOptions;
     public record Options(Sequence<SqlOption> OptionsList) : CreateTableOptions;
 
-
     public void ToSql(SqlTextWriter writer)
     {
         switch (this)

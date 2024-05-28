@@ -396,7 +396,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Create_Table_With_Defaults()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             var sql = """
                 CREATE TABLE public.customer ( 
@@ -533,7 +533,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Create_Table_Empty()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             // Zero-column tables are weird, but supported by at least PostgreSQL.
             // <https://github.com/sqlparser-rs/sqlparser-rs/pull/94>
@@ -543,7 +543,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Create_Table_Constraints_Only()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE t (CONSTRAINT positive CHECK (2 > 1))");
 
@@ -588,7 +588,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Create_Table_If_Not_Exists()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE IF NOT EXISTS uk_cities ()");
 
@@ -598,7 +598,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Bad_If_Not_Exists()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE TABLE IF EXISTS uk_cities ()"));
             Assert.Equal("Expected end of statement, found EXISTS, Line: 1, Col: 17", ex.Message);
@@ -616,7 +616,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Create_Schema_If_Not_Exists()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             var create = VerifiedStatement<Statement.CreateSchema>("CREATE SCHEMA IF NOT EXISTS schema_name");
             var name = (SchemaName.Simple)create.Name;
@@ -626,7 +626,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Drop_Schema_If_Exists()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             var drop = VerifiedStatement<Statement.Drop>("DROP SCHEMA IF EXISTS schema_name");
             Assert.Equal(ObjectType.Schema, drop.ObjectType);
@@ -635,7 +635,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Copy_From_Stdin()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             const string sql = """
                 COPY public.actor (actor_id, first_name, last_name, last_update, value) FROM stdin;
@@ -667,7 +667,7 @@ namespace SqlParser.Tests.Dialects
         public void Test_Copy_To()
         {
             var copy = VerifiedStatement<Statement.Copy>("COPY users TO 'data.csv'");
-            var source = new CopySource.Table(new ObjectName("users"), new Sequence<Ident>());
+            var source = new CopySource.Table(new ObjectName("users"), []);
             var expected = new Statement.Copy(source, true, new CopyTarget.File("data.csv"));
             Assert.Equal(expected, copy);
 
@@ -698,7 +698,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Copy_From()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             const string sql = """
                 COPY table (a, b) FROM 'file.csv' WITH
@@ -757,13 +757,13 @@ namespace SqlParser.Tests.Dialects
         public void Parse_Copy_To()
         {
             var copy = VerifiedStatement<Statement.Copy>("COPY users TO 'data.csv'");
-            var source = new CopySource.Table(new ObjectName("users"), new Sequence<Ident>());
+            var source = new CopySource.Table(new ObjectName("users"), []);
             var expected = new Statement.Copy(source, true, new CopyTarget.File("data.csv"));
             Assert.Equal(expected, copy);
 
 
             copy = VerifiedStatement<Statement.Copy>("COPY country TO STDOUT (DELIMITER '|')");
-            source = new CopySource.Table(new ObjectName("country"), new Sequence<Ident>());
+            source = new CopySource.Table(new ObjectName("country"), []);
             expected = new Statement.Copy(source, true, new CopyTarget.Stdout())
             {
                 Options = new[] { new CopyOption.Delimiter(Symbols.Pipe) }
@@ -781,7 +781,7 @@ namespace SqlParser.Tests.Dialects
         {
             var copy = VerifiedStatement<Statement.Copy>(
                 "COPY users FROM 'data.csv' BINARY DELIMITER ',' NULL 'null' CSV HEADER QUOTE '\"' ESCAPE '\\' FORCE NOT NULL column");
-            var source = new CopySource.Table(new ObjectName("users"), new Sequence<Ident>());
+            var source = new CopySource.Table(new ObjectName("users"), []);
             var expected = new Statement.Copy(source, false, new CopyTarget.File("data.csv"))
             {
                 LegacyOptions = new CopyLegacyOption[]
@@ -802,7 +802,7 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal(expected, copy);
 
 
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             copy = OneStatementParsesTo<Statement.Copy>("COPY users FROM 'data.csv' DELIMITER AS ',' NULL AS 'null' CSV QUOTE AS '\"' ESCAPE AS '\\'", "");
 
@@ -848,15 +848,13 @@ namespace SqlParser.Tests.Dialects
 
             Assert.Equal(expected, copy);
 
-
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
-
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
         }
 
         [Fact]
         public void Parse_Set()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             var set = VerifiedStatement<Statement.SetVariable>("SET a = b");
             Assert.Equal("a", set.Variable!);
@@ -880,14 +878,14 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal(new[] { new Identifier("b") }, set.Value);
 
             set = VerifiedStatement<Statement.SetVariable>("SET a.b.c = b");
-            Assert.Equal(new ObjectName(new Ident[] { "a", "b", "c" }), set.Variable!);
+            Assert.Equal(new ObjectName(["a", "b", "c"]), set.Variable!);
             Assert.Equal(new[] { new Identifier("b") }, set.Value);
 
             set = OneStatementParsesTo<Statement.SetVariable>(
                 "SET hive.tez.auto.reducer.parallelism=false",
                 "SET hive.tez.auto.reducer.parallelism = false");
 
-            Assert.Equal(new ObjectName(new Ident[] { "hive", "tez", "auto", "reducer", "parallelism" }), set.Variable!);
+            Assert.Equal(new ObjectName(["hive", "tez", "auto", "reducer", "parallelism"]), set.Variable!);
             Assert.Equal(new[] { new LiteralValue(new Value.Boolean(false)) }, set.Value);
 
             OneStatementParsesTo("SET a TO b", "SET a = b");
@@ -906,7 +904,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Set_Role()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             var set = VerifiedStatement<Statement.SetRole>("SET SESSION ROLE NONE");
             Assert.Equal(ContextModifier.Session, set.ContextModifier);
@@ -923,7 +921,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Show()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             var show = VerifiedStatement<Statement.ShowVariable>("SHOW a a");
             Assert.Equal(new Statement.ShowVariable(new Ident[] { "a", "a" }), show);
@@ -935,7 +933,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Deallocate()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             var deallocate = VerifiedStatement<Statement.Deallocate>("DEALLOCATE a");
             Assert.Equal("a", deallocate.Name);
@@ -981,7 +979,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Prepare()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             var prepare = VerifiedStatement<Statement.Prepare>("PREPARE a AS INSERT INTO customers VALUES (a1, a2, a3)");
             var insert = (Statement.Insert)prepare.Statement;
@@ -1172,7 +1170,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Array_Index_Expr()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             var num = Enumerable.Range(0, 11).Select(i => new LiteralValue(Number(i.ToString()))).ToList();
 
@@ -1435,11 +1433,11 @@ namespace SqlParser.Tests.Dialects
             select = VerifiedOnlySelect("SELECT (information_schema._pg_expandarray(ARRAY['i', 'i'])).n");
             expectedProjection = new SelectItem.UnnamedExpression(
                 new CompositeAccess(new Nested(new Function(
-                    new ObjectName(new Ident[]
-                    {
+                    new ObjectName(
+                    [
                         "information_schema",
                         "_pg_expandarray"
-                    }))
+                    ]))
                 {
                     Args = new FunctionArg[]
                     {
@@ -1459,24 +1457,24 @@ namespace SqlParser.Tests.Dialects
         public void Parse_Comments()
         {
             var comment = VerifiedStatement<Statement.Comment>("COMMENT ON COLUMN tab.name IS 'comment'");
-            var expected = new Statement.Comment(new ObjectName(new List<Ident> { "tab", "name" }), CommentObject.Column, "comment");
+            var expected = new Statement.Comment(new ObjectName(["tab", "name"]), CommentObject.Column, "comment");
             Assert.Equal(expected, comment);
 
 
             comment = VerifiedStatement<Statement.Comment>("COMMENT ON TABLE public.tab IS 'comment'");
-            expected = new Statement.Comment(new ObjectName(new List<Ident> { "public", "tab" }), CommentObject.Table, "comment");
+            expected = new Statement.Comment(new ObjectName(["public", "tab"]), CommentObject.Table, "comment");
             Assert.Equal(expected, comment);
 
 
             comment = VerifiedStatement<Statement.Comment>("COMMENT IF EXISTS ON TABLE public.tab IS NULL");
-            expected = new Statement.Comment(new ObjectName(new List<Ident> { "public", "tab" }), CommentObject.Table, IfExists: true);
+            expected = new Statement.Comment(new ObjectName(["public", "tab"]), CommentObject.Table, IfExists: true);
             Assert.Equal(expected, comment);
         }
 
         [Fact]
         public void Parse_Quoted_Identifier()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             VerifiedStatement("""
                 SELECT "quoted "" ident"
@@ -1486,7 +1484,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Quoted_Identifier_2()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             VerifiedStatement("SELECT \"\"\"quoted ident\"\"\"");
         }
@@ -1494,7 +1492,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Local_And_Global()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             VerifiedStatement("CREATE LOCAL TEMPORARY TABLE table (COL INT)");
         }
@@ -1502,7 +1500,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_On_Commit()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             VerifiedStatement("CREATE TEMPORARY TABLE table (COL INT) ON COMMIT PRESERVE ROWS");
             VerifiedStatement("CREATE TEMPORARY TABLE table (COL INT) ON COMMIT DELETE ROWS");
@@ -1529,7 +1527,7 @@ namespace SqlParser.Tests.Dialects
             //var ex = Assert.Throws<TokenizeException>(() => ParseSqlStatements("SELECT E'\\'"));
             //Assert.Equal("Unterminated encoded string literal after Line: 1, Col: 8", ex.Message);
 
-            var sql = "SELECT E'\\u0001', E'\\U0010FFFF', E'\\xC', E'\\x25', E'\\2', E'\\45', E'\\445'";
+            const string sql = "SELECT E'\\u0001', E'\\U0010FFFF', E'\\xC', E'\\x25', E'\\2', E'\\45', E'\\445'";
             var select = VerifiedOnlySelectWithCanonical(sql, canonical: "");
             Assert.Equal(7, select.Projection.Count);
 
@@ -1545,7 +1543,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Declare()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             VerifiedStatement("DECLARE \"SQL_CUR0x7fa44801bc00\" CURSOR WITH HOLD FOR SELECT 1");
             VerifiedStatement("DECLARE \"SQL_CUR0x7fa44801bc00\" CURSOR WITHOUT HOLD FOR SELECT 1");
@@ -1560,7 +1558,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Current_Functions()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             var select = VerifiedOnlySelect("SELECT CURRENT_CATALOG, CURRENT_USER, SESSION_USER, USER");
             Assert.Equal(new Function("CURRENT_CATALOG") { Special = true }, select.Projection[0].AsExpr());
@@ -1572,7 +1570,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Fetch()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             VerifiedStatement("FETCH 2048 IN \"SQL_CUR0x7fa44801bc00\"");
             VerifiedStatement("FETCH 2048 IN \"SQL_CUR0x7fa44801bc00\" INTO \"new_table\"");
@@ -1624,7 +1622,6 @@ namespace SqlParser.Tests.Dialects
                 }
             };
             Assert.Equal(expected, select.Selection);
-
 
             select = VerifiedOnlySelect("SELECT * FROM events WHERE relname OPERATOR(~) '^(table)$'");
             expected = new BinaryOp(
@@ -1905,11 +1902,11 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Truncate()
         {
-            DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
+            DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             var truncate = VerifiedStatement("TRUNCATE db.table_name");
 
-            var name = new ObjectName(new Ident[] { "db", "table_name" });
+            var name = new ObjectName(["db", "table_name"]);
             var expected = new Statement.Truncate(name, null, false);
             Assert.Equal(expected, truncate);
         }
@@ -1970,7 +1967,7 @@ namespace SqlParser.Tests.Dialects
             expected = new Statement.AlterRole("role_name", new AlterRoleOperation.Set(
                 "maintenance_work_mem",
                 new SetConfigValue.Value(new LiteralValue(new Value.Number("100000"))),
-                new ObjectName(new Ident[] { "database_name" })));
+                new ObjectName(["database_name"])));
             Assert.Equal(expected, statement);
 
 
@@ -1979,7 +1976,7 @@ namespace SqlParser.Tests.Dialects
             expected = new Statement.AlterRole("role_name", new AlterRoleOperation.Set(
                 "maintenance_work_mem",
                 new SetConfigValue.Value(new LiteralValue(new Value.Number("100000"))),
-                new ObjectName(new Ident[] { "database_name" })));
+                new ObjectName(["database_name"])));
             Assert.Equal(expected, statement);
 
 
@@ -1988,7 +1985,7 @@ namespace SqlParser.Tests.Dialects
             expected = new Statement.AlterRole("role_name", new AlterRoleOperation.Set(
                 "maintenance_work_mem",
                 new SetConfigValue.Default(),
-                new ObjectName(new Ident[] { "database_name" })));
+                new ObjectName(["database_name"])));
             Assert.Equal(expected, statement);
 
 
@@ -2002,7 +1999,7 @@ namespace SqlParser.Tests.Dialects
             statement = VerifiedStatement(sql, dialect);
             expected = new Statement.AlterRole("role_name",
                 new AlterRoleOperation.Reset(new ResetConfig.ConfigName("maintenance_work_mem"),
-                    new ObjectName(new Ident[] { "database_name" })));
+                    new ObjectName(["database_name"])));
             Assert.Equal(expected, statement);
 
         }
@@ -2019,11 +2016,11 @@ namespace SqlParser.Tests.Dialects
             Assert.Null(createIndex.Using);
             Assert.False(createIndex.Unique);
             Assert.True(createIndex.IfNotExists);
-            Assert.Equal(new Sequence<OrderByExpression>
-            {
+            Assert.Equal(
+            [
                new(new Identifier("col1")),
                new(new Identifier("col2"))
-            }, createIndex.Columns);
+            ], createIndex.Columns);
             Assert.Null(createIndex.Include);
         }
 
@@ -2121,11 +2118,10 @@ namespace SqlParser.Tests.Dialects
             var insert = (Statement.Insert)VerifiedStatement("INSERT INTO test_tables AS test_table (id, a) VALUES (DEFAULT, 123)");
 
             var values = new Values([
-                new()
-                {
+                [
                     new Identifier("DEFAULT"),
                     new LiteralValue(new Value.Number("123"))
-                }
+                ]
             ]);
 
             var columns = new Sequence<Ident> {"id", "a"};
@@ -2147,11 +2143,10 @@ namespace SqlParser.Tests.Dialects
             var insert = (Statement.Insert)VerifiedStatement("INSERT INTO test_tables AS \"Test_Table\" (id, a) VALUES (DEFAULT, '0123')");
 
             var values = new Values([
-                new()
-                {
+                [
                     new Identifier("DEFAULT"),
                     new LiteralValue(new Value.SingleQuotedString("0123"))
-                }
+                ]
             ]);
 
             var columns = new Sequence<Ident> { "id", "a" };

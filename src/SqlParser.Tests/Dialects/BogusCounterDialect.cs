@@ -6,13 +6,13 @@ namespace SqlParser.Tests.Dialects
 {
     public class BogusCounterDialect : GenericDialect
     {
-        public override Statement? ParseStatement(Parser parser)
+        public override Statement ParseStatement(Parser parser)
         {
             var token = parser.NextToken();
 
             if (token is Word {Value: "custom" } word)
             {
-                var value = word.Value!;
+                var value = word.Value;
 
                 while ((token = parser.NextToken()) is not EOF)
                 {

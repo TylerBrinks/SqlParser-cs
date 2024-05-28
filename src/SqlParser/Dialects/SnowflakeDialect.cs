@@ -311,7 +311,7 @@ public class SnowflakeDialect : Dialect
                 if (parser.NextToken() is SingleQuotedString file)
                 {
                     files ??= [];
-                    files!.Add(file.Value);
+                    files.Add(file.Value);
                 }
                 else
                 {
@@ -568,7 +568,7 @@ public class SnowflakeDialect : Dialect
     {
         var next = parser.NextToken();
 
-        if (next is AtSign atSign)
+        if (next is AtSign)
         {
             parser.PrevToken();
             var idents = new List<Ident>();
