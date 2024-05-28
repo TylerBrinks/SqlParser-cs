@@ -102,6 +102,11 @@ public static class EnumWriter
             JsonOperator.AtQuestion => "@?",
             JsonOperator.AtAt => "@@",
 
+            MergeClauseKind.Matched => "MATCHED",
+            MergeClauseKind.NotMatched => "NOT MATCHED",
+            MergeClauseKind.NotMatchedBySource => "NOT MATCHED BY SOURCE",
+            MergeClauseKind.NotMatchedByTarget => "NOT MATCHED BY TARGET",
+
             MySqlInsertPriority.LowPriority => "LOW_PRIORITY",
             MySqlInsertPriority.Delayed => "DELAYED",
             MySqlInsertPriority.HighPriority => "HIGH_PRIORITY",

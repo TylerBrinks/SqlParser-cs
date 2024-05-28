@@ -9914,51 +9914,82 @@ public class Parser
             }
 
             ExpectKeyword(Keyword.WHEN);
-            var isNotMatched = ParseKeyword(Keyword.NOT);
+
+            var clauseKind = MergeClauseKind.Matched;
+            if (ParseKeyword(Keyword.NOT))
+            {
+                clauseKind = MergeClauseKind.NotMatched;
+            }
+
             ExpectKeyword(Keyword.MATCHED);
+
+            if (clauseKind == MergeClauseKind.NotMatched && ParseKeywordSequence(Keyword.BY, Keyword.SOURCE))
+            {
+                clauseKind = MergeClauseKind.NotMatchedBySource;
+            }
+            else if (clauseKind == MergeClauseKind.NotMatched && ParseKeywordSequence(Keyword.BY, Keyword.TARGET))
+            {
+                clauseKind = MergeClauseKind.NotMatchedByTarget;
+            }
 
             var predicate = ParseInit(ParseKeyword(Keyword.AND), ParseExpr);
             ExpectKeyword(Keyword.THEN);
 
             var keyword = ParseOneOfKeywords(Keyword.UPDATE, Keyword.INSERT, Keyword.DELETE);
 
+            MergeAction mergeAction = null!;
+
             switch (keyword)
             {
                 case Keyword.UPDATE:
-                    if (isNotMatched)
+                    if (clauseKind == MergeClauseKind.NotMatched || clauseKind == MergeClauseKind.NotMatchedByTarget)
                     {
-                        throw new ParserException("UPDATE in NOT MATCHED merge clause");
+                        throw new ParserException($"UPDATE is not allowed in a {clauseKind} merge clause");
                     }
+                   
                     ExpectKeyword(Keyword.SET);
                     var assignments = ParseCommaSeparated(ParseAssignment);
-                    clauses.Add(new MergeClause.MatchedUpdate(assignments, predicate));
+                    mergeAction = new MergeAction.Update(assignments);
                     break;
 
                 case Keyword.DELETE:
-                    if (isNotMatched)
+                    if (clauseKind == MergeClauseKind.NotMatched || clauseKind == MergeClauseKind.NotMatchedByTarget)
                     {
-                        throw new ParserException("DELETE in NOT MATCHED merge clause");
+                        throw new ParserException($"DELETE is not allowed in a {clauseKind} merge clause");
                     }
 
-                    clauses.Add(new MergeClause.MatchedDelete(predicate));
+                    mergeAction = new MergeAction.Delete();
                     break;
 
                 case Keyword.INSERT:
-                    if (!isNotMatched)
+                    if (clauseKind != MergeClauseKind.NotMatched && clauseKind != MergeClauseKind.NotMatchedByTarget)
                     {
-                        throw new ParserException("INSERT in MATCHED merge clause");
+                        throw new ParserException($"INSERT is not allowed in a {clauseKind} merge clause");
                     }
 
                     var isMySql = _dialect is MySqlDialect;
                     var columns = ParseParenthesizedColumnList(IsOptional.Optional, isMySql);
-                    ExpectKeyword(Keyword.VALUES);
-                    var values = ParseValues(isMySql);
-                    clauses.Add(new MergeClause.NotMatched(columns, values, predicate));
+
+                    MergeInsertKind kind;
+                    if (_dialect is BigQueryDialect or GenericDialect&& ParseKeyword(Keyword.ROW))
+                    {
+                        kind = new MergeInsertKind.Row();
+                    }
+                    else
+                    {
+                        ExpectKeyword(Keyword.VALUES);
+                        var values = ParseValues(isMySql);
+                        kind = new MergeInsertKind.Values(values);
+                    }
+
+                    mergeAction = new MergeAction.Insert(new MergeInsertExpression(columns, kind));
                     break;
 
                 default:
                     throw Expected("UPDATE, DELETE or INSERT in merge clause");
             }
+
+            clauses.Add(new MergeClause(clauseKind, mergeAction, predicate));
         }
 
         return clauses;

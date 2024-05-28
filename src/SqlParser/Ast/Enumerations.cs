@@ -327,6 +327,14 @@ public enum MapAccessSyntax
     Period
 }
 
+public enum MergeClauseKind
+{
+    Matched,
+    NotMatched,
+    NotMatchedByTarget,
+    NotMatchedBySource,
+}
+
 public enum MySqlInsertPriority
 {
     None,

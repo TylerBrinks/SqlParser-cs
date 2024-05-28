@@ -4232,10 +4232,10 @@ namespace SqlParser.Tests
         public void Parse_Merge()
         {
             var mergeInto = VerifiedStatement<Statement.Merge>("""
-                MERGE INTO s.bar AS dest USING (SELECT * FROM s.foo) AS stg ON dest.D = stg.D AND dest.E = stg.E
-                 WHEN NOT MATCHED THEN INSERT (A, B, C) VALUES (stg.A, stg.B, stg.C)
-                 WHEN MATCHED AND dest.A = 'a' THEN UPDATE SET dest.F = stg.F, dest.G = stg.G
-                 WHEN MATCHED THEN DELETE
+                MERGE INTO s.bar AS dest USING (SELECT * FROM s.foo) AS stg ON dest.D = stg.D AND dest.E = stg.E 
+                WHEN NOT MATCHED THEN INSERT (A, B, C) VALUES (stg.A, stg.B, stg.C) 
+                WHEN MATCHED AND dest.A = 'a' THEN UPDATE SET dest.F = stg.F, dest.G = stg.G 
+                WHEN MATCHED THEN DELETE
                 """);
 
             var mergeNoInto = VerifiedStatement<Statement.Merge>("""
@@ -4275,13 +4275,13 @@ namespace SqlParser.Tests
                 new BinaryOp(
                     new BinaryOp(
                         new CompoundIdentifier(new Ident[] { "dest", "D" }),
-                       BinaryOperator.Eq,
+                        BinaryOperator.Eq,
                         new CompoundIdentifier(new Ident[] { "stg", "D" })
                     ),
                    BinaryOperator.And,
                     new BinaryOp(
                         new CompoundIdentifier(new Ident[] { "dest", "E" }),
-                       BinaryOperator.Eq,
+                        BinaryOperator.Eq,
                         new CompoundIdentifier(new Ident[] { "stg", "E" })
                     )
                 ),
@@ -4291,30 +4291,28 @@ namespace SqlParser.Tests
 
             Assert.Equal(new MergeClause[]
             {
-                new MergeClause.NotMatched(
-                    new Ident[]{"A", "B", "C"},
-                    new Values(new Sequence<Expression>[]
-                    {
-                        [
-                            new CompoundIdentifier(new Ident[] { "stg", "A" }),
-                            new CompoundIdentifier(new Ident[] { "stg", "B" }),
-                            new CompoundIdentifier(new Ident[] { "stg", "C" })
-                        ]
-                    })
+                new (MergeClauseKind.NotMatched, new MergeAction.Insert(
+                        new MergeInsertExpression(["A", "B", "C"], 
+                            new MergeInsertKind.Values(new Values([
+                                [
+                                    new CompoundIdentifier(new Ident[] { "stg", "A" }),
+                                    new CompoundIdentifier(new Ident[] { "stg", "B" }),
+                                    new CompoundIdentifier(new Ident[] { "stg", "C" })
+                                ]
+                            ])))
+                    )
                 ),
-                new MergeClause.MatchedUpdate(
-                    new Statement.Assignment[]
-                    {
+                new (MergeClauseKind.Matched, new MergeAction.Update([
                         new(new Ident[]{"dest", "F"}, new CompoundIdentifier(new Ident[]{"stg", "F"})),
                         new(new Ident[]{"dest", "G"}, new CompoundIdentifier(new Ident[]{"stg", "G"})),
-                    },
+                    ]),
                     new BinaryOp(
                         new CompoundIdentifier(new Ident[]{"dest", "A"}),
                         BinaryOperator.Eq,
                         new LiteralValue(new Value.SingleQuotedString("a"))
                     )
                 ),
-                new MergeClause.MatchedDelete()
+                new (MergeClauseKind.Matched, new MergeAction.Delete())
             },
             mergeNoInto.Clauses);
 
