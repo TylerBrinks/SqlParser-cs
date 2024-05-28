@@ -7,8 +7,8 @@ public class ParserTestBase
 {
     protected IEnumerable<Dialect>? DefaultDialects { get; set; }
 
-    public static readonly IEnumerable<Dialect> AllDialects = new Dialect[]
-    {
+    public static readonly IEnumerable<Dialect> AllDialects =
+    [
         new GenericDialect(),
         new PostgreSqlDialect(),
         new MsSqlDialect(),
@@ -19,8 +19,9 @@ public class ParserTestBase
         new MySqlDialect(),
         new BigQueryDialect(),
         new SQLiteDialect(),
-        new DuckDbDialect()
-    };
+        new DuckDbDialect(),
+        new DatabricksDialect()
+    ];
 
     private IEnumerable<Dialect> Dialects => DefaultDialects ?? AllDialects;
 
@@ -180,11 +181,10 @@ public class ParserTestBase
         });
     }
 
-    public Value.Number Number(string value)
+    public static Value.Number Number(string value)
     {
         return new Value.Number(value);
     }
-
 
     public static AlterTableOperation AlterTableOpWithName(Statement statement, string expectedName)
     {

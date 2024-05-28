@@ -17,8 +17,7 @@ public class PostgreSqlDialect : Dialect
         // See https://www.postgresql.org/docs/11/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
         // We don't yet support identifiers beginning with "letters with
         // diacritical marks and non-Latin letters"
-        //return character.IsLetter() || character == Symbols.Underscore;
-        return char.IsLetter(character) || character == Symbols.Underscore;
+        return char.IsLetter(character) || character is Symbols.Underscore;
     }
 
     public override bool IsIdentifierPart(char character)

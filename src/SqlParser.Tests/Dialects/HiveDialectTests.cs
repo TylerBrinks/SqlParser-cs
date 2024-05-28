@@ -243,30 +243,6 @@ public class HiveDialectTests : ParserTestBase
     }
 
     [Fact]
-    public void Filter_During_Aggregation()
-    {
-        var sql = """
-                  SELECT
-                   ARRAY_AGG(name) FILTER (WHERE name IS NOT NULL),
-                   ARRAY_AGG(name) FILTER (WHERE name LIKE 'a%')
-                   FROM region
-                  """;
-        VerifiedStatement(sql);
-    }
-
-    [Fact]
-    public void Filter_During_Aggregation_Aliased()
-    {
-        var sql = """
-                  SELECT
-                   ARRAY_AGG(name) FILTER (WHERE name IS NOT NULL) AS agg1,
-                   ARRAY_AGG(name) FILTER (WHERE name LIKE 'a%') AS agg2
-                   FROM region
-                  """;
-        VerifiedStatement(sql);
-    }
-
-    [Fact]
     public void Filter_As_Alias()
     {
         OneStatementParsesTo("SELECT name filter FROM region", "SELECT name AS filter FROM region");

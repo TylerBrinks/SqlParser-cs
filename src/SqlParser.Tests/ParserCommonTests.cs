@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text;
 using SqlParser.Ast;
 using SqlParser.Dialects;
 using static SqlParser.Ast.DataType;
@@ -1093,9 +1094,9 @@ namespace SqlParser.Tests
                 new Identifier("size"),
                 new GroupingSets(new Sequence<Expression>[]
                 {
-                    new() { new Identifier("brand") },
-                    new() { new Identifier("size") },
-                    new()
+                    [new Identifier("brand")],
+                    [new Identifier("size")],
+                    []
                 })
             ]);
 
@@ -1113,15 +1114,14 @@ namespace SqlParser.Tests
 
             var select = VerifiedOnlySelect("SELECT brand, size, sum(sales) FROM items_sold GROUP BY size, ROLLUP (brand, size)", dialects);
 
-            var expected = new GroupByExpression.Expressions(new Sequence<Expression>
-            {
+            var expected = new GroupByExpression.Expressions([
                 new Identifier("size"),
                 new Rollup(new Sequence<Expression>[]
                 {
-                    new(){ new Identifier("brand")},
-                    new(){ new Identifier("size")}
+                    [new Identifier("brand")],
+                    [new Identifier("size")]
                 })
-            });
+            ]);
 
             Assert.Equal(expected, select.GroupBy!);
         }
@@ -2360,6 +2360,8 @@ namespace SqlParser.Tests
         [Fact]
         public void Parse_Named_Argument_Function_With_Eq_Operator()
         {
+            DefaultDialects = AllDialects.Where(d => d.SupportsNamedFunctionArgsWithEqOperator);
+
             var select = VerifiedOnlySelect("SELECT FUN(a = '1', b = '2') FROM foo");
             var expected = new Function("FUN")
             {
@@ -2384,14 +2386,14 @@ namespace SqlParser.Tests
             expected = new Function("foo")
             {
                 Args = new Sequence<FunctionArg>
-               {
+                {
                    new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(
                        new BinaryOp(
                            new Identifier("bar"),
                            BinaryOperator.Eq,
                            new LiteralValue(new Value.Number("42"))
                         )))
-               }
+                }
             };
             var actual = VerifiedExpr("foo(bar = 42)", dialects);
             Assert.Equal(expected, actual);
@@ -4292,7 +4294,7 @@ namespace SqlParser.Tests
             Assert.Equal(new MergeClause[]
             {
                 new (MergeClauseKind.NotMatched, new MergeAction.Insert(
-                        new MergeInsertExpression(["A", "B", "C"], 
+                        new MergeInsertExpression(["A", "B", "C"],
                             new MergeInsertKind.Values(new Values([
                                 [
                                     new CompoundIdentifier(new Ident[] { "stg", "A" }),
@@ -5524,7 +5526,7 @@ namespace SqlParser.Tests
 
             Assert.Equal(select.From![0].Relation, expected);
 
-            static Expression Call(string function, IEnumerable<Expression> args)
+            static Expression Call(string function, IList<Expression> args)
             {
                 Sequence<FunctionArg>? functionArgs = null;
 
@@ -5656,7 +5658,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Parse_Size_List()
         {
-            DefaultDialects =[new GenericDialect(), new PostgreSqlDialect(), new DuckDbDialect()];
+            DefaultDialects = [new GenericDialect(), new PostgreSqlDialect(), new DuckDbDialect()];
 
             VerifiedStatement("CREATE TABLE embeddings (data FLOAT[1536])");
             VerifiedStatement("CREATE TABLE embeddings (data FLOAT[1536][3])");
@@ -5670,5 +5672,88 @@ namespace SqlParser.Tests
 
             VerifiedStatement("INSERT INTO t1 (id, name) (SELECT t2.id, t2.name FROM t2)");
         }
+
+        [Fact]
+        public void Test_Selective_Aggregation()
+        {
+            var sql = """
+                      SELECT 
+                      ARRAY_AGG(name) FILTER (WHERE name IS NOT NULL), 
+                      ARRAY_AGG(name) FILTER (WHERE name LIKE 'a%') AS agg2 
+                      FROM region
+                      """;
+
+            DefaultDialects = AllDialects.Where(d => d.SupportsFilterDuringAggregation);
+
+            var select = VerifiedOnlySelect(sql);
+
+            var expected = new Sequence<SelectItem>
+            {
+                new SelectItem.UnnamedExpression(new AggregateExpressionWithFilter(new ArrayAgg(
+                        new ArrayAggregate(new Identifier("name"))), new IsNotNull(new Identifier("name")))),
+
+                new SelectItem.ExpressionWithAlias(new AggregateExpressionWithFilter(
+                    new ArrayAgg(new ArrayAggregate(new Identifier("name"))),
+                    new Like(new Identifier("name"), false, new LiteralValue(new Value.SingleQuotedString("a%")))), "agg2")
+            };
+
+            Assert.Equal(expected, select.Projection);
+        }
+
+        [Fact]
+        public void Test_Group_By_Grouping_Sets()
+        {
+            var sql = """
+                      SELECT city, car_model, sum(quantity) AS sum 
+                      FROM dealer 
+                      GROUP BY GROUPING SETS ((city, car_model), (city), (car_model), ()) 
+                      ORDER BY city
+                      """;
+
+            DefaultDialects = AllDialects.Where(d => d.SupportsGroupByExpression);
+
+            var select = VerifiedOnlySelect(sql);
+
+            var expected = new GroupByExpression.Expressions([
+                new GroupingSets([
+                    [new Identifier("city"), new Identifier("car_model")],
+                    [new Identifier("city")],
+                    [new Identifier("car_model")],
+                    []
+                ])
+            ]);
+
+            Assert.Equal(expected, select.GroupBy);
+        }
+
+
+        [Fact]
+        public void Filter_During_Aggregation()
+        {
+            DefaultDialects = AllDialects.Where(d => d.SupportsFilterDuringAggregation);
+
+            var sql = """
+                      SELECT
+                       ARRAY_AGG(name) FILTER (WHERE name IS NOT NULL),
+                       ARRAY_AGG(name) FILTER (WHERE name LIKE 'a%')
+                       FROM region
+                      """;
+            VerifiedStatement(sql);
+        }
+
+        [Fact]
+        public void Filter_During_Aggregation_Aliased()
+        {
+            DefaultDialects = AllDialects.Where(d => d.SupportsFilterDuringAggregation);
+
+            var sql = """
+                      SELECT
+                       ARRAY_AGG(name) FILTER (WHERE name IS NOT NULL) AS agg1,
+                       ARRAY_AGG(name) FILTER (WHERE name LIKE 'a%') AS agg2
+                       FROM region
+                      """;
+            VerifiedStatement(sql);
+        }
+
     }
 }

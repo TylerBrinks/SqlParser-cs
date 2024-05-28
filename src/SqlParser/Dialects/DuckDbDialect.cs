@@ -1,12 +1,4 @@
-﻿using SqlParser.Dialects;
-using SqlParser;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SqlParser.Dialects;
+﻿namespace SqlParser.Dialects;
 
 /// <summary>
 /// DuckDb SQL Dialect
