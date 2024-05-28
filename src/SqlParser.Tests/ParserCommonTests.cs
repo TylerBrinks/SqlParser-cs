@@ -1554,7 +1554,7 @@ namespace SqlParser.Tests
                 )
                 """;
 
-            var canonical = """
+            const string canonical = """
                 CREATE TABLE uk_cities (
                 name VARCHAR(100) NOT NULL, 
                 lat DOUBLE NULL, 
