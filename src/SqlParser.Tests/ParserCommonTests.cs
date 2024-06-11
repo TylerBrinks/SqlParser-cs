@@ -5773,8 +5773,6 @@ namespace SqlParser.Tests
             ]);
             Check("{'Alberta': 'Edmonton', 'Manitoba': 'Winnipeg'}", expression);
 
-            new Cast(new LiteralValue(new Value.SingleQuotedString("2023-04-01")), new Timestamp(TimezoneInfo.None), CastKind.Cast);
-
 
             expression = new Dictionary([
                 new DictionaryField(new Ident("start", Symbols.SingleQuote),
@@ -5791,6 +5789,89 @@ namespace SqlParser.Tests
             {
                 Assert.Equal(expected, VerifiedExpr(sql, dialects!));
             }
+        }
+
+        [Fact]
+        public void Parse_Connect_By()
+        {
+            var dialects = AllDialects.Where(d => d.SupportsConnectBy).ToList();
+
+            var expected = new Select([
+                new SelectItem.UnnamedExpression(new Identifier("employee_id")),
+                new SelectItem.UnnamedExpression(new Identifier("manager_id")),
+                new SelectItem.UnnamedExpression(new Identifier("title"))
+            ])
+            {
+                From = [new TableWithJoins(new TableFactor.Table("employees"))],
+                ConnectBy = new ConnectBy(
+                    new BinaryOp(
+                        new Identifier("title"), 
+                        BinaryOperator.Eq, 
+                        new LiteralValue(new Value.SingleQuotedString("president"))
+                    ), 
+                [
+                    new BinaryOp(
+                        new Identifier("manager_id"),
+                        BinaryOperator.Eq,
+                        new Prior(new Identifier("employee_id"))
+                    )
+                ])
+            };
+
+            var connect1 = """
+                           SELECT employee_id, manager_id, title FROM employees 
+                           START WITH title = 'president' 
+                           CONNECT BY manager_id = PRIOR employee_id 
+                           ORDER BY employee_id
+                           """;
+
+            Assert.Equal(expected, VerifiedOnlySelect(connect1, dialects));
+
+             var connect2 = """
+                        SELECT employee_id, manager_id, title FROM employees 
+                        CONNECT BY manager_id = PRIOR employee_id 
+                        START WITH title = 'president' 
+                        ORDER BY employee_id
+                        """;
+
+            Assert.Equal(expected, VerifiedOnlySelectWithCanonical(connect2, connect1, dialects));
+
+            var connect3 = """
+                           SELECT employee_id, manager_id, title FROM employees 
+                           WHERE employee_id <> 42 
+                           START WITH title = 'president' 
+                           CONNECT BY manager_id = PRIOR employee_id 
+                           ORDER BY employee_id
+                           """;
+
+            expected = new Select([
+                new SelectItem.UnnamedExpression(new Identifier("employee_id")),
+                new SelectItem.UnnamedExpression(new Identifier("manager_id")),
+                new SelectItem.UnnamedExpression(new Identifier("title"))
+            ])
+            {
+                From = [new TableWithJoins(new TableFactor.Table("employees"))],
+                Selection = new BinaryOp(
+                    new Identifier("employee_id"),
+                    BinaryOperator.NotEq,
+                    new LiteralValue(new Value.Number("42"))
+                    ),
+                ConnectBy = new ConnectBy(
+                    new BinaryOp(
+                        new Identifier("title"),
+                        BinaryOperator.Eq,
+                        new LiteralValue(new Value.SingleQuotedString("president"))
+                    ),
+                    [
+                        new BinaryOp(
+                            new Identifier("manager_id"),
+                            BinaryOperator.Eq,
+                            new Prior(new Identifier("employee_id"))
+                        )
+                    ])
+            };
+
+            Assert.Equal(expected, VerifiedOnlySelect(connect3, dialects));
         }
     }
 }

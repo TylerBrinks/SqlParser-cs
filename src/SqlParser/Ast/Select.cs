@@ -22,6 +22,7 @@ public record Select([Visit(1)] Sequence<SelectItem> Projection) : IWriteSql, IE
     [Visit(11)] public Sequence<NamedWindowDefinition>? NamedWindow { get; init; }
     [Visit(12)] public Expression? QualifyBy { get; init; }
     [Visit(13)] public ValueTableMode? ValueTableMode { get; init; }
+    [Visit(14)] public ConnectBy? ConnectBy { get; init; }
 
     public void ToSql(SqlTextWriter writer)
     {
@@ -100,6 +101,11 @@ public record Select([Visit(1)] Sequence<SelectItem> Projection) : IWriteSql, IE
         if (QualifyBy != null)
         {
             writer.WriteSql($" QUALIFY {QualifyBy}");
+        }
+
+        if (ConnectBy != null)
+        {
+            writer.WriteSql($" {ConnectBy}");
         }
     }
 }

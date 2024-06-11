@@ -88,6 +88,12 @@ public class ParserTestBase
         return OneOfIdenticalResults(dialect => new Parser().TryWithSql(sql, dialect).ParseExpr(), dialects);
     }
 
+    public Query VerifiedQueryWithCanonical(string sql, string canonical)
+    {
+        var select = OneStatementParsesTo(sql, canonical);
+        return select.AsQuery()!;
+    }
+
     public T OneStatementParsesTo<T>(string sql, string canonical, bool preserveFormatting = false) where T : Statement
     {
         return OneStatementParsesTo<T>(sql, canonical, Dialects, preserveFormatting);

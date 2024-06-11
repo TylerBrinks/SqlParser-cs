@@ -38,4 +38,5 @@ public class RedshiftDialect : Dialect
     }
 
     public override bool ConvertTypeBeforeValue => true;
+    public virtual bool SupportsConnectBy => true;
 }

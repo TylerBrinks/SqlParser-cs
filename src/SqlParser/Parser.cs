@@ -48,6 +48,7 @@ public class Parser
     private DepthGuard _depthGuard = null!;
     private Dialect _dialect = null!;
     private ParserOptions _options = null!;
+    private ParserState _parserState = ParserState.Normal;
 
     /// <summary>
     /// Parses a given SQL string into an Abstract Syntax Tree with a generic SQL dialect
@@ -1241,6 +1242,11 @@ public class Parser
             return ParseBigQueryStructLiteral();
         }
 
+        Expression ParseConnectBy()
+        {
+            return new Prior(ParseSubExpression(PlusMinusPrecedence));
+        }
+
         Expression ParseBigQueryStructLiteral()
         {
             var (fields, trailingBracket) = ParseStructTypeDef(ParseBigQueryStructFieldDef);
@@ -1414,6 +1420,7 @@ public class Parser
             Word { Keyword: Keyword.NOT } => ParseNot(),
             Word { Keyword: Keyword.MATCH } when _dialect is MySqlDialect or GenericDialect => ParseMatchAgainst(),
             Word { Keyword: Keyword.STRUCT } when _dialect is BigQueryDialect or GenericDialect => ParseStruct(),
+            Word { Keyword: Keyword.PRIOR } when _parserState == ParserState.ConnectBy => ParseConnectBy(),
             //  
             // Here `word` is a word, check if it's a part of a multi-part
             // identifier, a function call, or a simple identifier
@@ -7882,6 +7889,9 @@ public class Parser
 
         var qualify = ParseInit(ParseKeyword(Keyword.QUALIFY), ParseExpr);
 
+        var connectBy = ParseConnect();
+
+
         return new Select(projection)
         {
             Distinct = distinct,
@@ -7897,8 +7907,45 @@ public class Parser
             Having = having,
             NamedWindow = namedWindows,
             QualifyBy = qualify,
-            ValueTableMode = valueTableMode
+            ValueTableMode = valueTableMode,
+            ConnectBy = connectBy
         };
+
+        ConnectBy? ParseConnect()
+        {
+            if (_dialect.SupportsConnectBy && ParseOneOfKeywords(Keyword.START, Keyword.CONNECT) != Keyword.undefined)
+            {
+                PrevToken();
+                return ParseConnectBy();
+            }
+
+            return null;
+        }
+    }
+
+    private T WithState<T>(ParserState state, Func<T> action)
+    {
+        var currentState = _parserState;
+        _parserState = state;
+        var result = action();
+        _parserState = currentState;
+        return result;
+    }
+
+    public ConnectBy ParseConnectBy()
+    {
+        if (ParseKeywordSequence(Keyword.CONNECT, Keyword.BY))
+        {
+            var rel = WithState(ParserState.ConnectBy, () => ParseCommaSeparated(ParseExpr));
+            ExpectKeywords(Keyword.START, Keyword.WITH);
+            return new ConnectBy(ParseExpr(), rel);
+        }
+
+        ExpectKeywords(Keyword.START, Keyword.WITH);
+        var conditionExpression = ParseExpr();
+        ExpectKeywords(Keyword.CONNECT, Keyword.BY);
+        var conditionRelationships = WithState(ParserState.ConnectBy, () => ParseCommaSeparated(ParseExpr));
+        return new ConnectBy(conditionExpression, conditionRelationships);
     }
 
     public Table ParseAsTable()

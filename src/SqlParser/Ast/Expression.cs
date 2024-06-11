@@ -229,7 +229,6 @@ public abstract record Expression : IWriteSql, IElement
             writer.Write(" END");
         }
     }
-
     /// <summary>
     /// CAST an expression to a different data type e.g. `CAST(foo AS VARCHAR(123))`
     /// </summary>
@@ -397,7 +396,10 @@ public abstract record Expression : IWriteSql, IElement
             writer.Write(")");
         }
     }
-
+    /// <summary>
+    /// Dictionary expression
+    /// </summary>
+    /// <param name="Fields"></param>
     public record Dictionary(Sequence<DictionaryField> Fields) : Expression
     {
         public override void ToSql(SqlTextWriter writer)
@@ -935,7 +937,11 @@ public abstract record Expression : IWriteSql, IElement
             writer.WriteSql($"{Column}{Keys.ToSqlDelimited(string.Empty)}");
         }
     }
-
+    /// <summary>
+    /// Map access key
+    /// </summary>
+    /// <param name="Key">Key</param>
+    /// <param name="Syntax">Syntax</param>
     public record MapAccessKey(Expression Key, MapAccessSyntax Syntax) : Expression
     {
         public override void ToSql(SqlTextWriter writer)
@@ -981,7 +987,6 @@ public abstract record Expression : IWriteSql, IElement
             }
         }
     }
-
     /// <summary>
     /// BigQuery specific: A named expression in a typeless struct
     /// </summary>
@@ -1069,7 +1074,17 @@ public abstract record Expression : IWriteSql, IElement
             writer.WriteSql($"POSITION({Expression} IN {In})");
         }
     }
-
+    /// <summary>
+    /// A reference to the prior level in a CONNECT BY clause.
+    /// </summary>
+    /// <param name="Expression">Expression</param>
+    public record Prior(Expression Expression) : Expression
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"PRIOR {Expression}");
+        }
+    }
     /// <summary>
     /// Qualified wildcard, e.g. `alias.*` or `schema.table.*`.
     /// (Same caveats apply to `QualifiedWildcard` as to `Wildcard`.)

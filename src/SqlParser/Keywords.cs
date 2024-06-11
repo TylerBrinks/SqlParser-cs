@@ -110,6 +110,11 @@ internal static class Keywords
         Keyword.WINDOW,
         Keyword.END,
         Keyword.FOR,
+        // for MYSQL PARTITION SELECTION
+        Keyword.PARTITION,
+        // for Snowflake START WITH .. CONNECT BY
+        Keyword.START,
+        Keyword.CONNECT,
         Keyword.AS, // TODO remove?
         // Reserved for snowflake MATCH_RECOGNIZE
         Keyword.MATCH_RECOGNIZE,

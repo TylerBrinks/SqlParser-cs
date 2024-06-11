@@ -132,4 +132,8 @@ public abstract class Dialect
     /// Returns true if the dialect supports dictionary syntax
     /// </summary>
     public virtual bool SupportsDictionarySyntax => false;
+    /// <summary>
+    /// Returns true if the dialect supports connect by syntax
+    /// </summary>
+    public virtual bool SupportsConnectBy => false;
 }
