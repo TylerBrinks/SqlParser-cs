@@ -31,4 +31,5 @@ public class DuckDbDialect : Dialect
     public override bool SupportsFilterDuringAggregation => true;
 
     public override bool SupportsNamedFunctionArgsWithEqOperator => true;
+    public override bool SupportsDictionarySyntax => true;
 }

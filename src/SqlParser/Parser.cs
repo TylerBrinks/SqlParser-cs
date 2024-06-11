@@ -1445,7 +1445,7 @@ public class Parser
 
             LeftParen => ParseLeftParen(),
             Placeholder or Colon or AtSign => ParseTokenValue(),
-            LeftBrace when _dialect is DuckDbDialect or GenericDialect => ParseDuckDbStructLiteral(),
+            LeftBrace when _dialect.SupportsDictionarySyntax => ParseDuckDbStructLiteral(),
 
             _ => throw Expected("an expression", token)
         };

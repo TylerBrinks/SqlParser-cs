@@ -639,4 +639,5 @@ public class SnowflakeDialect : Dialect
     }
    
     public override bool SupportsMatchRecognize => true;
+    public override bool SupportsDictionarySyntax => true;
 }

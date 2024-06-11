@@ -28,4 +28,5 @@ public class GenericDialect : Dialect
     public override bool SupportsStartTransactionModifier => true;
 
     public override bool SupportsMatchRecognize => true;
+    public override bool SupportsDictionarySyntax => true;
 }

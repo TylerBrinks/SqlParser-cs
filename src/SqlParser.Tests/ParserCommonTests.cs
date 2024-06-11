@@ -5762,5 +5762,35 @@ namespace SqlParser.Tests
             VerifiedStatement(sql);
         }
 
+        [Fact]
+        public void Test_Dictionary_Syntax()
+        {
+            var dialects = AllDialects.Where(d => d.SupportsDictionarySyntax).ToList();
+
+            var expression = new Dictionary([
+                new DictionaryField(new Ident("Alberta", Symbols.SingleQuote), new LiteralValue(new Value.SingleQuotedString("Edmonton"))),
+                new DictionaryField(new Ident("Manitoba", Symbols.SingleQuote), new LiteralValue(new Value.SingleQuotedString("Winnipeg")))
+            ]);
+            Check("{'Alberta': 'Edmonton', 'Manitoba': 'Winnipeg'}", expression);
+
+            new Cast(new LiteralValue(new Value.SingleQuotedString("2023-04-01")), new Timestamp(TimezoneInfo.None), CastKind.Cast);
+
+
+            expression = new Dictionary([
+                new DictionaryField(new Ident("start", Symbols.SingleQuote),
+                    new Cast(new LiteralValue(new Value.SingleQuotedString("2023-04-01")), new Timestamp(TimezoneInfo.None), CastKind.Cast)),
+
+                new DictionaryField(new Ident("end", Symbols.SingleQuote),
+                    new Cast(new LiteralValue(new Value.SingleQuotedString("2023-04-05")), new Timestamp(TimezoneInfo.None), CastKind.Cast)),
+            ]);
+            Check("{'start': CAST('2023-04-01' AS TIMESTAMP), 'end': CAST('2023-04-05' AS TIMESTAMP)}", expression);
+            
+            return;
+
+            void Check(string sql, Expression expected)
+            {
+                Assert.Equal(expected, VerifiedExpr(sql, dialects!));
+            }
+        }
     }
 }

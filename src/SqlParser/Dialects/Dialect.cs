@@ -128,4 +128,8 @@ public abstract class Dialect
     /// Returns true if the dialect supports match recognize
     /// </summary>
     public virtual bool SupportsMatchRecognize => false;
+    /// <summary>
+    /// Returns true if the dialect supports dictionary syntax
+    /// </summary>
+    public virtual bool SupportsDictionarySyntax => false;
 }
