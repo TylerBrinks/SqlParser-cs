@@ -1,4 +1,6 @@
-﻿namespace SqlParser.Dialects;
+﻿using SqlParser.Ast;
+
+namespace SqlParser.Dialects;
 
 /// <summary>
 /// Generic SQL dialect
@@ -30,4 +32,5 @@ public class GenericDialect : Dialect
     public override bool SupportsMatchRecognize => true;
     public override bool SupportsDictionarySyntax => true;
     public override bool SupportsConnectBy => true;
+    public override bool SupportsWindowClauseNamedWindowReference => true;
 }

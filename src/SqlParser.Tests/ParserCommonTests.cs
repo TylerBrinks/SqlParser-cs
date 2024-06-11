@@ -2474,7 +2474,50 @@ namespace SqlParser.Tests
         }
 
         [Fact]
-        public void Parse_Named_Window()
+        public void Parse_Window_Clause()
+        {
+            var sql = """
+                      SELECT * 
+                      FROM mytable 
+                      WINDOW 
+                      window1 AS (ORDER BY 1 ASC, 2 DESC, 3 NULLS FIRST), 
+                      window2 AS (window1), 
+                      window3 AS (PARTITION BY a, b, c), 
+                      window4 AS (ROWS UNBOUNDED PRECEDING), 
+                      window5 AS (window1 PARTITION BY a), 
+                      window6 AS (window1 ORDER BY a), 
+                      window7 AS (window1 ROWS UNBOUNDED PRECEDING), 
+                      window8 AS (window1 PARTITION BY a ORDER BY b ROWS UNBOUNDED PRECEDING) 
+                      ORDER BY C3
+                      """;
+
+            VerifiedOnlySelect(sql);
+
+            sql = "SELECT from mytable WINDOW window1 AS window2";
+
+            var dialects = AllDialects.Where(d => !d.SupportsWindowClauseNamedWindowReference).ToList();
+            foreach (var dialect in dialects)
+            {
+                Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
+            }
+        }
+
+        [Fact]
+        public void Parse_Window_Clause_Named_Window()
+        {
+            const string sql = "SELECT * FROM mytable WINDOW window1 AS window2";
+            var dialects = AllDialects.Where(d => d.SupportsWindowClauseNamedWindowReference).ToList();
+            var window = VerifiedOnlySelect(sql, dialects: dialects).NamedWindow;
+            var expected = new Sequence<NamedWindowDefinition>
+            {
+                new ("window1", new NamedWindowExpression.NamedWindow("window2"))
+            };
+
+            Assert.Equal(expected, window);
+        }
+
+        [Fact]
+        public void Test_Parse_Named_Window()
         {
             const string sql = """
                       SELECT 
@@ -2511,15 +2554,15 @@ namespace SqlParser.Tests
                 },
                 NamedWindow = new Sequence<NamedWindowDefinition>
                 {
-                    new ("window1", new WindowSpec(OrderBy: new Sequence<OrderByExpression>
+                    new ("window1", new NamedWindowExpression.NamedWindowSpec(new WindowSpec(OrderBy: new Sequence<OrderByExpression>
                     {
                         new (new Identifier("C12"))
-                    })),
+                    }))),
 
-                    new ("window2" ,new WindowSpec(new Sequence<Expression>
+                    new ("window2", new NamedWindowExpression.NamedWindowSpec(new WindowSpec(new Sequence<Expression>
                     {
                         new Identifier("C11")
-                    }))
+                    })))
                 },
             };
 

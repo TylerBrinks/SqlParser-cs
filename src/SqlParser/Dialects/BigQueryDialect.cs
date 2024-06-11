@@ -27,4 +27,9 @@ public class BigQueryDialect : Dialect
     public override bool IsDelimitedIdentifierStart(char character) => character == Symbols.Backtick;
 
     public override bool SupportsStringLiteralBackslashEscape => true;
+    /// <summary>
+    /// Returns true if the dialect supports referencing another named window
+    /// within a window clause declaration.
+    /// </summary>
+    public override bool SupportsWindowClauseNamedWindowReference => true;
 }

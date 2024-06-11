@@ -1725,8 +1725,22 @@ public class Parser
     {
         var ident = ParseIdentifier();
         ExpectKeyword(Keyword.AS);
-        ExpectLeftParen();
-        var windowSpec = ParseWindowSpec();
+
+        NamedWindowExpression windowSpec;
+
+        if (ConsumeToken<LeftParen>())
+        {
+            windowSpec = new NamedWindowExpression.NamedWindowSpec(ParseWindowSpec());
+        }
+        else if (_dialect.SupportsWindowClauseNamedWindowReference)
+        {
+            windowSpec = new NamedWindowExpression.NamedWindow(ParseIdentifier());
+        }
+        else
+        {
+            throw Expected("(", PeekToken());
+        }
+
         return new NamedWindowDefinition(ident, windowSpec);
     }
 

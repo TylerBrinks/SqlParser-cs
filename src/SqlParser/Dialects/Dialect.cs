@@ -136,4 +136,5 @@ public abstract class Dialect
     /// Returns true if the dialect supports connect by syntax
     /// </summary>
     public virtual bool SupportsConnectBy => false;
+    public virtual bool SupportsWindowClauseNamedWindowReference => false;
 }
