@@ -74,7 +74,7 @@ public abstract record FunctionArgExpression : IWriteSql, IElement
 /// <summary>
 /// Function definition
 /// </summary>
-public abstract record FunctionDefinition : IWriteSql
+public abstract record FunctionDefinition : IWriteSql, IElement
 {
     /// <summary>
     /// Single quoted definition
@@ -193,7 +193,7 @@ public record CreateFunctionBody : IWriteSql, IElement
 /// <summary>
 /// Create function using
 /// </summary>
-public abstract record CreateFunctionUsing : IWriteSql
+public abstract record CreateFunctionUsing : IWriteSql, IElement
 {
     public abstract record CreateFunctionUsingValue(string Value) : CreateFunctionUsing;
     /// <summary>

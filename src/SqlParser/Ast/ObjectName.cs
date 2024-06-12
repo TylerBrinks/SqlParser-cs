@@ -1,7 +1,7 @@
 ﻿namespace SqlParser.Ast;
 
 /// <summary>
-/// Object name containing one more more named identifiers
+/// Object name containing one more named identifiers
 /// </summary>
 public record ObjectName : IWriteSql, IElement
 {

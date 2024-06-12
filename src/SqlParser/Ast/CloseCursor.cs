@@ -3,7 +3,7 @@
 /// <summary>
 /// Close Cursor specifications
 /// </summary>
-public abstract record CloseCursor : IWriteSql
+public abstract record CloseCursor : IWriteSql, IElement
 {
     /// <summary>
     /// Close all cursors

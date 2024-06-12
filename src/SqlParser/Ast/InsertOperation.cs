@@ -1,7 +1,7 @@
 ﻿
 namespace SqlParser.Ast;
 
-public record InsertOperation([property: Visit(0)] ObjectName Name, [property: Visit(1)] Statement.Select? Source)
+public record InsertOperation([property: Visit(0)] ObjectName Name, [property: Visit(1)] Statement.Select? Source) : IElement
 {
     /// Only for Sqlite
     public SqliteOnConflict Or { get; init; }

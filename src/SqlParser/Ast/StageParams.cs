@@ -3,7 +3,7 @@
 /// <summary>
 /// Snowflake stage params
 /// </summary>
-public record StageParams : IWriteSql
+public record StageParams : IWriteSql, IElement
 {
     public string? Url { get; init; }
     public string? Endpoint { get; init; }
@@ -43,7 +43,7 @@ public record StageParams : IWriteSql
 /// <summary>
 /// Snowflake data loading options
 /// </summary>
-public record DataLoadingOption(string Name, DataLoadingOptionType OptionType, string Value) : IWriteSql
+public record DataLoadingOption(string Name, DataLoadingOptionType OptionType, string Value) : IWriteSql, IElement
 {
     public void ToSql(SqlTextWriter writer)
     {

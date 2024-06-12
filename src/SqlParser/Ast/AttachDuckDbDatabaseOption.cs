@@ -1,6 +1,6 @@
 ﻿namespace SqlParser.Ast;
 
-public abstract record AttachDuckDbDatabaseOption : IWriteSql
+public abstract record AttachDuckDbDatabaseOption : IWriteSql, IElement
 {
     public record ReadOnly(bool? IsReadOnly) : AttachDuckDbDatabaseOption
     {

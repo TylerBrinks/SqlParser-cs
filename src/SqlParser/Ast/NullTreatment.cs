@@ -1,6 +1,6 @@
 ﻿namespace SqlParser.Ast;
 
-public abstract record NullTreatment : IWriteSql
+public abstract record NullTreatment : IWriteSql, IElement
 {
     public record IgnoreNulls : NullTreatment;
 

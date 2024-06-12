@@ -34,7 +34,7 @@ public record Top(TopQuantity? Quantity, bool WithTies, bool Percent) : IWriteSq
     }
 }
 
-public abstract record TopQuantity
+public abstract record TopQuantity : IElement
 {
     public record TopExpression(Expression Expression) : TopQuantity;
     public record Constant(long Quantity) : TopQuantity;

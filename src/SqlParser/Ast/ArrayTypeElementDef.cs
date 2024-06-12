@@ -1,6 +1,6 @@
 ﻿namespace SqlParser.Ast;
 
-public abstract record ArrayElementTypeDef : IWriteSql
+public abstract record ArrayElementTypeDef : IWriteSql, IElement
 {
     public record None : ArrayElementTypeDef;
 

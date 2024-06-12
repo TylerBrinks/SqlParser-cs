@@ -1,6 +1,6 @@
 ﻿namespace SqlParser.Ast;
 
-public abstract record DateTimeField : IWriteSql
+public abstract record DateTimeField : IWriteSql, IElement
 {
     public record None : DateTimeField;
 
@@ -8,7 +8,7 @@ public abstract record DateTimeField : IWriteSql
 
     public record Month : DateTimeField;
 
-    public record Week(Ident? Weekday = null) : DateTimeField
+    public record Week(Ident? Weekday = null) : DateTimeField, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -76,7 +76,7 @@ public abstract record DateTimeField : IWriteSql
 
     public record Timezone : DateTimeField;
 
-    public record TimezoneAbbr : DateTimeField
+    public record TimezoneAbbr : DateTimeField, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -84,7 +84,7 @@ public abstract record DateTimeField : IWriteSql
         }
     }
 
-    public record TimezoneHour : DateTimeField
+    public record TimezoneHour : DateTimeField, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -92,7 +92,7 @@ public abstract record DateTimeField : IWriteSql
         }
     }
 
-    public record TimezoneMinute : DateTimeField
+    public record TimezoneMinute : DateTimeField, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -100,7 +100,7 @@ public abstract record DateTimeField : IWriteSql
         }
     }
 
-    public record TimezoneRegion : DateTimeField
+    public record TimezoneRegion : DateTimeField, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -110,7 +110,7 @@ public abstract record DateTimeField : IWriteSql
 
     public record NoDateTime : DateTimeField;
 
-    public record Custom(Ident CustomDate) : DateTimeField
+    public record Custom(Ident CustomDate) : DateTimeField, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {

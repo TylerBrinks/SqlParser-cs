@@ -94,7 +94,7 @@ public record WindowSpec(
     }
 }
 
-public record NamedWindowDefinition(Ident Name, NamedWindowExpression WindowSpec) : IWriteSql
+public record NamedWindowDefinition(Ident Name, NamedWindowExpression WindowSpec) : IWriteSql, IElement
 {
     public void ToSql(SqlTextWriter writer)
     {
@@ -102,7 +102,7 @@ public record NamedWindowDefinition(Ident Name, NamedWindowExpression WindowSpec
     }
 }
 
-public abstract record NamedWindowExpression : IWriteSql
+public abstract record NamedWindowExpression : IWriteSql, IElement
 {
     public record NamedWindow(Ident Expression) : NamedWindowExpression{}
     public record NamedWindowSpec(WindowSpec Spec) : NamedWindowExpression { }
@@ -116,7 +116,7 @@ public abstract record NamedWindowExpression : IWriteSql
                 break;
 
             case NamedWindowSpec s:
-                writer.WriteSql($"{s.Spec}");
+                writer.WriteSql($"({s.Spec})");
                 break;
         }
     }

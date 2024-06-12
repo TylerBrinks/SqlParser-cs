@@ -5,7 +5,7 @@ namespace SqlParser.Ast;
 /// <summary>
 /// ColumnOptions are modifiers that follow a column definition in a CREATE TABLE statement.
 /// </summary>
-public abstract record ColumnOption : IWriteSql
+public abstract record ColumnOption : IWriteSql, IElement
 {
     /// <summary>
     /// Null column option
@@ -40,7 +40,7 @@ public abstract record ColumnOption : IWriteSql
     /// </example>
     /// </summary>
     /// <param name="Expression">Expression</param>
-    public record Default(Expression Expression) : ColumnOption, IElement
+    public record Default(Expression Expression) : ColumnOption
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -88,7 +88,7 @@ public abstract record ColumnOption : IWriteSql
         Sequence<Ident>? ReferredColumns = null, 
         ReferentialAction OnDeleteAction = ReferentialAction.None, 
         ReferentialAction OnUpdateAction = ReferentialAction.None)
-        : ColumnOption, IElement
+        : ColumnOption
     {
         public ConstraintCharacteristics? Characteristics { get; init; }
 
@@ -125,7 +125,7 @@ public abstract record ColumnOption : IWriteSql
     /// </example>
     /// </summary>
     /// <param name="Expression">Expression</param>
-    public record Check(Expression Expression) : ColumnOption, IElement
+    public record Check(Expression Expression) : ColumnOption
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -156,7 +156,7 @@ public abstract record ColumnOption : IWriteSql
     /// Character set options
     /// </summary>
     /// <param name="Name"></param>
-    public record CharacterSet(ObjectName Name) : ColumnOption, IElement
+    public record CharacterSet(ObjectName Name) : ColumnOption
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -178,7 +178,7 @@ public abstract record ColumnOption : IWriteSql
     /// On Update column options
     /// </summary>
     /// <param name="Expression">Expression</param>
-    public record OnUpdate(Expression Expression) : ColumnOption, IElement
+    public record OnUpdate(Expression Expression) : ColumnOption
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -195,7 +195,7 @@ public abstract record ColumnOption : IWriteSql
         bool GeneratedKeyword,
         Sequence<SequenceOptions>? SequenceOptions = null,
         Expression? GenerationExpr = null,
-        GeneratedExpressionMode? GenerationExpressionMode = null) : ColumnOption, IElement
+        GeneratedExpressionMode? GenerationExpressionMode = null) : ColumnOption
     {
         public override void ToSql(SqlTextWriter writer)
         {

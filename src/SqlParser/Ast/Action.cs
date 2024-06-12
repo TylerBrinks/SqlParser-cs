@@ -3,7 +3,7 @@
 /// <summary>
 /// Actions such as create, execute, select, etc.
 /// </summary>
-public abstract record Action : IWriteSql
+public abstract record Action : IWriteSql, IElement
 {
     public abstract record ColumnAction(Sequence<Ident>? Columns = null) : Action;
 

@@ -3,7 +3,7 @@
 /// <summary>
 /// Conflict targets
 /// </summary>
-public abstract record ConflictTarget : IWriteSql
+public abstract record ConflictTarget : IWriteSql, IElement
 {
     /// <summary>
     /// Column conflict targets
@@ -14,7 +14,7 @@ public abstract record ConflictTarget : IWriteSql
     /// On Constraint conflict target
     /// </summary>
     /// <param name="Name">Object name</param>
-    public record OnConstraint(ObjectName Name) : ConflictTarget, IElement;
+    public record OnConstraint(ObjectName Name) : ConflictTarget;
 
     public void ToSql(SqlTextWriter writer)
     {

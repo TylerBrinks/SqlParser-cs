@@ -21,7 +21,7 @@ public record OnConflict(OnConflictAction OnConflictAction, ConflictTarget? Conf
 /// <summary>
 /// On conflict action
 /// </summary>
-public abstract record OnConflictAction : IWriteSql
+public abstract record OnConflictAction : IWriteSql, IElement
 {
     /// <summary>
     /// Do nothing on conflict

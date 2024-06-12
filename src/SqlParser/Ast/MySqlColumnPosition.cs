@@ -1,6 +1,6 @@
 ﻿namespace SqlParser.Ast;
 
-public abstract record MySqlColumnPosition : IWriteSql
+public abstract record MySqlColumnPosition : IWriteSql, IElement
 {
     public record First : MySqlColumnPosition;
 

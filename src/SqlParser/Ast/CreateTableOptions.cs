@@ -1,6 +1,6 @@
 ﻿namespace SqlParser.Ast;
 
-public abstract record CreateTableOptions : IWriteSql
+public abstract record CreateTableOptions : IWriteSql, IElement
 {
     public record None : CreateTableOptions;
     public record With(Sequence<SqlOption> OptionsList) : CreateTableOptions;

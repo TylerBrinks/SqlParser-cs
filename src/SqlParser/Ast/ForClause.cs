@@ -1,6 +1,6 @@
 ﻿namespace SqlParser.Ast;
 
-public abstract record ForClause : IWriteSql
+public abstract record ForClause : IWriteSql, IElement
 {
     public record Browse : ForClause
     {
@@ -61,7 +61,7 @@ public abstract record ForClause : IWriteSql
     public abstract void ToSql(SqlTextWriter writer);
 }
 
-public abstract record ForJson : IWriteSql
+public abstract record ForJson : IWriteSql, IElement
 {
     public record Auto : ForJson
     {
@@ -81,7 +81,7 @@ public abstract record ForJson : IWriteSql
     public abstract void ToSql(SqlTextWriter writer);
 }
 
-public abstract record ForXml :IWriteSql
+public abstract record ForXml : IWriteSql, IElement
 {
     public record Raw(string? Value) : ForXml
     {

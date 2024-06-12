@@ -3,7 +3,7 @@
 /// <summary>
 /// Primitive SQL values such as number and string
 /// </summary>
-public abstract record Value : IWriteSql
+public abstract record Value : IWriteSql, IElement
 {
     public abstract record StringBasedValue(string Value) : Value;
 
@@ -187,17 +187,6 @@ public abstract record Value : IWriteSql
     {
         return As<Number>();
     }
-
-    //public SingleQuotedString AsSingleQuoted()
-    //{
-    //    return As<SingleQuotedString>();
-    //}
-
-
-    //public DoubleQuotedString AsDoubleQuoted()
-    //{
-    //    return As<DoubleQuotedString>();
-    //}
 }
 /// <summary>
 /// Dollar quoted string value

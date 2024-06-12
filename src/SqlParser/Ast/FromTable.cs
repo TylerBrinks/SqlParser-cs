@@ -1,6 +1,6 @@
 ﻿namespace SqlParser.Ast;
 
-public abstract record FromTable(Sequence<TableWithJoins> From) : IWriteSql
+public abstract record FromTable(Sequence<TableWithJoins> From) : IWriteSql, IElement
 {
     /// An explicit `FROM` keyword was specified.
     public record WithFromKeyword(Sequence<TableWithJoins> From) : FromTable(From);

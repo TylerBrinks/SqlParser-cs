@@ -14,7 +14,7 @@ public abstract record AlterTableOperation : IWriteSql
     /// </example>
     /// </summary>
     /// <param name="TableConstraint">Table Constraint</param>
-    public record AddConstraint(TableConstraint TableConstraint) : AlterTableOperation, IElement
+    public record AddConstraint(TableConstraint TableConstraint) : AlterTableOperation
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -37,7 +37,7 @@ public abstract record AlterTableOperation : IWriteSql
         bool IfNotExists, 
         ColumnDef ColumnDef, 
         MySqlColumnPosition? ColumnPosition = null)
-        : AlterTableOperation, IIfNotExists, IElement
+        : AlterTableOperation, IIfNotExists
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -71,7 +71,7 @@ public abstract record AlterTableOperation : IWriteSql
     /// </summary>
     /// <param name="IfNotExists"></param>
     /// <param name="NewPartitions"></param>
-    public record AddPartitions(bool IfNotExists, Sequence<Partition> NewPartitions) : AlterTableOperation, IIfNotExists, IElement
+    public record AddPartitions(bool IfNotExists, Sequence<Partition> NewPartitions) : AlterTableOperation, IIfNotExists
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -90,7 +90,7 @@ public abstract record AlterTableOperation : IWriteSql
     /// </summary>
     /// <param name="ColumnName">Column Name</param>
     /// <param name="Operation">Alter column operation</param>
-    public record AlterColumn(Ident ColumnName, AlterColumnOperation Operation) : AlterTableOperation, IElement
+    public record AlterColumn(Ident ColumnName, AlterColumnOperation Operation) : AlterTableOperation
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -194,7 +194,7 @@ public abstract record AlterTableOperation : IWriteSql
     /// </summary>
     /// <param name="Partitions">Partitions sto drop</param>
     /// <param name="IfExists">Contains If Not Exists</param>
-    public record DropPartitions(Sequence<Expression> Partitions, bool IfExists) : AlterTableOperation, IElement
+    public record DropPartitions(Sequence<Expression> Partitions, bool IfExists) : AlterTableOperation
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -316,7 +316,7 @@ public abstract record AlterTableOperation : IWriteSql
     /// </summary>
     /// <param name="OldPartitions">Old partitions</param>
     /// <param name="NewPartitions">New partitions</param>
-    public record RenamePartitions(Sequence<Expression> OldPartitions, Sequence<Expression> NewPartitions) : AlterTableOperation, IElement
+    public record RenamePartitions(Sequence<Expression> OldPartitions, Sequence<Expression> NewPartitions) : AlterTableOperation
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -349,7 +349,7 @@ public abstract record AlterTableOperation : IWriteSql
     /// </example>
     /// </summary>
     /// <param name="Name">Table name</param>
-    public record RenameTable(ObjectName Name) : AlterTableOperation, IElement
+    public record RenameTable(ObjectName Name) : AlterTableOperation
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -374,7 +374,7 @@ public abstract record AlterTableOperation : IWriteSql
         DataType DataType, 
         Sequence<ColumnOption> Options,
         MySqlColumnPosition? ColumnPosition = null) 
-        : AlterTableOperation, IElement
+        : AlterTableOperation
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -413,7 +413,7 @@ public abstract record AlterTableOperation : IWriteSql
     /// 
     /// </summary>
     /// <param name="Name"></param>
-    public record SwapWith(ObjectName Name) : AlterTableOperation, IElement
+    public record SwapWith(ObjectName Name) : AlterTableOperation
     {
         public override void ToSql(SqlTextWriter writer)
         {

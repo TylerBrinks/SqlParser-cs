@@ -2,7 +2,7 @@
 
 namespace SqlParser.Ast;
 
-public abstract record RoleOption : IWriteSql
+public abstract record RoleOption : IWriteSql, IElement
 {
     public record BypassRls(bool Bypass) : RoleOption
     {
@@ -94,20 +94,21 @@ public abstract record RoleOption : IWriteSql
     public abstract void ToSql(SqlTextWriter writer);
 }
 
-public abstract record SetConfigValue
+public abstract record SetConfigValue : IElement
 {
     public record Default : SetConfigValue;
     public record FromCurrent : SetConfigValue;
     public record Value(Expression Expression) : SetConfigValue;
 }
 
-public abstract record ResetConfig
+public abstract record ResetConfig : IElement
 {
     public record All : ResetConfig;
+
     public record ConfigName(ObjectName Name) : ResetConfig;
 }
 
-public abstract record AlterRoleOperation : IWriteSql
+public abstract record AlterRoleOperation : IWriteSql, IElement
 {
     public record RenameRole(Ident RoleName) : AlterRoleOperation
     {

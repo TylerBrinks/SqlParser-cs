@@ -3,7 +3,7 @@
 /// <summary>
 /// SQL data types
 /// </summary>
-public abstract record DataType : IWriteSql
+public abstract record DataType : IWriteSql, IElement
 {
     /// <summary>
     /// Data type with character length specificity
@@ -286,7 +286,7 @@ public abstract record DataType : IWriteSql
     /// <summary>
     /// Custom type such as enums
     /// </summary>
-    public record Custom(ObjectName Name, Sequence<string>? Values = null) : DataType, IElement
+    public record Custom(ObjectName Name, Sequence<string>? Values = null) : DataType
     {
         public override void ToSql(SqlTextWriter writer)
         {

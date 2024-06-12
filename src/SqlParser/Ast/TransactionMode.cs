@@ -3,7 +3,7 @@
 /// <summary>
 /// Transaction mode
 /// </summary>
-public abstract record TransactionMode : IWriteSql
+public abstract record TransactionMode : IWriteSql, IElement
 {
     public record AccessMode(TransactionAccessMode TransactionAccessMode) : TransactionMode;
 

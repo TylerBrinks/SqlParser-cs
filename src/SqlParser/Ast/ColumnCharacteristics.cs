@@ -1,6 +1,6 @@
 ﻿namespace SqlParser.Ast;
 
-public record ConstraintCharacteristics : IWriteSql
+public record ConstraintCharacteristics : IWriteSql, IElement
 {
     public bool? Deferrable { get; set; }
     public DeferrableInitial? Initially { get; set; }

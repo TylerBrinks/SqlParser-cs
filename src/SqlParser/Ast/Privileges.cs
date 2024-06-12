@@ -3,7 +3,7 @@
 /// <summary>
 /// Privileges
 /// </summary>
-public abstract record Privileges : IWriteSql
+public abstract record Privileges : IWriteSql, IElement
 {
     /// <summary>
     /// All privileges applicable to the object type

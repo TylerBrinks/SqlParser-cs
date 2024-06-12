@@ -26,7 +26,7 @@ public abstract record HiveRowFormat : IElement
     public record Delimited(Sequence<HiveRowDelimiter>? Delimiters) : HiveRowFormat;
 }
 
-public record HiveRowDelimiter(HiveDelimiter Delimiter, Ident Character) : IWriteSql
+public record HiveRowDelimiter(HiveDelimiter Delimiter, Ident Character) : IWriteSql, IElement
 {
     public void ToSql(SqlTextWriter writer)
     {
@@ -69,13 +69,13 @@ public abstract record HiveDistributionStyle : IElement
 /// Hive IO format
 /// </summary>
 // ReSharper disable once InconsistentNaming
-public abstract record HiveIOFormat
+public abstract record HiveIOFormat : IElement
 {
     /// <summary>
     /// Hive IOF format
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    public record IOF(Expression InputFormat, Expression OutputFormat) : HiveIOFormat, IElement;
+    public record IOF(Expression InputFormat, Expression OutputFormat) : HiveIOFormat;
     /// <summary>
     /// Hive File IO format
     /// </summary>
@@ -85,7 +85,7 @@ public abstract record HiveIOFormat
     }
 }
 
-public record HiveSetLocation(bool HasSet, Ident Location) : IElement, IWriteSql
+public record HiveSetLocation(bool HasSet, Ident Location) : IWriteSql, IElement
 {
     public void ToSql(SqlTextWriter writer)
     {

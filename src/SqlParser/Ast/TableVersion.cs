@@ -1,6 +1,6 @@
 ﻿namespace SqlParser.Ast;
 
-public abstract record TableVersion : IWriteSql
+public abstract record TableVersion : IWriteSql, IElement
 {
     public record ForSystemTimeAsOf(Expression Expression) : TableVersion
     {

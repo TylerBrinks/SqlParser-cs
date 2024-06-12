@@ -1,6 +1,6 @@
 ﻿namespace SqlParser.Ast;
 
-public record StageLoadSelectItem : IWriteSql
+public record StageLoadSelectItem : IWriteSql, IElement
 {
     public Ident? Alias { get; set; }
     public int FileColumnNumber { get; set; }

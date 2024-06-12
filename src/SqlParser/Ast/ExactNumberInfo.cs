@@ -1,6 +1,6 @@
 ﻿namespace SqlParser.Ast;
 
-public abstract record ExactNumberInfo : IWriteSql
+public abstract record ExactNumberInfo : IWriteSql, IElement
 {
     /// <summary>
     /// No additional information e.g. `DECIMAL`

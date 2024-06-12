@@ -3,7 +3,7 @@
 /// <summary>
 /// Show statement filter
 /// </summary>
-public abstract record ShowStatementFilter : IWriteSql
+public abstract record ShowStatementFilter : IWriteSql, IElement
 {
     /// <summary>
     /// Like filter

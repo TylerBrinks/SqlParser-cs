@@ -1,6 +1,6 @@
 ﻿namespace SqlParser.Ast;
 
-public abstract record WindowType : IWriteSql
+public abstract record WindowType : IWriteSql, IElement
 {
     public record WindowSpecType(WindowSpec Spec) : WindowType;
     public record NamedWindow(Ident Name) : WindowType;

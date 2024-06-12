@@ -1,6 +1,6 @@
 ﻿namespace SqlParser.Ast;
 
-public abstract record MacroDefinition : IWriteSql
+public abstract record MacroDefinition : IWriteSql, IElement
 {
     public record MacroExpression(Expression Expression) : MacroDefinition;
 

@@ -1,6 +1,6 @@
 ﻿namespace SqlParser.Ast;
 
-public abstract record Password : IWriteSql
+public abstract record Password : IWriteSql, IElement
 {
     public record ValidPassword(Expression Expression) : Password, IElement;
 

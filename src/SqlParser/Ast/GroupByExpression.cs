@@ -1,7 +1,7 @@
 ﻿
 namespace SqlParser.Ast;
 
-public abstract record GroupByExpression : IWriteSql
+public abstract record GroupByExpression : IWriteSql, IElement
 {
     public record All : GroupByExpression;
 

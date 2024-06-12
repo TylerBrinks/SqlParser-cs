@@ -2,9 +2,6 @@
 // ReSharper disable CommentTypo
 // ReSharper disable UnusedMember
 
-using System;
-using System.ComponentModel;
-
 namespace SqlParser.Ast;
 
 public abstract record Statement : IWriteSql, IElement

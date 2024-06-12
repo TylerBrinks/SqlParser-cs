@@ -6,7 +6,7 @@
 /// DECLARE variable_name := 42
 /// DECLARE variable_name DEFAULT 42
 /// </summary>
-public abstract record DeclareAssignment(Expression Expression) : IWriteSql
+public abstract record DeclareAssignment(Expression Expression) : IWriteSql, IElement
 {
     public record DeclareExpression(Expression Declaration) : DeclareAssignment(Declaration);
     public record Default(Expression DefaultExpression) : DeclareAssignment(DefaultExpression);
@@ -37,7 +37,7 @@ public abstract record DeclareAssignment(Expression Expression) : IWriteSql
 }
 
 
-public record Declare(Sequence<Ident> Names, DataType? DataType, DeclareAssignment? Assignment, DeclareType? DeclareType) : IWriteSql
+public record Declare(Sequence<Ident> Names, DataType? DataType, DeclareAssignment? Assignment, DeclareType? DeclareType) : IWriteSql, IElement
 {
     /// <summary>
     /// Causes the cursor to return data in binary rather than in text format.

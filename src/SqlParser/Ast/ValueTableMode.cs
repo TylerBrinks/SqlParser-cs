@@ -2,10 +2,10 @@
 
 public abstract record ValueTableMode : IWriteSql, IElement
 {
-    public record AsStruct : ValueTableMode { }
-    public record AsValue : ValueTableMode { }
+    public record AsStruct : ValueTableMode;
 
-
+    public record AsValue : ValueTableMode;
+    
     public void ToSql(SqlTextWriter writer)
     {
         switch (this)

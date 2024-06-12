@@ -3,7 +3,7 @@
 /// <summary>
 /// Copy targets
 /// </summary>
-public abstract record CopyTarget : IWriteSql
+public abstract record CopyTarget : IWriteSql, IElement
 {
     /// <summary>
     /// Stdin copy target
@@ -49,7 +49,7 @@ public abstract record CopyTarget : IWriteSql
 /// <summary>
 /// Copy source
 /// </summary>
-public abstract record CopySource
+public abstract record CopySource : IElement
 {
     public record Table(ObjectName TableName, Sequence<Ident> Columns) : CopySource;
 
@@ -58,7 +58,7 @@ public abstract record CopySource
 /// <summary>
 /// Copy options
 /// </summary>
-public abstract record CopyOption : IWriteSql
+public abstract record CopyOption : IWriteSql, IElement
 {
     /// <summary>
     /// <example>
@@ -221,7 +221,7 @@ public abstract record CopyOption : IWriteSql
 /// <summary>
 /// Copy legacy options
 /// </summary>
-public abstract record CopyLegacyOption : IWriteSql
+public abstract record CopyLegacyOption : IWriteSql, IElement
 {
     /// <summary>
     /// Binary copy option
@@ -289,7 +289,7 @@ public abstract record CopyLegacyOption : IWriteSql
     }
 }
 
-public abstract record CopyLegacyCsvOption : IWriteSql
+public abstract record CopyLegacyCsvOption : IWriteSql, IElement
 {
     /// <summary>
     /// HEADER

@@ -1,7 +1,7 @@
 ﻿namespace SqlParser.Ast;
 
 /// <summary>
-/// The most complete variant of a SELECT select expression, optionally
+/// The most complete variant of a SELECT expression, optionally
 /// including WITH, UNION / other set operations, and ORDER BY.
 /// </summary>
 public record Query([Visit(1)] SetExpression Body) : IWriteSql, IElement

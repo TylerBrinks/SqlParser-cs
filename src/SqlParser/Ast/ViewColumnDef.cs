@@ -1,6 +1,6 @@
 ﻿namespace SqlParser.Ast;
 
-public  record ViewColumnDef(Ident Name, Sequence<SqlOption>? Options = null) : IWriteSql
+public  record ViewColumnDef(Ident Name, Sequence<SqlOption>? Options = null) : IWriteSql, IElement
 {
     public void ToSql(SqlTextWriter writer)
     {

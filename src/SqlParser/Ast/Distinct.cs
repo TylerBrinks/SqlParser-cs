@@ -1,6 +1,6 @@
 ﻿namespace SqlParser.Ast;
 
-public abstract record DistinctFilter : IWriteSql
+public abstract record DistinctFilter : IWriteSql, IElement
 {
     public record Distinct : DistinctFilter
     {

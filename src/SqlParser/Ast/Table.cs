@@ -5,7 +5,7 @@
 /// </summary>
 /// <param name="Name">Table name</param>
 /// <param name="SchemaName">Schema name</param>
-public record Table(string Name, string? SchemaName = null) : IWriteSql
+public record Table(string Name, string? SchemaName = null) : IWriteSql, IElement
 {
     public void ToSql(SqlTextWriter writer)
     {

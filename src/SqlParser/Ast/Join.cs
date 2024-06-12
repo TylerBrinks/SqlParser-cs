@@ -139,7 +139,7 @@ public abstract record JoinOperator : IElement
 /// <summary>
 /// Join constraint
 /// </summary>
-public abstract record JoinConstraint: IElement
+public abstract record JoinConstraint : IElement
 {
     /// <summary>
     /// On join constraint

@@ -3,7 +3,7 @@
 /// <summary>
 /// Options for `CAST` / `TRY_CAST`
 /// </summary>
-public abstract record CastFormat : IWriteSql
+public abstract record CastFormat : IWriteSql, IElement
 {
     public record Value(Ast.Value Val) : CastFormat;
 

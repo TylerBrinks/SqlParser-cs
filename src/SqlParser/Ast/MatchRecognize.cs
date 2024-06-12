@@ -1,6 +1,6 @@
 ﻿namespace SqlParser.Ast;
 
-public record Measure(Expression Expression, Ident Alias) : IWriteSql
+public record Measure(Expression Expression, Ident Alias) : IWriteSql, IElement
 {
     public void ToSql(SqlTextWriter writer)
     {
@@ -8,7 +8,7 @@ public record Measure(Expression Expression, Ident Alias) : IWriteSql
     }
 }
 
-public abstract record RowsPerMatch : IWriteSql
+public abstract record RowsPerMatch : IWriteSql, IElement
 {
     public record OneRow : RowsPerMatch;
 
@@ -33,7 +33,7 @@ public abstract record RowsPerMatch : IWriteSql
     }
 }
 
-public abstract record AfterMatchSkip : IWriteSql
+public abstract record AfterMatchSkip : IWriteSql, IElement
 {
     public record PastLastRow : AfterMatchSkip;
     public record ToNextRow : AfterMatchSkip;
@@ -69,7 +69,7 @@ public enum EmptyMatchesMode
     WithUnmatched,
 }
 
-public record SymbolDefinition(Ident Symbol, Expression Definition) : IWriteSql
+public record SymbolDefinition(Ident Symbol, Expression Definition) : IWriteSql, IElement
 {
     public void ToSql(SqlTextWriter writer)
     {
@@ -77,7 +77,7 @@ public record SymbolDefinition(Ident Symbol, Expression Definition) : IWriteSql
     }
 }
 
-public abstract record MatchRecognizeSymbol : IWriteSql
+public abstract record MatchRecognizeSymbol : IWriteSql, IElement
 {
     public record Named(Ident Symbol) : MatchRecognizeSymbol;
     public record Start: MatchRecognizeSymbol;
@@ -100,7 +100,7 @@ public abstract record MatchRecognizeSymbol : IWriteSql
     }
 }
 
-public abstract record MatchRecognizePattern : IWriteSql
+public abstract record MatchRecognizePattern : IWriteSql, IElement
 {
     public record Symbol(MatchRecognizeSymbol MatchSymbol) : MatchRecognizePattern;
     public record Exclude(MatchRecognizeSymbol ExcludeSymbol) : MatchRecognizePattern;
@@ -139,7 +139,7 @@ public abstract record MatchRecognizePattern : IWriteSql
     }
 }
 
-public abstract record RepetitionQualifier : IWriteSql
+public abstract record RepetitionQualifier : IWriteSql, IElement
 {
     public record ZeroOrMore : RepetitionQualifier;
     public record OneOrMore : RepetitionQualifier;

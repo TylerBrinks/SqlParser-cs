@@ -1,6 +1,6 @@
 ﻿namespace SqlParser.Ast;
 
-public abstract record FlushLocation : IWriteSql
+public abstract record FlushLocation : IWriteSql, IElement
 {
     public record NoWriteToBinlog : FlushLocation;
     public record Local : FlushLocation;

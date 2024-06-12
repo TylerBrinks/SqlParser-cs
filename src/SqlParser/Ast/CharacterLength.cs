@@ -1,7 +1,7 @@
 ﻿namespace SqlParser.Ast;
 
 
-public abstract record CharacterLength : IWriteSql
+public abstract record CharacterLength : IWriteSql, IElement
 {
     /// <summary>
     /// Information about [character length][1], including length and possibly unit.
