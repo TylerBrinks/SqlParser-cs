@@ -31,7 +31,7 @@ public abstract record OnConflictAction : IWriteSql, IElement
     /// Update on conflict
     /// </summary>
     /// <param name="DoUpdateAction">Do update instruction</param>
-    public record DoUpdate(DoUpdateAction DoUpdateAction) : OnConflictAction, IElement;
+    public record DoUpdate(DoUpdateAction DoUpdateAction) : OnConflictAction;
 
     public void ToSql(SqlTextWriter writer)
     {

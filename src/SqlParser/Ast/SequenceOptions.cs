@@ -31,7 +31,6 @@ public abstract record SequenceOptions : IWriteSql, IElement
     /// Min value sequence
     /// </summary>
     /// <param name="Expression">Min value</param>
-    //public record MinValue(MinMaxValue Value) : SequenceOptions
     public record MinValue(Expression? Expression) : SequenceOptions
     {
         public override void ToSql(SqlTextWriter writer)

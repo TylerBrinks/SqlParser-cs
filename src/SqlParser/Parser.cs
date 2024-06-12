@@ -813,6 +813,11 @@ public class Parser
 
         Expression ParseConvertExpr()
         {
+            if (_dialect is MsSqlDialect)
+            {
+                return ParseMsSqlConvert();
+            }
+
             Expression expr;
             DataType? dataType;
             ObjectName? charset = null;
@@ -824,7 +829,7 @@ public class Parser
                     dataType = ParseDataType();
                     ExpectToken<Comma>();
                     expr = ParseExpr();
-                    return new Expression.Convert(expr, null, charset, false);
+                    return new Expression.Convert(expr, null, charset, false, new Sequence<Expression>());
 
                 });
             }
@@ -837,7 +842,7 @@ public class Parser
                 charset = ParseObjectName();
                 ExpectRightParen();
 
-                return new Expression.Convert(expr, null, charset, false);
+                return new Expression.Convert(expr, null, charset, false, new Sequence<Expression>());
             }
 
             ExpectToken<Comma>();
@@ -850,7 +855,25 @@ public class Parser
 
             ExpectRightParen();
 
-            return new Expression.Convert(expr, dataType, charset, false);
+            return new Expression.Convert(expr, dataType, charset, false, new Sequence<Expression>());
+        }
+
+        Expression ParseMsSqlConvert()
+        {
+            return ExpectParens(() =>
+            {
+                var dataType = ParseDataType();
+                ExpectToken<Comma>();
+                var expr = ParseExpr();
+                var styles = new Sequence<Expression>();
+
+                if (ConsumeToken<Comma>())
+                {
+                    styles = ParseCommaSeparated(ParseExpr);
+                }
+
+                return new Expression.Convert(expr, dataType, null, true, styles);
+            });
         }
 
         CastFormat? ParseOptionalCastFormat()

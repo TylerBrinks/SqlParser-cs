@@ -8,13 +8,15 @@ public abstract record Password : IWriteSql, IElement
 
     public void ToSql(SqlTextWriter writer)
     {
-        if (this is ValidPassword v)
+        switch (this)
         {
-            writer.WriteSql($" PASSWORD {v.Expression}");
-        }
-        else if(this is NullPassword)
-        {
-            writer.WriteSql($" PASSWORD NULL");
+            case ValidPassword v:
+                writer.WriteSql($" PASSWORD {v.Expression}");
+                break;
+
+            case NullPassword:
+                writer.WriteSql($" PASSWORD NULL");
+                break;
         }
     }
 }

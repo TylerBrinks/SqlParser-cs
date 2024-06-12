@@ -3,7 +3,7 @@
 /// <summary>
 /// Schema name
 /// </summary>
-public abstract record SchemaName : Statement, IElement
+public abstract record SchemaName : Statement
 {
     /// <summary>
     /// Only schema name specified: schema name

@@ -332,7 +332,12 @@ public abstract record Expression : IWriteSql, IElement
     /// <summary>
     /// CONVERT a value to a different data type or character encoding `CONVERT(foo USING utf8mb4)`
     /// </summary>
-    public record Convert(Expression Expression, DataType? DataType, ObjectName? CharacterSet, bool TargetBeforeValue) : Expression
+    public record Convert(
+        Expression Expression,
+        DataType? DataType, 
+        ObjectName? CharacterSet, 
+        bool TargetBeforeValue,
+        Sequence<Expression> Styles) : Expression
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -360,6 +365,11 @@ public abstract record Expression : IWriteSql, IElement
             else
             {
                 writer.WriteSql($"{Expression}");
+            }
+
+            if (Styles.SafeAny())
+            {
+                writer.WriteSql($", {Styles.ToSqlDelimited()}");
             }
 
             writer.Write(")");

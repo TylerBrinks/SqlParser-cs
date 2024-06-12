@@ -85,7 +85,6 @@ public record Declare(Sequence<Ident> Names, DataType? DataType, DeclareAssignme
             writer.Write(Scroll.Value ?  " SCROLL" : " NO SCROLL");
         }
 
-        //writer.Write("CURSOR ");
         if (DeclareType != null)
         {
             writer.WriteSql($" {DeclareType}");

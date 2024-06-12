@@ -212,9 +212,25 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Convert()
         {
+            const string sql = "CONVERT(INT, 1, 2, 3, NULL)";
+            var convert = (Expression.Convert)VerifiedExpr(sql);
+
+            Assert.Equal(new LiteralValue(new Value.Number("1")), convert.Expression);
+            Assert.Equal(new DataType.Int(), convert.DataType);
+            Assert.Null(convert.CharacterSet);
+            Assert.True(convert.TargetBeforeValue);
+
+            Assert.Equal([
+                new LiteralValue(new Value.Number("2")),
+                new LiteralValue(new Value.Number("3")),
+                new LiteralValue(new Value.Null())
+            ], convert.Styles);
+
             VerifiedExpr("CONVERT(VARCHAR(MAX), 'foo')");
             VerifiedExpr("CONVERT(VARCHAR(10), 'foo')");
             VerifiedExpr("CONVERT(DECIMAL(10,5), 12.55)");
+
+            Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT CONVERT(INT, 'foo',) FROM T"));
         }
     }
 }

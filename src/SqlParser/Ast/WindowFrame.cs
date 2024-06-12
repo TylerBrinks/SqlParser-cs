@@ -104,8 +104,9 @@ public record NamedWindowDefinition(Ident Name, NamedWindowExpression WindowSpec
 
 public abstract record NamedWindowExpression : IWriteSql, IElement
 {
-    public record NamedWindow(Ident Expression) : NamedWindowExpression{}
-    public record NamedWindowSpec(WindowSpec Spec) : NamedWindowExpression { }
+    public record NamedWindow(Ident Expression) : NamedWindowExpression;
+
+    public record NamedWindowSpec(WindowSpec Spec) : NamedWindowExpression;
 
     public void ToSql(SqlTextWriter writer)
     {

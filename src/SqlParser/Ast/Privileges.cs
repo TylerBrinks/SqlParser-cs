@@ -8,12 +8,12 @@ public abstract record Privileges : IWriteSql, IElement
     /// <summary>
     /// All privileges applicable to the object type
     /// </summary>
-    /// <param name="WithPrivilegesKeyword"></param>
+    /// <param name="WithPrivilegesKeyword">With privileges</param>
     public record All(bool WithPrivilegesKeyword) : Privileges;
     /// <summary>
     /// Specific privileges (e.g. `SELECT`, `INSERT`)
     /// </summary>
-    /// <param name="Privileges"></param>
+    /// <param name="Privileges">List of privilege actions</param>
     public record Actions(Sequence<Action> Privileges) : Privileges;
 
     public void ToSql(SqlTextWriter writer)
@@ -25,7 +25,6 @@ public abstract record Privileges : IWriteSql, IElement
         }
         else if(this is Actions actions)
         {
-            //writer.WriteSqlObject(actions.Privileges);
             writer.WriteSql($"{actions.Privileges}");
         }
     }
