@@ -1436,6 +1436,37 @@ namespace SqlParser.Tests.Dialects
             );
             Assert.Equal(expr, select.Selection);
 
+            select = VerifiedOnlySelect("SELECT info FROM orders WHERE info ? 'b'");
+            expr = new BinaryOp(
+                new Identifier("info"),
+                BinaryOperator.Question,
+                new LiteralValue(new Value.SingleQuotedString("b"))
+            );
+            Assert.Equal(expr, select.Selection);
+
+
+            select = VerifiedOnlySelect("SELECT info FROM orders WHERE info ?& ARRAY['b', 'c']");
+            expr = new BinaryOp(
+                new Identifier("info"),
+                BinaryOperator.QuestionAnd,
+                new Expression.Array(new ArrayExpression([
+                    new LiteralValue(new Value.SingleQuotedString("b")),
+                    new LiteralValue(new Value.SingleQuotedString("c"))
+                ], true))     
+            );
+            Assert.Equal(expr, select.Selection);
+
+
+            select = VerifiedOnlySelect("SELECT info FROM orders WHERE info ?| ARRAY['b', 'c']");
+            expr = new BinaryOp(
+                new Identifier("info"),
+                BinaryOperator.QuestionPipe,
+                new Expression.Array(new ArrayExpression([
+                    new LiteralValue(new Value.SingleQuotedString("b")),
+                    new LiteralValue(new Value.SingleQuotedString("c"))
+                ], true))
+            );
+            Assert.Equal(expr, select.Selection);
         }
 
         [Fact]

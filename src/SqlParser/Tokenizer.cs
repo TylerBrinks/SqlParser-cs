@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Text;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
 
@@ -119,6 +120,8 @@ public ref struct Tokenizer(bool unescape = true)
             Symbols.Tilde => TokenizeTilde(),
             Symbols.Num => TokenizeHash(character),
             Symbols.At => TokenizeAt(character),
+            Symbols.QuestionMark when _dialect is PostgreSqlDialect => TokenizePgQuestion(),
+
             Symbols.QuestionMark => TokenizeQuestionMark(),
             // Identifier or keyword
             _ when _dialect.IsIdentifierStart(character) => TokenizeIdentifierOrKeyword([character]),
@@ -712,6 +715,17 @@ public ref struct Tokenizer(bool unescape = true)
         return new Whitespace(WhitespaceKind.InlineComment, new string(comment))
         {
             Prefix = Symbols.Num.ToString()
+        };
+    }
+
+    private Token TokenizePgQuestion()
+    {
+        _state.Next();
+        return _state.Peek() switch
+        {
+            Symbols.Pipe => TokenizeSingleCharacter(new QuestionPipe()),
+            Symbols.Ampersand => TokenizeSingleCharacter(new QuestionAnd()),
+            _ => TokenizeSingleCharacter(new Question()),
         };
     }
 

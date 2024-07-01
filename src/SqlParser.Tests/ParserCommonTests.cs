@@ -4464,14 +4464,6 @@ namespace SqlParser.Tests
         [Fact]
         public void Test_Placeholder()
         {
-            var select = VerifiedOnlySelect("SELECT * FROM student WHERE id = ?");
-            Assert.Equal(
-                new BinaryOp(
-                    new Identifier("id"),
-                   BinaryOperator.Eq,
-                    new LiteralValue(new Value.Placeholder("?"))),
-                select.Selection);
-
             var dialects = new Dialect[]
             {
                 new GenericDialect(),
@@ -4484,7 +4476,7 @@ namespace SqlParser.Tests
                 // Note: `$` is the starting word for the HiveDialect identifier
             };
 
-            select = VerifiedOnlySelect("SELECT * FROM student WHERE id = $Id1", dialects);
+            var select = VerifiedOnlySelect("SELECT * FROM student WHERE id = $Id1", dialects);
             Assert.Equal(
                 new BinaryOp(
                     new Identifier("id"),
@@ -4495,6 +4487,23 @@ namespace SqlParser.Tests
             var query = VerifiedQuery("SELECT * FROM student LIMIT $1 OFFSET $2", dialects);
             Assert.Equal(new LiteralValue(new Value.Placeholder("$1")), query.Limit);
             Assert.Equal(new Offset(new LiteralValue(new Value.Placeholder("$2")), OffsetRows.None), query.Offset);
+
+            dialects = [
+                new GenericDialect(),
+                new DuckDbDialect(),
+                new MsSqlDialect(),
+                new AnsiDialect(),
+                new BigQueryDialect(),
+                new SnowflakeDialect()
+            ];
+
+            select = VerifiedOnlySelect("SELECT * FROM student WHERE id = ?", dialects);
+            Assert.Equal(
+               new BinaryOp(
+                   new Identifier("id"),
+                   BinaryOperator.Eq,
+                   new LiteralValue(new Value.Placeholder("?")))
+            , select.Selection);
 
             select = VerifiedOnlySelect("SELECT $fromage_français, :x, ?123", dialects);
             Assert.Equal(new[]

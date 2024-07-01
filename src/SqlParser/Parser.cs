@@ -2170,6 +2170,9 @@ public class Parser
             HashMinus => BinaryOperator.HashMinus,
             AtQuestion => BinaryOperator.AtQuestion,
             AtAt => BinaryOperator.AtAt,
+            Question => BinaryOperator.Question,
+            QuestionAnd => BinaryOperator.QuestionAnd,
+            QuestionPipe => BinaryOperator.QuestionPipe,
 
             Word wrd => MatchKeyword(wrd.Keyword),
             _ => BinaryOperator.None
@@ -2680,7 +2683,9 @@ public class Parser
                 or HashMinus
                 or AtQuestion
                 or AtAt
-
+                or Question
+                or QuestionAnd
+                or QuestionPipe
                 //or Overlap
                 //or CaretAt
                 => PgOtherPrecedence,

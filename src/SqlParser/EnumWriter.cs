@@ -61,6 +61,9 @@ public static class EnumWriter
             BinaryOperator.ArrowAt => "<@",
             BinaryOperator.HashMinus => "#-",
             BinaryOperator.AtQuestion => "@?",
+            BinaryOperator.Question => "?",
+            BinaryOperator.QuestionAnd => "?&",
+            BinaryOperator.QuestionPipe => "?|",
 
             CteAsMaterialized.NotMaterialized => "NOT MATERIALIZED",
 

@@ -144,6 +144,22 @@ public enum BinaryOperator
     /// On PostgreSQL, this operator is used to check the given JSON path
     /// returns an item for the JSON value.
     AtQuestion,
+    /// The `?` operator.
+    ///
+    /// On PostgreSQL, this operator is used to check whether a string exists as a top-level key
+    /// within the JSON value
+    Question,
+    /// The `?&` operator.
+    ///
+    /// On PostgreSQL, this operator is used to check whether all the indicated array
+    /// members exist as top-level keys.
+    QuestionAnd,
+    /// The `?|` operator.
+    ///
+    /// On PostgreSQL, this operator is used to check whether any the indicated array
+    /// members exist as top-level keys.
+    QuestionPipe,
+
     // PostgreSQL-specific custom operator.
     //
     // https://www.postgresql.org/docs/current/sql-createoperator.html
