@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using SqlParser.Ast;
 using SqlParser.Dialects;
+using SqlParser.Tokens;
 using static SqlParser.Ast.DataType;
 using static SqlParser.Ast.Expression;
 using Action = SqlParser.Ast.Action;
@@ -5035,24 +5036,24 @@ namespace SqlParser.Tests
         public void Parse_Json_Ops_Without_Colon()
         {
             var pgAndGeneric = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
-            var operators = new List<Tuple<string, JsonOperator, IEnumerable<Dialect>>>
+            var operators = new List<Tuple<string, BinaryOperator, IEnumerable<Dialect>>>
             {
-                new("->", JsonOperator.Arrow, AllDialects),
-                new("->>", JsonOperator.LongArrow, AllDialects),
-                new("#>", JsonOperator.HashArrow, pgAndGeneric),
-                new("#>>", JsonOperator.HashLongArrow, pgAndGeneric),
-                new("@>", JsonOperator.AtArrow, AllDialects),
-                new("<@", JsonOperator.ArrowAt, AllDialects),
-                new("#-", JsonOperator.HashMinus, pgAndGeneric),
-                new("@?", JsonOperator.AtQuestion, AllDialects),
-                new("@@", JsonOperator.AtAt, AllDialects)
+                new("->", BinaryOperator.Arrow, AllDialects),
+                new("->>", BinaryOperator.LongArrow, AllDialects),
+                new("#>", BinaryOperator.HashArrow, pgAndGeneric),
+                new("#>>", BinaryOperator.HashLongArrow, pgAndGeneric),
+                new("@>", BinaryOperator.AtArrow, AllDialects),
+                new("<@", BinaryOperator.ArrowAt, AllDialects),
+                new("#-", BinaryOperator.HashMinus, pgAndGeneric),
+                new("@?", BinaryOperator.AtQuestion, AllDialects),
+                new("@@", BinaryOperator.AtAt, AllDialects)
             };
 
             foreach (var (symbol, op, dialects) in operators)
             {
                 var select = VerifiedOnlySelect($"SELECT a {symbol} b", dialects);
 
-                var expected = new SelectItem.UnnamedExpression(new JsonAccess(
+                var expected = new SelectItem.UnnamedExpression(new BinaryOp(
                     new Identifier("a"),
                     op,
                     new Identifier("b")
@@ -5825,7 +5826,7 @@ namespace SqlParser.Tests
                     new Cast(new LiteralValue(new Value.SingleQuotedString("2023-04-05")), new Timestamp(TimezoneInfo.None), CastKind.Cast)),
             ]);
             Check("{'start': CAST('2023-04-01' AS TIMESTAMP), 'end': CAST('2023-04-05' AS TIMESTAMP)}", expression);
-            
+
             return;
 
             void Check(string sql, Expression expected)
@@ -5848,10 +5849,10 @@ namespace SqlParser.Tests
                 From = [new TableWithJoins(new TableFactor.Table("employees"))],
                 ConnectBy = new ConnectBy(
                     new BinaryOp(
-                        new Identifier("title"), 
-                        BinaryOperator.Eq, 
+                        new Identifier("title"),
+                        BinaryOperator.Eq,
                         new LiteralValue(new Value.SingleQuotedString("president"))
-                    ), 
+                    ),
                 [
                     new BinaryOp(
                         new Identifier("manager_id"),
@@ -5870,7 +5871,7 @@ namespace SqlParser.Tests
 
             Assert.Equal(expected, VerifiedOnlySelect(connect1, dialects));
 
-             var connect2 = """
+            var connect2 = """
                         SELECT employee_id, manager_id, title FROM employees 
                         CONNECT BY manager_id = PRIOR employee_id 
                         START WITH title = 'president' 

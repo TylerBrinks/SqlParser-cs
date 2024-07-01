@@ -96,6 +96,54 @@ public enum BinaryOperator
     PGNotILikeMatch,
     // String "starts with", eg: `a ^@ b` (PostgreSQL-specific)
     PGStartsWith,
+    /// The `->` operator.
+    ///
+    /// On PostgreSQL, this operator extracts a JSON object field or array
+    /// element, for example `'{"a":"b"}'::json -> 'a'` or `[1, 2, 3]'::json
+    /// -> 2`.
+    Arrow,
+    /// The `->>` operator.
+    ///
+    /// On PostgreSQL, this operator that extracts a JSON object field or JSON
+    /// array element and converts it to text, for example `'{"a":"b"}'::json
+    /// ->> 'a'` or `[1, 2, 3]'::json ->> 2`.
+    LongArrow,
+    /// The `#>` operator.
+    ///
+    /// On PostgreSQL, this operator extracts a JSON sub-object at the specified
+    /// path, for example:
+    ///
+    /// {"a": {"b": ["foo","bar"]}}'::json #> '{a,b,1}
+    HashArrow,
+    /// The `#>>` operator.
+    ///
+    /// A PostgreSQL-specific operator that extracts JSON sub-object at the
+    /// specified path, for example
+    ///
+    /// {"a": {"b": ["foo","bar"]}}'::json #>> '{a,b,1}
+    HashLongArrow,
+    /// The `@@` operator.
+    ///
+    /// On PostgreSQL, this is used for JSON and text searches.
+    AtAt,
+    /// The `@>` operator.
+    ///
+    /// On PostgreSQL, this is used for JSON and text searches.
+    AtArrow,
+    /// The `<@` operator.
+    ///
+    /// On PostgreSQL, this is used for JSON and text searches.
+    ArrowAt,
+    /// The `#-` operator.
+    ///
+    /// On PostgreSQL, this operator is used to delete a field or array element
+    /// at a specified path.
+    HashMinus,
+    /// The `@?` operator.
+    ///
+    /// On PostgreSQL, this operator is used to check the given JSON path
+    /// returns an item for the JSON value.
+    AtQuestion,
     // PostgreSQL-specific custom operator.
     //
     // https://www.postgresql.org/docs/current/sql-createoperator.html

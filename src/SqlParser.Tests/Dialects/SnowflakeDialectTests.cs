@@ -131,65 +131,108 @@ namespace SqlParser.Tests.Dialects
         public void Parse_Array()
         {
             var select = VerifiedOnlySelect("SELECT CAST(a AS ARRAY) FROM customer");
-            Assert.Equal(new Cast(new Identifier("a"), new DataType.Array(new ArrayElementTypeDef.None()), CastKind.Cast), 
+            Assert.Equal(new Cast(new Identifier("a"), new DataType.Array(new ArrayElementTypeDef.None()), CastKind.Cast),
                 select.Projection.Single().AsExpr());
         }
 
         [Fact]
-        public void Parse_Json_Using_Colon()
+        public void Parse_Semi_Structured_Data_Traversal()
         {
             var select = VerifiedOnlySelect("SELECT a:b FROM t");
             var expected = new SelectItem.UnnamedExpression(new JsonAccess(
                 new Identifier("a"),
-                JsonOperator.Colon,
-                new LiteralValue(new Value.UnQuotedString("b"))
+                new JsonPath([new JsonPathElement.Dot("b", false)])
             ));
             Assert.Equal(expected, select.Projection[0]);
 
 
-            select = VerifiedOnlySelect("SELECT a:type FROM t");
+            select = VerifiedOnlySelect("SELECT a:\"my long object key name\" FROM t");
             expected = new SelectItem.UnnamedExpression(new JsonAccess(
                 new Identifier("a"),
-                JsonOperator.Colon,
-                new LiteralValue(new Value.UnQuotedString("type"))
+                new JsonPath([new JsonPathElement.Dot("my long object key name", true)])
             ));
             Assert.Equal(expected, select.Projection[0]);
 
 
-            select = VerifiedOnlySelect("SELECT a:location FROM t");
+            select = VerifiedOnlySelect("SELECT a[2 + 2] FROM t");
             expected = new SelectItem.UnnamedExpression(new JsonAccess(
                 new Identifier("a"),
-                JsonOperator.Colon,
-                new LiteralValue(new Value.UnQuotedString("location"))
+                new JsonPath([new JsonPathElement.Bracket(
+                    new BinaryOp(
+                        new LiteralValue(new Value.Number("2")),
+                        BinaryOperator.Plus,
+                        new LiteralValue(new Value.Number("2"))
+                    )
+                )])
             ));
             Assert.Equal(expected, select.Projection[0]);
-
-            select = VerifiedOnlySelect("SELECT a:date FROM t");
-            expected = new SelectItem.UnnamedExpression(new JsonAccess(
-                new Identifier("a"),
-                JsonOperator.Colon,
-                new LiteralValue(new Value.UnQuotedString("date"))
-            ));
-            Assert.Equal(expected, select.Projection[0]);
-
-            select = VerifiedOnlySelect("SELECT a:start, a:end FROM t");
-
-            var projection = new Sequence<SelectItem>
-            {
-                new SelectItem.UnnamedExpression(new JsonAccess(
-                    new Identifier("a"),
-                    JsonOperator.Colon,
-                    new LiteralValue(new Value.UnQuotedString("start")))),
-
-                new SelectItem.UnnamedExpression(new JsonAccess(
-                    new Identifier("a"),
-                    JsonOperator.Colon,
-                    new LiteralValue(new Value.UnQuotedString("end"))))
-            };
-
-            Assert.Equal(projection, select.Projection);
 
             VerifiedStatement("SELECT a:b::INT FROM t");
+
+            select = VerifiedOnlySelect("SELECT a:select, a:from FROM t");
+            Sequence<SelectItem> expectedProjection = [
+                new SelectItem.UnnamedExpression(new JsonAccess(
+                    new Identifier("a"),
+                    new JsonPath([new JsonPathElement.Dot("select", false)])
+                )),
+
+                new SelectItem.UnnamedExpression(new JsonAccess(
+                    new Identifier("a"),
+                    new JsonPath([new JsonPathElement.Dot("from", false)])
+                )),
+            ];
+            Assert.Equal(expectedProjection, select.Projection);
+
+
+            select = VerifiedOnlySelect("SELECT a:foo.\"bar\".baz");
+            expectedProjection = [new SelectItem.UnnamedExpression(new JsonAccess(
+                new Identifier("a"),
+                new JsonPath([
+                    new JsonPathElement.Dot("foo", false),
+                    new JsonPathElement.Dot("bar", true),
+                    new JsonPathElement.Dot("baz", false),
+                ])
+            ))];
+            Assert.Equal(expectedProjection, select.Projection);
+
+
+            select = VerifiedOnlySelect("SELECT a:foo[0].bar");
+            expectedProjection = [new SelectItem.UnnamedExpression(new JsonAccess(
+                new Identifier("a"),
+                new JsonPath([
+                    new JsonPathElement.Dot("foo", false),
+                    new JsonPathElement.Bracket(new LiteralValue(new Value.Number("0"))),
+                    new JsonPathElement.Dot("bar", false),
+                ])
+            ))];
+            Assert.Equal(expectedProjection, select.Projection);
+
+
+            select = VerifiedOnlySelect("SELECT a[0].foo.bar");
+            expectedProjection = [new SelectItem.UnnamedExpression(new JsonAccess(
+                new Identifier("a"),
+                new JsonPath([
+                    new JsonPathElement.Bracket(new LiteralValue(new Value.Number("0"))),
+                    new JsonPathElement.Dot("foo", false),
+                    new JsonPathElement.Dot("bar", false),
+                ])
+            ))];
+            Assert.Equal(expectedProjection, select.Projection);
+
+
+            var expr = VerifiedExpr("a[b:c]");
+            var expectedExpr =new JsonAccess(
+                new Identifier("a"),
+                new JsonPath([
+                    new JsonPathElement.Bracket(new JsonAccess(
+                        new Identifier("b"),
+                        new JsonPath([new JsonPathElement.Dot("c", false)])
+                    ))
+                ])
+            );
+            Assert.Equal(expectedExpr, expr);
+
+            var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT a:42"));
         }
 
         [Fact]
@@ -423,7 +466,7 @@ namespace SqlParser.Tests.Dialects
                                FILE_FORMAT=(COMPRESSION=AUTO BINARY_FORMAT=HEX ESCAPE='\\')
                                """;
 
-            var create = VerifiedStatement<Statement.CreateStage>(sql, options:new ParserOptions
+            var create = VerifiedStatement<Statement.CreateStage>(sql, options: new ParserOptions
             {
                 Unescape = false
             });
@@ -431,7 +474,7 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal(new DataLoadingOption("COMPRESSION", DataLoadingOptionType.Enum, "AUTO"), create.FileFormat![0]);
             Assert.Equal(new DataLoadingOption("BINARY_FORMAT", DataLoadingOptionType.Enum, "HEX"), create.FileFormat![1]);
             Assert.Equal(new DataLoadingOption("ESCAPE", DataLoadingOptionType.String, """\\"""), create.FileFormat![2]);
-           
+
             Assert.Equal(sql.Replace("\r", null).Replace("\n", null), create.ToSql());
         }
 
@@ -787,7 +830,7 @@ namespace SqlParser.Tests.Dialects
             [
                 ("DECLARE ex EXCEPTION (42, 'ERROR')", "ex", new DeclareAssignment.DeclareExpression(
                     new Expression.Tuple([
-                        new LiteralValue(new Value.Number("42")), 
+                        new LiteralValue(new Value.Number("42")),
                         new LiteralValue(new Value.SingleQuotedString("ERROR"))
                     ]))),
                 ("DECLARE ex EXCEPTION", "ex", null)

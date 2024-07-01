@@ -52,6 +52,15 @@ public static class EnumWriter
             BinaryOperator.PGILikeMatch => "~~*",
             BinaryOperator.PGNotLikeMatch => "!~~",
             BinaryOperator.PGNotILikeMatch => "!~~*",
+            BinaryOperator.Arrow => "->",
+            BinaryOperator.LongArrow => "->>",
+            BinaryOperator.HashArrow => "#>",
+            BinaryOperator.HashLongArrow => "#>>",
+            BinaryOperator.AtAt => "@@",
+            BinaryOperator.AtArrow => "@>",
+            BinaryOperator.ArrowAt => "<@",
+            BinaryOperator.HashMinus => "#-",
+            BinaryOperator.AtQuestion => "@?",
 
             CteAsMaterialized.NotMaterialized => "NOT MATERIALIZED",
 

@@ -19,6 +19,17 @@ public abstract record Value : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// B"string value"
+    /// </summary>
+    /// <param name="Value">String value</param>
+    public record DoubleQuotedByteStringLiteral(string Value) : StringBasedValue(Value)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"B\"{Value}\"");
+        }
+    }
+    /// <summary>
     /// $tag_name$string value$tag_name$ - Postgres syntax
     /// </summary>
     /// <param name="Value">Quoted value</param>
@@ -151,17 +162,6 @@ public abstract record Value : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             writer.WriteSql($"B'{Value}'");
-        }
-    }
-    /// <summary>
-    /// B"string value"
-    /// </summary>
-    /// <param name="Value">String value</param>
-    public record DoubleQuotedByteStringLiteral(string Value) : StringBasedValue(Value)
-    {
-        public override void ToSql(SqlTextWriter writer)
-        {
-            writer.WriteSql($"B\"{Value}\"");
         }
     }
     /// <summary>

@@ -858,19 +858,11 @@ public abstract record Expression : IWriteSql, IElement
     /// <param name="Left">Left hand expression</param>
     /// <param name="Operator">Json Operator</param>
     /// <param name="Right">Right hand expression</param>
-    public record JsonAccess(Expression Left, JsonOperator Operator, Expression Right) : Expression
+    public record JsonAccess(Expression Value, JsonPath Path) : Expression
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
-            if (Operator == JsonOperator.Colon)
-            {
-                writer.WriteSql($"{Left}{Operator}{Right}");
-            }
-            else
-            {
-                writer.WriteSql($"{Left} {Operator} {Right}");
-            }
+            writer.WriteSql($"{Value}{Path}");
         }
     }
     /// <summary>

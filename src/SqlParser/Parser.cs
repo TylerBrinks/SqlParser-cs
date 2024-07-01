@@ -29,6 +29,7 @@ public class Parser
     public const short OrPrecedence = 5;
     public const short AndPrecedence = 10;
     public const short UnaryNotPrecedence = 15;
+    public const short PgOtherPrecedence = 16;
     public const short IsPrecedence = 17;
     public const short LikePrecedence = 19;
     public const short BetweenPrecedence = 20;
@@ -2159,6 +2160,17 @@ public class Parser
             DoubleTildeAsterisk => BinaryOperator.PGILikeMatch,
             ExclamationMarkDoubleTilde => BinaryOperator.PGNotLikeMatch,
             ExclamationMarkDoubleTildeAsterisk => BinaryOperator.PGNotILikeMatch,
+
+            Arrow => BinaryOperator.Arrow,
+            LongArrow => BinaryOperator.LongArrow,
+            HashArrow => BinaryOperator.HashArrow,
+            HashLongArrow => BinaryOperator.HashLongArrow,
+            AtArrow => BinaryOperator.AtArrow,
+            ArrowAt => BinaryOperator.ArrowAt,
+            HashMinus => BinaryOperator.HashMinus,
+            AtQuestion => BinaryOperator.AtQuestion,
+            AtAt => BinaryOperator.AtAt,
+
             Word wrd => MatchKeyword(wrd.Keyword),
             _ => BinaryOperator.None
         };
@@ -2314,41 +2326,55 @@ public class Parser
 
         if (token is LeftBracket)
         {
-            return _dialect is PostgreSqlDialect or GenericDialect
-                ? ParseArrayIndex(expr)
-                : ParseMapAccess(expr);
-        }
-
-        if (token is Colon)
-        {
-            return new JsonAccess(expr, JsonOperator.Colon, new LiteralValue(ParseValue()));
-        }
-
-        if (token is Arrow
-            or LongArrow
-            or HashArrow
-            or HashLongArrow
-            or AtArrow
-            or ArrowAt
-            or HashMinus
-            or AtQuestion
-            or AtAt)
-        {
-            var op = token switch
+            if (_dialect is PostgreSqlDialect or GenericDialect)
             {
-                Arrow => JsonOperator.Arrow,
-                LongArrow => JsonOperator.LongArrow,
-                HashArrow => JsonOperator.HashArrow,
-                HashLongArrow => JsonOperator.HashLongArrow,
-                AtArrow => JsonOperator.AtArrow,
-                ArrowAt => JsonOperator.ArrowAt,
-                HashMinus => JsonOperator.HashMinus,
-                AtQuestion => JsonOperator.AtQuestion,
-                AtAt => JsonOperator.AtAt,
-                _ => JsonOperator.None,
-            };
-            return new JsonAccess(expr, op, ParseExpr());
+                return ParseArrayIndex(expr);
+            }
+            else if (_dialect is SnowflakeDialect)
+            {
+                PrevToken();
+                return ParseJsonAccess(expr);
+            }
+
+            return ParseMapAccess(expr);
         }
+
+        if (_dialect is SnowflakeDialect or GenericDialect && token is Colon)
+        {
+            PrevToken();
+            return ParseJsonAccess(expr);
+        }
+
+        //if (token is Colon)
+        //{
+        //    return new JsonAccess(expr, JsonOperator.Colon, new LiteralValue(ParseValue()));
+        //}
+
+        //if (token is Arrow
+        //    or LongArrow
+        //    or HashArrow
+        //    or HashLongArrow
+        //    or AtArrow
+        //    or ArrowAt
+        //    or HashMinus
+        //    or AtQuestion
+        //    or AtAt)
+        //{
+        //    var op = token switch
+        //    {
+        //        Arrow => JsonOperator.Arrow,
+        //        LongArrow => JsonOperator.LongArrow,
+        //        HashArrow => JsonOperator.HashArrow,
+        //        HashLongArrow => JsonOperator.HashLongArrow,
+        //        AtArrow => JsonOperator.AtArrow,
+        //        ArrowAt => JsonOperator.ArrowAt,
+        //        HashMinus => JsonOperator.HashMinus,
+        //        AtQuestion => JsonOperator.AtQuestion,
+        //        AtAt => JsonOperator.AtAt,
+        //        _ => JsonOperator.None,
+        //    };
+        //    return new JsonAccess(expr, op, ParseExpr());
+        //}
 
         throw new ParserException($"No infix parser token for {token}");
 
@@ -2386,6 +2412,56 @@ public class Parser
 
             return BinaryOperator.PGCustomBinaryOperator;
         }
+    }
+
+    public JsonAccess ParseJsonAccess(Expression expr)
+    {
+        var path = new Sequence<JsonPathElement>();
+        while (true)
+        {
+            var next = NextToken();
+
+            if (next is Colon && path.Count == 0)
+            {
+                path.Add(ParseJsonPathObjectKey());
+            }
+            else if (next is Period p && path.Any())
+            {
+                path.Add(ParseJsonPathObjectKey());
+
+            }
+            else if (next is LeftBracket)
+            {
+                var key = ParseExpr();
+                ExpectToken<RightBracket>();
+
+                path.Add(new JsonPathElement.Bracket(key));
+            }
+            else
+            {
+                PrevToken();
+                break;
+            }
+        }
+
+        return new JsonAccess(expr, new JsonPath(path));
+    }
+
+    public JsonPathElement ParseJsonPathObjectKey()
+    {
+        var token = NextToken();
+        if (token is Word w)
+        {
+            // path segments in SF dot notation can be unquoted or double quoted
+            var quoted = w.QuoteStyle == Symbols.DoubleQuote;
+            return new JsonPathElement.Dot(w.Value, quoted);
+        }
+        else if (token is DoubleQuotedString d)
+        {
+            return new JsonPathElement.Dot(d.Value, true);
+        }
+
+        throw Expected("Variant object key name", token);
     }
 
     /// <summary>
@@ -2590,13 +2666,13 @@ public class Parser
             DoubleColon
                 or Colon
                 or ExclamationMark
-                => ArrowPrecedence,
-
-            LeftBracket
-                or LongArrow
-                or Arrow
+                or LeftBracket
                 or Overlap
                 or CaretAt
+                => ArrowPrecedence,
+
+            Arrow
+                or LongArrow
                 or HashArrow
                 or HashLongArrow
                 or AtArrow
@@ -2604,7 +2680,10 @@ public class Parser
                 or HashMinus
                 or AtQuestion
                 or AtAt
-                => ArrowPrecedence,
+
+                //or Overlap
+                //or CaretAt
+                => PgOtherPrecedence,
 
             _ => 0
         };
@@ -6220,10 +6299,10 @@ public class Parser
                     Keyword.undefined when w.QuoteStyle == Symbols.SingleQuote => new Value.SingleQuotedString(w.Value),
                     Keyword.undefined when w.QuoteStyle != null => throw Expected("a value", PeekToken()),
 
-                    // Case when Snowflake Semi-structured data like key:value
-                    Keyword.undefined or Keyword.LOCATION or Keyword.TYPE or Keyword.DATE or Keyword.START or Keyword.END
-                        when _dialect is SnowflakeDialect or GenericDialect
-                            => new Value.UnQuotedString(w.Value),
+                    //// Case when Snowflake Semi-structured data like key:value
+                    //Keyword.undefined or Keyword.LOCATION or Keyword.TYPE or Keyword.DATE or Keyword.START or Keyword.END
+                    //    when _dialect is SnowflakeDialect or GenericDialect
+                    //        => new Value.UnQuotedString(w.Value),
 
                     _ => throw Expected("a concrete value", PeekToken())
                 };
@@ -6483,7 +6562,7 @@ public class Parser
             {
                 size = (long?)MaybeParseNullable(ParseLiteralUnit);
             }
-            
+
             ExpectToken<RightBracket>();
             data = new DataType.Array(new ArrayElementTypeDef.SquareBracket(data, size));
         }
@@ -8695,7 +8774,7 @@ public class Parser
 
             if (ParseKeywordSequence(Keyword.AFTER, Keyword.MATCH, Keyword.SKIP))
             {
-                if(ParseKeywordSequence(Keyword.PAST, Keyword.LAST, Keyword.ROW))
+                if (ParseKeywordSequence(Keyword.PAST, Keyword.LAST, Keyword.ROW))
                 {
                     afterMatchSkip = new AfterMatchSkip.PastLastRow();
                 }
@@ -8716,7 +8795,7 @@ public class Parser
                     throw Expected("after match skip otoin", NextToken());
                 }
             }
-            
+
 
             ExpectKeyword(Keyword.PATTERN);
             pattern = ExpectParens(ParsePattern);
@@ -10003,7 +10082,7 @@ public class Parser
                     {
                         throw new ParserException($"UPDATE is not allowed in a {clauseKind} merge clause");
                     }
-                   
+
                     ExpectKeyword(Keyword.SET);
                     var assignments = ParseCommaSeparated(ParseAssignment);
                     mergeAction = new MergeAction.Update(assignments);
@@ -10028,7 +10107,7 @@ public class Parser
                     var columns = ParseParenthesizedColumnList(IsOptional.Optional, isMySql);
 
                     MergeInsertKind kind;
-                    if (_dialect is BigQueryDialect or GenericDialect&& ParseKeyword(Keyword.ROW))
+                    if (_dialect is BigQueryDialect or GenericDialect && ParseKeyword(Keyword.ROW))
                     {
                         kind = new MergeInsertKind.Row();
                     }

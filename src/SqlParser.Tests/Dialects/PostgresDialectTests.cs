@@ -1,5 +1,6 @@
 ﻿using SqlParser.Ast;
 using SqlParser.Dialects;
+using SqlParser.Tokens;
 using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
 using ObjectType = SqlParser.Ast.ObjectType;
@@ -1288,94 +1289,126 @@ namespace SqlParser.Tests.Dialects
         {
             DefaultDialects = new[] { new PostgreSqlDialect() };
             var select = VerifiedOnlySelect("SELECT params ->> 'name' FROM events");
-            var expected = new SelectItem.UnnamedExpression(new JsonAccess(
+            var expected = new SelectItem.UnnamedExpression(new BinaryOp(
                 new Identifier("params"),
-                JsonOperator.LongArrow,
+                BinaryOperator.LongArrow,
                 new LiteralValue(new Value.SingleQuotedString("name"))
             ));
             Assert.Equal(expected, select.Projection.Single());
 
 
             select = VerifiedOnlySelect("SELECT params -> 'name' FROM events");
-            expected = new SelectItem.UnnamedExpression(new JsonAccess(
+            expected = new SelectItem.UnnamedExpression(new BinaryOp(
                 new Identifier("params"),
-                JsonOperator.Arrow,
+                BinaryOperator.Arrow,
                 new LiteralValue(new Value.SingleQuotedString("name"))
             ));
             Assert.Equal(expected, select.Projection.Single());
 
 
             select = VerifiedOnlySelect("SELECT info -> 'items' ->> 'product' FROM orders");
-            expected = new SelectItem.UnnamedExpression(new JsonAccess(
-                new Identifier("info"),
-                JsonOperator.Arrow,
-                new JsonAccess(
-                    new LiteralValue(new Value.SingleQuotedString("items")),
-                    JsonOperator.LongArrow,
-                    new LiteralValue(new Value.SingleQuotedString("product"))
-                )
+            expected = new SelectItem.UnnamedExpression(new BinaryOp(
+                new BinaryOp(
+                    new Identifier("info"),
+                    BinaryOperator.Arrow,
+                    new LiteralValue(new Value.SingleQuotedString("items"))),
+
+                BinaryOperator.LongArrow,
+
+                new LiteralValue(new Value.SingleQuotedString("product"))
+            ));
+            Assert.Equal(expected, select.Projection.Single());
+
+            
+            select = VerifiedOnlySelect("SELECT obj -> 42");
+            expected = new SelectItem.UnnamedExpression(new BinaryOp(
+                new Identifier("obj"),
+                BinaryOperator.Arrow,
+                new LiteralValue(new Value.Number("42"))
+            ));
+            Assert.Equal(expected, select.Projection.Single());
+
+
+            select = VerifiedOnlySelect("SELECT obj -> key");
+            expected = new SelectItem.UnnamedExpression(new BinaryOp(
+                new Identifier("obj"),
+                BinaryOperator.Arrow,
+                new Identifier("key")
+            ));
+            Assert.Equal(expected, select.Projection.Single());
+
+
+            select = VerifiedOnlySelect("SELECT obj -> 3 * 2");
+            expected = new SelectItem.UnnamedExpression(new BinaryOp(
+                new Identifier("obj"),
+                BinaryOperator.Arrow,
+                new BinaryOp(
+                    new LiteralValue(new Value.Number("3")),
+                    BinaryOperator.Multiply,
+                    new LiteralValue(new Value.Number("2"))
+                    )
             ));
             Assert.Equal(expected, select.Projection.Single());
 
 
             select = VerifiedOnlySelect("SELECT info #> '{a,b,c}' FROM orders");
-            expected = new SelectItem.UnnamedExpression(new JsonAccess(
+            expected = new SelectItem.UnnamedExpression(new BinaryOp(
                 new Identifier("info"),
-                JsonOperator.HashArrow,
+                BinaryOperator.HashArrow,
                 new LiteralValue(new Value.SingleQuotedString("{a,b,c}"))
             ));
             Assert.Equal(expected, select.Projection.Single());
 
 
             select = VerifiedOnlySelect("SELECT info #> '{a,b,c}' FROM orders");
-            expected = new SelectItem.UnnamedExpression(new JsonAccess(
+            expected = new SelectItem.UnnamedExpression(new BinaryOp(
                 new Identifier("info"),
-                JsonOperator.HashArrow,
+                BinaryOperator.HashArrow,
                 new LiteralValue(new Value.SingleQuotedString("{a,b,c}"))
             ));
             Assert.Equal(expected, select.Projection.Single());
 
 
             select = VerifiedOnlySelect("SELECT info #>> '{a,b,c}' FROM orders");
-            expected = new SelectItem.UnnamedExpression(new JsonAccess(
+            expected = new SelectItem.UnnamedExpression(new BinaryOp(
                 new Identifier("info"),
-                JsonOperator.HashLongArrow,
+                BinaryOperator.HashLongArrow,
                 new LiteralValue(new Value.SingleQuotedString("{a,b,c}"))
             ));
             Assert.Equal(expected, select.Projection.Single());
 
 
             select = VerifiedOnlySelect("SELECT info #>> '{a,b,c}' FROM orders");
-            expected = new SelectItem.UnnamedExpression(new JsonAccess(
+            expected = new SelectItem.UnnamedExpression(new BinaryOp(
                 new Identifier("info"),
-                JsonOperator.HashLongArrow,
+                BinaryOperator.HashLongArrow,
                 new LiteralValue(new Value.SingleQuotedString("{a,b,c}"))
             ));
             Assert.Equal(expected, select.Projection.Single());
 
 
             select = VerifiedOnlySelect("SELECT info FROM orders WHERE info @> '{\"a\": 1}'");
-            var expr = new JsonAccess(
+            var expr = new BinaryOp(
                 new Identifier("info"),
-                JsonOperator.AtArrow,
+                BinaryOperator.AtArrow,
                 new LiteralValue(new Value.SingleQuotedString("{\"a\": 1}"))
             );
             Assert.Equal(expr, select.Selection);
 
 
             select = VerifiedOnlySelect("SELECT info FROM orders WHERE '{\"a\": 1}' <@ info");
-            expr = new JsonAccess(
+            expr = new BinaryOp(
                 new LiteralValue(new Value.SingleQuotedString("{\"a\": 1}")),
-                JsonOperator.ArrowAt,
+                BinaryOperator.ArrowAt,
                 new Identifier("info")
             );
             Assert.Equal(expr, select.Selection);
 
 
             select = VerifiedOnlySelect("SELECT info #- ARRAY['a', 'b'] FROM orders");
-            expected = new SelectItem.UnnamedExpression(new JsonAccess(
+            expected = new SelectItem.UnnamedExpression(new BinaryOp(
                 new Identifier("info"),
-                JsonOperator.HashMinus,
+                BinaryOperator.HashMinus,
                 new Expression.Array(new ArrayExpression(new[]
                     {
                         new LiteralValue(new Value.SingleQuotedString("a")),
@@ -1387,18 +1420,18 @@ namespace SqlParser.Tests.Dialects
 
 
             select = VerifiedOnlySelect("SELECT info FROM orders WHERE info @? '$.a'");
-            expr = new JsonAccess(
+            expr = new BinaryOp(
                 new Identifier("info"),
-                JsonOperator.AtQuestion,
+                BinaryOperator.AtQuestion,
                 new LiteralValue(new Value.SingleQuotedString("$.a"))
             );
             Assert.Equal(expr, select.Selection);
 
 
             select = VerifiedOnlySelect("SELECT info FROM orders WHERE info @@ '$.a'");
-            expr = new JsonAccess(
+            expr = new BinaryOp(
                 new Identifier("info"),
-                JsonOperator.AtAt,
+                BinaryOperator.AtAt,
                 new LiteralValue(new Value.SingleQuotedString("$.a"))
             );
             Assert.Equal(expr, select.Selection);
