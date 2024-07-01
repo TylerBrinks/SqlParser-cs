@@ -21,7 +21,7 @@ namespace SqlParser.Tests
             return item switch
             {
                 UnnamedExpression u => u.Expression,
-                ExpressionWithAlias e => e.Expression,
+                SelectItem.ExpressionWithAlias e => e.Expression,
                 _ => throw new NotImplementedException("AsExpr extension method needs a new Increment match added")
             };
         }

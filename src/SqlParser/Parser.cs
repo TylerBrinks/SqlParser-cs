@@ -9058,27 +9058,40 @@ public class Parser
         };
     }
 
+    public ExpressionWithAlias ParseAliasedFunctionCall()
+    {
+        var next = NextToken();
+
+        if (next is not Word w)
+        {
+            throw Expected("a function identifier", PeekToken());
+        }
+
+        var expr = ParseFunction(new ObjectName([w.Value]));
+        var alias = ParseKeyword(Keyword.AS) ? ParseIdentifier() : null;
+
+        return new ExpressionWithAlias(expr, alias);
+    }
+
+    public ExpressionWithAlias ParseExpressionWithAlias()
+    {
+        var expr = ParseExpr();
+        var alias = ParseKeyword(Keyword.AS) ? ParseIdentifier() : null;
+        return new ExpressionWithAlias(expr, alias);
+    }
+
     private TableFactor ParsePivotTableFactor(TableFactor table, TableAlias? tableAlias = null)
     {
         var pivot = ExpectParens(() =>
         {
-            var token = NextToken();
-
-            var functionName = token switch
-            {
-                Word w => w.Value,
-                _ => throw Expected("an aggregate function name", PeekToken())
-            };
-
-            var function = ParseFunction(new ObjectName(functionName));
+            var aggregateFunctions = ParseCommaSeparated(ParseAliasedFunctionCall);
             ExpectKeyword(Keyword.FOR);
-
             var valueColumn = ParseObjectName().Values;
             ExpectKeyword(Keyword.IN);
 
-            var pivotValues = ExpectParens(() => ParseCommaSeparated(ParseValue));
+            var pivotValues = ExpectParens(() => ParseCommaSeparated(ParseExpressionWithAlias));
 
-            return new TableFactor.Pivot(table, function, valueColumn, pivotValues)
+            return new TableFactor.Pivot(table, aggregateFunctions, valueColumn, pivotValues)
             {
                 Alias = tableAlias,
             };

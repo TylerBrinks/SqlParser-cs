@@ -4905,8 +4905,10 @@ namespace SqlParser.Tests
         public void Parse_Pivot_Table()
         {
             const string sql = """
-                SELECT * FROM monthly_sales AS a 
-                PIVOT(SUM(a.amount) FOR a.MONTH IN ('JAN', 'FEB', 'MAR', 'APR')) AS p (c, d) 
+                SELECT * FROM monthly_sales AS a PIVOT(SUM(a.amount), 
+                SUM(b.amount) AS t, 
+                SUM(c.amount) AS u 
+                FOR a.MONTH IN (1 AS x, 'two', three AS y)) AS p (c, d) 
                 ORDER BY EMPID
                 """;
 
@@ -4914,30 +4916,41 @@ namespace SqlParser.Tests
             var from = statement.From![0];
             var relation = from.Relation;
 
-            var fn = new Function("SUM")
+            var functions = new Sequence<ExpressionWithAlias>
             {
-                Args = new FunctionArg[]
-                {
-                    new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new CompoundIdentifier(new Ident[]{"a","amount"})))
-                }
+                ExpectedFn("a", null),
+                ExpectedFn("b", "t"),
+                ExpectedFn("c", "u")
             };
             var table = new TableFactor.Table("monthly_sales")
             {
                 Alias = new TableAlias("a")
             };
-            var expected = new TableFactor.Pivot(table, fn, new Ident[] { "a", "MONTH" }, new Value[]
-            {
-                new Value.SingleQuotedString("JAN"),
-                new Value.SingleQuotedString("FEB"),
-                new Value.SingleQuotedString("MAR"),
-                new Value.SingleQuotedString("APR")
-            })
+            var expected = new TableFactor.Pivot(table, functions, new Ident[] { "a", "MONTH" }, [
+            
+                new ExpressionWithAlias(new LiteralValue(new Value.Number("1")), "x"),
+                new ExpressionWithAlias(new LiteralValue(new Value.SingleQuotedString("two")), null),
+                new ExpressionWithAlias(new Identifier("three"), "y"),
+            ])
             {
                 PivotAlias = new TableAlias("p", new Ident[] { "c", "d" })
             };
 
             Assert.Equal(expected, relation);
             Assert.Equal(sql.Replace("\r", "").Replace("\n", ""), VerifiedStatement(sql).ToSql());
+
+            ExpressionWithAlias ExpectedFn(string t, string? alias)
+            {
+                var expr = new Function("SUM")
+                {
+                    Args =
+                    [
+                        new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(
+                            new CompoundIdentifier([new Ident(t), new Ident("amount")])))
+                    ]
+                };
+                return new ExpressionWithAlias(expr,  alias!=null?new Ident(alias) :null);
+            }
         }
 
         [Fact]

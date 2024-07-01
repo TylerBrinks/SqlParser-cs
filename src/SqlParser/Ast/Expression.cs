@@ -1385,3 +1385,16 @@ public abstract record Expression : IWriteSql, IElement
     }
 }
 // ReSharper restore CommentTypo
+
+public record ExpressionWithAlias(Expression Expression, Ident? Alias) : IWriteSql, IElement
+{
+    public void ToSql(SqlTextWriter writer)
+    {
+        writer.WriteSql($"{Expression}");
+
+        if (Alias != null)
+        {
+            writer.WriteSql($" AS {Alias}");
+        }
+    }
+}

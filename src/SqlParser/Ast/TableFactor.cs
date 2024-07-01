@@ -76,9 +76,9 @@ public abstract record TableFactor : IWriteSql, IElement
     /// </summary>
     public record Pivot(
         [property: Visit(0)] TableFactor TableFactor,
-        [property: Visit(2)] Expression AggregateFunction,
+        [property: Visit(2)] Sequence<ExpressionWithAlias> AggregateFunctions,
         Sequence<Ident> ValueColumns,
-        Sequence<Value> PivotValues) : TableFactor
+        Sequence<ExpressionWithAlias> PivotValues) : TableFactor
     {
         public TableAlias? PivotAlias { get; set; }
 
@@ -86,7 +86,7 @@ public abstract record TableFactor : IWriteSql, IElement
         {
             var cols = new Expression.CompoundIdentifier(ValueColumns);
 
-            writer.WriteSql($"{TableFactor} PIVOT({AggregateFunction} FOR {cols} IN ({PivotValues.ToSqlDelimited()}))");
+            writer.WriteSql($"{TableFactor} PIVOT({AggregateFunctions.ToSqlDelimited()} FOR {cols} IN ({PivotValues.ToSqlDelimited()}))");
 
             if (PivotAlias != null)
             {
