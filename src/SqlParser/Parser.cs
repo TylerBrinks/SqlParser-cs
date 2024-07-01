@@ -6548,7 +6548,7 @@ public class Parser
             Word { Keyword: Keyword.ENUM } => new DataType.Enum(ParseStringValue()),
             Word { Keyword: Keyword.SET } => new DataType.Set(ParseStringValue()),
             Word { Keyword: Keyword.ARRAY } => ParseArray(),
-            Word { Keyword: Keyword.STRUCT } when _dialect is BigQueryDialect => ParseStruct(),
+            Word { Keyword: Keyword.STRUCT } when _dialect is BigQueryDialect or GenericDialect => ParseStruct(),
             _ => ParseUnmatched()
         };
 
