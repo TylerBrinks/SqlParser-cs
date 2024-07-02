@@ -4325,9 +4325,15 @@ public class Parser
         {
             return ParseBigQueryDeclare();
         }
+
         if (_dialect is SnowflakeDialect)
         {
             return ParseSnowflakeDeclare();
+        }
+
+        if (_dialect is MsSqlDialect)
+        {
+            return ParseMsSqlDeclare();
         }
 
         var name = ParseIdentifier();
@@ -4415,9 +4421,71 @@ public class Parser
         });
     }
 
+    public Statement.Declare ParseMsSqlDeclare()
+    {
+        var statements = new Sequence<Declare>();
+
+        while (true)
+        {
+            var name = ParseIdentifier();
+            if (!name.Value.StartsWith(Symbols.At))
+            {
+                throw Expected("Invalid MsSql variable declaration", PeekToken());
+            }
+
+            var token = PeekToken();
+            DeclareType? declareType = null;
+            DataType? dataType = null;
+
+            if (token is Word w)
+            {
+                if (w.Keyword == Keyword.CURSOR)
+                {
+                    NextToken();
+                    declareType = DeclareType.Cursor;
+                }
+                else if (w.Keyword == Keyword.AS)
+                {
+                    NextToken();
+                    dataType = ParseDataType();
+                }
+                else
+                {
+                    dataType = ParseDataType();
+                }
+            }
+            else
+            {
+                dataType = ParseDataType();
+            }
+
+            var assignment = ParseMsSqlVariableDeclarationExpression();
+
+            statements.Add(new Declare([name], dataType, assignment, declareType));
+
+            if (NextToken() is not Comma)
+            {
+                break;
+            }
+        }
+
+        return new Statement.Declare(statements);
+    }
+
+    public DeclareAssignment? ParseMsSqlVariableDeclarationExpression()
+    {
+        if (PeekToken() is Equal e)
+        {
+            NextToken();
+            return new DeclareAssignment.MsSqlAssignment(ParseExpr());
+        }
+
+        return null;
+    }
+
     public Statement.Declare ParseSnowflakeDeclare()
     {
-        var statements = new Sequence<Ast.Declare>();
+        var statements = new Sequence<Declare>();
 
         while (true)
         {

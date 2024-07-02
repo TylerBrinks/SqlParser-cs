@@ -12,7 +12,7 @@ namespace SqlParser.Tests.Dialects
         {
             DefaultDialects = new[] { new MsSqlDialect() };
         }
-        
+
         [Fact]
         public void Parse_MsSql_Identifiers()
         {
@@ -20,7 +20,7 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal(new Identifier("@@version"), select.Projection[0].AsExpr());
             Assert.Equal(new Identifier("_foo$123"), select.Projection[1].AsExpr());
             Assert.Equal(2, select.Projection.Count);
-            var table = (TableFactor.Table) select.From!.Single().Relation!;
+            var table = (TableFactor.Table)select.From!.Single().Relation!;
             Assert.Equal("##temp", table.Name);
         }
 
@@ -92,7 +92,7 @@ namespace SqlParser.Tests.Dialects
             var role = VerifiedStatement<Statement.CreateRole>("CREATE ROLE mssql AUTHORIZATION helena");
 
             Assert.Equal(new ObjectName[] { new("mssql") }, role.Names);
-            Assert.Equal(new ObjectName("helena") ,role.AuthorizationOwner);
+            Assert.Equal(new ObjectName("helena"), role.AuthorizationOwner);
         }
 
         [Fact]
@@ -100,7 +100,7 @@ namespace SqlParser.Tests.Dialects
         {
             var select = VerifiedOnlySelect("SELECT \"alias\".\"bar baz\", \"myfun\"(), \"simple id\" AS \"column alias\" FROM \"a table\" AS \"alias\"");
 
-            var table = (TableFactor.Table) select.From!.Single().Relation!;
+            var table = (TableFactor.Table)select.From!.Single().Relation!;
 
             Assert.Equal(new Ident[] { new("a table", Symbols.DoubleQuote) }, table.Name.Values);
             Assert.Equal(new Ident("alias", Symbols.DoubleQuote), table.Alias!.Name);
@@ -112,10 +112,10 @@ namespace SqlParser.Tests.Dialects
                 new("bar baz", Symbols.DoubleQuote)
             }), select.Projection[0].AsExpr());
 
-            Assert.Equal(new Function(new ObjectName(new Ident("myfun", Symbols.DoubleQuote))), 
+            Assert.Equal(new Function(new ObjectName(new Ident("myfun", Symbols.DoubleQuote))),
                 select.Projection[1].AsExpr());
 
-            var withAlias = (SelectItem.ExpressionWithAlias) select.Projection[2];
+            var withAlias = (SelectItem.ExpressionWithAlias)select.Projection[2];
 
             Assert.Equal(new Identifier(new Ident("simple id", Symbols.DoubleQuote)), withAlias.Expression);
             Assert.Equal(new Ident("column alias", Symbols.DoubleQuote), withAlias.Alias);
@@ -160,7 +160,7 @@ namespace SqlParser.Tests.Dialects
             [
                 new Ident("a schema", '['),
                 new Ident("a table", '['),
-            ] ), table.Name);
+            ]), table.Name);
 
             Assert.Equal(new Identifier(new Ident("a column", '[')), select.Projection.First().AsExpr());
         }
@@ -175,7 +175,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_For_Clause()
         {
-            var dialects = new Dialect[] {new MsSqlDialect(), new GenericDialect()};
+            var dialects = new Dialect[] { new MsSqlDialect(), new GenericDialect() };
             VerifiedStatement("SELECT a FROM t FOR JSON PATH", dialects);
             VerifiedStatement("SELECT b FROM t FOR JSON AUTO", dialects);
             VerifiedStatement("SELECT c FROM t FOR JSON AUTO, WITHOUT_ARRAY_WRAPPER", dialects);
@@ -193,7 +193,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Dont_Parse_Trailing_For()
         {
-            new []{ new MsSqlDialect() }.RunParserMethod("SELECT * FROM foo FOR", parser =>
+            new[] { new MsSqlDialect() }.RunParserMethod("SELECT * FROM foo FOR", parser =>
             {
                 Assert.Throws<ParserException>(() => parser.ParseQuery());
             });
@@ -205,7 +205,7 @@ namespace SqlParser.Tests.Dialects
             var query = VerifiedQuery("SELECT * FROM t FOR JSON PATH, ROOT('root')");
 
             var expected = new ForClause.Json(new ForJson.Path(), "root", false, false);
-            
+
             Assert.Equal(expected, query.ForClause);
         }
 
@@ -231,6 +231,22 @@ namespace SqlParser.Tests.Dialects
             VerifiedExpr("CONVERT(DECIMAL(10,5), 12.55)");
 
             Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT CONVERT(INT, 'foo',) FROM T"));
+        }
+
+        [Fact]
+        public void Parse_MsSql_Declare()
+        {
+            var statement = ParseSqlStatements("DECLARE @foo CURSOR, @bar INT, @baz AS TEXT = 'foobar';")[0];
+
+            var expected = new Statement.Declare([
+            
+                new Declare(["@foo"], null, null, DeclareType.Cursor),
+                new Declare(["@bar"], new DataType.Int(), null, null),
+                new Declare(["@baz"], new DataType.Text(),
+                    new DeclareAssignment.MsSqlAssignment(new LiteralValue(new Value.SingleQuotedString("foobar"))), null)
+            ]);
+
+            Assert.Equal(expected, statement);
         }
     }
 }

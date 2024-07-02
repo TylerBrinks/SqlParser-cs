@@ -12,6 +12,7 @@ public abstract record DeclareAssignment(Expression Expression) : IWriteSql, IEl
     public record Default(Expression DefaultExpression) : DeclareAssignment(DefaultExpression);
     public record Assignment(Expression AssignmentExpression) : DeclareAssignment(AssignmentExpression);
     public record For(Expression ForExpression) : DeclareAssignment(ForExpression);
+    public record MsSqlAssignment(Expression Expression) : DeclareAssignment(Expression);
 
     public void ToSql(SqlTextWriter writer)
     {
@@ -31,6 +32,10 @@ public abstract record DeclareAssignment(Expression Expression) : IWriteSql, IEl
 
             case For:
                 writer.WriteSql($"FOR {Expression}");
+                break;
+
+            case MsSqlAssignment:
+                writer.WriteSql($"= {Expression}");
                 break;
         }
     }
