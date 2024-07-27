@@ -21,7 +21,7 @@ public abstract class Dialect
     public abstract bool IsIdentifierPart(char character);
     /// <summary>
     /// Determine if a character starts a quoted identifier. The default
-    /// implementation, accepting "double quoted" ids is both ANSI-compliant
+    /// implementation, accepting "double-quoted" ids is both ANSI-compliant
     /// and appropriate for most dialects (with the notable exception of
     /// MySQL, MS SQL, and sqlite). You can accept one of characters listed
     /// in `Word::matching_end_quote` here
@@ -137,4 +137,9 @@ public abstract class Dialect
     /// </summary>
     public virtual bool SupportsConnectBy => false;
     public virtual bool SupportsWindowClauseNamedWindowReference => false;
+    /// <summary>
+    /// Returns true if the dialect supports identifiers starting with a numeric
+    /// prefix such as tables named: '59901_user_login'
+    /// </summary>
+    public virtual bool SupportsNumericPrefix => false;
 }

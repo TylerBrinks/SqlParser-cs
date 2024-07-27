@@ -1,4 +1,5 @@
-﻿using SqlParser.Dialects;
+﻿using SqlParser;
+using SqlParser.Dialects;
 using SqlParser.Tokens;
 
 namespace SqlParser.Tests
@@ -712,5 +713,56 @@ namespace SqlParser.Tests
             Assert.Throws<TokenizeException>(() => new Tokenizer().Tokenize(sql, new GenericDialect()));
 
         }
+
+        [Fact]
+        public void Tokenize_Numeric_Prefix_Trait()
+        {
+            TokenizeNumericPrefixInner(new NumericPrefixDialect());
+            TokenizeNumericPrefixInner(new HiveDialect());
+            TokenizeNumericPrefixInner(new MySqlDialect());
+            return;
+
+            static void TokenizeNumericPrefixInner(Dialect dialect)
+            {
+                var sql = "SELECT * FROM 1";
+                var tokenizer = new Tokenizer();
+
+                var tokens = tokenizer.Tokenize(sql, dialect);
+
+                var expected = new List<Token>
+                {
+                    new Word("SELECT"),
+                    new Whitespace(WhitespaceKind.Space),
+                    new Multiply(),
+                    new Whitespace(WhitespaceKind.Space),
+                    new Word("FROM"),
+                    new Whitespace(WhitespaceKind.Space),
+                    new Number("1")
+                };
+
+                Assert.Equal(expected, tokens);
+            }
+        }
     }
+}
+
+internal class NumericPrefixDialect : Dialect
+{
+    public override bool IsIdentifierStart(char character)
+    {
+        return character.IsAlphaNumeric() ||
+               character == Symbols.Underscore ||
+               character == Symbols.Dollar;
+    }
+
+    public override bool IsIdentifierPart(char character)
+    {
+        return character.IsAlphaNumeric() ||
+               character == Symbols.Underscore ||
+               character == Symbols.Dollar ||
+               character == Symbols.CurlyBracketOpen ||
+               character == Symbols.CurlyBracketClose;
+    }
+
+    public override bool SupportsNumericPrefix { get; }
 }

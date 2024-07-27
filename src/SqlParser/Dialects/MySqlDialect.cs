@@ -53,4 +53,5 @@ public class MySqlDialect : Dialect
     public override char? IdentifierQuoteStyle(string identifier) => Symbols.Backtick;
 
     public override bool SupportsStringLiteralBackslashEscape => true;
+    public virtual bool SupportsNumericPrefix => true;
 }

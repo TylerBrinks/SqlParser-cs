@@ -385,7 +385,7 @@ public ref struct Tokenizer(bool unescape = true)
             }
         }
 
-        if (_dialect is MySqlDialect or HiveDialect && exponent.Count == 0)
+        if (_dialect.SupportsNumericPrefix && exponent.Count == 0)
         {
             var word = _state.PeekTakeWhile(_dialect.IsIdentifierPart);
 
