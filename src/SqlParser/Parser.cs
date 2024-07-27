@@ -8074,12 +8074,11 @@ public class Parser
 
         var having = ParseInit(ParseKeyword(Keyword.HAVING), ParseExpr);
 
-        var namedWindows = ParseInit(ParseKeyword(Keyword.WINDOW), () => ParseCommaSeparated(ParseNamedWindow));
+        var (namedWindows, qualify, windowBeforQualify) = ParseWindow(); //ParseInit(ParseKeyword(Keyword.WINDOW), () => ParseCommaSeparated(ParseNamedWindow));
 
-        var qualify = ParseInit(ParseKeyword(Keyword.QUALIFY), ParseExpr);
+        //var qualify = ParseInit(ParseKeyword(Keyword.QUALIFY), ParseExpr);
 
         var connectBy = ParseConnect();
-
 
         return new Select(projection)
         {
@@ -8097,7 +8096,8 @@ public class Parser
             NamedWindow = namedWindows,
             QualifyBy = qualify,
             ValueTableMode = valueTableMode,
-            ConnectBy = connectBy
+            ConnectBy = connectBy,
+            WindowBeforeQualify = windowBeforQualify
         };
 
         ConnectBy? ParseConnect()
@@ -8109,6 +8109,37 @@ public class Parser
             }
 
             return null;
+        }
+
+        (Sequence<NamedWindowDefinition>?, Expression?, bool) ParseWindow()
+        {
+            if (ParseKeyword(Keyword.WINDOW))
+            {
+                var namedWindows = ParseCommaSeparated(ParseNamedWindow);
+
+                if (ParseKeyword(Keyword.QUALIFY))
+                {
+                    return (namedWindows, ParseExpr(), true);
+                }
+                else
+                {
+                    return (namedWindows, null, true);
+                }
+            }
+            else if(ParseKeyword(Keyword.QUALIFY))
+            {
+                var qualify = ParseExpr();
+                if (ParseKeyword(Keyword.WINDOW))
+                {
+                    return (ParseCommaSeparated(ParseNamedWindow), qualify, false);
+                }
+
+                return (null, qualify, false);
+            }
+            else
+            {
+                return (null, null, false);
+            }
         }
     }
 

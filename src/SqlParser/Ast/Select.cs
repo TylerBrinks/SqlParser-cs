@@ -21,8 +21,9 @@ public record Select([Visit(1)] Sequence<SelectItem> Projection) : IWriteSql, IE
     [Visit(10)] public Expression? Having { get; init; }
     [Visit(11)] public Sequence<NamedWindowDefinition>? NamedWindow { get; init; }
     [Visit(12)] public Expression? QualifyBy { get; init; }
-    [Visit(13)] public ValueTableMode? ValueTableMode { get; init; }
-    [Visit(14)] public ConnectBy? ConnectBy { get; init; }
+    [Visit(13)] public bool WindowBeforeQualify { get; init; }
+    [Visit(14)] public ValueTableMode? ValueTableMode { get; init; }
+    [Visit(15)] public ConnectBy? ConnectBy { get; init; }
 
     public void ToSql(SqlTextWriter writer)
     {
@@ -93,14 +94,27 @@ public record Select([Visit(1)] Sequence<SelectItem> Projection) : IWriteSql, IE
             writer.WriteSql($" HAVING {Having}");
         }
 
-        if (NamedWindow.SafeAny())
+        if (WindowBeforeQualify)
         {
-            writer.Write($" WINDOW {NamedWindow.ToSqlDelimited()}");
+            if (NamedWindow is not null)
+            {
+                writer.WriteSql($" WINDOW {NamedWindow.ToSqlDelimited()}");
+            }
+            if (QualifyBy != null)
+            {
+                writer.WriteSql($" QUALIFY {QualifyBy}");
+            }
         }
-
-        if (QualifyBy != null)
+        else
         {
-            writer.WriteSql($" QUALIFY {QualifyBy}");
+            if (QualifyBy != null)
+            {
+                writer.WriteSql($" QUALIFY {QualifyBy}");
+            }
+            if (NamedWindow is not null)
+            {
+                writer.WriteSql($" WINDOW {NamedWindow.ToSqlDelimited()}");
+            }
         }
 
         if (ConnectBy != null)

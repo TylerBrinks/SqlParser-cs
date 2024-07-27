@@ -1,7 +1,6 @@
 ﻿using System.Text;
 using SqlParser.Ast;
 using SqlParser.Dialects;
-using SqlParser.Tokens;
 using static SqlParser.Ast.DataType;
 using static SqlParser.Ast.Expression;
 using Action = SqlParser.Ast.Action;
@@ -2565,9 +2564,39 @@ namespace SqlParser.Tests
                         new Identifier("C11")
                     })))
                 },
+                WindowBeforeQualify = true
             };
 
             Assert.Equal(expected, actual);
+        }
+
+        [Fact]
+        public void Parse_Window_And_Qualify_Clause()
+        {
+            var sql = """
+                      SELECT 
+                      MIN(c12) OVER window1 AS min1 
+                      FROM aggregate_test_100 
+                      QUALIFY ROW_NUMBER() OVER my_window 
+                      WINDOW window1 AS (ORDER BY C12), 
+                      window2 AS (PARTITION BY C11) 
+                      ORDER BY C3
+                      """;
+
+            VerifiedOnlySelect(sql);
+            
+            
+            sql = """
+                      SELECT 
+                      MIN(c12) OVER window1 AS min1 
+                      FROM aggregate_test_100 
+                      WINDOW window1 AS (ORDER BY C12), 
+                      window2 AS (PARTITION BY C11) 
+                      QUALIFY ROW_NUMBER() OVER my_window 
+                      ORDER BY C3
+                      """;
+
+            VerifiedOnlySelect(sql);
         }
 
         [Fact]
