@@ -1075,7 +1075,7 @@ public class Parser
                 PrevToken();
                 expr = new Expression.Subquery(ParseQuery());
             }
-            else if ((lambda = TryParseLambda()) !=null)
+            else if ((lambda = TryParseLambda()) != null)
             {
                 return lambda;
             }
@@ -1339,7 +1339,7 @@ public class Parser
             Word { Keyword: Keyword.INTERVAL } => ParseInterval(),
             // Treat ARRAY[1,2,3] as an array [1,2,3], otherwise try as subquery or a function call
             Word { Keyword: Keyword.ARRAY } when PeekToken() is LeftBracket => ParseLeftArray(),
-            Word { Keyword: Keyword.ARRAY } arr when 
+            Word { Keyword: Keyword.ARRAY } arr when
                 PeekToken() is LeftParen &&
                 _dialect is not ClickHouseDialect and not DatabricksDialect
                     => ParseArraySubquery(arr),
@@ -1397,8 +1397,8 @@ public class Parser
         {
             var word = PeekNthToken(1) as Word;
 
-            if (_dialect is not DatabricksDialect || 
-                word!=null && word.Keyword == Keyword.SELECT || word.Keyword == Keyword.WITH)
+            if (_dialect is not DatabricksDialect ||
+                word != null && word.Keyword == Keyword.SELECT || word.Keyword == Keyword.WITH)
             {
                 return true;
             }
@@ -1454,12 +1454,7 @@ public class Parser
     /// </summary>
     public (StructField, bool) ParseBigQueryStructFieldDef()
     {
-        var next = PeekToken();
-        var isAnonymous = false;
-        if (next is Word w)
-        {
-            isAnonymous = System.Array.IndexOf(Keywords.All, w.Value.ToUpperInvariant()) > -1;
-        }
+        var isAnonymous = !(PeekNthToken(0) is Word && PeekNthToken(1) is Word);
 
         var fieldName = isAnonymous
             ? null
@@ -1687,7 +1682,8 @@ public class Parser
                 {
                     filter = null;
                 }
-            }else if (token
+            }
+            else if (token
                       is SingleQuotedString
                       or EscapedStringLiteral
                       or NationalStringLiteral
@@ -7124,7 +7120,7 @@ public class Parser
                         {
                             throw Expected("continuation of hyphenated identifier", nextToken);
                         }
-                        
+
                         throw Expected("continuation of hyphenated identifier");
                     }
                 }
@@ -8198,7 +8194,7 @@ public class Parser
                 {
                     return (windows, ParseExpr(), true);
                 }
-                    
+
                 return (windows, null, true);
             }
             else if (ParseKeyword(Keyword.QUALIFY))
@@ -9026,25 +9022,25 @@ public class Parser
             case Placeholder:
                 return new MatchRecognizePattern.Symbol(new MatchRecognizeSymbol.End());
             case LeftBrace:
-            {
-                ExpectToken<Minus>();
-                var symbol = new MatchRecognizeSymbol.Named(ParseIdentifier());
-                ExpectToken<Minus>();
-                ExpectToken<RightBrace>();
-                return new MatchRecognizePattern.Exclude(symbol);
-            }
+                {
+                    ExpectToken<Minus>();
+                    var symbol = new MatchRecognizeSymbol.Named(ParseIdentifier());
+                    ExpectToken<Minus>();
+                    ExpectToken<RightBrace>();
+                    return new MatchRecognizePattern.Exclude(symbol);
+                }
             case Word { Value: "PERMUTE" }:
-            {
-                Sequence<MatchRecognizeSymbol> symbols = ExpectParens(() =>
-                    ParseCommaSeparated<MatchRecognizeSymbol>(() => new MatchRecognizeSymbol.Named(ParseIdentifier())));
-                return new MatchRecognizePattern.Permute(symbols);
-            }
+                {
+                    Sequence<MatchRecognizeSymbol> symbols = ExpectParens(() =>
+                        ParseCommaSeparated<MatchRecognizeSymbol>(() => new MatchRecognizeSymbol.Named(ParseIdentifier())));
+                    return new MatchRecognizePattern.Permute(symbols);
+                }
             case LeftParen:
-            {
-                var pattern = ParsePattern();
-                ExpectRightParen();
-                return new MatchRecognizePattern.Group(pattern);
-            }
+                {
+                    var pattern = ParsePattern();
+                    ExpectRightParen();
+                    return new MatchRecognizePattern.Group(pattern);
+                }
         }
 
         PrevToken();
