@@ -53,6 +53,8 @@ public abstract record FunctionArgumentClause : IWriteSql
     public record Limit(Expression LimitExpression) : FunctionArgumentClause;
     public record OnOverflow(ListAggOnOverflow ListOverflow) : FunctionArgumentClause;
 
+    public record Separator(Value Value) : FunctionArgumentClause;
+
     public void ToSql(SqlTextWriter writer)
     {
         switch (this)
@@ -71,6 +73,10 @@ public abstract record FunctionArgumentClause : IWriteSql
 
             case OnOverflow f:
                 writer.WriteSql($"{f.ListOverflow}");
+                break;
+
+            case Separator s:
+                writer.WriteSql($"SEPARATOR {s.Value}");
                 break;
         }
     }

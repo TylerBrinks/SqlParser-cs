@@ -1344,5 +1344,14 @@ namespace SqlParser.Tests.Dialects
             operation = AlterTableOpWithName(OneStatementParsesTo("ALTER TABLE orders MODIFY description TEXT NOT NULL AFTER total_count", sql1), expectedName);
             Assert.Equal(expectedOperation, operation);
         }
+
+        [Fact]
+        public void Test_Group_Concat()
+        {
+            VerifiedExpr("GROUP_CONCAT(DISTINCT test_score)");
+            VerifiedExpr("GROUP_CONCAT(test_score ORDER BY test_score)");
+            VerifiedExpr("GROUP_CONCAT(test_score SEPARATOR ' ')");
+            VerifiedExpr("GROUP_CONCAT(DISTINCT test_score ORDER BY test_score DESC SEPARATOR ' ')");
+        }
     }
 }

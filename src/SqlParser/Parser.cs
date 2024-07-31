@@ -1648,6 +1648,12 @@ public class Parser
             clauses.Add(new FunctionArgumentClause.Limit(ParseExpr()));
         }
 
+        if (_dialect is GenericDialect or MySqlDialect && ParseKeyword(Keyword.SEPARATOR))
+        {
+            clauses ??= new Sequence<FunctionArgumentClause>();
+            clauses.Add(new FunctionArgumentClause.Separator(ParseValue()));
+        }
+
         var onOverflow = ParseListAggOnOverflow();
         if (onOverflow != null)
         {

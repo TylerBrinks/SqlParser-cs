@@ -660,6 +660,7 @@ public enum Keyword
     SELECT,
     SEMI,
     SENSITIVE,
+    SEPARATOR,
     SEQUENCE,
     SEQUENCEFILE,
     SEQUENCES,
