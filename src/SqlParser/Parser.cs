@@ -14,6 +14,7 @@ using DataType = SqlParser.Ast.DataType;
 using Select = SqlParser.Ast.Select;
 using Declare = SqlParser.Ast.Declare;
 using HiveRowDelimiter = SqlParser.Ast.HiveRowDelimiter;
+using static SqlParser.Ast.FunctionArguments;
 
 namespace SqlParser;
 
@@ -1071,7 +1072,7 @@ public class Parser
             if (ParseKeywordSequence(Keyword.SELECT) || ParseKeyword(Keyword.WITH))
             {
                 PrevToken();
-                expr = new Subquery(ParseQuery());
+                expr = new Expression.Subquery(ParseQuery());
             }
             else
             {
@@ -7393,7 +7394,7 @@ public class Parser
             return new Precision(precision);
         }
 
-        return new None();
+        return new ExactNumberInfo.None();
     }
 
     public Sequence<string>? ParseOptionalTypeModifiers()
@@ -8780,6 +8781,19 @@ public class Parser
                 Alias = alias,
                 WithOffset = withOffset,
                 WithOffsetAlias = withOffsetAlias
+            };
+        }
+
+        if (_dialect is SnowflakeDialect or DatabricksDialect or GenericDialect && ParseKeyword(Keyword.VALUES))
+        {
+            // Snowflake and Databricks allow syntax like below:
+            // SELECT * FROM VALUES (1, 'a'), (2, 'b') AS t (col1, col2)
+            // where there are no parentheses around the VALUES clause.
+            var values = new SetExpression.ValuesExpression(ParseValues(false));
+            var alias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
+            return new TableFactor.Derived(new Query(values))
+            {
+                Alias = alias
             };
         }
 

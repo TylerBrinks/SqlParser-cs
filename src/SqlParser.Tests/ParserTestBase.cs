@@ -94,6 +94,12 @@ public class ParserTestBase
         return select.AsQuery()!;
     }
 
+    public Query VerifiedQueryWithCanonical(string sql, string canonical, IEnumerable<Dialect> dialects)
+    {
+        var select = OneStatementParsesTo(sql, canonical, dialects);
+        return select.AsQuery()!;
+    }
+
     public T OneStatementParsesTo<T>(string sql, string canonical, bool preserveFormatting = false) where T : Statement
     {
         return OneStatementParsesTo<T>(sql, canonical, Dialects, preserveFormatting);

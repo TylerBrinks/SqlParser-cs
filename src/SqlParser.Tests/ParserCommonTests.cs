@@ -434,7 +434,7 @@ namespace SqlParser.Tests
             };
 
             Assert.Equal(expected, select.Projection.Single().AsExpr());
-           
+
             VerifiedStatement("SELECT COUNT(ALL +x) FROM customer");
             VerifiedStatement("SELECT COUNT(+x) FROM customer");
 
@@ -1162,7 +1162,7 @@ namespace SqlParser.Tests
                 {
                     Args = new FunctionArguments.List(new FunctionArgumentList(null, [
                         new FunctionArg.Unnamed(new FunctionArgExpression.Wildcard())
-                    ],null))
+                    ], null))
                 },
                 BinaryOperator.Gt,
                 new LiteralValue(Number("1"))
@@ -5990,6 +5990,30 @@ namespace SqlParser.Tests
             };
 
             Assert.Equal(expected, VerifiedOnlySelect(connect3, dialects));
+        }
+
+        [Fact]
+        public void Tests_Select_Values_Without_Parens()
+        {
+            var dialects = new Dialect[] { new GenericDialect(), new SnowflakeDialect(), new DatabricksDialect() };
+
+            const string sql = "SELECT * FROM VALUES (1, 2), (2,3) AS tbl (id, val)";
+            const string canonical = "SELECT * FROM (VALUES (1, 2), (2, 3)) AS tbl (id, val)";
+
+            VerifiedOnlySelectWithCanonical(sql, canonical, dialects);
+        }
+
+        [Fact]
+        public void Tests_Select_Values_Without_Parens_And_Set_Op()
+        {
+            var dialects = new Dialect[] { new GenericDialect(), new SnowflakeDialect(), new DatabricksDialect() };
+
+            const string sql = "SELECT id + 1, name FROM VALUES (1, 'Apple'), (2, 'Banana'), (3, 'Orange') AS fruits (id, name) UNION ALL SELECT 5, 'Strawberry'";
+            const string canonical = "SELECT id + 1, name FROM (VALUES (1, 'Apple'), (2, 'Banana'), (3, 'Orange')) AS fruits (id, name) UNION ALL SELECT 5, 'Strawberry'";
+
+            var query = VerifiedQueryWithCanonical(sql, canonical, dialects);
+
+            Assert.Equal(SetOperator.Union, ((SetExpression.SetOperation)query.Body).Op);
         }
     }
 }
