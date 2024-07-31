@@ -514,4 +514,13 @@ public class BigQueryDialectTests : ParserTestBase
 
         Assert.Equal(expected, select.Projection.First().AsExpr());
     }
+
+    [Fact]
+    public void Test_Any_Value()
+    {
+        VerifiedExpr("ANY_VALUE(fruit)");
+        VerifiedExpr("ANY_VALUE(fruit) OVER (ORDER BY LENGTH(fruit) ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)");
+        VerifiedExpr("ANY_VALUE(fruit HAVING MAX sold)");
+        VerifiedExpr("ANY_VALUE(fruit HAVING MIN sold)");
+    }
 }

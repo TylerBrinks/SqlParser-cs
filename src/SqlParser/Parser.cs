@@ -1643,6 +1643,18 @@ public class Parser
             clauses.Add(new FunctionArgumentClause.Limit(ParseExpr()));
         }
 
+        if (_dialect is GenericDialect or BigQueryDialect && ParseKeyword(Keyword.HAVING))
+        {
+            var kind = ParseOneOfKeywords(Keyword.MIN, Keyword.MAX) switch
+            {
+                Keyword.MIN => HavingBoundKind.Min,
+                Keyword.MAX => HavingBoundKind.Max,
+            };
+
+            clauses ??= new Sequence<FunctionArgumentClause>();
+            clauses.Add(new FunctionArgumentClause.Having(new HavingBound(kind, ParseExpr())));
+        }
+
         if (_dialect is GenericDialect or MySqlDialect && ParseKeyword(Keyword.SEPARATOR))
         {
             clauses ??= new Sequence<FunctionArgumentClause>();

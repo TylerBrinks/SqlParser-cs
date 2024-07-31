@@ -96,6 +96,9 @@ public static class EnumWriter
             FunctionParallel.Restricted => "PARALLEL RESTRICTED",
             FunctionParallel.Safe => "PARALLEL SAFE",
 
+            HavingBoundKind.Min => "MIN",
+            HavingBoundKind.Max => "MAX",
+
             HiveDelimiter.FieldsTerminatedBy => "FIELDS TERMINATED BY",
             HiveDelimiter.FieldsEscapedBy => "ESCAPED BY",
             HiveDelimiter.CollectionItemsTerminatedBy => "COLLECTION ITEMS TERMINATED BY",

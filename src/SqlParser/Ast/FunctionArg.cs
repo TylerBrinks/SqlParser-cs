@@ -52,8 +52,8 @@ public abstract record FunctionArgumentClause : IWriteSql
     public record OrderBy(Sequence<OrderByExpression> OrderByExpressions) : FunctionArgumentClause;
     public record Limit(Expression LimitExpression) : FunctionArgumentClause;
     public record OnOverflow(ListAggOnOverflow ListOverflow) : FunctionArgumentClause;
-
     public record Separator(Value Value) : FunctionArgumentClause;
+    public record Having(HavingBound Bound) : FunctionArgumentClause;
 
     public void ToSql(SqlTextWriter writer)
     {
@@ -77,6 +77,10 @@ public abstract record FunctionArgumentClause : IWriteSql
 
             case Separator s:
                 writer.WriteSql($"SEPARATOR {s.Value}");
+                break;
+
+            case Having h:
+                writer.WriteSql($"{h.Bound}");
                 break;
         }
     }

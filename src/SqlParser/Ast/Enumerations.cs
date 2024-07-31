@@ -304,6 +304,12 @@ public enum GeneratedExpressionMode
     Sorted
 }
 
+public enum HavingBoundKind
+{
+    Min,
+    Max
+}
+
 public enum HiveDelimiter
 {
     FieldsTerminatedBy,
