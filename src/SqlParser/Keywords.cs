@@ -144,7 +144,6 @@ public enum Keyword
     ARCHIVE,
     ARE,
     ARRAY,
-    ARRAY_AGG,
     ARRAY_MAX_CARDINALITY,
     AS,
     ASC,
