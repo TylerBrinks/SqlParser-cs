@@ -144,4 +144,6 @@ public abstract class Dialect
     public virtual bool SupportsNumericPrefix => false;
 
     public virtual bool SupportsWindowFunctionNullTreatmentArg => false;
+    public virtual bool SupportsLambdaFunctions => false;
+    
 }

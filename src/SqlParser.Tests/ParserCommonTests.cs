@@ -3704,10 +3704,12 @@ namespace SqlParser.Tests
             VerifiedStatement("SELECT * FROM t WHERE EXISTS (WITH u AS (SELECT 1) SELECT * FROM u)");
             VerifiedStatement("SELECT EXISTS (SELECT 1)");
 
-            var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT EXISTS ("));
+            var dialects = AllDialects.Where(d => d is not DatabricksDialect);
+
+            var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT EXISTS (", dialects));
             Assert.Equal("Expected SELECT, VALUES, or a subquery in the query body, found EOF", ex.Message);
 
-            ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT EXISTS (NULL)"));
+            ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT EXISTS (NULL)", dialects));
             Assert.Equal("Expected SELECT, VALUES, or a subquery in the query body, found NULL, Line: 1, Col: 16", ex.Message);
         }
 
@@ -5102,7 +5104,7 @@ namespace SqlParser.Tests
             var pgAndGeneric = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
             var operators = new List<Tuple<string, BinaryOperator, IEnumerable<Dialect>>>
             {
-                new("->", BinaryOperator.Arrow, AllDialects),
+                new("->", BinaryOperator.Arrow, AllDialects.Where(d => d is not DatabricksDialect)),
                 new("->>", BinaryOperator.LongArrow, AllDialects),
                 new("#>", BinaryOperator.HashArrow, pgAndGeneric),
                 new("#>>", BinaryOperator.HashLongArrow, pgAndGeneric),

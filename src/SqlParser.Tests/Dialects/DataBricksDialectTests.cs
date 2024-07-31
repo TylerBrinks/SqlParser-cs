@@ -22,5 +22,12 @@ namespace SqlParser.Tests.Dialects
             select = VerifiedOnlySelect("SELECT \"Ä\"");
             Assert.Equal(new SelectItem.UnnamedExpression(new LiteralValue(new Value.DoubleQuotedString("Ä"))), select.Projection[0]);
         }
+
+        [Fact]
+        public void Test_Databricks_Exists()
+        {
+            var actual = VerifiedExpr("exists(array(1, 2, 3), x -> x IS NULL)");
+
+        }
     }
 }

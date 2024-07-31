@@ -22,4 +22,6 @@ public class DatabricksDialect : Dialect
 
     public override bool SupportsFilterDuringAggregation => true;
     public override bool SupportsGroupByExpression => true;
+    public virtual bool SupportsLambdaFunctions => true;
+
 }

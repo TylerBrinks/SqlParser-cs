@@ -1,6 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-
-namespace SqlParser.Ast;
+﻿namespace SqlParser.Ast;
 
 // ReSharper disable CommentTypo
 
@@ -26,7 +24,7 @@ public abstract record Expression : IWriteSql, IElement
         }
     }
     /// <summary>
-    /// Any operation e.g. `1 ANY (1)` or `foo > ANY(bar)`, It will be wrapped in the right side of BinaryExpr
+    /// Any operation e.g. `1 ANY (1)` or `foo > ANY(bar)`, It will be wrapped on the right side of BinaryExpr
     /// </summary>
     /// <param name="Left">Expression</param>
     /// <param name="CompareOp">Operator</param>
@@ -446,7 +444,6 @@ public abstract record Expression : IWriteSql, IElement
         /// <summary>
         /// Sequence function call
         /// </summary>
-        //public Sequence<FunctionArg>? Args { get; internal set; }
         public FunctionArguments Args { get; internal set; }
 
         /// <summary>
@@ -796,14 +793,24 @@ public abstract record Expression : IWriteSql, IElement
     /// <summary>
     /// JSON access (Postgres)  eg: data->'tags'
     /// </summary>
-    /// <param name="Left">Left hand expression</param>
-    /// <param name="Operator">Json Operator</param>
-    /// <param name="Right">Right hand expression</param>
+    /// <param name="Value">Value expression</param>
+    /// <param name="Path">Json path</param>
     public record JsonAccess(Expression Value, JsonPath Path) : Expression
     {
         public override void ToSql(SqlTextWriter writer)
         {
             writer.WriteSql($"{Value}{Path}");
+        }
+    }
+    /// <summary>
+    /// Lambda function
+    /// See https://docs.databricks.com/en/sql/language-manual/sql-ref-lambda-functions.html
+    /// </summary>
+    public record Lambda(LambdaFunction LambdaFunction) : Expression
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{LambdaFunction}");
         }
     }
     /// <summary>
@@ -834,22 +841,6 @@ public abstract record Expression : IWriteSql, IElement
             }
         }
     }
-    /// <summary>
-    /// LISTAGG function
-    /// <example>
-    /// <c>
-    /// SELECT LISTAGG(...) WITHIN GROUP (ORDER BY ...)
-    /// </c>
-    /// </example>
-    /// </summary>
-    /// <param name="ListAggregate">List aggregate</param>
-    //public record ListAgg(ListAggregate ListAggregate) : Expression
-    //{
-    //    public override void ToSql(SqlTextWriter writer)
-    //    {
-    //        ListAggregate.ToSql(writer);
-    //    }
-    //}
     /// <summary>
     /// Literal value e.g. '5'
     /// </summary>
@@ -1124,14 +1115,9 @@ public abstract record Expression : IWriteSql, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            if (Fields.SafeAny())
-            {
-                writer.Write($"STRUCT<{Fields.ToSqlDelimited()}>({Values.ToSqlDelimited()})");
-            }
-            else
-            {
-                writer.Write($"STRUCT({Values.ToSqlDelimited()})");
-            }
+            writer.Write(Fields.SafeAny()
+                ? $"STRUCT<{Fields.ToSqlDelimited()}>({Values.ToSqlDelimited()})"
+                : $"STRUCT({Values.ToSqlDelimited()})");
         }
     }
     /// <summary>

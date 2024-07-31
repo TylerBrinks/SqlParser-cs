@@ -1069,10 +1069,15 @@ public class Parser
         Expression ParseLeftParen()
         {
             Expression expr;
+            Expression? lambda;
             if (ParseKeywordSequence(Keyword.SELECT) || ParseKeyword(Keyword.WITH))
             {
                 PrevToken();
                 expr = new Expression.Subquery(ParseQuery());
+            }
+            else if ((lambda = TryParseLambda()) !=null)
+            {
+                return lambda;
             }
             else
             {
@@ -1235,6 +1240,12 @@ public class Parser
                 return new IntroducedString(word.Value, ParseIntroducedStringValue());
             }
 
+            if (tkn is Arrow && _dialect.SupportsLambdaFunctions)
+            {
+                ExpectToken<Arrow>();
+                return new Lambda(new LambdaFunction(new OneOrManyWithParens<Ident>.One(word.ToIdent()), ParseExpr()));
+            }
+
             return new Identifier(word.ToIdent());
         }
 
@@ -1317,7 +1328,7 @@ public class Parser
             Word { Keyword: Keyword.CAST } => ParseCastExpression(CastKind.Cast),
             Word { Keyword: Keyword.TRY_CAST } => ParseCastExpression(CastKind.TryCast),
             Word { Keyword: Keyword.SAFE_CAST } => ParseCastExpression(CastKind.SafeCast),
-            Word { Keyword: Keyword.EXISTS } => ParseExistsExpr(false),
+            Word { Keyword: Keyword.EXISTS } when SupportDataBricksExists() => ParseExistsExpr(false),
             Word { Keyword: Keyword.EXTRACT } => ParseExtractExpr(),
             Word { Keyword: Keyword.CEIL } => ParseCeilFloorExpr(true),
             Word { Keyword: Keyword.FLOOR } => ParseCeilFloorExpr(false),
@@ -1326,11 +1337,12 @@ public class Parser
             Word { Keyword: Keyword.OVERLAY } => ParseOverlayExpr(),
             Word { Keyword: Keyword.TRIM } => ParseTrimExpr(),
             Word { Keyword: Keyword.INTERVAL } => ParseInterval(),
-            //Word { Keyword: Keyword.LISTAGG } => ParseListAggExpr(),
             // Treat ARRAY[1,2,3] as an array [1,2,3], otherwise try as subquery or a function call
             Word { Keyword: Keyword.ARRAY } when PeekToken() is LeftBracket => ParseLeftArray(),
-            Word { Keyword: Keyword.ARRAY } arr when PeekToken() is LeftParen &&
-                                                     _dialect is not ClickHouseDialect => ParseArraySubquery(arr),
+            Word { Keyword: Keyword.ARRAY } arr when 
+                PeekToken() is LeftParen &&
+                _dialect is not ClickHouseDialect and not DatabricksDialect
+                    => ParseArraySubquery(arr),
             //Word { Keyword: Keyword.ARRAY_AGG } => ParseArrayAggregateExpression(),
             Word { Keyword: Keyword.NOT } => ParseNot(),
             Word { Keyword: Keyword.MATCH } when _dialect is MySqlDialect or GenericDialect => ParseMatchAgainst(),
@@ -1380,6 +1392,36 @@ public class Parser
         }
 
         return expr;
+
+        bool SupportDataBricksExists()
+        {
+            var word = PeekNthToken(1) as Word;
+
+            if (_dialect is not DatabricksDialect || 
+                word!=null && word.Keyword == Keyword.SELECT || word.Keyword == Keyword.WITH)
+            {
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    public Expression? TryParseLambda()
+    {
+        if (!_dialect.SupportsLambdaFunctions)
+        {
+            return null;
+        }
+
+        return MaybeParse(() =>
+        {
+            var parameters = ParseCommaSeparated(() => ParseIdentifier());
+            ExpectToken<RightParen>();
+            ExpectToken<Arrow>();
+            var expr = ParseExpr();
+            return new Lambda(new LambdaFunction(new OneOrManyWithParens<Ident>.Many(parameters), expr));
+        });
     }
 
     public Dictionary ParseDuckDbStructLiteral()
