@@ -15,20 +15,26 @@ public class ClickhouseDialectTests : ParserTestBase
     {
         var select = VerifiedOnlySelect("SELECT string_values[indexOf(string_names, 'endpoint')] FROM foos WHERE id = 'test' AND string_value[indexOf(string_name, 'app')] <> 'foo'");
 
+        var args = new Sequence<FunctionArg>
+        {
+            new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.Identifier("string_names"))),
+            new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.LiteralValue(new Value.SingleQuotedString("endpoint"))))
+        };
+
+        var selectionArgs = new Sequence<FunctionArg>
+        {
+            new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.Identifier("string_name"))),
+            new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.LiteralValue(new Value.SingleQuotedString("app"))))
+        };
+
         var expected = new Select([
             new SelectItem.UnnamedExpression(new Expression.MapAccess(new Expression.Identifier("string_values"),
             [
                 new(new Expression.Function("indexOf")
                 {
-                    Args =
-                    [
-                        new FunctionArg.Unnamed(
-                            new FunctionArgExpression.FunctionExpression(new Expression.Identifier("string_names"))),
-                        new FunctionArg.Unnamed(
-                            new FunctionArgExpression.FunctionExpression(
-                                new Expression.LiteralValue(new Value.SingleQuotedString("endpoint"))))
-                    ]
-                }, MapAccessSyntax.Bracket)
+                    Args = new FunctionArguments.List(new FunctionArgumentList(null, args, null))
+                }, 
+                MapAccessSyntax.Bracket)
             ]))
         ])
         {
@@ -50,15 +56,8 @@ public class ClickhouseDialectTests : ParserTestBase
                     [
                         new Expression.MapAccessKey(new Expression.Function("indexOf")
                         {
-                            Args =
-                            [
-                                new FunctionArg.Unnamed(
-                                    new FunctionArgExpression.FunctionExpression(
-                                        new Expression.Identifier("string_name"))),
-                                new FunctionArg.Unnamed(
-                                    new FunctionArgExpression.FunctionExpression(
-                                        new Expression.LiteralValue(new Value.SingleQuotedString("app"))))
-                            ]
+                            Args = new FunctionArguments.List(new FunctionArgumentList(null, selectionArgs, null))
+
                         }, MapAccessSyntax.Bracket)
 
 
@@ -88,16 +87,20 @@ public class ClickhouseDialectTests : ParserTestBase
     public void Parse_Array_Fn()
     {
         var select = VerifiedOnlySelect("SELECT array(x1, x2) FROM foo");
+
+        var args = new Sequence<FunctionArg>
+        {
+             new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.Identifier("x1"))),
+             new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.Identifier("x2")))
+        };
+
         var expected = new Expression.Function("array")
         {
-            Args =
-            [
-                new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.Identifier("x1"))),
-                new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.Identifier("x2")))
-            ]
+            Args = new FunctionArguments.List(new FunctionArgumentList(null, args, null))
         };
 
         Assert.Equal(expected, select.Projection.First().AsExpr());
+
     }
 
     [Fact]
@@ -128,7 +131,10 @@ public class ClickhouseDialectTests : ParserTestBase
         ]);
         Assert.Equal(compound, select.Projection[0].AsExpr());
 
-        var fn = new Expression.Function(new ObjectName(new Ident("myfun", Symbols.DoubleQuote)));
+        var fn = new Expression.Function(new ObjectName(new Ident("myfun", Symbols.DoubleQuote)))
+        {
+            Args = new FunctionArguments.List(FunctionArgumentList.Empty())
+        };
         Assert.Equal(fn, select.Projection[1].AsExpr());
 
         var exp = (SelectItem.ExpressionWithAlias)select.Projection[2];

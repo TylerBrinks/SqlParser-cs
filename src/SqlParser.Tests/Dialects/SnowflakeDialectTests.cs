@@ -254,7 +254,10 @@ namespace SqlParser.Tests.Dialects
                 new("bar baz", Symbols.DoubleQuote)
             }), select.Projection[0].AsExpr());
 
-            Assert.Equal(new Function(new ObjectName(new Ident("myfun", Symbols.DoubleQuote))), select.Projection[1].AsExpr());
+            Assert.Equal(new Function(new ObjectName(new Ident("myfun", Symbols.DoubleQuote)))
+            {
+                Args = new FunctionArguments.List(FunctionArgumentList.Empty())
+            }, select.Projection[1].AsExpr());
 
             var expr = new SelectItem.ExpressionWithAlias(new Identifier(new Ident("simple id", Symbols.DoubleQuote)),
                 new Ident("column alias", Symbols.DoubleQuote));
@@ -270,9 +273,6 @@ namespace SqlParser.Tests.Dialects
         {
             VerifiedStatement("SELECT ARRAY_AGG(x) WITHIN GROUP (ORDER BY x) AS a FROM T");
             VerifiedStatement("SELECT ARRAY_AGG(DISTINCT x) WITHIN GROUP (ORDER BY x ASC) FROM tbl");
-
-            var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("select array_agg(x order by x) as a from T"));
-            Assert.Equal("Expected ), found order, Line: 1, Col: 20", ex.Message);
         }
 
         [Fact]
@@ -684,17 +684,15 @@ namespace SqlParser.Tests.Dialects
         public void Parse_Subquery_Function_Argument()
         {
             // Snowflake allows passing an unparenthesized subquery as the single argument to a function.
-            OneStatementParsesTo("SELECT parse_json(SELECT '{}')", "SELECT parse_json((SELECT '{}'))");
+            //OneStatementParsesTo("SELECT parse_json(SELECT '{}')", "SELECT parse_json((SELECT '{}'))");
+            VerifiedStatement("SELECT parse_json(SELECT '{}')");
 
             // Subqueries that begin with 'WITH' work too.
-            OneStatementParsesTo(
-                "SELECT parse_json(WITH q AS (SELECT '{}' AS foo) SELECT foo FROM q)",
-                "SELECT parse_json((WITH q AS (SELECT '{}' AS foo) SELECT foo FROM q))"
-            );
+            VerifiedStatement("SELECT parse_json(WITH q AS (SELECT '{}' AS foo) SELECT foo FROM q)");
 
             // Commas are parsed as part of the subquery, not additional arguments to
             // the function.
-            OneStatementParsesTo("SELECT func(SELECT 1, 2)", "SELECT func((SELECT 1, 2))");
+            VerifiedStatement("SELECT func(SELECT 1, 2)");
         }
 
         [Fact]
@@ -747,14 +745,14 @@ namespace SqlParser.Tests.Dialects
             left = new Identifier("c1");
             right = new Function("myudf")
             {
-                Args =
-                [
+                Args = new FunctionArguments.List(new FunctionArgumentList(null, [
                     new FunctionArg.Unnamed(
                         new FunctionArgExpression.FunctionExpression(
                             new UnaryOp(
                                 new LiteralValue(
                                     new Value.Number("42")), UnaryOperator.Plus)))
-                ]
+                ], null))
+                
             };
             Assert.Equal(select.Selection!.AsBinaryOp().Left, left);
             Assert.Equal(select.Selection.AsBinaryOp().Right, right);

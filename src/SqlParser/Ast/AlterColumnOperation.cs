@@ -53,7 +53,7 @@ public abstract record AlterColumnOperation : IWriteSql, IElement
     /// <param name="DataType"></param>
     public record SetDataType(DataType DataType, Expression? Using = null) : AlterColumnOperation;
 
-    public record AddGenerated(GeneratedAs? GeneratedAs, Sequence<SequenceOptions> SequenceOptions) : AlterColumnOperation;
+    public record AddGenerated(GeneratedAs? GeneratedAs, Sequence<SequenceOptions>? SequenceOptions) : AlterColumnOperation;
 
     public void ToSql(SqlTextWriter writer)
     {

@@ -1205,14 +1205,14 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
 
-           sql = "SELECT (CAST(ARRAY[ARRAY[2, 3]] AS INT[][]))[1][2]";
-           select = VerifiedOnlySelect(sql);
+            sql = "SELECT (CAST(ARRAY[ARRAY[2, 3]] AS INT[][]))[1][2]";
+            select = VerifiedOnlySelect(sql);
 
-           expected = new ArrayIndex(new Nested(
-                    new Cast(
-                        new Expression.Array(
-                            new ArrayExpression(new[]
-                            {
+            expected = new ArrayIndex(new Nested(
+                     new Cast(
+                         new Expression.Array(
+                             new ArrayExpression(new[]
+                             {
                                 new Expression.Array(new ArrayExpression(
                                         new []
                                         {
@@ -1221,22 +1221,22 @@ namespace SqlParser.Tests.Dialects
                                         }, true
                                     )
                                 )
-                            }, true)
-                        ),
-                        new DataType.Array(
-                            new ArrayElementTypeDef.SquareBracket(
-                                new DataType.Array(
-                                    new ArrayElementTypeDef.SquareBracket(
-                                        new DataType.Int())))), 
-                        CastKind.Cast
-                    )
-                //new DataType.Array(new DataType.Array(new DataType.Int())))
-                ),
-                new[]
-                {
+                             }, true)
+                         ),
+                         new DataType.Array(
+                             new ArrayElementTypeDef.SquareBracket(
+                                 new DataType.Array(
+                                     new ArrayElementTypeDef.SquareBracket(
+                                         new DataType.Int())))),
+                         CastKind.Cast
+                     )
+                 //new DataType.Array(new DataType.Array(new DataType.Int())))
+                 ),
+                 new[]
+                 {
                     num[1],
                     num[2]
-                });
+                 });
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
 
@@ -1253,18 +1253,23 @@ namespace SqlParser.Tests.Dialects
             var body = new SetExpression.SetOperation(
                 new SetExpression.SelectExpression(new Select(new[]
                 {
-                    new SelectItem.UnnamedExpression(new LiteralValue(Number("1")))
+                        new SelectItem.UnnamedExpression(new LiteralValue(Number("1")))
                 })),
                 SetOperator.Union,
                 new SetExpression.SelectExpression(new Select(new[]
                 {
-                    new SelectItem.UnnamedExpression(new LiteralValue(Number("2")))
+                        new SelectItem.UnnamedExpression(new LiteralValue(Number("2")))
                 })),
                 SetQuantifier.None);
-            var expected = new ArraySubquery(new Query(body));
+            var expected = new Function("ARRAY")
+            {
+                Args = new FunctionArguments.Subquery(new Query(body))
+            };
 
             Assert.Equal(expected, select.Projection.Single().AsExpr());
+            //Assert.Fail("Implement");
         }
+
 
         [Fact]
         public void Test_Transaction_Statement()
@@ -1319,7 +1324,7 @@ namespace SqlParser.Tests.Dialects
             ));
             Assert.Equal(expected, select.Projection.Single());
 
-            
+
             select = VerifiedOnlySelect("SELECT obj -> 42");
             expected = new SelectItem.UnnamedExpression(new BinaryOp(
                 new Identifier("obj"),
@@ -1452,7 +1457,7 @@ namespace SqlParser.Tests.Dialects
                 new Expression.Array(new ArrayExpression([
                     new LiteralValue(new Value.SingleQuotedString("b")),
                     new LiteralValue(new Value.SingleQuotedString("c"))
-                ], true))     
+                ], true))
             );
             Assert.Equal(expr, select.Selection);
 
@@ -1503,14 +1508,13 @@ namespace SqlParser.Tests.Dialects
                         "_pg_expandarray"
                     ]))
                 {
-                    Args = new FunctionArg[]
-                    {
+                    Args = new FunctionArguments.List(new FunctionArgumentList(null, [
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.Array(new ArrayExpression(new[]
                         {
                             new LiteralValue(new Value.SingleQuotedString("i")),
                             new LiteralValue(new Value.SingleQuotedString("i"))
                         }, true))))
-                    }
+                    ], null))
                 }), "n")
             );
 
@@ -1625,10 +1629,22 @@ namespace SqlParser.Tests.Dialects
             DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             var select = VerifiedOnlySelect("SELECT CURRENT_CATALOG, CURRENT_USER, SESSION_USER, USER");
-            Assert.Equal(new Function("CURRENT_CATALOG") { Special = true }, select.Projection[0].AsExpr());
-            Assert.Equal(new Function("CURRENT_USER") { Special = true }, select.Projection[1].AsExpr());
-            Assert.Equal(new Function("SESSION_USER") { Special = true }, select.Projection[2].AsExpr());
-            Assert.Equal(new Function("USER") { Special = true }, select.Projection[3].AsExpr());
+            Assert.Equal(new Function("CURRENT_CATALOG")
+            {
+                Args = new FunctionArguments.None()
+            }, select.Projection[0].AsExpr());
+            Assert.Equal(new Function("CURRENT_USER")
+            {
+                Args = new FunctionArguments.None()
+            }, select.Projection[1].AsExpr());
+            Assert.Equal(new Function("SESSION_USER")
+            {
+                Args = new FunctionArguments.None()
+            }, select.Projection[2].AsExpr());
+            Assert.Equal(new Function("USER")
+            {
+                Args = new FunctionArguments.None()
+            }, select.Projection[3].AsExpr());
         }
 
         [Fact]
@@ -1789,7 +1805,10 @@ namespace SqlParser.Tests.Dialects
                 new ("alias", Symbols.DoubleQuote),
                 new ("bar baz", Symbols.DoubleQuote)
             }), select.Projection[0].AsExpr());
-            Assert.Equal(new Function(new ObjectName(new Ident("myfun", Symbols.DoubleQuote))), select.Projection[1].AsExpr());
+            Assert.Equal(new Function(new ObjectName(new Ident("myfun", Symbols.DoubleQuote)))
+            {
+                Args = new FunctionArguments.List(FunctionArgumentList.Empty())
+            }, select.Projection[1].AsExpr());
 
             Assert.Equal(new SelectItem.ExpressionWithAlias(new Identifier(
                 new Ident("simple id", Symbols.DoubleQuote)),
@@ -2188,7 +2207,7 @@ namespace SqlParser.Tests.Dialects
                 ]
             ]);
 
-            var columns = new Sequence<Ident> {"id", "a"};
+            var columns = new Sequence<Ident> { "id", "a" };
 
             var expected = new Statement.Insert(new InsertOperation("test_tables",
                 new Statement.Select(new Query(new SetExpression.ValuesExpression(values))))

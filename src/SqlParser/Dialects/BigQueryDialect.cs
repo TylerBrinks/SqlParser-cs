@@ -32,4 +32,6 @@ public class BigQueryDialect : Dialect
     /// within a window clause declaration.
     /// </summary>
     public override bool SupportsWindowClauseNamedWindowReference => true;
+
+    public override bool SupportsWindowFunctionNullTreatmentArg => true;
 }

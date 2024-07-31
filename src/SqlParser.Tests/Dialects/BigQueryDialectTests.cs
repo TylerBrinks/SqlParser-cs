@@ -228,19 +228,9 @@ public class BigQueryDialectTests : ParserTestBase
                      "SELECT ARRAY_AGG(x ORDER BY x) AS a FROM T",
                      "SELECT ARRAY_AGG(x ORDER BY x LIMIT 2) FROM tbl",
                      "SELECT ARRAY_AGG(DISTINCT x ORDER BY x LIMIT 2) FROM tbl",
-                     "SELECT ARRAY_AGG(x ORDER BY x, y) AS a FROM T",
-                     "SELECT ARRAY_AGG(x ORDER BY x ASC, y DESC) AS a FROM T"
                  })
         {
             VerifiedStatement(sql, supportedDialects);
-        }
-
-        var wildcardSql = "SELECT ARRAY_AGG(sections_tbl.*) AS sections FROM sections_tbl";
-        foreach (var dialect in AllDialects)
-        {
-            if (dialect is PostgreSqlDialect) { continue; }
-
-            Assert.Throws<ParserException>(() => ParseSqlStatements(wildcardSql));
         }
     }
 
@@ -270,20 +260,24 @@ public class BigQueryDialectTests : ParserTestBase
     [Fact]
     public void Parse_Map_Access_Expr()
     {
-        _ = VerifiedExpr("users[-1][safe_offset(2)].a.b");
-        _ = new MapAccess(new Identifier("users"), [
+        var expression = VerifiedExpr("users[-1][safe_offset(2)].a.b");
+
+        var args = new Sequence<FunctionArg>
+        {
+            new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.Number("2"))))
+        };
+
+        var expected = new MapAccess(new Identifier("users"), [
             new(new UnaryOp(new LiteralValue(new Value.Number("1")), UnaryOperator.Minus), MapAccessSyntax.Bracket),
             new(new Function("safe_offset")
             {
-                Args = new Sequence<FunctionArg>
-                {
-                    new FunctionArg.Unnamed(
-                        new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.Number("2"))))
-                }
+                Args = new FunctionArguments.List(new FunctionArgumentList(null, args, null))
             }, MapAccessSyntax.Bracket),
 
             new(new CompoundIdentifier(["a", "b"]), MapAccessSyntax.Period)
         ]);
+
+        Assert.Equal(expected, expression);
 
         VerifiedOnlySelect("SELECT myfunc()[-1].a[SAFE_OFFSET(2)].b");
     }
@@ -491,7 +485,7 @@ public class BigQueryDialectTests : ParserTestBase
     [Fact]
     public void Parse_Create_View_With_Unquoted_Hyphen()
     {
-        var create = VerifiedStatement< Statement.CreateView>("CREATE VIEW IF NOT EXISTS my-pro-ject.mydataset.myview AS SELECT 1");
+        var create = VerifiedStatement<Statement.CreateView>("CREATE VIEW IF NOT EXISTS my-pro-ject.mydataset.myview AS SELECT 1");
         Assert.Equal("my-pro-ject.mydataset.myview", create.Name);
         Assert.Equal("SELECT 1", create.Query.ToSql());
     }

@@ -220,19 +220,21 @@ public class DuckDbDialectTests : ParserTestBase
         var select = VerifiedOnlySelect("SELECT FUN(a := '1', b := '2') FROM foo");
         var function = (Expression.Function)select.Projection.First().AsExpr();
 
+        var args = new Sequence<FunctionArg>
+        {
+            new FunctionArg.Named("a",
+                new FunctionArgExpression.FunctionExpression(
+                    new Expression.LiteralValue(new Value.SingleQuotedString("1"))),
+                new FunctionArgOperator.Assignment()),
+            new FunctionArg.Named("b",
+                new FunctionArgExpression.FunctionExpression(
+                    new Expression.LiteralValue(new Value.SingleQuotedString("2"))),
+                new FunctionArgOperator.Assignment())
+        };
+
         Assert.Equal(new Expression.Function("FUN")
         {
-            Args =
-            [
-               new FunctionArg.Named("a",
-                   new FunctionArgExpression.FunctionExpression(
-                       new Expression.LiteralValue(new Value.SingleQuotedString("1"))),
-                            new FunctionArgOperator.Assignment()),
-               new FunctionArg.Named("b",
-                   new FunctionArgExpression.FunctionExpression(
-                       new Expression.LiteralValue(new Value.SingleQuotedString("2"))),
-                   new FunctionArgOperator.Assignment())
-            ]
+            Args =new FunctionArguments.List(new FunctionArgumentList(null, args, null))
         }, function);
     }
 

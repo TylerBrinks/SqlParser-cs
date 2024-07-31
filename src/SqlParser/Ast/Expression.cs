@@ -13,18 +13,6 @@ public abstract record Expression : IWriteSql, IElement
         string? NegatedText => Negated ? "NOT " : null;
     }
     /// <summary>
-    /// Aggregate function with filter
-    /// </summary>
-    /// <param name="Expression">Expression</param>
-    /// <param name="Filter">Filter</param>
-    public record AggregateExpressionWithFilter(Expression Expression, Expression Filter) : Expression
-    {
-        public override void ToSql(SqlTextWriter writer)
-        {
-            writer.WriteSql($"{Expression} FILTER (WHERE {Filter})");
-        }
-    }
-    /// <summary>
     /// ALL operation e.g. `1 ALL (1)` or `foo > ALL(bar)`, It will be wrapped on the right side of BinaryExpr
     /// </summary>
     /// <param name="Left">Expression</param>
@@ -62,22 +50,6 @@ public abstract record Expression : IWriteSql, IElement
         }
     }
     /// <summary>
-    /// ARRAY_AGG function
-    /// <example>
-    /// <c>
-    /// SELECT ARRAY_AGG(... ORDER BY ...)
-    /// </c>
-    /// </example>
-    /// </summary>
-    /// <param name="ArrayAggregate">Array aggregation</param>
-    public record ArrayAgg(ArrayAggregate ArrayAggregate) : Expression
-    {
-        public override void ToSql(SqlTextWriter writer)
-        {
-            writer.WriteSql($"{ArrayAggregate}");
-        }
-    }
-    /// <summary>
     /// An array index expression
     /// <example>
     /// <c>
@@ -97,22 +69,6 @@ public abstract record Expression : IWriteSql, IElement
             {
                 writer.WriteSql($"[{index}]");
             }
-        }
-    }
-    /// <summary>
-    /// An array subquery constructor
-    /// <example>
-    /// <c>
-    /// SELECT ARRAY(SELECT 1 UNION SELECT 2)
-    /// </c>
-    /// </example>
-    /// </summary>
-    /// <param name="Query">Subquery</param>
-    public record ArraySubquery(Query Query) : Expression
-    {
-        public override void ToSql(SqlTextWriter writer)
-        {
-            writer.WriteSql($"ARRAY({Query})");
         }
     }
     /// <summary>
@@ -475,6 +431,7 @@ public abstract record Expression : IWriteSql, IElement
             }
         }
     }
+
     /// <summary>
     /// Scalar function call
     /// <example>
@@ -489,68 +446,53 @@ public abstract record Expression : IWriteSql, IElement
         /// <summary>
         /// Sequence function call
         /// </summary>
-        public Sequence<FunctionArg>? Args { get; internal set; }
+        //public Sequence<FunctionArg>? Args { get; internal set; }
+        public FunctionArguments Args { get; internal set; }
+
         /// <summary>
         /// e.g. `x > 5` in `COUNT(x) FILTER (WHERE x > 5)`
         /// </summary>
         public Expression? Filter { get; init; }
+
         /// <summary>
         /// e.g. `x > 5` in `COUNT(x) FILTER (WHERE x > 5)`
         /// </summary>
         public NullTreatment? NullTreatment { get; init; }
+
         /// <summary>
         /// Window spec
         /// </summary>
         public WindowType? Over { get; init; }
+
         /// <summary>
-        /// Aggregate functions may specify eg `COUNT(DISTINCT x)`
+        /// WITHIN GROUP (ORDER BY key [ASC | DESC], ...)
         /// </summary>
-        public bool Distinct { get; init; }
-        /// <summary>
-        /// Some functions must be called without trailing parentheses, for example Postgres\
-        /// do it for current_catalog, current_schema, etc. This flags is used for formatting.
-        /// </summary>
-        public bool Special { get; init; }
-        /// <summary>
-        /// Required ordering for the function (if empty, there is no requirement).
-        /// </summary>
-        public Sequence<OrderByExpression>? OrderBy { get; init; }
+        public Sequence<OrderByExpression>? WithinGroup { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
-            if (Special)
+
+            writer.WriteSql($"{Name}{Args}");
+
+            if (WithinGroup.SafeAny())
             {
-                Name.ToSql(writer);
+                writer.WriteSql($" WITHIN GROUP (ORDER BY {WithinGroup!.ToSqlDelimited()})");
             }
-            else
+
+            if (Filter != null)
             {
-                var ordered = OrderBy is { Count: > 0 };
+                writer.WriteSql($" FILTER (WHERE {Filter})");
+            }
 
-                var distinct = Distinct ? "DISTINCT " : null;
-                writer.WriteSql($"{Name}({distinct}{Args}");
+            if (NullTreatment != null)
+            {
+                writer.WriteSql($" {NullTreatment}");
+            }
 
-                if (ordered)
-                {
-                    var orderBy = ordered ? " ORDER BY " : string.Empty;
-                    writer.Write($"{orderBy}{OrderBy.ToSqlDelimited()}");
-                }
+            if (Over != null)
+            {
+                writer.WriteSql($" OVER {Over}");
 
-                writer.Write(")");
-
-                if (Filter != null)
-                {
-                    writer.WriteSql($" FILTER (WHERE {Filter})");
-                }
-
-                if (NullTreatment != null)
-                {
-                    writer.WriteSql($" {NullTreatment}");
-                }
-
-                if (Over != null)
-                {
-                    writer.WriteSql($" OVER {Over}");
-                }
             }
         }
     }
@@ -657,7 +599,6 @@ public abstract record Expression : IWriteSql, IElement
     /// </c>
     /// </example>.
     /// </summary>
-   
     public record Interval : Expression
     {
         /// <param name="value">Value</param>
@@ -902,13 +843,13 @@ public abstract record Expression : IWriteSql, IElement
     /// </example>
     /// </summary>
     /// <param name="ListAggregate">List aggregate</param>
-    public record ListAgg(ListAggregate ListAggregate) : Expression
-    {
-        public override void ToSql(SqlTextWriter writer)
-        {
-            ListAggregate.ToSql(writer);
-        }
-    }
+    //public record ListAgg(ListAggregate ListAggregate) : Expression
+    //{
+    //    public override void ToSql(SqlTextWriter writer)
+    //    {
+    //        ListAggregate.ToSql(writer);
+    //    }
+    //}
     /// <summary>
     /// Literal value e.g. '5'
     /// </summary>

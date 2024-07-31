@@ -1,6 +1,7 @@
 ﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
+using Xunit.Sdk;
 using static SqlParser.Ast.Expression;
 
 // ReSharper disable CommentTypo
@@ -116,7 +117,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Window_Function_With_Filter()
         {
-            var functionNames = new[] {"row_number", "rank", "max", "count", "user_defined_function"};
+            var functionNames = new[] { "row_number", "rank", "max", "count", "user_defined_function" };
 
             foreach (var fn in functionNames)
             {
@@ -128,7 +129,9 @@ namespace SqlParser.Tests.Dialects
                 {
                     Over = new WindowType.WindowSpecType(new WindowSpec()),
                     Filter = new Identifier("y"),
-                    Args =  [new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("x")))]
+                    Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                        new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("x")))
+                    ], null))
                 });
                 Assert.Equal(expected, select.Projection.First());
             }

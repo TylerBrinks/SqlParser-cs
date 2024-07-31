@@ -1,5 +1,82 @@
 ﻿namespace SqlParser.Ast;
 
+public abstract record FunctionArguments : IWriteSql, IElement
+{
+    public record None : FunctionArguments;
+    public record Subquery(Query Query) : FunctionArguments;
+    public record List(FunctionArgumentList ArgumentList) : FunctionArguments;
+
+    public void ToSql(SqlTextWriter writer)
+    {
+        switch (this)
+        {
+            case Subquery s:
+                writer.WriteSql($"({s.Query})");
+                break;
+            case List l:
+                writer.WriteSql($"({l.ArgumentList})");
+                break;
+        }
+    }
+}
+
+public record FunctionArgumentList(
+    DuplicateTreatment? DuplicateTreatment,
+    Sequence<FunctionArg> Args,
+    Sequence<FunctionArgumentClause>? Clauses) : IWriteSql
+{
+    public static FunctionArgumentList Empty()
+    {
+        return new FunctionArgumentList(null, null, null);
+    }
+
+    public void ToSql(SqlTextWriter writer)
+    {
+        if (DuplicateTreatment != null)
+        {
+            writer.WriteSql($"{DuplicateTreatment} ");
+        }
+
+        writer.WriteDelimited(Args, ", ");
+
+        if (Clauses.SafeAny())
+        {
+            writer.WriteSql($" {Clauses.ToSqlDelimited(" ")}");
+        }
+    }
+}
+
+public abstract record FunctionArgumentClause : IWriteSql
+{
+    public record IgnoreOrRespectNulls(NullTreatment NullTreatment) : FunctionArgumentClause;
+    public record OrderBy(Sequence<OrderByExpression> OrderByExpressions) : FunctionArgumentClause;
+    public record Limit(Expression LimitExpression) : FunctionArgumentClause;
+    public record OnOverflow(ListAggOnOverflow ListOverflow) : FunctionArgumentClause;
+
+    public void ToSql(SqlTextWriter writer)
+    {
+        switch (this)
+        {
+            case IgnoreOrRespectNulls i:
+                writer.WriteSql($"{i.NullTreatment}");
+                break;
+
+            case OrderBy o:
+                writer.WriteSql($"ORDER BY {o.OrderByExpressions.ToSqlDelimited()}");
+                break;
+
+            case Limit l:
+                writer.WriteSql($"LIMIT {l.LimitExpression}");
+                break;
+
+            case OnOverflow f:
+                writer.WriteSql($"{f.ListOverflow}");
+                break;
+        }
+    }
+}
+
+
 /// <summary>
 /// Function argument
 /// </summary>

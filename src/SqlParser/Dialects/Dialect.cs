@@ -142,4 +142,6 @@ public abstract class Dialect
     /// prefix such as tables named: '59901_user_login'
     /// </summary>
     public virtual bool SupportsNumericPrefix => false;
+
+    public virtual bool SupportsWindowFunctionNullTreatmentArg => false;
 }

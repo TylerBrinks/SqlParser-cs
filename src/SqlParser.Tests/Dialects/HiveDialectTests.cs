@@ -267,7 +267,10 @@ public class HiveDialectTests : ParserTestBase
 
         }), select.Projection[0].AsExpr());
 
-        Assert.Equal(new Function(new ObjectName(new Ident("myfun", Symbols.DoubleQuote))),
+        Assert.Equal(new Function(new ObjectName(new Ident("myfun", Symbols.DoubleQuote)))
+            {
+                Args = new FunctionArguments.List(FunctionArgumentList.Empty())
+            },
             select.Projection[1].AsExpr());
 
         var withAlias = (SelectItem.ExpressionWithAlias)select.Projection[2];

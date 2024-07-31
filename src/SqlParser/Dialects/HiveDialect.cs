@@ -24,5 +24,5 @@ public class HiveDialect : Dialect
     }
 
     public override bool SupportsFilterDuringAggregation => true;
-    public virtual bool SupportsNumericPrefix => true;
+    public override bool SupportsNumericPrefix => true;
 }

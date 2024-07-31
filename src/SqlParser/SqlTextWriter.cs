@@ -35,7 +35,7 @@ public class SqlTextWriter : StringWriter
     /// <typeparam name="T">IWriteSql Type</typeparam>
     /// <param name="enumerable">IWriteSql enumerable list</param>
     /// <param name="delimiter">String delimiter between each object</param>
-    public void WriteDelimited<T>(IEnumerable<T>? enumerable, string delimiter) where T : IWriteSql
+    public void WriteDelimited<T>(IEnumerable<T>? enumerable, string delimiter = ",") where T : IWriteSql
     {
         if (enumerable == null) { return; }
 

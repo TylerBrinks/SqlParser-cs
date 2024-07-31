@@ -232,6 +232,14 @@ public enum DiscardObject
     Temp
 }
 
+public enum DuplicateTreatment
+{
+    /// Perform the calculation only unique values.
+    Distinct,
+    /// Retain all duplicate values (the default).
+    All,
+}
+
 public enum FileFormat
 {
     None,

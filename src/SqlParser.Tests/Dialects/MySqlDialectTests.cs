@@ -435,47 +435,37 @@ namespace SqlParser.Tests.Dialects
             {
                 new(new Ident[] {"description"}, new Function("VALUES")
                 {
-                    Args = new FunctionArg[]
-                    {
-                        new FunctionArg.Unnamed(
-                            new FunctionArgExpression.FunctionExpression(new Identifier("description")))
-                    }
+                    Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                        new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("description")))
+                    ], null))
                 }),
 
                 new(new Ident[] {"perm_create"}, new Function("VALUES")
                 {
-                    Args = new FunctionArg[]
-                    {
-                        new FunctionArg.Unnamed(
-                            new FunctionArgExpression.FunctionExpression(new Identifier("perm_create")))
-                    }
+                    Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                        new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("perm_create")))
+                    ], null))
                 }),
 
                 new(new Ident[] {"perm_read"}, new Function("VALUES")
                 {
-                    Args = new FunctionArg[]
-                    {
-                        new FunctionArg.Unnamed(
-                            new FunctionArgExpression.FunctionExpression(new Identifier("perm_read")))
-                    }
+                    Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                        new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("perm_read")))
+                    ], null))
                 }),
 
                 new(new Ident[] {"perm_update"}, new Function("VALUES")
                 {
-                    Args = new FunctionArg[]
-                    {
-                        new FunctionArg.Unnamed(
-                            new FunctionArgExpression.FunctionExpression(new Identifier("perm_update")))
-                    }
+                    Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                        new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("perm_update")))
+                    ], null))
                 }),
 
                 new(new Ident[] {"perm_delete"}, new Function("VALUES")
                 {
-                    Args = new FunctionArg[]
-                    {
-                        new FunctionArg.Unnamed(
-                            new FunctionArgExpression.FunctionExpression(new Identifier("perm_delete")))
-                    }
+                    Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                        new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("perm_delete")))
+                    ], null))
                 })
             });
 
@@ -668,14 +658,17 @@ namespace SqlParser.Tests.Dialects
                     "CREATE TABLE foo (`modification_time` DATETIME ON UPDATE CURRENT_TIMESTAMP())");
             Assert.Equal("foo", create.Name);
 
-            Assert.Equal(new ColumnDef[]
-            {
+            Assert.Equal([
                 new(new Ident("modification_time", Symbols.Backtick), new DataType.Datetime(),
                     Options: new ColumnOptionDef[]
                     {
-                        new(Option: new ColumnOption.OnUpdate(new Function("CURRENT_TIMESTAMP")))
+                        new(Option: new ColumnOption.OnUpdate(new Function("CURRENT_TIMESTAMP")
+                        {
+                            Args = new FunctionArguments.List(FunctionArgumentList.Empty())
+                        }))
+                        
                     })
-            }, create.Columns);
+            ], create.Columns);
         }
 
         [Fact]

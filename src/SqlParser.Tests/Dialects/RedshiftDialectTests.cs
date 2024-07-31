@@ -68,7 +68,10 @@ namespace SqlParser.Tests.Dialects
                 new("bar baz", Symbols.DoubleQuote)
             }), select.Projection[0].AsExpr());
 
-            Assert.Equal(new Function(new ObjectName(new Ident("myfun", Symbols.DoubleQuote))), select.Projection[1].AsExpr());
+            Assert.Equal(new Function(new ObjectName(new Ident("myfun", Symbols.DoubleQuote)))
+            {
+                Args = new FunctionArguments.List(FunctionArgumentList.Empty())
+            }, select.Projection[1].AsExpr());
 
             var expr = new SelectItem.ExpressionWithAlias(new Identifier(new Ident("simple id", Symbols.DoubleQuote)),
                 new Ident("column alias", Symbols.DoubleQuote));

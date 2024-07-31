@@ -54,7 +54,7 @@ public abstract record ListAggOnOverflow : IWriteSql, IElement
 
     public void ToSql(SqlTextWriter writer)
     {
-        writer.Write(" ON OVERFLOW");
+        writer.Write("ON OVERFLOW");
 
         if (this is Error)
         {

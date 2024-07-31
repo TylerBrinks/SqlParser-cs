@@ -67,6 +67,9 @@ public static class EnumWriter
 
             CteAsMaterialized.NotMaterialized => "NOT MATERIALIZED",
 
+            DuplicateTreatment.All => "ALL",
+            DuplicateTreatment.Distinct => "DISTINCT",
+
             EmptyMatchesMode.Show => "SHOW EMPTY MATCHES",
             EmptyMatchesMode.Omit => "OMIT EMPTY MATCHES",
             EmptyMatchesMode.WithUnmatched => "WITH UNMATCHED ROWS",
