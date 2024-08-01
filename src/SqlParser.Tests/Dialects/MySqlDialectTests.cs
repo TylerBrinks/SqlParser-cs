@@ -146,7 +146,7 @@ namespace SqlParser.Tests.Dialects
             DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
             VerifiedStatement("SET sql_mode = CONCAT(@@sql_mode, ',STRICT_TRANS_TABLES')");
 
-            var expected = new Statement.SetVariable(true, false, "autocommit", new[]
+            var expected = new Statement.SetVariable(true, false, new OneOrManyWithParens<ObjectName>.One("autocommit"), new[]
             {
                 new LiteralValue(Number("1"))
             });

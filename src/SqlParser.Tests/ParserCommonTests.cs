@@ -4088,11 +4088,29 @@ namespace SqlParser.Tests
             var variable = VerifiedStatement<Statement.SetVariable>("SET SOMETHING = '1'");
             Assert.False(variable.Local);
             Assert.False(variable.HiveVar);
-            Assert.Equal(new ObjectName("SOMETHING"), variable.Variable);
+            Assert.Equal(new OneOrManyWithParens<ObjectName>.One("SOMETHING"), variable.Variables);
             Assert.Equal(new[]
             {
                 new LiteralValue(new Value.SingleQuotedString("1"))
             }, variable.Value);
+
+            OneStatementParsesTo("SET SOMETHING TO '1'", "SET SOMETHING = '1'");
+
+            var multiVariableDialects = AllDialects.Where(d => d.SupportsParenthesizedSetVariables).ToList();
+
+            variable = VerifiedStatement<Statement.SetVariable>("SET (a, b, c) = (1, 2, 3)", multiVariableDialects);
+            Assert.False(variable.Local);
+            Assert.False(variable.HiveVar);
+            Assert.Equal(new OneOrManyWithParens<ObjectName>.Many(["a", "b", "c"]), variable.Variables);
+            Assert.Equal(
+            [
+                new LiteralValue(new Value.Number("1")),
+                new LiteralValue(new Value.Number("2")),
+                new LiteralValue(new Value.Number("3"))
+            ], variable.Value);
+
+            Assert.Throws<ParserException>(() => ParseSqlStatements("SET (a, b, c) = (1, 2, 3", multiVariableDialects));
+            Assert.Throws<ParserException>(() => ParseSqlStatements("SET (a, b, c) = 1, 2, 3", multiVariableDialects));
 
             OneStatementParsesTo("SET SOMETHING TO '1'", "SET SOMETHING = '1'");
         }
@@ -4103,7 +4121,7 @@ namespace SqlParser.Tests
             var variable = VerifiedStatement<Statement.SetVariable>("SET TIMEZONE = 'UTC'");
             Assert.False(variable.Local);
             Assert.False(variable.HiveVar);
-            Assert.Equal(new ObjectName("TIMEZONE"), variable.Variable);
+            Assert.Equal(new OneOrManyWithParens<ObjectName>.One("TIMEZONE"), variable.Variables);
             Assert.Equal(new[]
             {
                 new LiteralValue(new Value.SingleQuotedString("UTC"))

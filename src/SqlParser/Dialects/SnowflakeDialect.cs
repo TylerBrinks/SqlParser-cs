@@ -21,6 +21,7 @@ public class SnowflakeDialect : Dialect
     public override bool SupportsFilterDuringAggregation => true;
     public override bool SupportsWithinAfterArrayAggregation => true;
     public override bool SupportsStringLiteralBackslashEscape => true;
+    public override bool SupportsParenthesizedSetVariables => true;
 
     public override Statement? ParseStatement(Parser parser)
     {

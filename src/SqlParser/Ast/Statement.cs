@@ -2004,7 +2004,7 @@ public abstract record Statement : IWriteSql, IElement
     /// <param name="HiveVar">True if Hive variable</param>
     /// <param name="Variable">Variable name</param>
     /// <param name="Value">Value</param>
-    public record SetVariable(bool Local, bool HiveVar, ObjectName? Variable = null, Sequence<Expression>? Value = null) : Statement
+    public record SetVariable(bool Local, bool HiveVar, OneOrManyWithParens<ObjectName> Variables, Sequence<Expression>? Value = null) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -2015,9 +2015,14 @@ public abstract record Statement : IWriteSql, IElement
                 writer.Write("LOCAL ");
             }
 
+            var parenthesized = Variables is OneOrManyWithParens<ObjectName>.Many;
+
             var hiveVar = HiveVar ? "HIVEVAR:" : null;
 
-            writer.WriteSql($"{hiveVar}{Variable} = {Value}");
+            var leftParen = parenthesized ? "(" : string.Empty;
+            var rightParen = parenthesized ? ")" : string.Empty;
+
+            writer.WriteSql($"{hiveVar}{Variables} = {leftParen}{Value}{rightParen}");
         }
     }
     /// <summary>

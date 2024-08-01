@@ -8318,11 +8318,27 @@ public class Parser
             return new SetRole(contextModifier, roleName);
         }
 
-        var variable = ParseKeywordSequence(Keyword.TIME, Keyword.ZONE)
-            ? new ObjectName("TIMEZONE")
-            : ParseObjectName();
+        OneOrManyWithParens<ObjectName> variables;
 
-        if (variable.ToString().ToUpperInvariant() == "NAMES" && _dialect is MySqlDialect or GenericDialect)
+        if (ParseKeywordSequence(Keyword.TIME, Keyword.ZONE))
+        {
+            variables = new OneOrManyWithParens<ObjectName>.One(new ObjectName("TIMEZONE"));
+        }
+        else if(_dialect.SupportsParenthesizedSetVariables && ConsumeToken<LeftParen>())
+        {
+            var objectNames = ParseCommaSeparated(ParseIdentifier).Select(i => new ObjectName(i));
+
+            variables = new OneOrManyWithParens<ObjectName>.Many(new Sequence<ObjectName>(objectNames));
+            ExpectToken<RightParen>();
+        }
+        else
+        {
+            variables = new OneOrManyWithParens<ObjectName>.One(ParseObjectName(false));
+        }
+
+        if (variables is OneOrManyWithParens<ObjectName>.One one &&
+            one.Value.ToString().ToUpperInvariant() == "NAMES" &&
+            _dialect is MySqlDialect or GenericDialect)
         {
             if (ParseKeyword(Keyword.DEFAULT))
             {
@@ -8334,8 +8350,15 @@ public class Parser
             return new SetNames(charsetName, collationName);
         }
 
+        var parenthesizedAssignment = variables is OneOrManyWithParens<ObjectName>.Many;
+
         if (ConsumeToken<Equal>() || ParseKeyword(Keyword.TO))
         {
+            if (parenthesizedAssignment)
+            {
+                ExpectToken<LeftParen>();
+            }
+
             var values = new Sequence<Expression>();
             while (true)
             {
@@ -8354,15 +8377,22 @@ public class Parser
                     continue;
                 }
 
+                if (parenthesizedAssignment)
+                {
+                    ExpectToken<RightParen>();
+                }
+
                 return new SetVariable(
                     modifier == Keyword.LOCAL,
                     modifier == Keyword.HIVEVAR,
-                    variable,
+                    variables,
                     values);
             }
         }
 
-        switch (variable.ToString())
+        // TODO set variable expectation
+
+        switch (variables.ToString())
         {
             case "TIMEZONE":
                 {
@@ -8370,6 +8400,7 @@ public class Parser
                     var expr = ParseExpr();
                     return new SetTimeZone(modifier == Keyword.LOCAL, expr);
                 }
+            
             case "CHARACTERISTICS":
                 ExpectKeywords(Keyword.AS, Keyword.TRANSACTION);
                 return new SetTransaction(ParseTransactionModes(), Session: true);
@@ -8385,6 +8416,7 @@ public class Parser
                     return new SetTransaction(null, snapshotId);
 
                 }
+            
             default:
                 throw Expected("equal sign or TO", PeekToken());
         }

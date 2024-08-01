@@ -204,7 +204,7 @@ public class HiveDialectTests : ParserTestBase
         var variable = VerifiedStatement<Statement.SetVariable>("SET hive.tez.java.opts = -Xmx4g");
 
         var expected = new Statement.SetVariable(false, false,
-            new ObjectName(["hive", "tez", "java", "opts"]),
+            new OneOrManyWithParens<ObjectName>.One(new ObjectName(["hive", "tez", "java", "opts"])),
             new[]
             {
                 new UnaryOp(new Identifier("Xmx4g"), UnaryOperator.Minus)

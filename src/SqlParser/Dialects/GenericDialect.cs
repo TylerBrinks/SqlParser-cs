@@ -34,4 +34,5 @@ public class GenericDialect : Dialect
     public override bool SupportsConnectBy => true;
     public override bool SupportsWindowClauseNamedWindowReference => true;
     public override bool SupportsWindowFunctionNullTreatmentArg => true;
+    public override bool SupportsParenthesizedSetVariables => true;
 }

@@ -10,7 +10,13 @@ public record LambdaFunction(OneOrManyWithParens<Ident> Params, Expression Body)
 
 public abstract record OneOrManyWithParens<T> : IWriteSql where T : IWriteSql
 {
-    public record One(T Value) : OneOrManyWithParens<T>;
+    public record One(T Value) : OneOrManyWithParens<T>
+    {
+        public override string ToString()
+        {
+            return Value.ToString()!;
+        }
+    }
     public record Many(Sequence<T> Values) : OneOrManyWithParens<T>;
 
     public void ToSql(SqlTextWriter writer)

@@ -829,7 +829,7 @@ namespace SqlParser.Tests.Dialects
         {
             var copy = VerifiedStatement<Statement.Copy>(
                 "COPY users TO 'data.csv' BINARY DELIMITER ',' NULL 'null' CSV HEADER QUOTE '\"' ESCAPE '\\' FORCE QUOTE column");
-            var source = new CopySource.Table(new ObjectName("users"), new Sequence<Ident>());
+            var source = new CopySource.Table(new ObjectName("users"), []);
             var expected = new Statement.Copy(source, true, new CopyTarget.File("data.csv"))
             {
                 LegacyOptions = new CopyLegacyOption[]
@@ -858,35 +858,37 @@ namespace SqlParser.Tests.Dialects
             DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
             var set = VerifiedStatement<Statement.SetVariable>("SET a = b");
-            Assert.Equal("a", set.Variable!);
+            Assert.Equal(new OneOrManyWithParens<ObjectName>.One("a"), set.Variables);
             Assert.Equal(new[] { new Identifier("b") }, set.Value);
 
             set = VerifiedStatement<Statement.SetVariable>("SET a = 'b'");
-            Assert.Equal("a", set.Variable!);
+            Assert.Equal(new OneOrManyWithParens<ObjectName>.One("a"), set.Variables);
             Assert.Equal(new[] { new LiteralValue(new Value.SingleQuotedString("b")) }, set.Value);
 
             set = VerifiedStatement<Statement.SetVariable>("SET a = 0");
-            Assert.Equal("a", set.Variable!);
+            Assert.Equal(new OneOrManyWithParens<ObjectName>.One("a"), set.Variables);
             Assert.Equal(new[] { new LiteralValue(Number("0")) }, set.Value);
 
             set = VerifiedStatement<Statement.SetVariable>("SET a = DEFAULT");
-            Assert.Equal("a", set.Variable!);
+            Assert.Equal(new OneOrManyWithParens<ObjectName>.One("a"), set.Variables);
             Assert.Equal(new[] { new Identifier("DEFAULT") }, set.Value);
 
             set = VerifiedStatement<Statement.SetVariable>("SET LOCAL a = b");
-            Assert.Equal("a", set.Variable!);
+            Assert.Equal(new OneOrManyWithParens<ObjectName>.One("a"), set.Variables);
             Assert.True(set.Local);
             Assert.Equal(new[] { new Identifier("b") }, set.Value);
 
             set = VerifiedStatement<Statement.SetVariable>("SET a.b.c = b");
-            Assert.Equal(new ObjectName(["a", "b", "c"]), set.Variable!);
+            Assert.Equal(new OneOrManyWithParens<ObjectName>.One(new ObjectName(["a", "b", "c"])),
+                set.Variables);
             Assert.Equal(new[] { new Identifier("b") }, set.Value);
 
             set = OneStatementParsesTo<Statement.SetVariable>(
                 "SET hive.tez.auto.reducer.parallelism=false",
                 "SET hive.tez.auto.reducer.parallelism = false");
 
-            Assert.Equal(new ObjectName(["hive", "tez", "auto", "reducer", "parallelism"]), set.Variable!);
+            Assert.Equal(new OneOrManyWithParens<ObjectName>.One(new ObjectName(["hive", "tez", "auto", "reducer", "parallelism"])),
+                set.Variables);
             Assert.Equal(new[] { new LiteralValue(new Value.Boolean(false)) }, set.Value);
 
             OneStatementParsesTo("SET a TO b", "SET a = b");
