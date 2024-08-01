@@ -135,7 +135,7 @@ public class DuckDbDialectTests : ParserTestBase
     }
 
     [Fact]
-    public void Test_Duckdb_Install()
+    public void Test_DuckDb_Install()
     {
         var statement = VerifiedStatement("INSTALL tpch");
 
@@ -313,5 +313,24 @@ public class DuckDbDialectTests : ParserTestBase
         var expected = new Statement.DetachDuckDbDatabase(false, false, "db_name");
 
         Assert.Equal(expected, create);
+    }
+
+    [Fact]
+    public void Test_Array_Index()
+    {
+        var select = VerifiedOnlySelect("SELECT ['a', 'b', 'c'][3] AS three");
+        var projection = select.Projection;
+        Assert.Single(projection);
+
+        var expr = ((SelectItem.ExpressionWithAlias)projection[0]).Expression;
+
+        var expected = new Expression.ArrayIndex(new Expression.Array(new ArrayExpression([
+                new Expression.LiteralValue(new Value.SingleQuotedString("a")),
+                new Expression.LiteralValue(new Value.SingleQuotedString("b")),
+                new Expression.LiteralValue(new Value.SingleQuotedString("c"))
+            ])), 
+            [new Expression.LiteralValue(new Value.Number("3"))]);
+
+        Assert.Equal(expected, expr);
     }
 }

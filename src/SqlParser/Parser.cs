@@ -2413,7 +2413,7 @@ public class Parser
 
         if (token is LeftBracket)
         {
-            if (_dialect is PostgreSqlDialect or GenericDialect)
+            if (_dialect is PostgreSqlDialect or DuckDbDialect or GenericDialect)
             {
                 return ParseArrayIndex(expr);
             }
@@ -2431,37 +2431,6 @@ public class Parser
             PrevToken();
             return ParseJsonAccess(expr);
         }
-
-        //if (token is Colon)
-        //{
-        //    return new JsonAccess(expr, JsonOperator.Colon, new LiteralValue(ParseValue()));
-        //}
-
-        //if (token is Arrow
-        //    or LongArrow
-        //    or HashArrow
-        //    or HashLongArrow
-        //    or AtArrow
-        //    or ArrowAt
-        //    or HashMinus
-        //    or AtQuestion
-        //    or AtAt)
-        //{
-        //    var op = token switch
-        //    {
-        //        Arrow => JsonOperator.Arrow,
-        //        LongArrow => JsonOperator.LongArrow,
-        //        HashArrow => JsonOperator.HashArrow,
-        //        HashLongArrow => JsonOperator.HashLongArrow,
-        //        AtArrow => JsonOperator.AtArrow,
-        //        ArrowAt => JsonOperator.ArrowAt,
-        //        HashMinus => JsonOperator.HashMinus,
-        //        AtQuestion => JsonOperator.AtQuestion,
-        //        AtAt => JsonOperator.AtAt,
-        //        _ => JsonOperator.None,
-        //    };
-        //    return new JsonAccess(expr, op, ParseExpr());
-        //}
 
         throw new ParserException($"No infix parser token for {token}");
 
