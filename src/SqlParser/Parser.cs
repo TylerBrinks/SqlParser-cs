@@ -879,12 +879,23 @@ public class Parser
             {
                 var value = ParseValue();
 
-                if (ParseKeywordSequence(Keyword.AT, Keyword.TIME, Keyword.ZONE))
+                var timeZoneValue = ParseOptionalTimeZone();
+                if (timeZoneValue != null)
                 {
-                    return new CastFormat.ValueAtTimeZone(value, ParseValue());
+                    return new CastFormat.ValueAtTimeZone(value, timeZoneValue);
                 }
 
                 return new CastFormat.Value(value);
+            }
+
+            return null;
+        }
+
+        Value? ParseOptionalTimeZone()
+        {
+            if (ParseKeywordSequence(Keyword.AT, Keyword.TIME, Keyword.ZONE))
+            {
+                return ParseValue();
             }
 
             return null;
@@ -8320,7 +8331,7 @@ public class Parser
         {
             variables = new OneOrManyWithParens<ObjectName>.One(new ObjectName("TIMEZONE"));
         }
-        else if(_dialect.SupportsParenthesizedSetVariables && ConsumeToken<LeftParen>())
+        else if (_dialect.SupportsParenthesizedSetVariables && ConsumeToken<LeftParen>())
         {
             var objectNames = ParseCommaSeparated(ParseIdentifier).Select(i => new ObjectName(i));
 
@@ -8396,7 +8407,7 @@ public class Parser
                     var expr = ParseExpr();
                     return new SetTimeZone(modifier == Keyword.LOCAL, expr);
                 }
-            
+
             case "CHARACTERISTICS":
                 ExpectKeywords(Keyword.AS, Keyword.TRANSACTION);
                 return new SetTransaction(ParseTransactionModes(), Session: true);
@@ -8412,7 +8423,7 @@ public class Parser
                     return new SetTransaction(null, snapshotId);
 
                 }
-            
+
             default:
                 throw Expected("equal sign or TO", PeekToken());
         }

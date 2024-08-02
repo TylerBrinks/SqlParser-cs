@@ -309,5 +309,17 @@ namespace SqlParser.Tests
             var parser = new Parser();
             _ = parser.ParseSql("select a from tbl where b = 123.45");
         }
+
+        [Fact]
+        public void Parse_Double_Colon_Cast_At_Timezone()
+        {
+            var select = VerifiedOnlySelect("SELECT '2001-01-01T00:00:00.000Z'::TIMESTAMP AT TIME ZONE 'Europe/Brussels' FROM t");
+
+            var expression = new Expression.LiteralValue(new Value.SingleQuotedString("2001-01-01T00:00:00.000Z"));
+            var cast = new Expression.Cast(expression, new DataType.Timestamp(TimezoneInfo.None), CastKind.DoubleColon);
+            var expected = new Expression.AtTimeZone(cast, "Europe/Brussels");
+            
+            Assert.Equal(expected, select.Projection[0].AsExpr());
+        }
     }
 }
