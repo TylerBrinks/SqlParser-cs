@@ -26,13 +26,11 @@ public class GenericDialect : Dialect
     }
 
     public override bool SupportsGroupByExpression => true;
-
-    public override bool SupportsStartTransactionModifier => true;
-
-    public override bool SupportsMatchRecognize => true;
-    public override bool SupportsDictionarySyntax => true;
     public override bool SupportsConnectBy => true;
-    public override bool SupportsWindowClauseNamedWindowReference => true;
+    public override bool SupportsMatchRecognize => true;
+    public override bool SupportsStartTransactionModifier => true;
     public override bool SupportsWindowFunctionNullTreatmentArg => true;
+    public override bool SupportsDictionarySyntax => true;
+    public override bool SupportsWindowClauseNamedWindowReference => true;
     public override bool SupportsParenthesizedSetVariables => true;
 }

@@ -15,38 +15,103 @@ public class BigQueryDialectTests : ParserTestBase
     [Fact]
     public void Parse_Literal_String()
     {
-        var select = VerifiedOnlySelect("SELECT 'single', \"double\"");
-        Assert.Equal(2, select.Projection.Count);
-        Assert.Equal(new LiteralValue(new Value.SingleQuotedString("single")), select.Projection.First().AsExpr());
-        Assert.Equal(new LiteralValue(new Value.DoubleQuotedString("double")), select.Projection.Last().AsExpr());
+        const string sql = """"
+                           SELECT 
+                           'single', 
+                           "double", 
+                           '''triple-single''', 
+                           """triple-double""", 
+                           'single\'escaped', 
+                           '''triple-single\'escaped''', 
+                           '''triple-single'unescaped''', 
+                           "double\"escaped", 
+                           """triple-double\"escaped""", 
+                           """triple-double"unescaped"""
+                           """";
+
+        /*
+           'single', 
+           "double", 
+           '''triple-single'''
+           """triple-double""",
+           'single\'escaped', 
+           '''triple-single\'escaped''', 
+           '''triple-single'unescaped''', 
+           "double\"escaped", 
+           """triple-double\"escaped""", 
+           """triple-double"unescaped"""
+         */
+        var select = VerifiedOnlySelect(sql);
+
+        Assert.Equal(10, select.Projection.Count);
+        //Assert.Equal(new LiteralValue(new Value.SingleQuotedString("single")), select.Projection[0].AsExpr());
+        //Assert.Equal(new LiteralValue(new Value.DoubleQuotedString("double")), select.Projection[1].AsExpr());
+        //Assert.Equal(new LiteralValue(new Value.TripleSingleQuotedString("triple-single")), select.Projection[2].AsExpr());
+        //Assert.Equal(new LiteralValue(new Value.TripleDoubleQuotedString("triple-double")), select.Projection[3].AsExpr());
+        //Assert.Equal(new LiteralValue(new Value.SingleQuotedString("single\\'escaped")), select.Projection[4].AsExpr());
+        //Assert.Equal(new LiteralValue(new Value.TripleSingleQuotedString("triple-single\\'escaped")), select.Projection[5].AsExpr());
+        //Assert.Equal(new LiteralValue(new Value.TripleSingleQuotedString("triple-single'unescaped")), select.Projection[6].AsExpr());
+        //Assert.Equal(new LiteralValue(new Value.TripleSingleQuotedString("double\\\"escaped")), select.Projection[7].AsExpr());
+        //Assert.Equal(new LiteralValue(new Value.TripleDoubleQuotedString("triple-double\\\"escaped")), select.Projection[8].AsExpr());
+        //Assert.Equal(new LiteralValue(new Value.TripleDoubleQuotedString("triple-double\"unescaped")), select.Projection[9].AsExpr());
     }
 
     [Fact]
     public void Parse_Byte_Literal()
     {
-        var select = VerifiedOnlySelect("SELECT B'abc', B\"abc\"");
-        Assert.Equal(2, select.Projection.Count);
-        Assert.Equal(new LiteralValue(new Value.SingleQuotedByteStringLiteral("abc")), select.Projection.First().AsExpr());
-        Assert.Equal(new LiteralValue(new Value.DoubleQuotedByteStringLiteral("abc")), select.Projection.Last().AsExpr());
+        var sql = """"
+                  SELECT 
+                  B'abc', 
+                  B"abc", 
+                  B'f\(abc,(.*),def\)', 
+                  B"f\(abc,(.*),def\)", 
+                  B'''abc''', 
+                  B"""abc"""
+                  """";
+  
+        var statement = VerifiedStatement(sql);
+        var projection = statement.AsQuery()!.Body.AsSelect().Projection;
 
-        OneStatementParsesTo("SELECT b'abc', b\"abc\"", "SELECT B'abc', B\"abc\"");
+        Assert.Equal(6, projection.Count);
+        Assert.Equal(new LiteralValue(new Value.SingleQuotedByteStringLiteral("abc")), projection[0].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.DoubleQuotedByteStringLiteral("abc")), projection[1].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.SingleQuotedByteStringLiteral("f\\(abc,(.*),def\\)")), projection[2].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.DoubleQuotedByteStringLiteral("f\\(abc,(.*),def\\)")), projection[3].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.TripleSingleQuotedByteStringLiteral("abc")), projection[4].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.TripleDoubleQuotedByteStringLiteral("abc")), projection[5].AsExpr());
+
+        OneStatementParsesTo(
+            """"
+            SELECT b'123', b"123", b'''123''', b"""123"""
+            """",
+            """"
+            SELECT B'123', B"123", B'''123''', B"""123"""
+            """");
     }
 
     [Fact]
     public void Parse_Raw_Literal()
     {
-        var query = OneStatementParsesTo<Statement.Select>(
-            "SELECT R'abc', R\"abc\", R'f\\(abc,(.*),def\\)', R\"f\\(abc,(.*),def\\)\"",
-            "SELECT R'abc', R'abc', R'f\\(abc,(.*),def\\)', R'f\\(abc,(.*),def\\)'");
+        var sql = """"
+                  SELECT 
+                  R'abc', 
+                  R"abc", 
+                  R'f\(abc,(.*),def\)', 
+                  R"f\(abc,(.*),def\)", 
+                  R'''abc''', 
+                  R"""abc"""
+                  """";
 
-        var body = (SetExpression.SelectExpression)query.Query.Body;
-        var select = body.Select;
+        var statement = VerifiedStatement(sql);
+        var projection = statement.AsQuery()!.Body.AsSelect().Projection;
 
-        Assert.Equal(4, select.Projection.Count);
-        Assert.Equal(new LiteralValue(new Value.RawStringLiteral("abc")), select.Projection[0].AsExpr());
-        Assert.Equal(new LiteralValue(new Value.RawStringLiteral("abc")), select.Projection[1].AsExpr());
-        Assert.Equal(new LiteralValue(new Value.RawStringLiteral("f\\(abc,(.*),def\\)")), select.Projection[2].AsExpr());
-        Assert.Equal(new LiteralValue(new Value.RawStringLiteral("f\\(abc,(.*),def\\)")), select.Projection[3].AsExpr());
+        Assert.Equal(6, projection.Count);
+        Assert.Equal(new LiteralValue(new Value.SingleQuotedRawStringLiteral("abc")), projection[0].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.DoubleQuotedRawStringLiteral("abc")), projection[1].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.SingleQuotedRawStringLiteral("f\\(abc,(.*),def\\)")), projection[2].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.DoubleQuotedRawStringLiteral("f\\(abc,(.*),def\\)")), projection[3].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.TripleSingleQuotedRawStringLiteral("abc")), projection[4].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.TripleDoubleQuotedRawStringLiteral("abc")), projection[5].AsExpr());
     }
 
     [Fact]

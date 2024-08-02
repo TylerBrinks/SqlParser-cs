@@ -52,6 +52,18 @@ public abstract record Value : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// Double-quoted literal with raw string prefix. Example `R"abc"`
+    /// https://cloud.google.com/bigquery/docs/reference/standard-sql/lexical#quoted_literals
+    /// </summary>
+    /// <param name="Value">String value</param>
+    public record DoubleQuotedRawStringLiteral(string Value) : StringBasedValue(Value)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write($"R\"{Value}\"");
+        }
+    }
+    /// <summary>
     /// e'string value' - Postgres extension
     /// <see href="https://www.postgresql.org/docs/8.3/sql-syntax-lexical.html#SQL-SYNTAX-STRINGS"/>
     /// for more details.
@@ -131,18 +143,6 @@ public abstract record Value : IWriteSql, IElement
         }
     }
     /// <summary>
-    /// R'string value' or r'string value' or r"string value"
-    /// <see href="https://cloud.google.com/bigquery/docs/reference/standard-sql/lexical#quoted_literals"/>
-    /// </summary>
-    /// <param name="Value">String value</param>
-    public record RawStringLiteral(string Value) : StringBasedValue(Value)
-    {
-        public override void ToSql(SqlTextWriter writer)
-        {
-            writer.Write($"R'{Value}'");
-        }
-    }
-    /// <summary>
     /// Single quoted string value
     /// </summary>
     /// <param name="Value">String value</param>
@@ -165,14 +165,87 @@ public abstract record Value : IWriteSql, IElement
         }
     }
     /// <summary>
-    /// Add support of snowflake field:key - key should be a value
+    /// Single quoted literal with raw string prefix. Example `R'abc'`
+    /// https://cloud.google.com/bigquery/docs/reference/standard-sql/lexical#quoted_literals
     /// </summary>
-    /// <param name="Value">String value</param>
-    public record UnQuotedString(string Value) : StringBasedValue(Value)
+    /// <param name="Value"></param>
+    public record SingleQuotedRawStringLiteral(string Value) : StringBasedValue(Value)
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.Write(Value);
+            writer.Write($"R'{Value}'");
+        }
+    }
+    /// <summary>
+    /// Triple double quoted strings: Example """abc"""
+    /// https://cloud.google.com/bigquery/docs/reference/standard-sql/lexical#quoted_literals
+    /// </summary>
+    /// <param name="Value">String value</param>
+    public record TripleSingleQuotedString(string Value) : StringBasedValue(Value)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write($"'''{Value}'''");
+        }
+    }
+    /// <summary>
+    /// Triple double quoted strings: Example """abc"""
+    /// https://cloud.google.com/bigquery/docs/reference/standard-sql/lexical#quoted_literals
+    /// </summary>
+    /// <param name="Value">String Value</param>
+    public record TripleDoubleQuotedString(string Value) : StringBasedValue(Value)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write($"\"\"\"{Value}\"\"\"");
+        }
+    }
+    /// <summary>
+    /// Triple single quoted literal with byte string prefix. Example `B'''abc'''`
+    /// https://cloud.google.com/bigquery/docs/reference/standard-sql/lexical#quoted_literals
+    /// </summary>
+    /// <param name="Value">String Value</param>
+    public record TripleSingleQuotedByteStringLiteral(string Value) : StringBasedValue(Value)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write($"B'''{Value}'''");
+        }
+    }
+    /// <summary>
+    /// Triple double-quoted literal with byte string prefix. Example `B"""abc"""`
+    /// https://cloud.google.com/bigquery/docs/reference/standard-sql/lexical#quoted_literals
+    /// </summary>
+    /// <param name="Value">String Value</param>
+    public record TripleDoubleQuotedByteStringLiteral(string Value) : StringBasedValue(Value)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write($"B\"\"\"{Value}\"\"\"");
+        }
+    }
+    /// <summary>
+    /// Triple single quoted literal with raw string prefix. Example `R'''abc'''`
+    /// https://cloud.google.com/bigquery/docs/reference/standard-sql/lexical#quoted_literals
+    /// </summary>
+    /// <param name="Value">String Value</param>
+    public record TripleSingleQuotedRawStringLiteral(string Value) : StringBasedValue(Value)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write($"R'''{Value}'''");
+        }
+    }
+    /// <summary>
+    /// Triple double-quoted literal with raw string prefix. Example `R"""abc"""`
+    /// https://cloud.google.com/bigquery/docs/reference/standard-sql/lexical#quoted_literals
+    /// </summary>
+    /// <param name="Value"></param>
+    public record TripleDoubleQuotedRawStringLiteral(string Value) : StringBasedValue(Value)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write($"R\"\"\"{Value}\"\"\"");
         }
     }
 
@@ -180,7 +253,7 @@ public abstract record Value : IWriteSql, IElement
 
     public T As<T>() where T : Value
     {
-        return (T) this;
+        return (T)this;
     }
 
     public Number AsNumber()
@@ -197,8 +270,8 @@ public record DollarQuotedStringValue(string Value, string? Tag = null) : IWrite
 {
     public void ToSql(SqlTextWriter writer)
     {
-        writer.Write(Tag != null 
-            ? $"${Tag}${Value}${Tag}$" 
+        writer.Write(Tag != null
+            ? $"${Tag}${Value}${Tag}$"
             : $"$${Value}$$");
     }
 }

@@ -135,65 +135,82 @@ internal static class Extensions
     /// <returns>Escapee string</returns>
     public static string? EscapeQuotedString(this string? value, char quote)
     {
+        // EscapeQuotedString doesn't know which mode of escape was
+        // chosen by the user. So this code must to correctly display
+        // strings without knowing if the strings are already escaped
+        // or not.
+        //
+        // If the quote symbol in the string is repeated twice, OR, if
+        // the quote symbol is after backslash, display all the chars
+        // without any escape. However, if the quote symbol is used
+        // just between usual chars, `fmt()` should display it twice.
+        //
+        // The following table has examples
+        //
+        // | original query | mode      | AST Node                                           | serialized   |
+        // | -------------  | --------- | -------------------------------------------------- | ------------ |
+        // | `"A""B""A"`    | no-escape | `DoubleQuotedString(String::from("A\"\"B\"\"A"))`  | `"A""B""A"`  |
+        // | `"A""B""A"`    | default   | `DoubleQuotedString(String::from("A\"B\"A"))`      | `"A""B""A"`  |
+        // | `"A\"B\"A"`    | no-escape | `DoubleQuotedString(String::from("A\\\"B\\\"A"))`  | `"A\"B\"A"`  |
+        // | `"A\"B\"A"`    | default   | `DoubleQuotedString(String::from("A\"B\"A"))`      | `"A""B""A"`  |
+
         if (string.IsNullOrEmpty(value))
         {
-            return value;
+            return null;
         }
 
-        var builder = StringBuilderPool.Get();
+        var previousChar = char.MinValue;
+        var state = new State(value);
+        char current;
+        List<char> word = [];
 
-        char? previous = null;
-        var peekable = new State(value);
-
-        char character;
-        while ((character = peekable.Peek()) != Symbols.EndOfFile)
+        while ((current = state.Peek()) != char.MaxValue)
         {
-            if (character == quote)
+            if (current == quote)
             {
-                if (previous == Symbols.Backslash)
+                if (previousChar == Symbols.Backslash)
                 {
-                    builder.Append(character);
+                    word.Add(current);
+                    state.Next();
                     continue;
                 }
 
-                peekable.Next();
-                builder.Append($"{character}{character}");
-
-                if (peekable.Peek() == quote)
+                state.Next();
+                if (state.Peek() == quote)
                 {
-                    peekable.Next();
+                    word.Add(current);
+                    word.Add(current);
+                    state.Next();
+                }
+                else
+                {
+                    word.Add(current);
+                    word.Add(current);
                 }
             }
             else
             {
-                builder.Append(character);
-                peekable.Next();
+                word.Add(current);
+                state.Next();
             }
 
-            previous = character;
+            previousChar = current;
         }
 
-        return StringBuilderPool.Return(builder);
+        return new string(word.ToArray());
     }
     /// <summary>
     /// Escapes a string with single quotes
     /// </summary>
     /// <param name="value">Value to escape</param>
     /// <returns>Escaped string</returns>
-    public static string? EscapeSingleQuoteString(this string? value)
-    {
-        return EscapeQuotedString(value, Symbols.SingleQuote);
-    }
+    public static string? EscapeSingleQuoteString(this string? value) => EscapeQuotedString(value, Symbols.SingleQuote);
     /// <summary>
     /// Escapes a string with double quotes
     /// </summary>
     /// <param name="value">Value to escape</param>
     /// <returns>Escaped string</returns>
-    public static string? EscapeDoubleQuoteString(this string? value)
-    {
-        return EscapeQuotedString(value, Symbols.DoubleQuote);
-    }
-
+    public static string? EscapeDoubleQuoteString(this string? value) => EscapeQuotedString(value, Symbols.DoubleQuote);
     /// <summary>
     /// Escapes a string by replacing requiring escape substitution
     ///
@@ -230,3 +247,43 @@ internal static class Extensions
         return StringBuilderPool.Return(builder);
     }
 }
+
+//if (string.IsNullOrEmpty(value))
+//{
+//    return value;
+//}
+
+//var builder = StringBuilderPool.Get();
+
+//char? previous = null;
+//var peekable = new State(value);
+
+//char character;
+//while ((character = peekable.Peek()) != Symbols.EndOfFile)
+//{
+//    if (character == quote)
+//    {
+//        if (previous == Symbols.Backslash)
+//        {
+//            builder.Append(character);
+//            continue;
+//        }
+
+//        peekable.Next();
+//        builder.Append($"{character}{character}");
+
+//        if (peekable.Peek() == quote)
+//        {
+//            peekable.Next();
+//        }
+//    }
+//    else
+//    {
+//        builder.Append(character);
+//        peekable.Next();
+//    }
+
+//    previous = character;
+//}
+
+//return StringBuilderPool.Return(builder);

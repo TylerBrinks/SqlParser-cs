@@ -25,13 +25,12 @@ public class BigQueryDialect : Dialect
     /// <param name="character"></param>
     /// <returns></returns>
     public override bool IsDelimitedIdentifierStart(char character) => character == Symbols.Backtick;
-
-    public override bool SupportsStringLiteralBackslashEscape => true;
     /// <summary>
     /// Returns true if the dialect supports referencing another named window
     /// within a window clause declaration.
     /// </summary>
     public override bool SupportsWindowClauseNamedWindowReference => true;
-
+    public override bool SupportsStringLiteralBackslashEscape => true;
     public override bool SupportsWindowFunctionNullTreatmentArg => true;
+    public override bool SupportsTripleQuotedString => true;
 }

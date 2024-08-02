@@ -146,4 +146,5 @@ public abstract class Dialect
     public virtual bool SupportsWindowFunctionNullTreatmentArg => false;
     public virtual bool SupportsLambdaFunctions => false;
     public virtual bool SupportsParenthesizedSetVariables => false;
+    public virtual bool SupportsTripleQuotedString => false;
 }

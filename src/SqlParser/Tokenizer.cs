@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Text;
+﻿using System.Text;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
 
@@ -73,13 +72,11 @@ public ref struct Tokenizer(bool unescape = true)
             // string, but PostgreSQL, at least, allows a lowercase 'x' too.
             'X' or 'x' => TokenizeHex(),
 
-            Symbols.SingleQuote => new SingleQuotedString(
-                new string(TokenizeQuotedString(Symbols.SingleQuote, _dialect.SupportsStringLiteralBackslashEscape))),
+            Symbols.SingleQuote => TokenizeSingle(), //new SingleQuotedString(new string(TokenizeQuotedString(Symbols.SingleQuote, _dialect.SupportsStringLiteralBackslashEscape))),
 
             Symbols.DoubleQuote when
                 !_dialect.IsDelimitedIdentifierStart(character) &&
-                !_dialect.IsIdentifierStart(character) => new DoubleQuotedString(
-                    new string(TokenizeQuotedString(Symbols.DoubleQuote, _dialect.SupportsStringLiteralBackslashEscape))),
+                !_dialect.IsIdentifierStart(character) => TokenizeDouble(), //new DoubleQuotedString(//new string(TokenizeSingleQuotedString(Symbols.DoubleQuote, _dialect.SupportsStringLiteralBackslashEscape))),
 
             // Delimited (quoted) identifier
             _ when
@@ -98,7 +95,7 @@ public ref struct Tokenizer(bool unescape = true)
             Symbols.Divide => TokenizeDivide(),
             Symbols.Plus => TokenizeSingleCharacter(new Plus()),
             Symbols.Asterisk => TokenizeSingleCharacter(new Multiply()),
-            Symbols.Percent => TokenizePercent(character),// TokenizeSingleCharacter(new Modulo()),
+            Symbols.Percent => TokenizePercent(character),
 
             Symbols.Pipe => TokenizePipe(),
             Symbols.Equal => TokenizeEqual(),
@@ -133,12 +130,104 @@ public ref struct Tokenizer(bool unescape = true)
         };
     }
 
+    private Token TokenizeSingle()
+    {
+        if (_dialect.SupportsTripleQuotedString)
+        {
+            return TokenizeSingleOrTripleQuotedString(
+                Symbols.SingleQuote,
+                _dialect.SupportsStringLiteralBackslashEscape,
+                s => new SingleQuotedString(s),
+                s => new TripleSingleQuotedString(s)
+            );
+        }
+
+        var value = TokenizeSingleQuotedString(Symbols.SingleQuote, _dialect.SupportsStringLiteralBackslashEscape);
+
+        return new SingleQuotedString(value);
+    }
+
+    private Token TokenizeDouble()
+    {
+        if (_dialect.SupportsTripleQuotedString)
+        {
+            return TokenizeSingleOrTripleQuotedString(
+                Symbols.DoubleQuote,
+                _dialect.SupportsStringLiteralBackslashEscape,
+                s => new DoubleQuotedString(s),
+                s => new TripleDoubleQuotedString(s)
+            );
+        }
+
+        var value = TokenizeSingleQuotedString(Symbols.DoubleQuote, _dialect.SupportsStringLiteralBackslashEscape);
+
+        return new DoubleQuotedString(value);
+    }
+
+    private string TokenizeSingleQuotedString(char quoteStyle, bool backslashEscape)
+    {
+        var characters = TokenizeQuotedString(new TokenizeQuotedStringSettings
+        {
+            QuoteStyle = quoteStyle,
+            NumberQuoteCharacters = new NumStringQuoteChars.One(),
+            NumberOpeningQuotesToConsume = 1,
+            BackslashEscape = backslashEscape
+        });
+
+        return new string(characters);
+    }
+
     public static char[] ConcatArrays(params char[][] arrays)
     {
         var first = arrays[0];
         var list = arrays.Skip(1)
             .Aggregate<char[]?, IEnumerable<char>>(first, (current, next) => current.Concat(next!));
         return list.ToArray();
+    }
+
+    private Token TokenizeSingleOrTripleQuotedString(
+        char quoteStyle,
+        bool backslashEscape,
+        Func<string, Token> singleFn,
+        Func<string, Token> tripleFn)
+    {
+        var errorLocation = _state.CloneLocation();
+        var numberOpeningQuotes = 0;
+
+        for (var i = 0; i < 3; i++)
+        {
+            if (quoteStyle == _state.Peek())
+            {
+                _state.Next();
+                numberOpeningQuotes++;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        var (tokenFn, numberQuoteCharacters) = numberOpeningQuotes switch
+        {
+            1 => (singleFn, (NumStringQuoteChars)new NumStringQuoteChars.One()),
+            2 => (singleFn, new NumStringQuoteChars.Unused()),
+            3 => (tripleFn, new NumStringQuoteChars.Many(3)),
+            _ => throw new TokenizeException("invalid string literal opening", errorLocation)
+        };
+
+        if (numberQuoteCharacters is NumStringQuoteChars.Unused)
+        {
+            return new SingleQuotedString("");
+        }
+
+        var settings = new TokenizeQuotedStringSettings
+        {
+            QuoteStyle = quoteStyle,
+            NumberQuoteCharacters = numberQuoteCharacters,
+            BackslashEscape = backslashEscape
+        };
+
+        return tokenFn(new string(TokenizeQuotedString(settings)));
     }
 
     private Token TokenizeSingleCharacter(Token token)
@@ -163,7 +252,7 @@ public ref struct Tokenizer(bool unescape = true)
         _state.Next();
         return _state.Peek() switch
         {
-            Symbols.SingleQuote => new NationalStringLiteral(new string(TokenizeQuotedString(Symbols.SingleQuote, true))),
+            Symbols.SingleQuote => new NationalStringLiteral(TokenizeSingleQuotedString(Symbols.SingleQuote, true)),
             _ => new Word(new string(TokenizeWord(first)), null)
         };
     }
@@ -194,7 +283,7 @@ public ref struct Tokenizer(bool unescape = true)
             return new Word(new string(TokenizeWord(first)), null);
         }
 
-        var hex = TokenizeQuotedString(Symbols.SingleQuote, true);
+        var hex = TokenizeSingleQuotedString(Symbols.SingleQuote, true);
         return new HexStringLiteral(new string(hex));
 
     }
@@ -233,26 +322,47 @@ public ref struct Tokenizer(bool unescape = true)
             : word;
     }
 
-    private char[] TokenizeQuotedString(char quoteStyle, bool allowEscape)
+    private char[] TokenizeQuotedString(TokenizeQuotedStringSettings settings)
     {
         var errorLocation = _state.CloneLocation();
         var word = new List<char>();
 
-        // Consume the quote
-        _state.Next();
-
-        char current;
-
-        while ((current = _state.Peek()) != Symbols.EndOfFile)
+        // Consume any opening quotes.
+        for (var i = 0; i < settings.NumberOpeningQuotesToConsume; i++)
         {
-            if (quoteStyle == current)
+            if (settings.QuoteStyle != _state.Next())
+            {
+                throw new TokenizeException("invalid string literal opening", _state.CloneLocation());
+            }
+        }
+
+        var numberConsecutiveQuotes = 0;
+        while (_state.Peek() != Symbols.EndOfFile)
+        {
+            NumStringQuoteChars? pendingFinalQuote = settings.NumberQuoteCharacters switch
+            {
+                NumStringQuoteChars.One o => o,
+                NumStringQuoteChars.Many m when numberConsecutiveQuotes + 1 == m.Count => m,
+                _ => null
+            };
+
+            var current = _state.Peek();
+
+            if (current == settings.QuoteStyle && pendingFinalQuote != null)
             {
                 _state.Next();
+                if (pendingFinalQuote is NumStringQuoteChars.Many m)
+                {
+                    // For an initial string like `"""abc"""`, at this point we have
+                    // `abc""` in the buffer and have now matched the final `"`.
+                    // However, the string to return is simply `abc`, so we strip off
+                    // the trailing quotes before returning.
+                    return word.Take(word.Count - m.Count + 1).ToArray();
+                }
 
-                if (_state.Peek() == quoteStyle)
+                if (_state.Peek() == settings.QuoteStyle)
                 {
                     word.Add(current);
-
                     if (!unescape)
                     {
                         // In no-escape mode, the given query has to be saved completely
@@ -265,13 +375,13 @@ public ref struct Tokenizer(bool unescape = true)
                 {
                     return word.ToArray();
                 }
-
             }
-            else if (current == Symbols.Backslash && allowEscape)
+            else if (current == Symbols.Backslash && settings.BackslashEscape)
             {
                 _state.Next();
-
+                numberConsecutiveQuotes = 0;
                 var next = _state.Peek();
+
                 if (!unescape)
                 {
                     word.Add(current);
@@ -299,11 +409,19 @@ public ref struct Tokenizer(bool unescape = true)
             else
             {
                 _state.Next();
+                if (current == settings.QuoteStyle)
+                {
+                    numberConsecutiveQuotes++;
+                }
+                else
+                {
+                    numberConsecutiveQuotes = 0;
+                }
                 word.Add(current);
             }
         }
 
-        throw new TokenizeException($"Unterminated string literal. Expected {quoteStyle} after {errorLocation}", errorLocation);
+        throw new TokenizeException($"Unterminated string literal. Expected {settings.QuoteStyle} after {errorLocation}", errorLocation);
     }
 
     private Word TokenizeDelimitedQuoted(char startQuote)
@@ -423,22 +541,53 @@ public ref struct Tokenizer(bool unescape = true)
     {
         var current = _state.Peek();
         _state.Next();
-        return _state.Peek() switch
+
+        switch (_state.Peek())
         {
-            Symbols.SingleQuote => new SingleQuotedByteStringLiteral(new string(TokenizeQuotedString(Symbols.SingleQuote, false))),
-            Symbols.DoubleQuote => new DoubleQuotedByteStringLiteral(new string(TokenizeQuotedString(Symbols.DoubleQuote, false))),
-            _ => new Word(new string(TokenizeWord(current)), null)
-        };
+            case Symbols.SingleQuote:
+                {
+                    if (_dialect.SupportsTripleQuotedString)
+                    {
+                        return TokenizeSingleOrTripleQuotedString(Symbols.SingleQuote, false,
+                            s => new SingleQuotedByteStringLiteral(s),
+                            s => new TripleSingleQuotedByteStringLiteral(s));
+                    }
+
+                    var value = TokenizeSingleQuotedString(Symbols.SingleQuote, false);
+                    return new SingleQuotedByteStringLiteral(value);
+                }
+
+            case Symbols.DoubleQuote:
+                {
+                    if (_dialect.SupportsTripleQuotedString)
+                    {
+                        return TokenizeSingleOrTripleQuotedString(Symbols.DoubleQuote, false,
+                            s => new DoubleQuotedByteStringLiteral(s),
+                            s => new TripleDoubleQuotedByteStringLiteral(s));
+                    }
+
+                    var value = TokenizeSingleQuotedString(Symbols.DoubleQuote, false);
+                    return new DoubleQuotedByteStringLiteral(value);
+                }
+
+            default:
+                return new Word(new string(TokenizeWord(current)), null);
+        }
     }
 
     private Token TokenizeRawStringLiteral()
     {
         var current = _state.Peek();
         _state.Next();
+
         return _state.Peek() switch
         {
-            Symbols.SingleQuote => new RawStringLiteral(new string(TokenizeQuotedString(Symbols.SingleQuote, false))),
-            Symbols.DoubleQuote => new RawStringLiteral(new string(TokenizeQuotedString(Symbols.DoubleQuote, false))),
+            Symbols.SingleQuote => TokenizeSingleOrTripleQuotedString(Symbols.SingleQuote, false,
+                s => new SingleQuotedRawStringLiteral(s), s => new TripleSingleQuotedRawStringLiteral(s)),
+
+            Symbols.DoubleQuote => TokenizeSingleOrTripleQuotedString(Symbols.DoubleQuote, false,
+                s => new DoubleQuotedRawStringLiteral(s), s => new TripleDoubleQuotedRawStringLiteral(s)),
+
             _ => new Word(new string(TokenizeWord(current)), null)
         };
     }

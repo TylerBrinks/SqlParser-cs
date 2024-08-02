@@ -29,7 +29,6 @@ public class Word : StringToken
             return;
         }
 
-        //var index = Array.BinarySearch(Keywords.All, value.ToUpperInvariant());
         var index = Array.IndexOf(Keywords.All, value.ToUpperInvariant());
 
         if (index > -1)

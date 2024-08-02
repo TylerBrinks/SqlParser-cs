@@ -14,7 +14,6 @@ using DataType = SqlParser.Ast.DataType;
 using Select = SqlParser.Ast.Select;
 using Declare = SqlParser.Ast.Declare;
 using HiveRowDelimiter = SqlParser.Ast.HiveRowDelimiter;
-using static SqlParser.Ast.FunctionArguments;
 
 namespace SqlParser;
 
@@ -620,8 +619,7 @@ public class Parser
         }
 
         _index = index;
-        var expr = ParseExpr();
-        return expr;
+        return ParseExpr();
     }
 
     /// <summary>
@@ -1369,9 +1367,17 @@ public class Parser
             Number
                 or SingleQuotedString
                 or DoubleQuotedString
+                or TripleSingleQuotedString
+                or TripleDoubleQuotedString
                 or DollarQuotedString
                 or SingleQuotedByteStringLiteral
                 or DoubleQuotedByteStringLiteral
+                or TripleSingleQuotedByteStringLiteral
+                or TripleDoubleQuotedByteStringLiteral
+                or SingleQuotedRawStringLiteral
+                or DoubleQuotedRawStringLiteral
+                or TripleSingleQuotedRawStringLiteral
+                or TripleDoubleQuotedRawStringLiteral
                 or RawStringLiteral
                 or NationalStringLiteral
                 or HexStringLiteral
@@ -6440,17 +6446,38 @@ public class Parser
             case DoubleQuotedString s:
                 return new Value.DoubleQuotedString(s.Value);
 
-            case DollarQuotedString s:
-                return new Value.DollarQuotedString(new DollarQuotedStringValue(s.Value, s.Tag));
-
             case SingleQuotedByteStringLiteral s:
                 return new Value.SingleQuotedByteStringLiteral(s.Value);
 
             case DoubleQuotedByteStringLiteral s:
                 return new Value.DoubleQuotedByteStringLiteral(s.Value);
 
-            case RawStringLiteral r:
-                return new Value.RawStringLiteral(r.Value);
+            case TripleSingleQuotedString s:
+                return new Value.TripleSingleQuotedString(s.Value);
+
+            case TripleDoubleQuotedString s:
+                return new Value.TripleDoubleQuotedString(s.Value);
+
+            case DollarQuotedString s:
+                return new Value.DollarQuotedString(new DollarQuotedStringValue(s.Value, s.Tag));
+
+            case TripleSingleQuotedByteStringLiteral s:
+                return new Value.TripleSingleQuotedByteStringLiteral(s.Value);
+
+            case TripleDoubleQuotedByteStringLiteral s:
+                return new Value.TripleDoubleQuotedByteStringLiteral(s.Value);
+
+            case SingleQuotedRawStringLiteral s:
+                return new Value.SingleQuotedRawStringLiteral(s.Value);
+
+            case DoubleQuotedRawStringLiteral s:
+                return new Value.DoubleQuotedRawStringLiteral(s.Value);
+
+            case TripleSingleQuotedRawStringLiteral s:
+                return new Value.TripleSingleQuotedRawStringLiteral(s.Value);
+
+            case TripleDoubleQuotedRawStringLiteral s:
+                return new Value.TripleDoubleQuotedRawStringLiteral(s.Value);
 
             case NationalStringLiteral n:
                 return new Value.NationalStringLiteral(n.Value);

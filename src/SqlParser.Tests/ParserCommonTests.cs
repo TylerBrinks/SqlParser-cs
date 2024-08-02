@@ -517,8 +517,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Parse_Escaped_Single_Quote_String_Predicate_With_Escape()
         {
-            var select = VerifiedOnlySelect("SELECT id, fname, lname FROM customer WHERE salary <> 'Jim''s salary'",
-                new[] { new MySqlDialect() }, unescape: true);
+            var select = VerifiedOnlySelect("SELECT id, fname, lname FROM customer WHERE salary <> 'Jim''s salary'", unescape:true);
 
             var expected = new BinaryOp(
                 new Identifier("salary"),
