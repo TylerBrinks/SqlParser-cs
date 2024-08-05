@@ -1082,7 +1082,7 @@ public class Parser
             if (ParseKeywordSequence(Keyword.SELECT) || ParseKeyword(Keyword.WITH))
             {
                 PrevToken();
-                expr = new Expression.Subquery(ParseQuery());
+                expr = new Subquery(ParseQuery());
             }
             else if ((lambda = TryParseLambda()) != null)
             {
@@ -1414,13 +1414,7 @@ public class Parser
         {
             var word = PeekNthToken(1) as Word;
 
-            if (_dialect is not DatabricksDialect ||
-                word != null && word.Keyword == Keyword.SELECT || word.Keyword == Keyword.WITH)
-            {
-                return true;
-            }
-
-            return false;
+            return _dialect is not DatabricksDialect || word is { Keyword: Keyword.SELECT } || word is {Keyword: Keyword.WITH};
         }
     }
 
@@ -1668,20 +1662,20 @@ public class Parser
                 Keyword.MAX => HavingBoundKind.Max,
             };
 
-            clauses ??= new Sequence<FunctionArgumentClause>();
+            clauses ??= [];
             clauses.Add(new FunctionArgumentClause.Having(new HavingBound(kind, ParseExpr())));
         }
 
         if (_dialect is GenericDialect or MySqlDialect && ParseKeyword(Keyword.SEPARATOR))
         {
-            clauses ??= new Sequence<FunctionArgumentClause>();
+            clauses ??= [];
             clauses.Add(new FunctionArgumentClause.Separator(ParseValue()));
         }
 
         var onOverflow = ParseListAggOnOverflow();
         if (onOverflow != null)
         {
-            clauses ??= new Sequence<FunctionArgumentClause>();
+            clauses ??= [];
             clauses.Add(new FunctionArgumentClause.OnOverflow(onOverflow));
         }
 
@@ -2875,6 +2869,42 @@ public class Parser
     public bool PeekTokenIs<T>() where T : Token
     {
         return PeekToken().GetType() == typeof(T);
+    }
+
+    public IList<Token> PeekTokens(int count)
+    {
+        return PeekTokensWithLocation(count).ToList();
+    }
+
+    public IEnumerable<Token> PeekTokensWithLocation(int count)
+    {
+        var index = _index;
+        var iteration = 0;
+
+        while (true)
+        {
+            if (index >= _tokens.Count)
+            {
+                yield return new EOF();
+                break;
+            }
+
+            var token = _tokens[index];
+            index++;
+
+            if (token is Whitespace)
+            {
+                continue;
+            }
+
+            yield return token;
+
+            iteration++;
+            if (iteration == count)
+            {
+                break;
+            }
+        }
     }
 
     /// <summary>
@@ -7457,7 +7487,7 @@ public class Parser
             return new Precision(precision);
         }
 
-        return new ExactNumberInfo.None();
+        return new None();
     }
 
     public Sequence<string>? ParseOptionalTypeModifiers()
@@ -8879,8 +8909,12 @@ public class Parser
             };
         }
 
-        if (_dialect is SnowflakeDialect or DatabricksDialect or GenericDialect && ParseKeyword(Keyword.VALUES))
+        var peekedTokens = PeekTokens(2);
+        if (_dialect is SnowflakeDialect or DatabricksDialect or GenericDialect &&
+            peekedTokens[0] is Word { Keyword: Keyword.VALUES } &&
+            peekedTokens[1] is LeftParen)
         {
+            ExpectKeyword(Keyword.VALUES);
             // Snowflake and Databricks allow syntax like below:
             // SELECT * FROM VALUES (1, 'a'), (2, 'b') AS t (col1, col2)
             // where there are no parentheses around the VALUES clause.

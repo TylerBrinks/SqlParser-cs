@@ -26,8 +26,34 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Test_Databricks_Exists()
         {
-            var actual = VerifiedExpr("exists(array(1, 2, 3), x -> x IS NULL)");
+            VerifiedExpr("exists(array(1, 2, 3), x -> x IS NULL)");
+        }
 
+        [Fact]
+        public void Test_Values_Clause()
+        {
+            var query = VerifiedQuery("VALUES (\"one\", 1), ('two', 2)");
+
+            var expected = new SetExpression.ValuesExpression(new Values([
+                [
+                    new LiteralValue(new Value.DoubleQuotedString("one")),
+                    new LiteralValue(new Value.Number("1"))
+                ],
+                [
+                    new LiteralValue(new Value.SingleQuotedString("two")),
+                    new LiteralValue(new Value.Number("2"))
+                ]
+            ]));
+
+            Assert.Equal(expected, query.Body);
+
+            VerifiedQueryWithCanonical("SELECT * FROM VALUES (\"one\", 1), ('two', 2)", "SELECT * FROM (VALUES (\"one\", 1), ('two', 2))");
+
+
+            var tableFactor = new TableFactor.Table("values");
+            query = VerifiedQuery("WITH values AS (SELECT 42) SELECT * FROM values");
+
+            Assert.Equal(tableFactor, query.Body.AsSelect().From![0].Relation);
         }
     }
 }
