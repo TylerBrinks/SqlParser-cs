@@ -6034,5 +6034,30 @@ namespace SqlParser.Tests
 
             Assert.Equal(SetOperator.Union, ((SetExpression.SetOperation)query.Body).Op);
         }
+
+        [Fact]
+        public void Parse_Select_Wildcard_With_Except()
+        {
+            var dialects = AllDialects.Where(d => d.SupportsSelectWildcardExcept).ToList();
+
+            var select = VerifiedOnlySelect("SELECT * EXCEPT (col_a) FROM data", dialects);
+
+            var expected = new SelectItem.Wildcard(new WildcardAdditionalOptions
+            {
+                ExceptOption = new ExceptSelectItem("col_a", [])
+            });
+            Assert.Equal(expected, select.Projection[0]);
+            
+            select = VerifiedOnlySelect("SELECT * EXCEPT (department_id, employee_id) FROM employee_table", dialects);
+
+            expected = new SelectItem.Wildcard(new WildcardAdditionalOptions
+            {
+                ExceptOption = new ExceptSelectItem("department_id", ["employee_id"])
+            });
+            Assert.Equal(expected, select.Projection[0]);
+
+
+            Assert.Throws<ParserException>(()=> ParseSqlStatements("SELECT * EXCEPT () FROM employee_table", dialects));
+        }
     }
 }

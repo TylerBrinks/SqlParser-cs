@@ -33,4 +33,5 @@ public class GenericDialect : Dialect
     public override bool SupportsDictionarySyntax => true;
     public override bool SupportsWindowClauseNamedWindowReference => true;
     public override bool SupportsParenthesizedSetVariables => true;
+    public override bool SupportsSelectWildcardExcept => true;
 }

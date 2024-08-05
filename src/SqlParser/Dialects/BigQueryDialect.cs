@@ -33,4 +33,5 @@ public class BigQueryDialect : Dialect
     public override bool SupportsStringLiteralBackslashEscape => true;
     public override bool SupportsWindowFunctionNullTreatmentArg => true;
     public override bool SupportsTripleQuotedString => true;
+    public override bool SupportsSelectWildcardExcept => true;
 }

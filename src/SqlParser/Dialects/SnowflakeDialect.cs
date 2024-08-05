@@ -19,7 +19,6 @@ public class SnowflakeDialect : Dialect
         => character.IsAlphaNumeric() || character is Symbols.Dollar or Symbols.Underscore;
 
     public override bool SupportsFilterDuringAggregation => true;
-    public override bool SupportsWithinAfterArrayAggregation => true;
     public override bool SupportsStringLiteralBackslashEscape => true;
     public override bool SupportsParenthesizedSetVariables => true;
 

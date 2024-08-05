@@ -88,14 +88,6 @@ public abstract class Dialect
     /// <returns>True if supported; otherwise false.</returns>
     public virtual bool SupportsFilterDuringAggregation => false;
     /// <summary>
-    /// Returns true if the dialect supports `ARRAY_AGG() [WITHIN GROUP (ORDER BY)]` expressions.
-    /// Otherwise, the dialect should expect an `ORDER BY` without the `WITHIN GROUP` clause, e.g. [`ANSI`]
-    ///
-    /// <see href="https://jakewheat.github.io/sql-overview/sql-2016-foundation-grammar.html#array-aggregate-function"/>
-    /// </summary>
-    /// <returns>True if supported; otherwise false</returns>
-    public virtual bool SupportsWithinAfterArrayAggregation => false;
-    /// <summary>
     /// True if the dialect supports `(NOT) in ()`                                
     /// </summary>
     public virtual bool SupportsInEmptyList => false;
@@ -147,4 +139,5 @@ public abstract class Dialect
     public virtual bool SupportsLambdaFunctions => false;
     public virtual bool SupportsParenthesizedSetVariables => false;
     public virtual bool SupportsTripleQuotedString => false;
+    public virtual bool SupportsSelectWildcardExcept => false;
 }

@@ -9793,6 +9793,8 @@ public class Parser
     /// <returns></returns>
     public WildcardAdditionalOptions ParseWildcardAdditionalOptions()
     {
+        //todo ilike
+
         ExcludeSelectItem? optExclude = null;
         if (_dialect is GenericDialect or DuckDbDialect or SnowflakeDialect)
         {
@@ -9800,7 +9802,7 @@ public class Parser
         }
 
         ExceptSelectItem? optExcept = null;
-        if (_dialect is GenericDialect or BigQueryDialect or ClickHouseDialect)
+        if (_dialect.SupportsSelectWildcardExcept)
         {
             optExcept = ParseOptionalSelectItemExcept();
         }

@@ -12,4 +12,5 @@ public class ClickHouseDialect : Dialect
     public override bool IsIdentifierPart(char character) =>  IsIdentifierStart(character) || character.IsDigit();
     
     public override bool SupportsStringLiteralBackslashEscape => true;
+    public override bool SupportsSelectWildcardExcept => true;
 }

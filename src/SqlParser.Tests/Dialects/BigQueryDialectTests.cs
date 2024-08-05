@@ -300,29 +300,6 @@ public class BigQueryDialectTests : ParserTestBase
     }
 
     [Fact]
-    public void Test_Select_Wildcard_With_Except()
-    {
-        DefaultDialects = new Dialect[] { new BigQueryDialect(), new GenericDialect() };
-        var select = VerifiedOnlySelect("SELECT * EXCEPT (col_a) FROM data");
-        var expected = new SelectItem.Wildcard(new WildcardAdditionalOptions
-        {
-            ExceptOption = new ExceptSelectItem("col_a", new Ident[] { }),
-        });
-        Assert.Equal(expected, select.Projection[0]);
-
-
-        select = VerifiedOnlySelect("SELECT * EXCEPT (department_id, employee_id) FROM employee_table");
-        expected = new SelectItem.Wildcard(new WildcardAdditionalOptions
-        {
-            ExceptOption = new ExceptSelectItem("department_id", new Ident[] { "employee_id" }),
-        });
-        Assert.Equal(expected, select.Projection[0]);
-
-        var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT * EXCEPT () FROM employee_table"));
-        Assert.Equal("Expected identifier, found ), Line: 1, Col: 18", ex.Message);
-    }
-
-    [Fact]
     public void Parse_Map_Access_Expr()
     {
         var expression = VerifiedExpr("users[-1][safe_offset(2)].a.b");
