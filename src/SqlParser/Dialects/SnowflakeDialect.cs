@@ -640,5 +640,6 @@ public class SnowflakeDialect : Dialect
    
     public override bool SupportsMatchRecognize => true;
     public override bool SupportsDictionarySyntax => true;
-    public virtual bool SupportsConnectBy => true;
+    public override bool SupportsConnectBy => true;
+    public override bool SupportsWindowFunctionNullTreatmentArg => true;
 }

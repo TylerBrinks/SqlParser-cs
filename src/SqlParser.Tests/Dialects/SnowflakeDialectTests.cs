@@ -913,5 +913,15 @@ namespace SqlParser.Tests.Dialects
 
             Assert.Equal(expected, select.Projection.First().AsExpr());
         }
+
+        [Fact]
+        public void First_Value_Ignore_Nulls()
+        {
+            VerifiedOnlySelect("""
+                               SELECT FIRST_VALUE(column2 IGNORE NULLS) 
+                               OVER (PARTITION BY column1 ORDER BY column2) 
+                               FROM some_table
+                               """);
+        }
     }
 }
