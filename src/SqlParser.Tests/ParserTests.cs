@@ -317,7 +317,8 @@ namespace SqlParser.Tests
 
             var expression = new Expression.LiteralValue(new Value.SingleQuotedString("2001-01-01T00:00:00.000Z"));
             var cast = new Expression.Cast(expression, new DataType.Timestamp(TimezoneInfo.None), CastKind.DoubleColon);
-            var expected = new Expression.AtTimeZone(cast, "Europe/Brussels");
+            var expected = new Expression.AtTimeZone(cast,
+                new Expression.LiteralValue(new Value.SingleQuotedString("Europe/Brussels")));
             
             Assert.Equal(expected, select.Projection[0].AsExpr());
         }

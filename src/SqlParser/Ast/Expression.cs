@@ -77,11 +77,11 @@ public abstract record Expression : IWriteSql, IElement
     /// </c>
     /// </example>
     /// </summary>
-    public record AtTimeZone(Expression Timestamp, string? TimeZone) : Expression
+    public record AtTimeZone(Expression Timestamp, Expression TimeZone) : Expression
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"{Timestamp} AT TIME ZONE '{TimeZone}'");
+            writer.WriteSql($"{Timestamp} AT TIME ZONE {TimeZone}");
         }
     }
     /// <summary>

@@ -2824,7 +2824,7 @@ namespace SqlParser.Tests
                 Args = new FunctionArguments.List(new FunctionArgumentList(null, [
                     new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(zero))
                 ], null))
-            }, "UTC-06:00");
+            }, new LiteralValue(new Value.SingleQuotedString("UTC-06:00")) );
 
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
@@ -2839,7 +2839,7 @@ namespace SqlParser.Tests
                                 Args = new FunctionArguments.List(new FunctionArgumentList(null, [
                                     new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(zero))
                                 ], null))
-                            }, "UTC-06:00"))
+                            },  new LiteralValue(new Value.SingleQuotedString("UTC-06:00")) ))
                         ),
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.SingleQuotedString("%Y-%m-%dT%H"))))
                 ], null))

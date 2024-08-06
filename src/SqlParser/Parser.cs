@@ -37,7 +37,7 @@ public class Parser
     public const short AmpersandPrecedence = 23;
     public const short XOrPrecedence = 24;
     public const short MulDivModOpPrecedence = 40;
-
+    public const short AtTimeZonePrecedence = 41;
     public const short PlusMinusPrecedence = 30;
 
     //public const short MultiplyPrecedence = 40;
@@ -2348,18 +2348,10 @@ public class Parser
                     throw Expected("[NOT] NULL or TRUE|FALSE or [NOT] DISTINCT FROM after IS", PeekToken());
 
                 case Keyword.AT:
-                    {
-                        if (ParseKeywordSequence(Keyword.TIME, Keyword.ZONE))
-                        {
-                            var timeZone = NextToken();
-                            if (timeZone is SingleQuotedString s)
-                            {
-                                return new AtTimeZone(expr, s.Value);
-                            }
-                        }
-
-                        throw new ParserException($"No infix parser for token {token}");
-                    }
+                {
+                    ExpectKeywords(Keyword.TIME, Keyword.ZONE);
+                    return new AtTimeZone(expr, ParseSubExpression(precedence));
+                }
                 case Keyword.NOT or
                     Keyword.IN or
                     Keyword.BETWEEN or
@@ -2413,7 +2405,6 @@ public class Parser
 
         if (token is DoubleColon)
         {
-            //return ParsePgCast(expr);
             return new Cast(expr, ParseDataType(), CastKind.DoubleColon);
         }
 
@@ -2759,9 +2750,10 @@ public class Parser
 
         short GetAtPrecedence()
         {
-            if (PeekNthToken(1) is Word && PeekNthToken(2) is Word)
+            if (PeekNthToken(1) is Word { Keyword: Keyword.TIME } && 
+                PeekNthToken(2) is Word { Keyword: Keyword.ZONE })
             {
-                return 20; // time zone precedence
+                return AtTimeZonePrecedence;
             }
 
             return 0;

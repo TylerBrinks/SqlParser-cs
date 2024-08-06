@@ -2288,5 +2288,25 @@ namespace SqlParser.Tests.Dialects
             VerifiedStatement("WITH cte AS MATERIALIZED (SELECT id FROM accounts) SELECT id FROM cte");
             VerifiedStatement("WITH cte AS NOT MATERIALIZED (SELECT id FROM accounts) SELECT id FROM cte");
         }
+
+        [Fact]
+        public void Parse_At_Time_Zone()
+        {
+            VerifiedExpr("CURRENT_TIMESTAMP AT TIME ZONE tz");
+            VerifiedExpr("CURRENT_TIMESTAMP AT TIME ZONE ('America/' || 'Los_Angeles')");
+
+            var expected = new BinaryOp(
+                new AtTimeZone(
+                    new TypedString("2001-09-28 01:00", new DataType.Timestamp(TimezoneInfo.None))
+                    , new Cast(new LiteralValue(new Value.SingleQuotedString("America/Los_Angeles")), new DataType.Text(), CastKind.DoubleColon)),
+              
+                BinaryOperator.Plus,
+                new Interval(new LiteralValue(new Value.SingleQuotedString("23 hours")))
+
+            );
+
+            var tz= VerifiedExpr("TIMESTAMP '2001-09-28 01:00' AT TIME ZONE 'America/Los_Angeles'::TEXT + INTERVAL '23 hours'");
+            Assert.Equal(expected, tz);
+        }
     }
 }
