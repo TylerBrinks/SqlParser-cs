@@ -92,6 +92,10 @@ public static class EnumWriter
             FunctionCalledOnNull.CalledOnNullInput => "CALLED ON NULL INPUT",
             FunctionCalledOnNull.ReturnsNullOnNullInput => "RETURNS NULL ON NULL INPUT",
             FunctionCalledOnNull.Strict => "STRICT",
+
+            FunctionDeterminismSpecifier.Deterministic => "DETERMINISTIC",
+            FunctionDeterminismSpecifier.NotDeterministic => "NOT DETERMINISTIC",
+
             FunctionParallel.Unsafe => "PARALLEL UNSAFE",
             FunctionParallel.Restricted => "PARALLEL RESTRICTED",
             FunctionParallel.Safe => "PARALLEL SAFE",

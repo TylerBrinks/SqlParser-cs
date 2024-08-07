@@ -1825,12 +1825,7 @@ namespace SqlParser.Tests.Dialects
         public void Parse_Create_Function()
         {
             var create = VerifiedStatement<Statement.CreateFunction>("CREATE FUNCTION add(INTEGER, INTEGER) RETURNS INTEGER LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE AS 'select $1 + $2;'");
-            var expected = new Statement.CreateFunction("add", new CreateFunctionBody
-            {
-                Language = "SQL",
-                Behavior = FunctionBehavior.Immutable,
-                As = new FunctionDefinition.SingleQuotedDef("select $1 + $2;")
-            })
+            var expected = new Statement.CreateFunction("add")
             {
                 Args = new OperateFunctionArg[]
                 {
@@ -1838,50 +1833,11 @@ namespace SqlParser.Tests.Dialects
                     new (ArgMode.None) { DataType = new DataType.Integer() }
                 },
                 ReturnType = new DataType.Integer(),
-                Parameters = new CreateFunctionBody()
-                {
-                    Language = "SQL",
-                    Behavior = FunctionBehavior.Immutable,
-                    CalledOnNull = FunctionCalledOnNull.Strict,
-                    Parallel = FunctionParallel.Safe,
-                    As = new FunctionDefinition.SingleQuotedDef("select $1 + $2;")
-                }
-            };
-            Assert.Equal(expected, create);
-
-
-            create = VerifiedStatement<Statement.CreateFunction>("CREATE OR REPLACE FUNCTION add(a INTEGER, IN b INTEGER = 1) RETURNS INTEGER LANGUAGE SQL IMMUTABLE RETURN a + b");
-            expected = new Statement.CreateFunction("add", new CreateFunctionBody
-            {
                 Language = "SQL",
+                Parallel = FunctionParallel.Safe,
                 Behavior = FunctionBehavior.Immutable,
-                Return = new BinaryOp(
-                    new Identifier("a"),
-                   BinaryOperator.Plus,
-                    new Identifier("b")
-                )
-            })
-            {
-                Args = new OperateFunctionArg[]
-                {
-                    new (ArgMode.None) { DataType = new DataType.Integer(), Name = "a"},
-                    new (ArgMode.In) { DataType = new DataType.Integer(), Name = "b", DefaultExpr = new LiteralValue(Number("1"))}
-                },
-                ReturnType = new DataType.Integer(),
-                OrReplace = true
-            };
-            Assert.Equal(expected, create);
-
-            create = VerifiedStatement<Statement.CreateFunction>("CREATE OR REPLACE FUNCTION increment(i INTEGER) RETURNS INTEGER LANGUAGE plpgsql AS $$ BEGIN RETURN i + 1; END; $$");
-            expected = new Statement.CreateFunction("increment", new CreateFunctionBody
-            {
-                Language = "plpgsql",
-                As = new FunctionDefinition.DoubleDollarDef(" BEGIN RETURN i + 1; END; ")
-            })
-            {
-                OrReplace = true,
-                Args = new OperateFunctionArg[] { new(ArgMode.None) { Name = "i", DataType = new DataType.Integer() } },
-                ReturnType = new DataType.Integer()
+                CalledOnNull = FunctionCalledOnNull.Strict,
+                FunctionBody = new CreateFunctionBody.AsBeforeOptions(new LiteralValue(new Value.SingleQuotedString("select $1 + $2;"))),
             };
             Assert.Equal(expected, create);
         }

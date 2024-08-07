@@ -283,6 +283,12 @@ public enum FunctionCalledOnNull
     Strict
 }
 
+public enum FunctionDeterminismSpecifier
+{
+    Deterministic,
+    NotDeterministic,
+}
+
 public enum FunctionParallel
 {
     Unsafe,

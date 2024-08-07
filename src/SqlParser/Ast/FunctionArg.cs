@@ -161,33 +161,34 @@ public abstract record FunctionArgExpression : IWriteSql, IElement
 /// <summary>
 /// Function definition
 /// </summary>
-public abstract record FunctionDefinition : IWriteSql, IElement
-{
-    /// <summary>
-    /// Single quoted definition
-    /// </summary>
-    /// <param name="Value">String value</param>
-    public record SingleQuotedDef(string Value) : FunctionDefinition;
-    /// <summary>
-    /// Double quoted definition
-    /// </summary>
-    /// <param name="Value">String value</param>
-    public record DoubleDollarDef(string Value) : FunctionDefinition;
+//public abstract record FunctionDefinition : IWriteSql, IElement
+//{
+//    /// <summary>
+//    /// Single quoted definition
+//    /// </summary>
+//    /// <param name="Value">String value</param>
+//    public record SingleQuotedDef(string Value) : FunctionDefinition;
+//    /// <summary>
+//    /// Double quoted definition
+//    /// </summary>
+//    /// <param name="Value">String value</param>
+//    public record DoubleDollarDef(string Value) : FunctionDefinition;
 
-    public void ToSql(SqlTextWriter writer)
-    {
-        switch (this)
-        {
-            case SingleQuotedDef s:
-                writer.WriteSql($"'{s.Value}'");
-                break;
+//    public void ToSql(SqlTextWriter writer)
+//    {
+//        switch (this)
+//        {
+//            case SingleQuotedDef s:
+//                writer.WriteSql($"'{s.Value}'");
+//                break;
 
-            case DoubleDollarDef d:
-                writer.WriteSql($"$${d.Value}$$");
-                break;
-        }
-    }
-}
+//            case DoubleDollarDef d:
+//                writer.WriteSql($"$${d.Value}$$");
+//                break;
+//        }
+//    }
+//}
+
 
 public abstract record FunctionArgOperator : IWriteSql, IElement
 {
@@ -221,59 +222,15 @@ public abstract record FunctionArgOperator : IWriteSql, IElement
 /// <summary>
 /// Create function body
 /// </summary>
-public record CreateFunctionBody : IWriteSql, IElement
+public record CreateFunctionBody(Expression Expression) : IWriteSql
 {
-    // LANGUAGE lang_name
-    public Ident? Language { get; internal set; }
-    // IMMUTABLE | STABLE | VOLATILE
-    public FunctionBehavior? Behavior { get; internal set; }
-    // AS 'definition'
-    // Note that Hive's `AS class_name` is also parsed here.
-    public FunctionDefinition? As { get; internal set; }
-    // RETURN expression
-    public Expression? Return { get; internal set; }
-    // USING ... (Hive only)
-    public CreateFunctionUsing? Using { get; internal set; }
-
-    public FunctionCalledOnNull? CalledOnNull { get; internal set; }
-    public FunctionParallel? Parallel { get; internal set; }
+    public record AsBeforeOptions(Expression Expression) : CreateFunctionBody(Expression);
+    public record AsAfterOptions(Expression Expression) : CreateFunctionBody(Expression);
+    public record Return(Expression Expression) : CreateFunctionBody(Expression);
 
     public void ToSql(SqlTextWriter writer)
     {
-        if (Language != null)
-        {
-            writer.WriteSql($" LANGUAGE {Language}");
-        }
-
-        if (Behavior != null)
-        {
-            writer.WriteSql($" {Behavior}");
-        }
-
-        if (CalledOnNull != null)
-        {
-            writer.WriteSql($" {CalledOnNull}");
-        }
-
-        if (Parallel != null)
-        {
-            writer.WriteSql($" {Parallel}");
-        }
-
-        if (As != null)
-        {
-            writer.WriteSql($" AS {As}");
-        }
-
-        if (Return != null)
-        {
-            writer.WriteSql($" RETURN {Return}");
-        }
-
-        if (Using != null)
-        {
-            writer.WriteSql($" {Using}");
-        }
+       writer.WriteSql($"{Expression}");
     }
 }
 

@@ -172,7 +172,7 @@ public abstract record Statement : IWriteSql, IElement
             writer.WriteSql($"ATTACH {keyword}{DatabaseFileName} AS {SchemaName}");
         }
     }
-   
+
     public record AttachDuckDbDatabase(
         bool IfNotExists,
         bool Database,
@@ -530,18 +530,30 @@ public abstract record Statement : IWriteSql, IElement
     /// Postgres <see href="https://www.postgresql.org/docs/15/sql-createfunction.html"/>
     /// </summary>
     /// <param name="Name">Function name</param>
-    public record CreateFunction([Visit(0)] ObjectName Name, [Visit(1)] CreateFunctionBody Parameters) : Statement
+    public record CreateFunction([Visit(0)] ObjectName Name) : Statement, IIfNotExists
     {
         public bool OrReplace { get; init; }
         public bool Temporary { get; init; }
+        public bool IfNotExists { get; init; }
         [Visit(2)] public Sequence<OperateFunctionArg>? Args { get; init; }
         public DataType? ReturnType { get; init; }
+        public CreateFunctionBody FunctionBody { get; init; }
+        public FunctionBehavior? Behavior { get; init; }
+        public FunctionCalledOnNull? CalledOnNull { get; init; }
+        public FunctionParallel? Parallel { get; init; }
+        public CreateFunctionUsing? Using { get; init; }
+        public Ident? Language { get; init; }
+        public FunctionDeterminismSpecifier? DeterminismSpecifier { get; init; }
+        public Sequence<SqlOption>? Options { get; init; }
+        public ObjectName? RemoteConnection { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
+            var ifNot = IfNotExists ? $"{AsIne.IfNotExistsText} " : null;
             var or = OrReplace ? "OR REPLACE " : null;
             var temp = Temporary ? "TEMPORARY " : null;
-            writer.WriteSql($"CREATE {or}{temp}FUNCTION {Name}");
+
+            writer.WriteSql($"CREATE {or}{temp}FUNCTION {ifNot}{Name}");
 
             if (Args.SafeAny())
             {
@@ -553,7 +565,55 @@ public abstract record Statement : IWriteSql, IElement
                 writer.WriteSql($" RETURNS {ReturnType}");
             }
 
-            writer.WriteSql($"{Parameters}");
+            if (DeterminismSpecifier != null)
+            {
+                writer.WriteSql($" {DeterminismSpecifier}");
+            }
+            if (Language != null)
+            {
+                writer.WriteSql($" LANGUAGE {Language}");
+            }
+            if (Behavior != null)
+            {
+                writer.WriteSql($" {Behavior}");
+            }
+            if (CalledOnNull != null)
+            {
+                writer.WriteSql($" {CalledOnNull}");
+            }
+            if (Parallel != null)
+            {
+                writer.WriteSql($" {Parallel}");
+            }
+            if (RemoteConnection != null)
+            {
+                writer.WriteSql($" REMOTE WITH CONNECTION {RemoteConnection}");
+            }
+
+            switch (FunctionBody)
+            {
+                case CreateFunctionBody.AsBeforeOptions b:
+                    writer.WriteSql($" AS {b}");
+                    break;
+            
+                case CreateFunctionBody.Return r:
+                    writer.WriteSql($" RETURN {r}");
+                    break;
+            }
+
+            if (Using != null)
+            {
+                writer.WriteSql($" {Using}");
+            }
+            if (Options !=null)
+            {
+                writer.WriteSql($" OPTIONS({Options.ToSqlDelimited()})");
+            }
+            if (FunctionBody is CreateFunctionBody.AsAfterOptions f)
+            {
+                writer.WriteSql ($" AS {f}");
+            }
+            //writer.WriteSql($"{Parameters}");
         }
     }
     /// <summary>
@@ -662,7 +722,7 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
-   
+
     public record CreateSecret(
         bool OrReplace,
         bool? Temporary,
@@ -1264,7 +1324,7 @@ public abstract record Statement : IWriteSql, IElement
     /// Note: this is a PostgreSQL-specific statement,
     /// but may also compatible with other SQL.
     /// </summary>
-    /// <param name="Name">Name identifier</param>
+    /// <param name="Statements">Declare statements</param>
     public record Declare(Sequence<Ast.Declare> Statements) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
@@ -1275,11 +1335,7 @@ public abstract record Statement : IWriteSql, IElement
     /// <summary>
     /// Delete statement
     /// </summary>
-    /// <param name="Tables">Table names</param>
-    /// <param name="From">Join table names</param>
-    /// <param name="Using">Using</param>
-    /// <param name="Selection">Selection expression</param>
-    /// <param name="Returning">Select items to return</param>
+    /// <param name="DeleteOperation">Delete operation</param>
     public record Delete(DeleteOperation DeleteOperation) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
@@ -1319,7 +1375,7 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
-   
+
     public record DetachDuckDbDatabase(
         bool IfExists,
         bool Database,
@@ -1437,7 +1493,7 @@ public abstract record Statement : IWriteSql, IElement
         /// Whether `RESTRICT` was specified. This will be `false` when
         /// `CASCADE` or no drop behavior at all was specified.
         public bool Restrict { get; init; }
-        /// Hive allows you specify whether the table's stored data will be
+        /// Hive allows you to specify whether the table's stored data will be
         /// deleted along with the dropped table
         public bool Purge { get; init; }
         /// <summary>
@@ -2002,7 +2058,7 @@ public abstract record Statement : IWriteSql, IElement
     /// </summary>
     /// <param name="Local">True if local</param>
     /// <param name="HiveVar">True if Hive variable</param>
-    /// <param name="Variable">Variable name</param>
+    /// <param name="Variables">Variable names</param>
     /// <param name="Value">Value</param>
     public record SetVariable(bool Local, bool HiveVar, OneOrManyWithParens<ObjectName> Variables, Sequence<Expression>? Value = null) : Statement
     {

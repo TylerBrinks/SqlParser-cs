@@ -14,6 +14,7 @@ using DataType = SqlParser.Ast.DataType;
 using Select = SqlParser.Ast.Select;
 using Declare = SqlParser.Ast.Declare;
 using HiveRowDelimiter = SqlParser.Ast.HiveRowDelimiter;
+using System.ComponentModel.DataAnnotations;
 
 namespace SqlParser;
 
@@ -1414,7 +1415,7 @@ public class Parser
         {
             var word = PeekNthToken(1) as Word;
 
-            return _dialect is not DatabricksDialect || word is { Keyword: Keyword.SELECT } || word is {Keyword: Keyword.WITH};
+            return _dialect is not DatabricksDialect || word is { Keyword: Keyword.SELECT } || word is { Keyword: Keyword.WITH };
         }
     }
 
@@ -2348,10 +2349,10 @@ public class Parser
                     throw Expected("[NOT] NULL or TRUE|FALSE or [NOT] DISTINCT FROM after IS", PeekToken());
 
                 case Keyword.AT:
-                {
-                    ExpectKeywords(Keyword.TIME, Keyword.ZONE);
-                    return new AtTimeZone(expr, ParseSubExpression(precedence));
-                }
+                    {
+                        ExpectKeywords(Keyword.TIME, Keyword.ZONE);
+                        return new AtTimeZone(expr, ParseSubExpression(precedence));
+                    }
                 case Keyword.NOT or
                     Keyword.IN or
                     Keyword.BETWEEN or
@@ -2750,7 +2751,7 @@ public class Parser
 
         short GetAtPrecedence()
         {
-            if (PeekNthToken(1) is Word { Keyword: Keyword.TIME } && 
+            if (PeekNthToken(1) is Word { Keyword: Keyword.TIME } &&
                 PeekNthToken(2) is Word { Keyword: Keyword.ZONE })
             {
                 return AtTimeZonePrecedence;
@@ -3719,27 +3720,49 @@ public class Parser
         };
     }
 
-    public CreateFunction ParseCreateFunction(bool orReplace, bool temporary)
+    public Statement ParseCreateFunction(bool orReplace, bool temporary)
     {
         if (_dialect is HiveDialect)
         {
-            var name = ParseObjectName();
-            ExpectKeyword(Keyword.AS);
-            var className = ParseFunctionDefinition();
-            var parameters = new CreateFunctionBody
-            {
-                As = className,
-                Using = ParseOptionalCreateFunctionUsing()
-            };
-
-            return new CreateFunction(name, parameters)
-            {
-                OrReplace = orReplace,
-                Temporary = temporary,
-            };
+            return ParseHiveCreateFunction();
         }
 
         if (_dialect is PostgreSqlDialect or GenericDialect)
+        {
+            return ParsePostgresCreateFunction();
+        }
+
+        if (_dialect is DuckDbDialect)
+        {
+            return ParseCreateMacro(orReplace, temporary);
+        }
+
+        if (_dialect is BigQueryDialect)
+        {
+            return ParseBigqueryCreateFunction();
+        }
+
+        PrevToken();
+        throw Expected("an object type after CREATE", PeekToken());
+
+        Statement ParseHiveCreateFunction()
+        {
+            var name = ParseObjectName();
+            ExpectKeyword(Keyword.AS);
+
+            var as_ = ParseCreateFunctionBodyString();
+            var using_ = ParseOptionalCreateFunctionUsing();
+
+            return new CreateFunction(name)
+            {
+                OrReplace = orReplace,
+                Temporary = temporary,
+                FunctionBody = new CreateFunctionBody.AsBeforeOptions(as_),
+                Using = using_,
+            };
+        }
+
+        Statement ParsePostgresCreateFunction()
         {
             var name = ParseObjectName();
 
@@ -3759,19 +3782,190 @@ public class Parser
             });
 
             var returnType = ParseInit(ParseKeyword(Keyword.RETURNS), ParseDataType);
-            var parameters = ParseCreateFunctionBody();
 
-            return new CreateFunction(name, parameters)
+            CreateFunctionBody? functionBody = null;
+            Ident? language = null;
+            FunctionBehavior? behavior = null;
+            FunctionCalledOnNull? calledOnNull = null;
+            FunctionParallel? parallel = null;
+
+            while (true)
+            {
+                if (ParseKeyword(Keyword.AS))
+                {
+                    EnsureNotSet(functionBody, "AS");
+
+                    functionBody = new CreateFunctionBody.AsBeforeOptions(ParseCreateFunctionBodyString());
+                }
+                else if (ParseKeyword(Keyword.LANGUAGE))
+                {
+                    EnsureNotSet(language, "LANGUAGE");
+                    language = ParseIdentifier();
+                }
+                else if (ParseKeyword(Keyword.IMMUTABLE))
+                {
+                    EnsureNotSet(behavior, "IMMUTABLE | STABLE | VOLATILE");
+                    behavior = FunctionBehavior.Immutable;
+                }
+                else if (ParseKeyword(Keyword.STABLE))
+                {
+                    EnsureNotSet(behavior, "IMMUTABLE | STABLE | VOLATILE");
+                    behavior = FunctionBehavior.Stable;
+                }
+                else if (ParseKeyword(Keyword.VOLATILE))
+                {
+                    EnsureNotSet(behavior, "IMMUTABLE | STABLE | VOLATILE");
+                    behavior = FunctionBehavior.Volatile;
+                }
+                else if (ParseKeywordSequence(Keyword.CALLED, Keyword.ON, Keyword.NULL, Keyword.INPUT))
+                {
+                    EnsureNotSet(calledOnNull, "CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT");
+                    calledOnNull = FunctionCalledOnNull.CalledOnNullInput;
+                }
+                else if (ParseKeywordSequence(Keyword.RETURNS, Keyword.NULL, Keyword.ON, Keyword.NULL, Keyword.INPUT))
+                {
+                    EnsureNotSet(calledOnNull, "CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT");
+                    calledOnNull = FunctionCalledOnNull.ReturnsNullOnNullInput;
+                }
+                else if (ParseKeyword(Keyword.STRICT))
+                {
+                    EnsureNotSet(calledOnNull, "CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT");
+                    calledOnNull = FunctionCalledOnNull.Strict;
+                }
+                else if (ParseKeyword(Keyword.PARALLEL))
+                {
+                    EnsureNotSet(parallel, "PARALLEL { UNSAFE | RESTRICTED | SAFE }");
+                    if (ParseKeyword(Keyword.UNSAFE))
+                    {
+                        parallel = FunctionParallel.Unsafe;
+                    }
+                    else if (ParseKeyword(Keyword.RESTRICTED))
+                    {
+                        parallel = FunctionParallel.Restricted;
+
+                    }
+                    else if (ParseKeyword(Keyword.SAFE))
+                    {
+                        parallel = FunctionParallel.Safe;
+                    }
+                    else
+                    {
+                        throw Expected("one of UNSAFE | RESTRICTED | SAFE", PeekToken());
+                    }
+                }
+                else if (ParseKeyword(Keyword.RETURN))
+                {
+                    EnsureNotSet(functionBody, "RETURN");
+                    functionBody = new CreateFunctionBody.Return(ParseExpr());
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            return new CreateFunction(name)
             {
                 OrReplace = orReplace,
                 Temporary = temporary,
                 Args = args,
                 ReturnType = returnType,
+                Behavior = behavior,
+                CalledOnNull = calledOnNull,
+                Parallel = parallel,
+                Language = language,
+                FunctionBody = functionBody,
             };
         }
 
-        PrevToken();
-        throw Expected("an object type after CREATE", PeekToken());
+        Statement ParseBigqueryCreateFunction()
+        {
+            var ifNotExists = ParseIfNotExists();
+            var name = ParseObjectName();
+
+            var args = ExpectParens(() =>
+            {
+                return ParseCommaSeparated(() =>
+                {
+                    var name = ParseIdentifier();
+                    var dataType = ParseDataType();
+                    return new OperateFunctionArg(ArgMode.None)
+                    {
+                        Name = name,
+                        DataType = dataType
+                    };
+                });
+            });
+
+            var returnType = ParseKeyword(Keyword.RETURNS)
+                ? ParseDataType()
+                : null;
+
+            var determinismSpecifier = ParseKeyword(Keyword.DETERMINISTIC)
+                ? FunctionDeterminismSpecifier.Deterministic
+                : FunctionDeterminismSpecifier.NotDeterministic;
+
+            var language = ParseKeyword(Keyword.LANGUAGE)
+                ? ParseIdentifier()
+                : null;
+
+            var remoteConnection = ParseKeywordSequence(Keyword.REMOTE, Keyword.WITH, Keyword.CONNECTION)
+                ? ParseObjectName()
+                : null;
+
+            // `OPTIONS` may come before of after the function body but
+            // may be specified at most once.
+            var options = MaybeParseOptions(Keyword.OPTIONS);
+
+            CreateFunctionBody? functionBody = null;
+
+            if (remoteConnection == null)
+            {
+                ExpectKeyword(Keyword.AS);
+                var expr = ParseExpr();
+                if (options is null)
+                {
+                    options = MaybeParseOptions(Keyword.OPTIONS);
+                    functionBody = new CreateFunctionBody.AsBeforeOptions(expr);
+                }
+                else
+                {
+                    functionBody = new CreateFunctionBody.AsAfterOptions(expr);
+                }
+            }
+
+            return new Statement.CreateFunction(name)
+            {
+                OrReplace = orReplace,
+                Temporary = temporary,
+                IfNotExists = ifNotExists,
+                Args = args,
+                ReturnType = returnType,
+                FunctionBody = functionBody,
+                Language = language,
+                DeterminismSpecifier = determinismSpecifier,
+                Options = options,
+                RemoteConnection = remoteConnection,
+            };
+        }
+
+        void EnsureNotSet(object? field, string fieldName)
+        {
+            if (field is not null)
+            {
+                throw new ParserException($"{fieldName} specified more than once");
+            }
+        }
+    }
+
+    public Sequence<SqlOption>? MaybeParseOptions(Keyword keyword)
+    {
+        if (PeekToken() is Word w && w.Keyword == keyword)
+        {
+            return ParseOptions(keyword);
+        }
+
+        return null;
     }
 
     public OperateFunctionArg ParseFunctionArg()
@@ -3809,93 +4003,16 @@ public class Parser
         };
     }
 
-    public CreateFunctionBody ParseCreateFunctionBody()
+    public Expression ParseCreateFunctionBodyString()
     {
-        var body = new CreateFunctionBody();
-        const string immutable = "IMMUTABLE | STABLE | VOLATILE";
-
-        while (true)
+        var next = PeekToken();
+        if (next is DollarQuotedString dq && _dialect is PostgreSqlDialect or GenericDialect)
         {
-            if (ParseKeyword(Keyword.AS))
-            {
-                EnsureNotSet(body.As, "AS");
-
-                body.As = ParseFunctionDefinition();
-            }
-            else if (ParseKeyword(Keyword.LANGUAGE))
-            {
-                EnsureNotSet(body.Language, "LANGUAGE");
-                body.Language = ParseIdentifier();
-            }
-            else if (ParseKeyword(Keyword.IMMUTABLE))
-            {
-                EnsureNotSet(body.Behavior, immutable);
-                body.Behavior = FunctionBehavior.Immutable;
-            }
-            else if (ParseKeyword(Keyword.STABLE))
-            {
-                EnsureNotSet(body.Behavior, immutable);
-                body.Behavior = FunctionBehavior.Stable;
-            }
-            else if (ParseKeyword(Keyword.VOLATILE))
-            {
-                EnsureNotSet(body.Behavior, immutable);
-                body.Behavior = FunctionBehavior.Volatile;
-            }
-            else if (ParseKeywordSequence(Keyword.CALLED, Keyword.ON, Keyword.NULL, Keyword.INPUT))
-            {
-                EnsureNotSet(body.CalledOnNull, "CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT");
-                body.CalledOnNull = FunctionCalledOnNull.CalledOnNullInput;
-            }
-            else if (ParseKeywordSequence(Keyword.RETURNS, Keyword.NULL, Keyword.ON, Keyword.NULL, Keyword.INPUT))
-            {
-                EnsureNotSet(body.CalledOnNull, "CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT");
-                body.CalledOnNull = FunctionCalledOnNull.ReturnsNullOnNullInput;
-            }
-            else if (ParseKeyword(Keyword.STRICT))
-            {
-                EnsureNotSet(body.CalledOnNull, "CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT");
-                body.CalledOnNull = FunctionCalledOnNull.Strict;
-            }
-            else if (ParseKeyword(Keyword.PARALLEL))
-            {
-                EnsureNotSet(body.Parallel, "PARALLEL { UNSAFE | RESTRICTED | SAFE }");
-                if (ParseKeyword(Keyword.UNSAFE))
-                {
-                    body.Parallel = FunctionParallel.Unsafe;
-                }
-                else if (ParseKeyword(Keyword.RESTRICTED))
-                {
-                    body.Parallel = FunctionParallel.Restricted;
-
-                }
-                else if (ParseKeyword(Keyword.SAFE))
-                {
-                    body.Parallel = FunctionParallel.Safe;
-                }
-                else
-                {
-                    throw Expected("one of UNSAFE | RESTRICTED | SAFE", PeekToken());
-                }
-            }
-            else if (ParseKeyword(Keyword.RETURN))
-            {
-                EnsureNotSet(body.Return, "RETURN");
-                body.Return = ParseExpr();
-            }
-            else
-            {
-                return body;
-            }
+            NextToken();
+            return new LiteralValue(new Value.DollarQuotedString(new DollarQuotedStringValue(dq.Value)));
         }
 
-        void EnsureNotSet(object? field, string fieldName)
-        {
-            if (field is not null)
-            {
-                throw new ParserException($"{fieldName} specified more than once");
-            }
-        }
+        return new LiteralValue(new Value.SingleQuotedString(ParseLiteralString()));
     }
 
     /// <summary>
@@ -6622,21 +6739,21 @@ public class Parser
         throw Expected("literal int", token);
     }
 
-    public FunctionDefinition ParseFunctionDefinition()
-    {
-        var token = PeekToken();
-        return token switch
-        {
-            DollarQuotedString s when _dialect is PostgreSqlDialect or GenericDialect => DoubleDollar(s.Value),
-            _ => new FunctionDefinition.SingleQuotedDef(ParseLiteralString())
-        };
+    //public FunctionDefinition ParseFunctionDefinition()
+    //{
+    //    var token = PeekToken();
+    //    return token switch
+    //    {
+    //        DollarQuotedString s when _dialect is PostgreSqlDialect or GenericDialect => DoubleDollar(s.Value),
+    //        _ => new FunctionDefinition.SingleQuotedDef(ParseLiteralString())
+    //    };
 
-        FunctionDefinition DoubleDollar(string value)
-        {
-            NextToken();
-            return new FunctionDefinition.DoubleDollarDef(value);
-        }
-    }
+    //    FunctionDefinition DoubleDollar(string value)
+    //    {
+    //        NextToken();
+    //        return new FunctionDefinition.DoubleDollarDef(value);
+    //    }
+    //}
     /// <summary>
     /// Parse a literal string
     /// </summary>

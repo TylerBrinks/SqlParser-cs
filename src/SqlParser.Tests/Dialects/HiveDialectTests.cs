@@ -224,21 +224,21 @@ public class HiveDialectTests : ParserTestBase
 
         Assert.True(create.Temporary);
         Assert.Equal("mydb.myfunc", create.Name);
-        var fnBody = new CreateFunctionBody
-        {
-            As = new FunctionDefinition.SingleQuotedDef("org.random.class.Name"),
-            Using = new CreateFunctionUsing.Jar("hdfs://somewhere.com:8020/very/far")
-        };
-        Assert.Equal(fnBody, create.Parameters);
-
-        var ex = Assert.Throws<ParserException>(() =>
-            ParseSqlStatements("CREATE TEMPORARY FUNCTION mydb.myfunc AS 'org.random.class.Name' USING JAR"));
-        Assert.Equal("Expected literal string, found EOF", ex.Message);
+        var fnBody = new CreateFunctionBody.AsBeforeOptions(new LiteralValue(new Value.SingleQuotedString("org.random.class.Name")));
+        
+        Assert.Equal(fnBody, create.FunctionBody);
+        Assert.Equal(new CreateFunctionUsing.Jar("hdfs://somewhere.com:8020/very/far"), create.Using);
 
         DefaultDialects = new[] { new MsSqlDialect() };
 
-        ex = Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
+        var ex = Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
         Assert.Equal("Expected an object type after CREATE, found FUNCTION, Line: 1, Col: 18", ex.Message);
+
+        DefaultDialects = new[] { new HiveDialect() };
+
+        sql = "CREATE TEMPORARY FUNCTION mydb.myfunc AS 'org.random.class.Name' USING JAR";
+        ex = Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
+        Assert.Equal("Expected literal string, found EOF", ex.Message);
     }
 
     [Fact]

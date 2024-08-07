@@ -620,6 +620,7 @@ public enum Keyword
     RELATIVE,
     RELAY,
     RELEASE,
+    REMOTE,
     RENAME,
     REPAIR,
     REPEATABLE,
