@@ -4155,6 +4155,22 @@ public class Parser
             }
         }
 
+        string? comment = null;
+
+        if (_dialect is SnowflakeDialect or GenericDialect && ParseKeyword(Keyword.COMMENT))
+        {
+            ExpectToken<Equal>();
+            var next = NextToken();
+            if (next is SingleQuotedString s)
+            {
+                comment = s.Value;
+            }
+            else
+            {
+                throw Expected("string literal", next);
+            }
+        }
+
         ExpectKeyword(Keyword.AS);
         var query = ParseQuery();
 
@@ -4167,6 +4183,7 @@ public class Parser
             ClusterBy = clusterBy,
             Materialized = materialized,
             OrReplace = orReplace,
+            Comment = comment,
             WithNoSchemaBinding = withNoBinding,
             IfNotExists = ifNotExists,
             Temporary = temporary,

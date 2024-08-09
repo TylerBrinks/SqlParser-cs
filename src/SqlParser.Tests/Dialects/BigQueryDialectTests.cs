@@ -478,11 +478,17 @@ public class BigQueryDialectTests : ParserTestBase
     public void Parse_Create_View_If_Not_Exists()
     {
         const string sql = "CREATE VIEW IF NOT EXISTS mydataset.newview AS SELECT foo FROM bar";
-        var create = (Statement.CreateView)VerifiedStatement(sql);
-
+        var create = VerifiedStatement<Statement.CreateView>(sql);
 
         Assert.Equal("mydataset.newview", create.Name);
         Assert.Equal("SELECT foo FROM bar", create.Query.ToSql());
+        Assert.False(create.Materialized);
+        Assert.False(create.OrReplace);
+        Assert.Equal(new CreateTableOptions.None(), create.Options);
+        Assert.Null(create.Comment);
+        Assert.False(create.WithNoSchemaBinding);
+        Assert.True(create.IfNotExists);
+        Assert.False(create.Temporary);
     }
     [Fact]
     public void Test_Select_As_Struct()

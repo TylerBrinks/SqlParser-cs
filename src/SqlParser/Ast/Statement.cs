@@ -1069,6 +1069,7 @@ public abstract record Statement : IWriteSql, IElement
         public required CreateTableOptions Options { get; init; }
         //[Visit(2)] public Sequence<SqlOption>? WithOptions { get; init; }
         public Sequence<Ident>? ClusterBy { get; init; }
+        public string? Comment { get; init; }
         public bool WithNoSchemaBinding { get; init; }
         public bool IfNotExists { get; init; }
         public bool Temporary { get; init; }
@@ -1081,6 +1082,11 @@ public abstract record Statement : IWriteSql, IElement
             var ifNotExists = IfNotExists ? "IF NOT EXISTS " : null;
 
             writer.WriteSql($"CREATE {orReplace}{materialized}{temporary}VIEW {ifNotExists}{Name}");
+
+            if (Comment != null)
+            {
+                writer.WriteSql($" COMMENT = '{Comment.EscapeSingleQuoteString()}'");
+            }
 
             if (Options is CreateTableOptions.With)
             {

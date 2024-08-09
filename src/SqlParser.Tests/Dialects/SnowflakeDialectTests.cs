@@ -1022,5 +1022,31 @@ namespace SqlParser.Tests.Dialects
                 ORDER BY region
                 """);
         }
+
+
+        [Fact]
+        public void Parse_Of_Create_Or_Replace_View_With_Comment_Missing_Equal()
+        {
+            Assert.Single(ParseSqlStatements("CREATE OR REPLACE VIEW v COMMENT = 'hello, world' AS SELECT 1"));
+            Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE OR REPLACE VIEW v COMMENT 'hello, world' AS SELECT 1"));
+        }
+
+        [Fact]
+        public void Parse_Create_Or_Replace_With_Comment_For_Snowflake()
+        {
+            var view = VerifiedStatement<Statement.CreateView>("CREATE OR REPLACE VIEW v COMMENT = 'hello, world' AS SELECT 1");
+
+            Assert.Equal("v", view.Name);
+            Assert.Null(view.Columns);
+            Assert.Equal(new CreateTableOptions.None(), view.Options);
+            Assert.Equal("SELECT 1", view.Query.ToSql());
+            Assert.False(view.Materialized);
+            Assert.True(view.OrReplace);
+            Assert.Null(view.ClusterBy);
+            Assert.Equal("hello, world", view.Comment);
+            Assert.False(view.WithNoSchemaBinding);
+            Assert.False(view.IfNotExists);
+            Assert.False(view.Temporary);
+        }
     }
 }

@@ -100,9 +100,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Create_View_Temporary_If_Not_Exists()
         {
-            var create =
-                VerifiedStatement<Statement.CreateView>(
-                    "CREATE TEMPORARY VIEW IF NOT EXISTS myschema.myview AS SELECT foo FROM bar");
+            var create = VerifiedStatement<Statement.CreateView>("CREATE TEMPORARY VIEW IF NOT EXISTS myschema.myview AS SELECT foo FROM bar");
 
             Assert.Equal("myschema.myview", create.Name);
             Assert.Null(create.Columns);
@@ -112,6 +110,7 @@ namespace SqlParser.Tests.Dialects
             Assert.False(create.WithNoSchemaBinding);
             Assert.True(create.IfNotExists);
             Assert.True(create.Temporary);
+            Assert.Null(create.Comment);
         }
 
         [Fact]

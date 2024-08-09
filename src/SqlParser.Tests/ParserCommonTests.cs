@@ -3743,6 +3743,7 @@ namespace SqlParser.Tests
             Assert.False(create.WithNoSchemaBinding);
             Assert.False(create.IfNotExists);
             Assert.False(create.Temporary);
+            Assert.Null(create.Comment);
         }
 
         [Fact]
@@ -3758,6 +3759,7 @@ namespace SqlParser.Tests
             Assert.False(create.WithNoSchemaBinding);
             Assert.False(create.IfNotExists);
             Assert.False(create.Temporary);
+            Assert.Null(create.Comment);
         }
 
         [Fact]
@@ -3780,6 +3782,7 @@ namespace SqlParser.Tests
             Assert.True(create.OrReplace);
             Assert.Equal("SELECT 1", create.Query.Query.ToSql());
             Assert.False(create.WithNoSchemaBinding);
+            Assert.Null(create.Comment);
         }
 
         [Fact]
@@ -3795,6 +3798,7 @@ namespace SqlParser.Tests
             Assert.False(create.WithNoSchemaBinding);
             Assert.False(create.IfNotExists);
             Assert.True(create.Temporary);
+            Assert.Null(create.Comment);
         }
 
         [Fact]
@@ -3806,6 +3810,7 @@ namespace SqlParser.Tests
             Assert.True(create.OrReplace);
             Assert.Equal("SELECT 1", create.Query.Query.ToSql());
             Assert.False(create.WithNoSchemaBinding);
+            Assert.Null(create.Comment);
         }
 
         [Fact]
@@ -3817,6 +3822,7 @@ namespace SqlParser.Tests
             Assert.False(create.OrReplace);
             Assert.Equal("SELECT foo FROM bar", create.Query.Query.ToSql());
             Assert.False(create.WithNoSchemaBinding);
+            Assert.Null(create.Comment);
         }
 
         [Fact]
@@ -3829,6 +3835,7 @@ namespace SqlParser.Tests
             Assert.Equal(new Ident[] { "foo" }, create.ClusterBy!);
             Assert.Equal("SELECT foo FROM bar", create.Query.Query.ToSql());
             Assert.False(create.WithNoSchemaBinding);
+            Assert.Null(create.Comment);
         }
 
         [Fact]
