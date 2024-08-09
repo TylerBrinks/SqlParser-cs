@@ -14,7 +14,6 @@ using DataType = SqlParser.Ast.DataType;
 using Select = SqlParser.Ast.Select;
 using Declare = SqlParser.Ast.Declare;
 using HiveRowDelimiter = SqlParser.Ast.HiveRowDelimiter;
-using System.ComponentModel.DataAnnotations;
 
 namespace SqlParser;
 
@@ -1428,7 +1427,7 @@ public class Parser
 
         return MaybeParse(() =>
         {
-            var parameters = ParseCommaSeparated(() => ParseIdentifier());
+            var parameters = ParseCommaSeparated(ParseIdentifier);
             ExpectToken<RightParen>();
             ExpectToken<Arrow>();
             var expr = ParseExpr();
@@ -3934,7 +3933,7 @@ public class Parser
                 }
             }
 
-            return new Statement.CreateFunction(name)
+            return new CreateFunction(name)
             {
                 OrReplace = orReplace,
                 Temporary = temporary,
@@ -8781,6 +8780,15 @@ public class Parser
                     JoinOperator = new JoinOperator.OuterApply()
                 };
             }
+            else if (ParseKeyword(Keyword.ASOF))
+            {
+                ExpectKeyword(Keyword.JOIN);
+
+                var asOfRelation = ParseTableFactor();
+                ExpectKeyword(Keyword.MATCH_CONDITION);
+                var matchCondition = ExpectParens(ParseExpr);
+                join = new Join(asOfRelation, new JoinOperator.AsOf(matchCondition, ParseJoinConstraint(false)));
+            }
             else
             {
                 var natural = ParseKeyword(Keyword.NATURAL);
@@ -9133,15 +9141,16 @@ public class Parser
         Sequence<Measure>? measures = null;
         RowsPerMatch? rowsPerMatch = null;
         AfterMatchSkip? afterMatchSkip = null;
+
         Sequence<SymbolDefinition> symbols = ExpectParens(() =>
         {
             partitionBy = ParseKeywordSequence(Keyword.PARTITION, Keyword.BY)
                 ? ParseCommaSeparated(ParseExpr)
-                : new Sequence<Expression>();
+                : [];
 
             orderBy = ParseKeywordSequence(Keyword.ORDER, Keyword.BY)
                 ? ParseCommaSeparated(ParseOrderByExpr)
-                : new Sequence<OrderByExpression>();
+                : [];
 
             measures = ParseKeyword(Keyword.MEASURES)
                 ? ParseCommaSeparated(() =>
@@ -9151,7 +9160,7 @@ public class Parser
                     var alias = ParseIdentifier();
                     return new Measure(measure, alias);
                 })
-                : new Sequence<Measure>();
+                : [];
 
             if (ParseKeywordSequence(Keyword.ONE, Keyword.ROW, Keyword.PER, Keyword.MATCH))
             {

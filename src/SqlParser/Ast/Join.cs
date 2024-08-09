@@ -15,6 +15,10 @@ public record Join(TableFactor? Relation = null, JoinOperator? JoinOperator = nu
             case JoinOperator.CrossJoin:
                 writer.WriteSql($" CROSS JOIN {Relation}");
                 return;
+
+            case JoinOperator.AsOf a:
+                writer.WriteSql($" ASOF JOIN {Relation} MATCH_CONDITION ({a.MatchCondition})");
+                return;
         }
 
         string joinText = null!;
@@ -131,9 +135,11 @@ public abstract record JoinOperator : IElement
     /// </summary>
     public record CrossApply : JoinOperator;
     /// <summary>
-    /// 
+    /// Outer apply join
     /// </summary>
     public record OuterApply : JoinOperator;
+
+    public record AsOf(Expression MatchCondition, JoinConstraint Constraint) : JoinOperator;
 }
 
 /// <summary>

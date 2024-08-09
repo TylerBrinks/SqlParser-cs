@@ -246,7 +246,7 @@ namespace SqlParser.Tests.Dialects
             );
             Assert.Equal(expectedExpr, expr);
 
-            var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT a:42"));
+            Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT a:42"));
         }
 
         [Fact]
@@ -1047,6 +1047,37 @@ namespace SqlParser.Tests.Dialects
             Assert.False(view.WithNoSchemaBinding);
             Assert.False(view.IfNotExists);
             Assert.False(view.Temporary);
+        }
+
+        [Fact]
+        public void AsOf_Joins()
+        {
+            var query = VerifiedOnlySelect("""
+                                           SELECT * 
+                                           FROM trades_unixtime AS tu 
+                                           ASOF JOIN quotes_unixtime AS qu 
+                                           MATCH_CONDITION (tu.trade_time >= qu.quote_time)
+                                           """);
+
+            var expected = new TableWithJoins(new TableFactor.Table("trades_unixtime")
+            {
+                Alias = new TableAlias("tu")
+            })
+            {
+                Joins = [ 
+                    new Join(new TableFactor.Table("quotes_unixtime")
+                        {
+                            Alias = new TableAlias("qu")
+                        }, 
+                        new JoinOperator.AsOf(new BinaryOp(
+                                new CompoundIdentifier(["tu", "trade_time"]),
+                                BinaryOperator.GtEq,
+                                new CompoundIdentifier(["qu", "quote_time"])
+                            ), new JoinConstraint.None()))
+                ]
+            };
+
+            Assert.Equal(expected, query.From![0]);
         }
     }
 }
