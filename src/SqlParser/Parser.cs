@@ -6015,7 +6015,13 @@ public class Parser
             options = ParseOptions(Keyword.OPTIONS);
         }
 
-        return new ViewColumnDef(name, options);
+        DataType? dataType = null;
+        if (_dialect is ClickHouseDialect)
+        {
+            dataType = ParseDataType();
+        }
+
+        return new ViewColumnDef(name, dataType, options);
     }
 
     private AlterTableOperation ParseAlterTableOperation()

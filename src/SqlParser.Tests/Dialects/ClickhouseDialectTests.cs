@@ -195,4 +195,21 @@ public class ClickhouseDialectTests : ParserTestBase
     {
         VerifiedStatement("SELECT * REPLACE (i + 1 AS i) FROM columns_transformers");
     }
+
+    [Fact]
+    public void Parse_Create_View_With_Fields_Data_Types()
+    {
+        var view = VerifiedStatement<Statement.CreateView>("CREATE VIEW v (i \"int\", f \"String\") AS SELECT * FROM t");
+
+        var columns = new Sequence<ViewColumnDef>
+        {
+            new ("i", new DataType.Custom(new ObjectName(new Ident("int", Symbols.DoubleQuote)))),
+            new ("f", new DataType.Custom(new ObjectName(new Ident("String", Symbols.DoubleQuote)))),
+        };
+
+        Assert.Equal("v", view.Name);
+        Assert.Equal(columns, view.Columns);
+
+        Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE VIEW v (i, f) AS SELECT * FROM t"));
+    }
 }
