@@ -78,15 +78,22 @@ public abstract record TableFactor : IWriteSql, IElement
         [property: Visit(0)] TableFactor TableFactor,
         [property: Visit(2)] Sequence<ExpressionWithAlias> AggregateFunctions,
         Sequence<Ident> ValueColumns,
-        Sequence<ExpressionWithAlias> PivotValues) : TableFactor
+        PivotValueSource ValueSource,
+        Expression? DefaultOnNull,
+        TableAlias? PivotAlias = null
+        ) : TableFactor
     {
-        public TableAlias? PivotAlias { get; set; }
-
         public override void ToSql(SqlTextWriter writer)
         {
             var cols = new Expression.CompoundIdentifier(ValueColumns);
 
-            writer.WriteSql($"{TableFactor} PIVOT({AggregateFunctions.ToSqlDelimited()} FOR {cols} IN ({PivotValues.ToSqlDelimited()}))");
+            writer.WriteSql($"{TableFactor} PIVOT({AggregateFunctions.ToSqlDelimited()} FOR {cols} IN ({ValueSource})");
+
+            if (DefaultOnNull != null)
+            {
+                writer.WriteSql($" DEFAULT ON NULL ({DefaultOnNull})");
+            }
+            writer.Write(")");
 
             if (PivotAlias != null)
             {

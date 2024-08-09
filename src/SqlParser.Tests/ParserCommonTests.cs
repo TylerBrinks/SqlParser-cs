@@ -2504,10 +2504,7 @@ namespace SqlParser.Tests
             sql = "SELECT from mytable WINDOW window1 AS window2";
 
             var dialects = AllDialects.Where(d => !d.SupportsWindowClauseNamedWindowReference).ToList();
-            foreach (var dialect in dialects)
-            {
-                Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
-            }
+            Assert.Throws<ParserException>(() => ParseSqlStatements(sql, dialects));
         }
 
         [Fact]
@@ -4997,15 +4994,14 @@ namespace SqlParser.Tests
             {
                 Alias = new TableAlias("a")
             };
-            var expected = new TableFactor.Pivot(table, functions, new Ident[] { "a", "MONTH" }, [
-
-                new ExpressionWithAlias(new LiteralValue(new Value.Number("1")), "x"),
-                new ExpressionWithAlias(new LiteralValue(new Value.SingleQuotedString("two")), null),
-                new ExpressionWithAlias(new Identifier("three"), "y"),
-            ])
-            {
-                PivotAlias = new TableAlias("p", new Ident[] { "c", "d" })
-            };
+            var expected = new TableFactor.Pivot(table, functions, new Ident[] { "a", "MONTH" },
+                new PivotValueSource.List([
+                            new ExpressionWithAlias(new LiteralValue(new Value.Number("1")), "x"),
+                            new ExpressionWithAlias(new LiteralValue(new Value.SingleQuotedString("two")), null),
+                            new ExpressionWithAlias(new Identifier("three"), "y"),
+                    ]),
+                null, 
+                new TableAlias("p", new Ident[] { "c", "d" }));
 
             Assert.Equal(expected, relation);
             Assert.Equal(sql.Replace("\r", "").Replace("\n", ""), VerifiedStatement(sql).ToSql());
@@ -5924,7 +5920,7 @@ namespace SqlParser.Tests
 
             void Check(string sql, Expression expected)
             {
-                Assert.Equal(expected, VerifiedExpr(sql, dialects!));
+                Assert.Equal(expected, VerifiedExpr(sql, dialects));
             }
         }
 

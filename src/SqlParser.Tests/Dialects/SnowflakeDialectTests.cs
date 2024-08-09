@@ -29,7 +29,8 @@ namespace SqlParser.Tests.Dialects
         {
             DefaultDialects = [new SnowflakeDialect(), new GenericDialect()];
 
-            var create = VerifiedStatement<Statement.CreateTable>("CREATE TRANSIENT TABLE CUSTOMER (id INT, name VARCHAR(255))");
+            var create =
+                VerifiedStatement<Statement.CreateTable>("CREATE TRANSIENT TABLE CUSTOMER (id INT, name VARCHAR(255))");
 
             Assert.Equal("CUSTOMER", create.Name);
             Assert.True(create.Transient);
@@ -76,11 +77,11 @@ namespace SqlParser.Tests.Dialects
         {
             DefaultDialects = [new SnowflakeDialect(), new GenericDialect()];
             OneStatementParsesTo(
-                 "SELECT * FROM ((SELECT 1) AS t)",
-                 "SELECT * FROM (SELECT 1) AS t");
+                "SELECT * FROM ((SELECT 1) AS t)",
+                "SELECT * FROM (SELECT 1) AS t");
             OneStatementParsesTo(
-                 "SELECT * FROM (((SELECT 1) AS t))",
-                 "SELECT * FROM (SELECT 1) AS t");
+                "SELECT * FROM (((SELECT 1) AS t))",
+                "SELECT * FROM (SELECT 1) AS t");
         }
 
         [Fact]
@@ -131,7 +132,8 @@ namespace SqlParser.Tests.Dialects
         public void Parse_Array()
         {
             var select = VerifiedOnlySelect("SELECT CAST(a AS ARRAY) FROM customer");
-            Assert.Equal(new Cast(new Identifier("a"), new DataType.Array(new ArrayElementTypeDef.None()), CastKind.Cast),
+            Assert.Equal(
+                new Cast(new Identifier("a"), new DataType.Array(new ArrayElementTypeDef.None()), CastKind.Cast),
                 select.Projection.Single().AsExpr());
         }
 
@@ -157,20 +159,23 @@ namespace SqlParser.Tests.Dialects
             select = VerifiedOnlySelect("SELECT a[2 + 2] FROM t");
             expected = new SelectItem.UnnamedExpression(new JsonAccess(
                 new Identifier("a"),
-                new JsonPath([new JsonPathElement.Bracket(
-                    new BinaryOp(
-                        new LiteralValue(new Value.Number("2")),
-                        BinaryOperator.Plus,
-                        new LiteralValue(new Value.Number("2"))
+                new JsonPath([
+                    new JsonPathElement.Bracket(
+                        new BinaryOp(
+                            new LiteralValue(new Value.Number("2")),
+                            BinaryOperator.Plus,
+                            new LiteralValue(new Value.Number("2"))
+                        )
                     )
-                )])
+                ])
             ));
             Assert.Equal(expected, select.Projection[0]);
 
             VerifiedStatement("SELECT a:b::INT FROM t");
 
             select = VerifiedOnlySelect("SELECT a:select, a:from FROM t");
-            Sequence<SelectItem> expectedProjection = [
+            Sequence<SelectItem> expectedProjection =
+            [
                 new SelectItem.UnnamedExpression(new JsonAccess(
                     new Identifier("a"),
                     new JsonPath([new JsonPathElement.Dot("select", false)])
@@ -185,43 +190,52 @@ namespace SqlParser.Tests.Dialects
 
 
             select = VerifiedOnlySelect("SELECT a:foo.\"bar\".baz");
-            expectedProjection = [new SelectItem.UnnamedExpression(new JsonAccess(
-                new Identifier("a"),
-                new JsonPath([
-                    new JsonPathElement.Dot("foo", false),
-                    new JsonPathElement.Dot("bar", true),
-                    new JsonPathElement.Dot("baz", false),
-                ])
-            ))];
+            expectedProjection =
+            [
+                new SelectItem.UnnamedExpression(new JsonAccess(
+                    new Identifier("a"),
+                    new JsonPath([
+                        new JsonPathElement.Dot("foo", false),
+                        new JsonPathElement.Dot("bar", true),
+                        new JsonPathElement.Dot("baz", false),
+                    ])
+                ))
+            ];
             Assert.Equal(expectedProjection, select.Projection);
 
 
             select = VerifiedOnlySelect("SELECT a:foo[0].bar");
-            expectedProjection = [new SelectItem.UnnamedExpression(new JsonAccess(
-                new Identifier("a"),
-                new JsonPath([
-                    new JsonPathElement.Dot("foo", false),
-                    new JsonPathElement.Bracket(new LiteralValue(new Value.Number("0"))),
-                    new JsonPathElement.Dot("bar", false),
-                ])
-            ))];
+            expectedProjection =
+            [
+                new SelectItem.UnnamedExpression(new JsonAccess(
+                    new Identifier("a"),
+                    new JsonPath([
+                        new JsonPathElement.Dot("foo", false),
+                        new JsonPathElement.Bracket(new LiteralValue(new Value.Number("0"))),
+                        new JsonPathElement.Dot("bar", false),
+                    ])
+                ))
+            ];
             Assert.Equal(expectedProjection, select.Projection);
 
 
             select = VerifiedOnlySelect("SELECT a[0].foo.bar");
-            expectedProjection = [new SelectItem.UnnamedExpression(new JsonAccess(
-                new Identifier("a"),
-                new JsonPath([
-                    new JsonPathElement.Bracket(new LiteralValue(new Value.Number("0"))),
-                    new JsonPathElement.Dot("foo", false),
-                    new JsonPathElement.Dot("bar", false),
-                ])
-            ))];
+            expectedProjection =
+            [
+                new SelectItem.UnnamedExpression(new JsonAccess(
+                    new Identifier("a"),
+                    new JsonPath([
+                        new JsonPathElement.Bracket(new LiteralValue(new Value.Number("0"))),
+                        new JsonPathElement.Dot("foo", false),
+                        new JsonPathElement.Dot("bar", false),
+                    ])
+                ))
+            ];
             Assert.Equal(expectedProjection, select.Projection);
 
 
             var expr = VerifiedExpr("a[b:c]");
-            var expectedExpr =new JsonAccess(
+            var expectedExpr = new JsonAccess(
                 new Identifier("a"),
                 new JsonPath([
                     new JsonPathElement.Bracket(new JsonAccess(
@@ -238,7 +252,9 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Delimited_Identifiers()
         {
-            var select = VerifiedOnlySelect("SELECT \"alias\".\"bar baz\", \"myfun\"(), \"simple id\" AS \"column alias\" FROM \"a table\" AS \"alias\"");
+            var select =
+                VerifiedOnlySelect(
+                    "SELECT \"alias\".\"bar baz\", \"myfun\"(), \"simple id\" AS \"column alias\" FROM \"a table\" AS \"alias\"");
 
             var table = new TableFactor.Table(new ObjectName(new Ident("a table", Symbols.DoubleQuote)))
             {
@@ -320,7 +336,8 @@ namespace SqlParser.Tests.Dialects
 
             Assert.Equal(expected, select.Projection[0]);
 
-            select = VerifiedOnlySelect("SELECT name.* RENAME (department_id AS new_dep, employee_id AS new_emp) FROM employee_table");
+            select = VerifiedOnlySelect(
+                "SELECT name.* RENAME (department_id AS new_dep, employee_id AS new_emp) FROM employee_table");
 
             expected = new SelectItem.QualifiedWildcard("name", new WildcardAdditionalOptions
             {
@@ -350,7 +367,8 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal(expected, select.Projection[0]);
 
             // rename cannot precede exclude
-            var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT * RENAME col_a AS col_b EXCLUDE col_z FROM data"));
+            var ex = Assert.Throws<ParserException>(() =>
+                ParseSqlStatements("SELECT * RENAME col_a AS col_b EXCLUDE col_z FROM data"));
             Assert.Equal("Expected end of statement, found EXCLUDE, Line: 1, Col: 32", ex.Message);
         }
 
@@ -428,10 +446,14 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal("myint", create.StageParams.StorageIntegration);
             Assert.Equal("<s3_api_compatible_endpoint>", create.StageParams.Endpoint);
 
-            Assert.Equal(new DataLoadingOption("AWS_KEY_ID", DataLoadingOptionType.String, "1a2b3c"), create.StageParams.Credentials![0]);
-            Assert.Equal(new DataLoadingOption("AWS_SECRET_KEY", DataLoadingOptionType.String, "4x5y6z"), create.StageParams.Credentials![1]);
-            Assert.Equal(new DataLoadingOption("MASTER_KEY", DataLoadingOptionType.String, "key"), create.StageParams.Encryption![0]);
-            Assert.Equal(new DataLoadingOption("TYPE", DataLoadingOptionType.String, "AWS_SSE_KMS"), create.StageParams.Encryption![1]);
+            Assert.Equal(new DataLoadingOption("AWS_KEY_ID", DataLoadingOptionType.String, "1a2b3c"),
+                create.StageParams.Credentials![0]);
+            Assert.Equal(new DataLoadingOption("AWS_SECRET_KEY", DataLoadingOptionType.String, "4x5y6z"),
+                create.StageParams.Credentials![1]);
+            Assert.Equal(new DataLoadingOption("MASTER_KEY", DataLoadingOptionType.String, "key"),
+                create.StageParams.Encryption![0]);
+            Assert.Equal(new DataLoadingOption("TYPE", DataLoadingOptionType.String, "AWS_SSE_KMS"),
+                create.StageParams.Encryption![1]);
 
             Assert.Equal(sql.Replace("\r", "").Replace("\n", ""), create.ToSql());
         }
@@ -448,9 +470,12 @@ namespace SqlParser.Tests.Dialects
 
             var create = VerifiedStatement<Statement.CreateStage>(sql);
 
-            Assert.Equal(new DataLoadingOption("ENABLE", DataLoadingOptionType.Boolean, "TRUE"), create.DirectoryTableParams![0]);
-            Assert.Equal(new DataLoadingOption("REFRESH_ON_CREATE", DataLoadingOptionType.Boolean, "FALSE"), create.DirectoryTableParams![1]);
-            Assert.Equal(new DataLoadingOption("NOTIFICATION_INTEGRATION", DataLoadingOptionType.String, "some-string"), create.DirectoryTableParams![2]);
+            Assert.Equal(new DataLoadingOption("ENABLE", DataLoadingOptionType.Boolean, "TRUE"),
+                create.DirectoryTableParams![0]);
+            Assert.Equal(new DataLoadingOption("REFRESH_ON_CREATE", DataLoadingOptionType.Boolean, "FALSE"),
+                create.DirectoryTableParams![1]);
+            Assert.Equal(new DataLoadingOption("NOTIFICATION_INTEGRATION", DataLoadingOptionType.String, "some-string"),
+                create.DirectoryTableParams![2]);
 
             Assert.Equal(sql.Replace("\r", "").Replace("\n", ""), create.ToSql());
         }
@@ -471,9 +496,12 @@ namespace SqlParser.Tests.Dialects
                 Unescape = false
             });
 
-            Assert.Equal(new DataLoadingOption("COMPRESSION", DataLoadingOptionType.Enum, "AUTO"), create.FileFormat![0]);
-            Assert.Equal(new DataLoadingOption("BINARY_FORMAT", DataLoadingOptionType.Enum, "HEX"), create.FileFormat![1]);
-            Assert.Equal(new DataLoadingOption("ESCAPE", DataLoadingOptionType.String, """\\"""), create.FileFormat![2]);
+            Assert.Equal(new DataLoadingOption("COMPRESSION", DataLoadingOptionType.Enum, "AUTO"),
+                create.FileFormat![0]);
+            Assert.Equal(new DataLoadingOption("BINARY_FORMAT", DataLoadingOptionType.Enum, "HEX"),
+                create.FileFormat![1]);
+            Assert.Equal(new DataLoadingOption("ESCAPE", DataLoadingOptionType.String, """\\"""),
+                create.FileFormat![2]);
 
             Assert.Equal(sql.Replace("\r", null).Replace("\n", null), create.ToSql());
         }
@@ -483,11 +511,13 @@ namespace SqlParser.Tests.Dialects
         {
             DefaultDialects = [new SnowflakeDialect()];
 
-            const string sql = "CREATE OR REPLACE STAGE my_ext_stage URL='s3://load/files/' COPY_OPTIONS=(ON_ERROR=CONTINUE FORCE=TRUE)";
+            const string sql =
+                "CREATE OR REPLACE STAGE my_ext_stage URL='s3://load/files/' COPY_OPTIONS=(ON_ERROR=CONTINUE FORCE=TRUE)";
 
             var create = VerifiedStatement<Statement.CreateStage>(sql);
 
-            Assert.Equal(new DataLoadingOption("ON_ERROR", DataLoadingOptionType.Enum, "CONTINUE"), create.CopyOptions![0]);
+            Assert.Equal(new DataLoadingOption("ON_ERROR", DataLoadingOptionType.Enum, "CONTINUE"),
+                create.CopyOptions![0]);
             Assert.Equal(new DataLoadingOption("FORCE", DataLoadingOptionType.Boolean, "TRUE"), create.CopyOptions![1]);
 
             Assert.Equal(sql, create.ToSql());
@@ -511,13 +541,13 @@ namespace SqlParser.Tests.Dialects
         public void Test_Copy_Into_With_Stage_Params()
         {
             var sql = """
-                COPY INTO my_company.emp_basic 
-                FROM 's3://load/files/' 
-                STORAGE_INTEGRATION=myint 
-                ENDPOINT='<s3_api_compatible_endpoint>' 
-                CREDENTIALS=(AWS_KEY_ID='1a2b3c' AWS_SECRET_KEY='4x5y6z') 
-                ENCRYPTION=(MASTER_KEY='key' TYPE='AWS_SSE_KMS')
-                """;
+                      COPY INTO my_company.emp_basic 
+                      FROM 's3://load/files/' 
+                      STORAGE_INTEGRATION=myint 
+                      ENDPOINT='<s3_api_compatible_endpoint>' 
+                      CREDENTIALS=(AWS_KEY_ID='1a2b3c' AWS_SECRET_KEY='4x5y6z') 
+                      ENCRYPTION=(MASTER_KEY='key' TYPE='AWS_SSE_KMS')
+                      """;
 
             var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
 
@@ -530,22 +560,22 @@ namespace SqlParser.Tests.Dialects
                     StorageIntegration = "myint",
                     Credentials =
                     [
-                        new ("AWS_KEY_ID", DataLoadingOptionType.String, "1a2b3c"),
-                        new ("AWS_SECRET_KEY", DataLoadingOptionType.String, "4x5y6z"),
+                        new("AWS_KEY_ID", DataLoadingOptionType.String, "1a2b3c"),
+                        new("AWS_SECRET_KEY", DataLoadingOptionType.String, "4x5y6z"),
                     ],
                     Encryption =
                     [
-                        new ("MASTER_KEY", DataLoadingOptionType.String, "key"),
-                        new ("TYPE", DataLoadingOptionType.String, "AWS_SSE_KMS"),
+                        new("MASTER_KEY", DataLoadingOptionType.String, "key"),
+                        new("TYPE", DataLoadingOptionType.String, "AWS_SSE_KMS"),
                     ]
                 });
 
             Assert.Equal(expected, copy);
 
             sql = """
-                COPY INTO my_company.emp_basic FROM 
-                (SELECT t1.$1 FROM 's3://load/files/' STORAGE_INTEGRATION=myint)
-                """;
+                  COPY INTO my_company.emp_basic FROM 
+                  (SELECT t1.$1 FROM 's3://load/files/' STORAGE_INTEGRATION=myint)
+                  """;
 
             copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
 
@@ -587,9 +617,9 @@ namespace SqlParser.Tests.Dialects
             Assert.Equal(new ObjectName(["@schema", "general_finished"]), copy.FromStage);
             Assert.Equal(
             [
-                new () { Alias = "t1", FileColumnNumber = 1, Element = "st", ItemAs = "st" },
-                new () { FileColumnNumber = 1, Element = "index" },
-                new () { Alias = "t2", FileColumnNumber = 1 },
+                new() { Alias = "t1", FileColumnNumber = 1, Element = "st", ItemAs = "st" },
+                new() { FileColumnNumber = 1, Element = "index" },
+                new() { Alias = "t2", FileColumnNumber = 1 },
             ], copy.FromTransformations);
 
         }
@@ -610,11 +640,14 @@ namespace SqlParser.Tests.Dialects
                 Unescape = false
             });
             const string value = """
-                        \\
-                        """;
-            Assert.Contains(copy.FileFormat!, o => o is { Name: "COMPRESSION", OptionType: DataLoadingOptionType.Enum, Value: "AUTO" });
-            Assert.Contains(copy.FileFormat!, o => o is { Name: "BINARY_FORMAT", OptionType: DataLoadingOptionType.Enum, Value: "HEX" });
-            Assert.Contains(copy.FileFormat!, o => o is { Name: "ESCAPE", OptionType: DataLoadingOptionType.String, Value: value });
+                                 \\
+                                 """;
+            Assert.Contains(copy.FileFormat!,
+                o => o is { Name: "COMPRESSION", OptionType: DataLoadingOptionType.Enum, Value: "AUTO" });
+            Assert.Contains(copy.FileFormat!,
+                o => o is { Name: "BINARY_FORMAT", OptionType: DataLoadingOptionType.Enum, Value: "HEX" });
+            Assert.Contains(copy.FileFormat!,
+                o => o is { Name: "ESCAPE", OptionType: DataLoadingOptionType.String, Value: value });
         }
 
         [Fact]
@@ -630,8 +663,10 @@ namespace SqlParser.Tests.Dialects
 
             var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
 
-            Assert.Contains(copy.CopyOptions!, o => o is { Name: "ON_ERROR", OptionType: DataLoadingOptionType.Enum, Value: "CONTINUE" });
-            Assert.Contains(copy.CopyOptions!, o => o is { Name: "FORCE", OptionType: DataLoadingOptionType.Boolean, Value: "TRUE" });
+            Assert.Contains(copy.CopyOptions!,
+                o => o is { Name: "ON_ERROR", OptionType: DataLoadingOptionType.Enum, Value: "CONTINUE" });
+            Assert.Contains(copy.CopyOptions!,
+                o => o is { Name: "FORCE", OptionType: DataLoadingOptionType.Boolean, Value: "TRUE" });
         }
 
         [Fact]
@@ -639,11 +674,11 @@ namespace SqlParser.Tests.Dialects
         {
             var allowedObjectNames = new List<ObjectName>
             {
-                new (["my_compan", "emp_basic"]),
-                new (["@namespace", "%table_name"]),
-                new (["@namespace", "%table_name/path"]),
-                new (["@namespace", "stage_name/path"]),
-                new (new Ident("@~/path")),
+                new(["my_compan", "emp_basic"]),
+                new(["@namespace", "%table_name"]),
+                new(["@namespace", "%table_name/path"]),
+                new(["@namespace", "stage_name/path"]),
+                new(new Ident("@~/path")),
             };
 
             foreach (var objectName in allowedObjectNames)
@@ -677,7 +712,8 @@ namespace SqlParser.Tests.Dialects
 
             Assert.Equal(expected, select.Projection.First().AsExpr());
 
-            Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT TRIM('xyz' 'a')", new[] { new BigQueryDialect() }));
+            Assert.Throws<ParserException>(() =>
+                ParseSqlStatements("SELECT TRIM('xyz' 'a')", new[] { new BigQueryDialect() }));
         }
 
         [Fact]
@@ -698,7 +734,8 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Position_Not_Function_Columns()
         {
-            VerifiedStatement("SELECT position FROM tbl1 WHERE position NOT IN ('first', 'last')", new Dialect[] { new SnowflakeDialect(), new GenericDialect() });
+            VerifiedStatement("SELECT position FROM tbl1 WHERE position NOT IN ('first', 'last')",
+                new Dialect[] { new SnowflakeDialect(), new GenericDialect() });
         }
 
         [Fact]
@@ -714,14 +751,17 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Lateral_Flatten()
         {
-            VerifiedOnlySelect("SELECT * FROM TABLE(FLATTEN(input => parse_json('{\"a\":1, \b\":[77,88]}'), outer => true)) AS f");
-            VerifiedOnlySelect("SELECT emp.employee_ID, emp.last_name, index, value AS project_name FROM employees AS emp, LATERAL FLATTEN(INPUT => emp.project_names) AS proj_names");
+            VerifiedOnlySelect(
+                "SELECT * FROM TABLE(FLATTEN(input => parse_json('{\"a\":1, \b\":[77,88]}'), outer => true)) AS f");
+            VerifiedOnlySelect(
+                "SELECT emp.employee_ID, emp.last_name, index, value AS project_name FROM employees AS emp, LATERAL FLATTEN(INPUT => emp.project_names) AS proj_names");
         }
 
         [Fact]
         public void Parse_Pivot_Of_Table_Factor_Derived()
         {
-            VerifiedStatement("SELECT * FROM (SELECT place_id, weekday, open FROM times AS p) PIVOT(max(open) FOR weekday IN (0, 1, 2, 3, 4, 5, 6)) AS p (place_id, open_sun, open_mon, open_tue, open_wed, open_thu, open_fri, open_sat)");
+            VerifiedStatement(
+                "SELECT * FROM (SELECT place_id, weekday, open FROM times AS p) PIVOT(max(open) FOR weekday IN (0, 1, 2, 3, 4, 5, 6)) AS p (place_id, open_sun, open_mon, open_tue, open_wed, open_thu, open_fri, open_sat)");
         }
 
         [Fact]
@@ -752,7 +792,7 @@ namespace SqlParser.Tests.Dialects
                                 new LiteralValue(
                                     new Value.Number("42")), UnaryOperator.Plus)))
                 ], null))
-                
+
             };
             Assert.Equal(select.Selection!.AsBinaryOp().Left, left);
             Assert.Equal(select.Selection.AsBinaryOp().Right, right);
@@ -799,8 +839,10 @@ namespace SqlParser.Tests.Dialects
         {
             List<(string Sql, string Name, DeclareAssignment? Assignment)> queries =
             [
-                ("DECLARE res RESULTSET DEFAULT 42", "res", new DeclareAssignment.Default(new LiteralValue(new Value.Number("42")))),
-                ("DECLARE res RESULTSET := 42", "res", new DeclareAssignment.Assignment(new LiteralValue(new Value.Number("42")))),
+                ("DECLARE res RESULTSET DEFAULT 42", "res",
+                    new DeclareAssignment.Default(new LiteralValue(new Value.Number("42")))),
+                ("DECLARE res RESULTSET := 42", "res",
+                    new DeclareAssignment.Assignment(new LiteralValue(new Value.Number("42")))),
                 ("DECLARE res RESULTSET", "res", null),
             ];
 
@@ -852,8 +894,10 @@ namespace SqlParser.Tests.Dialects
         {
             List<(string Sql, string Name, DataType? DataType, DeclareAssignment? Assignment)> queries =
             [
-                ("DECLARE profit TEXT DEFAULT 42", "profit", new DataType.Text(), new DeclareAssignment.Default(new LiteralValue(new Value.Number("42")))),
-                ("DECLARE profit DEFAULT 42", "profit", null, new DeclareAssignment.Default(new LiteralValue(new Value.Number("42")))),
+                ("DECLARE profit TEXT DEFAULT 42", "profit", new DataType.Text(),
+                    new DeclareAssignment.Default(new LiteralValue(new Value.Number("42")))),
+                ("DECLARE profit DEFAULT 42", "profit", null,
+                    new DeclareAssignment.Default(new LiteralValue(new Value.Number("42")))),
                 ("DECLARE profit TEXT", "profit", new DataType.Text(), null),
                 ("DECLARE profit", "profit", null, null)
             ];
@@ -890,7 +934,8 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Test_Snowflake_Copy_Into_Stage_Name_Ends_With_Parens()
         {
-            var copy = VerifiedStatement<Statement.CopyIntoSnowflake>("COPY INTO SCHEMA.SOME_MONITORING_SYSTEM FROM (SELECT t.$1:st AS st FROM @schema.general_finished)");
+            var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(
+                "COPY INTO SCHEMA.SOME_MONITORING_SYSTEM FROM (SELECT t.$1:st AS st FROM @schema.general_finished)");
             var into = new ObjectName(["SCHEMA", "SOME_MONITORING_SYSTEM"]);
             var fromStage = new ObjectName(["@schema", "general_finished"]);
 
@@ -922,6 +967,60 @@ namespace SqlParser.Tests.Dialects
                                OVER (PARTITION BY column1 ORDER BY column2) 
                                FROM some_table
                                """);
+        }
+
+        [Fact]
+        public void Test_Pivot()
+        {
+            // pivot on static list of values with default
+            VerifiedOnlySelect(
+                """
+                SELECT * 
+                FROM quarterly_sales 
+                PIVOT(SUM(amount) 
+                FOR quarter IN (
+                '2023_Q1', 
+                '2023_Q2', 
+                '2023_Q3', 
+                '2023_Q4', 
+                '2024_Q1') 
+                DEFAULT ON NULL (0)
+                ) 
+                ORDER BY empid
+                """);
+
+            // dynamic pivot from subquery
+            VerifiedOnlySelect(
+                """
+                SELECT * 
+                FROM quarterly_sales 
+                PIVOT(SUM(amount) FOR quarter IN (
+                SELECT DISTINCT quarter 
+                FROM ad_campaign_types_by_quarter 
+                WHERE television = true 
+                ORDER BY quarter)
+                ) 
+                ORDER BY empid
+                """);
+
+            // dynamic pivot on any value (with order by)
+            VerifiedOnlySelect(
+                """
+                SELECT * 
+                FROM quarterly_sales 
+                PIVOT(SUM(amount) FOR quarter IN (ANY ORDER BY quarter)) 
+                ORDER BY empid
+                """);
+
+            // dynamic pivot on any value (without order by)
+            VerifiedOnlySelect(
+                """
+                SELECT * 
+                FROM sales_data 
+                PIVOT(SUM(total_sales) FOR fis_quarter IN (ANY)) 
+                WHERE fis_year IN (2023) 
+                ORDER BY region
+                """);
         }
     }
 }

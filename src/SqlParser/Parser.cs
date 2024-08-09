@@ -9457,26 +9457,51 @@ public class Parser
         return new ExpressionWithAlias(expr, alias);
     }
 
-    private TableFactor ParsePivotTableFactor(TableFactor table, TableAlias? tableAlias = null)
+    private TableFactor ParsePivotTableFactor(TableFactor table)
     {
-        var pivot = ExpectParens(() =>
+        Sequence<ExpressionWithAlias> aggregateFunctions = null!;
+        Sequence<Ident> valueColumn = null!;
+        Expression? defaultOnNull = null;
+
+        var valueSource = ExpectParens(() =>
         {
-            var aggregateFunctions = ParseCommaSeparated(ParseAliasedFunctionCall);
+            aggregateFunctions = ParseCommaSeparated(ParseAliasedFunctionCall);
             ExpectKeyword(Keyword.FOR);
-            var valueColumn = ParseObjectName().Values;
+            valueColumn = ParseObjectName().Values;
             ExpectKeyword(Keyword.IN);
 
-            var pivotValues = ExpectParens(() => ParseCommaSeparated(ParseExpressionWithAlias));
-
-            return new TableFactor.Pivot(table, aggregateFunctions, valueColumn, pivotValues)
+            var source = ExpectParens<PivotValueSource>(() =>
             {
-                Alias = tableAlias,
-            };
+                if (ParseKeyword(Keyword.ANY))
+                {
+                    var orderBy = ParseKeywordSequence(Keyword.ORDER, Keyword.BY)
+                        ? ParseCommaSeparated(ParseOrderByExpr)
+                        : null;
+                   
+                    return new PivotValueSource.Any(orderBy);
+                }
+
+                if (ParseOneOfKeywords(Keyword.SELECT, Keyword.WITH) == Keyword.undefined)
+                {
+                    return new PivotValueSource.List(ParseCommaSeparated(ParseExpressionWithAlias));
+                }
+                
+                PrevToken();
+                return new PivotValueSource.Subquery(ParseQuery());
+            });
+
+            if (ParseKeywordSequence(Keyword.DEFAULT, Keyword.ON, Keyword.NULL))
+            {
+                defaultOnNull = ExpectParens(ParseExpr);
+            }
+
+            return source;
         });
 
+
         var alias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
-        pivot.PivotAlias = alias;
-        return pivot;
+
+        return new TableFactor.Pivot(table, aggregateFunctions, valueColumn, valueSource, defaultOnNull, alias);
     }
 
     private TableFactor ParseUnpivotTableFactor(TableFactor table)
