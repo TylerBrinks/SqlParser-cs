@@ -4,6 +4,7 @@ using SqlParser.Tokens;
 using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
 using ObjectType = SqlParser.Ast.ObjectType;
+using Subscript = SqlParser.Ast.Subscript;
 
 // ReSharper disable StringLiteralTypo
 
@@ -986,7 +987,7 @@ namespace SqlParser.Tests.Dialects
 
             var prepare = VerifiedStatement<Statement.Prepare>("PREPARE a AS INSERT INTO customers VALUES (a1, a2, a3)");
             var insert = (Statement.Insert)prepare.Statement;
-            var source = (Query)insert.InsertOperation.Source;
+            var source = (Query)insert.InsertOperation.Source!;
             var values = (SetExpression.ValuesExpression)source.Body;
             Assert.Equal("a", prepare.Name);
 
@@ -1179,66 +1180,63 @@ namespace SqlParser.Tests.Dialects
 
             var sql = "SELECT foo[0] FROM foos";
             var select = VerifiedOnlySelect(sql);
-            var expected = new ArrayIndex(new Identifier("foo"), new[]
-            {
-                num[0]
-            });
+            var expected = new Expression.Subscript(new Identifier("foo"),
+                new Subscript.Index(num[0]));
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
 
             sql = "SELECT foo[0][0] FROM foos";
             select = VerifiedOnlySelect(sql);
-            expected = new ArrayIndex(new Identifier("foo"), new Expression[]
-            {
-                num[0],
-                num[0]
-            });
+            expected = new Expression.Subscript(
+                new Expression.Subscript(new Identifier("foo"), new Subscript.Index(num[0])),
+                new Subscript.Index(num[0])
+            );
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
 
             sql = "SELECT bar[0][\"baz\"][\"fooz\"] FROM foos";
             select = VerifiedOnlySelect(sql);
-            expected = new ArrayIndex(new Identifier("bar"), new Expression[]
-            {
-                num[0],
-                new Identifier(new Ident("baz", Symbols.DoubleQuote)),
-                new Identifier(new Ident("fooz", Symbols.DoubleQuote))
-            });
+            expected = new Expression.Subscript(
+                new Expression.Subscript(
+                    new Expression.Subscript(
+                        new Identifier("bar"), new Subscript.Index(num[0])),
+                    new Subscript.Index(
+                        new Identifier(new Ident("baz", Symbols.DoubleQuote)))),
+                new Subscript.Index(new Identifier(new Ident("fooz", Symbols.DoubleQuote))));
+
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
 
             sql = "SELECT (CAST(ARRAY[ARRAY[2, 3]] AS INT[][]))[1][2]";
             select = VerifiedOnlySelect(sql);
 
-            expected = new ArrayIndex(new Nested(
-                     new Cast(
-                         new Expression.Array(
-                             new ArrayExpression(new[]
-                             {
-                                new Expression.Array(new ArrayExpression(
-                                        new []
-                                        {
-                                            num[2],
-                                            num[3]
-                                        }, true
-                                    )
+            var nested = new Nested(
+                new Cast(
+                    new Expression.Array(
+                        new ArrayExpression(new[]
+                        {
+                            new Expression.Array(new ArrayExpression(
+                                    new[]
+                                    {
+                                        num[2],
+                                        num[3]
+                                    }, true
                                 )
-                             }, true)
-                         ),
-                         new DataType.Array(
-                             new ArrayElementTypeDef.SquareBracket(
-                                 new DataType.Array(
-                                     new ArrayElementTypeDef.SquareBracket(
-                                         new DataType.Int())))),
-                         CastKind.Cast
-                     )
-                 //new DataType.Array(new DataType.Array(new DataType.Int())))
-                 ),
-                 new[]
-                 {
-                    num[1],
-                    num[2]
-                 });
+                            )
+                        }, true)
+                    ),
+                    new DataType.Array(
+                        new ArrayElementTypeDef.SquareBracket(
+                            new DataType.Array(
+                                new ArrayElementTypeDef.SquareBracket(
+                                    new DataType.Int())))),
+                    CastKind.Cast
+                )
+            );
+            expected = new Expression.Subscript(
+                new Expression.Subscript(nested, new Subscript.Index(num[1])),
+                new Subscript.Index(num[2]));
+
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
 
@@ -1580,23 +1578,6 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Parse_Escaped_Literal_String()
         {
-            //DefaultDialects = new Dialect[] { new PostgreSqlDialect(), new GenericDialect() };
-
-            //var select = VerifiedOnlySelect("""
-            //    SELECT E's1 \n s1', E's2 \\n s2', E's3 \\\n s3', E's4 \\\\n s4', E'\'', E'foo \\'
-            //    """);
-
-            //Assert.Equal(6, select.Projection.Count);
-            //Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("s1 \n s1")), select.Projection[0].AsExpr());
-            //Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("s2 \\n s2")), select.Projection[1].AsExpr());
-            //Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("s3 \\\n s3")), select.Projection[2].AsExpr());
-            //Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("s4 \\\\n s4")), select.Projection[3].AsExpr());
-            //Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("'")), select.Projection[4].AsExpr());
-            //Assert.Equal(new LiteralValue(new Value.EscapedStringLiteral("foo \\")), select.Projection[5].AsExpr());
-
-            //var ex = Assert.Throws<TokenizeException>(() => ParseSqlStatements("SELECT E'\\'"));
-            //Assert.Equal("Unterminated encoded string literal after Line: 1, Col: 8", ex.Message);
-
             const string sql = "SELECT E'\\u0001', E'\\U0010FFFF', E'\\xC', E'\\x25', E'\\2', E'\\45', E'\\445'";
             var select = VerifiedOnlySelectWithCanonical(sql, canonical: "");
             Assert.Equal(7, select.Projection.Count);
@@ -2255,14 +2236,94 @@ namespace SqlParser.Tests.Dialects
                 new AtTimeZone(
                     new TypedString("2001-09-28 01:00", new DataType.Timestamp(TimezoneInfo.None))
                     , new Cast(new LiteralValue(new Value.SingleQuotedString("America/Los_Angeles")), new DataType.Text(), CastKind.DoubleColon)),
-              
+
                 BinaryOperator.Plus,
                 new Interval(new LiteralValue(new Value.SingleQuotedString("23 hours")))
 
             );
 
-            var tz= VerifiedExpr("TIMESTAMP '2001-09-28 01:00' AT TIME ZONE 'America/Los_Angeles'::TEXT + INTERVAL '23 hours'");
+            var tz = VerifiedExpr("TIMESTAMP '2001-09-28 01:00' AT TIME ZONE 'America/Los_Angeles'::TEXT + INTERVAL '23 hours'");
             Assert.Equal(expected, tz);
+        }
+
+        [Fact]
+        public void Parse_Array_Subscript()
+        {
+            var expression = (Expression.Subscript)VerifiedExpr("(ARRAY[1, 2, 3, 4, 5, 6])[2]");
+            Subscript expected = new Subscript.Index(new LiteralValue(new Value.Number("2")));
+            Assert.Equal(expected, expression.Key);
+
+            expression = (Expression.Subscript)VerifiedExpr("(ARRAY[1, 2, 3, 4, 5, 6])[foo]");
+            expected = new Subscript.Index(new Identifier("foo"));
+            Assert.Equal(expected, expression.Key);
+
+            expression = (Expression.Subscript)VerifiedExpr("(ARRAY[1, 2, 3, 4, 5, 6])[2:5:3]");
+            expected = new Subscript.Slice(
+                new LiteralValue(new Value.Number("2")),
+                new LiteralValue(new Value.Number("5")),
+                new LiteralValue(new Value.Number("3")));
+            Assert.Equal(expected, expression.Key);
+
+
+            expression = (Expression.Subscript)VerifiedExpr("arr[array_length(arr) - 3:array_length(arr) - 1]");
+            expected = new Subscript.Slice(
+                new BinaryOp(new Function("array_length")
+                    {
+                        Args = new FunctionArguments.List(new FunctionArgumentList(null,
+                            [new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("arr")))],
+                            null))
+                    },
+                    BinaryOperator.Minus, 
+                    new LiteralValue(new Value.Number("3"))),
+
+                new BinaryOp(new Function("array_length")
+                    {
+                        Args = new FunctionArguments.List(new FunctionArgumentList(
+                            null,
+                            [new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("arr")))],
+                            null))
+                    },
+                    BinaryOperator.Minus,
+                    new LiteralValue(new Value.Number("1"))),
+                null);
+            Assert.Equal(expected, expression.Key);
+
+            expression = (Expression.Subscript)VerifiedExpr("(ARRAY[1, 2, 3, 4, 5, 6])[:5]");
+            expected = new Subscript.Slice(null, new LiteralValue(new Value.Number("5")), null);
+            Assert.Equal(expected, expression.Key);
+
+            expression = (Expression.Subscript)VerifiedExpr("(ARRAY[1, 2, 3, 4, 5, 6])[2:]");
+            expected = new Subscript.Slice(new LiteralValue(new Value.Number("2")), null,  null);
+            Assert.Equal(expected, expression.Key);
+
+            expression = (Expression.Subscript)VerifiedExpr("(ARRAY[1, 2, 3, 4, 5, 6])[:]");
+            expected = new Subscript.Slice(null, null, null);
+            Assert.Equal(expected, expression.Key);
+
+            VerifiedExpr("schedule[:2][2:]");
+        }
+
+        [Fact]
+        public void Parse_Array_Multi_Subscript()
+        {
+            var expression = (Expression.Subscript)VerifiedExpr("make_array(1, 2, 3)[1:2][2]");
+            var expected = new Expression.Subscript(
+                new Expression.Subscript(
+                    new Function("make_array")
+                    {
+                        Args = new FunctionArguments.List(new FunctionArgumentList(
+                            null,
+                            [
+                                new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.Number("1")))),
+                                new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.Number("2")))),
+                                new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.Number("3"))))
+                            ],
+                            null))
+                    },
+                    new Subscript.Slice(new LiteralValue(new Value.Number("1")), new LiteralValue(new Value.Number("2")), null)), 
+                new Subscript.Index(new LiteralValue(new Value.Number("2"))));
+            
+            Assert.Equal(expected, expression);
         }
     }
 }

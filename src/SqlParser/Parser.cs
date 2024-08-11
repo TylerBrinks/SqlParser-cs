@@ -14,6 +14,7 @@ using DataType = SqlParser.Ast.DataType;
 using Select = SqlParser.Ast.Select;
 using Declare = SqlParser.Ast.Declare;
 using HiveRowDelimiter = SqlParser.Ast.HiveRowDelimiter;
+using Subscript = SqlParser.Ast.Subscript;
 
 namespace SqlParser;
 
@@ -117,6 +118,7 @@ public class Parser
         return condition ? initialization() : default;
     }
 
+    // ReSharper disable once GrammarMistakeInComment
     /// <summary>
     /// Parse potentially multiple statements
     ///
@@ -1318,7 +1320,10 @@ public class Parser
         var expr = token switch
         {
             Word { Keyword: Keyword.TRUE or Keyword.FALSE or Keyword.NULL } => ParseTokenValue(),
-            Word { Keyword: Keyword.CURRENT_CATALOG or Keyword.CURRENT_USER or Keyword.SESSION_USER or Keyword.USER } word
+            Word
+            {
+                Keyword: Keyword.CURRENT_CATALOG or Keyword.CURRENT_USER or Keyword.SESSION_USER or Keyword.USER
+            } word
                 when _dialect is PostgreSqlDialect or GenericDialect
                 => new Function(new ObjectName(word.ToIdent()))
                 {
@@ -1351,7 +1356,7 @@ public class Parser
             Word { Keyword: Keyword.ARRAY } arr when
                 PeekToken() is LeftParen &&
                 _dialect is not ClickHouseDialect and not DatabricksDialect
-                    => ParseArraySubquery(arr),
+                => ParseArraySubquery(arr),
             //Word { Keyword: Keyword.ARRAY_AGG } => ParseArrayAggregateExpression(),
             Word { Keyword: Keyword.NOT } => ParseNot(),
             Word { Keyword: Keyword.MATCH } when _dialect is MySqlDialect or GenericDialect => ParseMatchAgainst(),
@@ -1414,7 +1419,8 @@ public class Parser
         {
             var word = PeekNthToken(1) as Word;
 
-            return _dialect is not DatabricksDialect || word is { Keyword: Keyword.SELECT } || word is { Keyword: Keyword.WITH };
+            return _dialect is not DatabricksDialect || word is { Keyword: Keyword.SELECT } ||
+                   word is { Keyword: Keyword.WITH };
         }
     }
 
@@ -1444,6 +1450,7 @@ public class Parser
 
         return new Dictionary(fields);
     }
+
     /// <summary>
     /// Parse a field for a DuckDb dictionary
     ///
@@ -1460,6 +1467,7 @@ public class Parser
 
         return new DictionaryField(key, expression);
     }
+
     /// <summary>
     /// Parse an expression value for a bigquery struct
     /// </summary>
@@ -1476,7 +1484,8 @@ public class Parser
         return (new StructField(fieldType, fieldName), trailingBracket);
     }
 
-    public (Sequence<StructField> Fields, bool MatchingTrailingBracket) ParseStructTypeDef(Func<(StructField, bool)> elementParser)
+    public (Sequence<StructField> Fields, bool MatchingTrailingBracket) ParseStructTypeDef(
+        Func<(StructField, bool)> elementParser)
     {
         var startToken = PeekToken();
         ExpectKeyword(Keyword.STRUCT);
@@ -1591,7 +1600,8 @@ public class Parser
 
         NullTreatment? nullTreatment = null;
 
-        if (args.Clauses == null || args.Clauses!.Count == 0 || args.Clauses.All(c => c is not FunctionArgumentClause.IgnoreOrRespectNulls))
+        if (args.Clauses == null || args.Clauses!.Count == 0 ||
+            args.Clauses.All(c => c is not FunctionArgumentClause.IgnoreOrRespectNulls))
         {
             nullTreatment = ParseNullTreatment();
         }
@@ -1707,10 +1717,10 @@ public class Parser
                 }
             }
             else if (token
-                      is SingleQuotedString
-                      or EscapedStringLiteral
-                      or NationalStringLiteral
-                      or HexStringLiteral)
+                     is SingleQuotedString
+                     or EscapedStringLiteral
+                     or NationalStringLiteral
+                     or HexStringLiteral)
             {
                 filter = ParseExpr();
             }
@@ -1873,8 +1883,11 @@ public class Parser
         {
             windowName = MaybeParse(ParseIdentifier);
         }
-        var partitionBy = ParseInit(ParseKeywordSequence(Keyword.PARTITION, Keyword.BY), () => ParseCommaSeparated(ParseExpr));
-        var orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY), () => ParseCommaSeparated(ParseOrderByExpr));
+
+        var partitionBy = ParseInit(ParseKeywordSequence(Keyword.PARTITION, Keyword.BY),
+            () => ParseCommaSeparated(ParseExpr));
+        var orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY),
+            () => ParseCommaSeparated(ParseOrderByExpr));
         var windowFrame = ParseInit(!ConsumeToken<RightParen>(), () =>
         {
             var windowFrame = ParseWindowFrame();
@@ -1963,7 +1976,8 @@ public class Parser
                 attributeCollation = ParseObjectName();
             }
 
-            attributes.Add(new UserDefinedTypeCompositeAttributeDef(attributeName, attributeDataType, attributeCollation));
+            attributes.Add(
+                new UserDefinedTypeCompositeAttributeDef(attributeName, attributeDataType, attributeCollation));
             var comma = ConsumeToken<Comma>();
             if (ConsumeToken<RightParen>())
             {
@@ -2417,7 +2431,7 @@ public class Parser
         {
             if (_dialect is PostgreSqlDialect or DuckDbDialect or GenericDialect)
             {
-                return ParseArrayIndex(expr);
+                return ParseSubscript(expr);
             }
             else if (_dialect is SnowflakeDialect)
             {
@@ -2470,6 +2484,65 @@ public class Parser
 
             return BinaryOperator.PGCustomBinaryOperator;
         }
+    }
+
+    public Subscript ParseSubscriptInner()
+    {
+        Expression? lowerBound = null;
+
+        if (!ConsumeToken<Colon>())
+        {
+            lowerBound = ParseExpr();
+        }
+
+        if (ConsumeToken<RightBracket>())
+        {
+            if (lowerBound != null)
+            {
+                return new Subscript.Index(lowerBound);
+            }
+
+            return new Subscript.Slice(lowerBound, null, null);
+        }
+
+        if (lowerBound != null)
+        {
+            ExpectToken<Colon>();
+        }
+
+        if (ConsumeToken<RightBracket>())
+        {
+            return new Subscript.Slice(lowerBound, null, null);
+        }
+
+        var upperBound = ParseExpr();
+
+        if (ConsumeToken<RightBracket>())
+        {
+            return new Subscript.Slice(lowerBound, upperBound, null);
+        }
+
+        ExpectToken<Colon>();
+
+        Expression? stride = null;
+
+        if (!ConsumeToken<RightBracket>())
+        {
+            stride = ParseExpr();
+        }
+
+        if (stride != null)
+        {
+            ExpectToken<RightBracket>();
+        }
+
+        return new Subscript.Slice(lowerBound, upperBound, stride);
+    }
+
+    public Expression ParseSubscript(Expression expression)
+    {
+        var subscript = ParseSubscriptInner();
+        return new Expression.Subscript(expression, subscript);
     }
 
     public JsonAccess ParseJsonAccess(Expression expr)
@@ -2535,21 +2608,21 @@ public class Parser
         return null;
     }
 
-    public Expression ParseArrayIndex(Expression expr)
-    {
-        var index = ParseExpr();
-        ExpectToken<RightBracket>();
-        var indexes = new Sequence<Expression> { index };
+    //public Expression ParseArrayIndex(Expression expr)
+    //{
+    //    var index = ParseExpr();
+    //    ExpectToken<RightBracket>();
+    //    var indexes = new Sequence<Expression> { index };
 
-        while (ConsumeToken<LeftBracket>())
-        {
-            var innerIndex = ParseExpr();
-            ExpectToken<RightBracket>();
-            indexes.Add(innerIndex);
-        }
+    //    while (ConsumeToken<LeftBracket>())
+    //    {
+    //        var innerIndex = ParseExpr();
+    //        ExpectToken<RightBracket>();
+    //        indexes.Add(innerIndex);
+    //    }
 
-        return new ArrayIndex(expr, indexes);
-    }
+    //    return new ArrayIndex(expr, indexes);
+    //}
 
     public LockTable ParseLockTable()
     {
@@ -2722,15 +2795,17 @@ public class Parser
                 => MulDivModOpPrecedence,
 
             DoubleColon
-                or Colon
+                //or Colon
                 or ExclamationMark
                 or LeftBracket
                 or Overlap
                 or CaretAt
                 => ArrowPrecedence,
 
+            Colon when _dialect is SnowflakeDialect => ArrowPrecedence,
+
             Arrow
-                or LongArrow
+            or LongArrow
                 or HashArrow
                 or HashLongArrow
                 or AtArrow
@@ -2987,6 +3062,7 @@ public class Parser
         return false;
     }
 
+    // ReSharper disable once GrammarMistakeInComment
     /// <summary>
     /// Parses the keyword list and returns the first keyword
     /// found that matches one of the input keywords
@@ -3630,6 +3706,7 @@ public class Parser
         ExpectKeyword(Keyword.USING);
 
         var moduleName = ParseIdentifier();
+        // ReSharper disable once GrammarMistakeInComment
         // SQLite docs note that module "arguments syntax is sufficiently
         // general that the arguments can be made to appear as column
         // definitions in a traditional CREATE TABLE statement", but
@@ -3749,15 +3826,15 @@ public class Parser
             var name = ParseObjectName();
             ExpectKeyword(Keyword.AS);
 
-            var as_ = ParseCreateFunctionBodyString();
-            var using_ = ParseOptionalCreateFunctionUsing();
+            var @as = ParseCreateFunctionBodyString();
+            var @using = ParseOptionalCreateFunctionUsing();
 
             return new CreateFunction(name)
             {
                 OrReplace = orReplace,
                 Temporary = temporary,
-                FunctionBody = new CreateFunctionBody.AsBeforeOptions(as_),
-                Using = using_,
+                FunctionBody = new CreateFunctionBody.AsBeforeOptions(@as),
+                Using = @using
             };
         }
 
@@ -8136,6 +8213,7 @@ public class Parser
 
         return new ForClause.Xml(forXml, elements, binaryBase64, root, type);
     }
+    // ReSharper disable once GrammarMistakeInComment
     /// <summary>
     /// Parse a "query body", which is an expression with roughly the
     /// following grammar:
@@ -8957,6 +9035,7 @@ public class Parser
                 return result;
             }
 
+            // ReSharper disable once GrammarMistakeInComment
             // A parsing error from `parse_derived_table_factor` indicates that the '(' we've
             // recently consumed does not start a derived table (cases 1, 2, or 4).
             // `maybe_parse` will ignore such an error and rewind to be after the opening '('.
@@ -9509,7 +9588,7 @@ public class Parser
                     var orderBy = ParseKeywordSequence(Keyword.ORDER, Keyword.BY)
                         ? ParseCommaSeparated(ParseOrderByExpr)
                         : null;
-                   
+
                     return new PivotValueSource.Any(orderBy);
                 }
 
@@ -9517,7 +9596,7 @@ public class Parser
                 {
                     return new PivotValueSource.List(ParseCommaSeparated(ParseExpressionWithAlias));
                 }
-                
+
                 PrevToken();
                 return new PivotValueSource.Subquery(ParseQuery());
             });

@@ -55,13 +55,13 @@ public abstract record Expression : IWriteSql, IElement
     /// </c>
     /// </example>
     /// </summary>
-    /// <param name="Obj"></param>
+    /// <param name="Expression"></param>
     /// <param name="Indexes"></param>
-    public record ArrayIndex(Expression Obj, Sequence<Expression> Indexes) : Expression
+    public record ArrayIndex(Expression Expression, Sequence<Subscript> Indexes) : Expression
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"{Obj}");
+            writer.WriteSql($"{Expression}");
 
             foreach (var index in Indexes)
             {
@@ -1120,6 +1120,15 @@ public abstract record Expression : IWriteSql, IElement
                 : $"STRUCT({Values.ToSqlDelimited()})");
         }
     }
+
+    public record Subscript(Expression Expression, Ast.Subscript Key) : Expression
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{Expression}[{Key}]");
+        }
+    }
+
     /// <summary>
     /// Substring expression
     /// <example>

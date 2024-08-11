@@ -324,12 +324,12 @@ public class DuckDbDialectTests : ParserTestBase
 
         var expr = ((SelectItem.ExpressionWithAlias)projection[0]).Expression;
 
-        var expected = new Expression.ArrayIndex(new Expression.Array(new ArrayExpression([
+        var expected = new Expression.Subscript(new Expression.Array(new ArrayExpression([
                 new Expression.LiteralValue(new Value.SingleQuotedString("a")),
                 new Expression.LiteralValue(new Value.SingleQuotedString("b")),
                 new Expression.LiteralValue(new Value.SingleQuotedString("c"))
-            ])), 
-            [new Expression.LiteralValue(new Value.Number("3"))]);
+            ])),
+            new Subscript.Index(new Expression.LiteralValue(new Value.Number("3"))));
 
         Assert.Equal(expected, expr);
     }
