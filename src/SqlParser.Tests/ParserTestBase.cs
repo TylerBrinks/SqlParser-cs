@@ -158,7 +158,11 @@ public class ParserTestBase
     public Sequence<Statement?> ParseSqlStatements(string sql, IEnumerable<Dialect> dialects, bool unescape = false, ParserOptions? options = null)
     {
         options ??= new ParserOptions { Unescape = unescape };
-        return OneOfIdenticalResults(dialect => new Parser().ParseSql(sql, dialect, options), dialects)!;
+        return OneOfIdenticalResults(dialect =>
+        {
+            options.TrailingCommas |= dialect.SupportsTrailingCommas;
+            return new Parser().ParseSql(sql, dialect, options);
+        }, dialects)!;
     }
 
     public T OneOfIdenticalResults<T>(Func<Dialect, T> action, IEnumerable<Dialect> dialects) where T : class

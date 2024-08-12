@@ -21,6 +21,11 @@ public class SnowflakeDialect : Dialect
     public override bool SupportsFilterDuringAggregation => true;
     public override bool SupportsStringLiteralBackslashEscape => true;
     public override bool SupportsParenthesizedSetVariables => true;
+    public override bool SupportsProjectionTrailingCommas => true;
+    public override bool SupportsMatchRecognize => true;
+    public override bool SupportsDictionarySyntax => true;
+    public override bool SupportsConnectBy => true;
+    public override bool SupportsWindowFunctionNullTreatmentArg => true;
 
     public override Statement? ParseStatement(Parser parser)
     {
@@ -637,9 +642,4 @@ public class SnowflakeDialect : Dialect
 
         return new Ident(ident.ToString());
     }
-   
-    public override bool SupportsMatchRecognize => true;
-    public override bool SupportsDictionarySyntax => true;
-    public override bool SupportsConnectBy => true;
-    public override bool SupportsWindowFunctionNullTreatmentArg => true;
 }

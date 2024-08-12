@@ -1987,6 +1987,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Parse_Create_Table_Trailing_Comma()
         {
+            DefaultDialects =[ new DuckDbDialect() ];
             OneStatementParsesTo(
                 "CREATE TABLE foo (bar int,)",
                 "CREATE TABLE foo (bar INT)");
@@ -5167,7 +5168,7 @@ namespace SqlParser.Tests
                         int2_col INT2,
                         float8_col FLOAT8,
                         float4_col FLOAT4,
-                        bool_col BOOL,
+                        bool_col BOOL
                     );
                     """;
 

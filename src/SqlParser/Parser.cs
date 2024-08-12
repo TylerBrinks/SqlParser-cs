@@ -73,7 +73,10 @@ public class Parser
     /// <returns></returns>
     public Sequence<Statement> ParseSql(ReadOnlySpan<char> sql, Dialect dialect, ParserOptions? options = null)
     {
-        _options = options ?? new ParserOptions();
+        _options = options ?? new ParserOptions
+        {
+            TrailingCommas = dialect.SupportsTrailingCommas
+        };
         _depthGuard = new DepthGuard(_options.RecursionLimit);
         _dialect = dialect;
 
@@ -3220,7 +3223,7 @@ public class Parser
         // code to add for just one case, so we'll just do it manually here.
         var oldValue = _options.TrailingCommas;
 
-        _options.TrailingCommas |= _dialect is BigQueryDialect or SnowflakeDialect;
+        _options.TrailingCommas |= _dialect.SupportsProjectionTrailingCommas;
 
         var result = ParseCommaSeparated(ParseSelectItem);
         _options.TrailingCommas = oldValue;
@@ -5413,15 +5416,17 @@ public class Parser
 
             var commaFound = ConsumeToken<Comma>();
 
-            if (ConsumeToken<RightParen>())
-            {
-                // allow a trailing comma, even though it's not in standard
-                break;
-            }
+            var rightParen = PeekToken() is RightParen;
 
-            if (!commaFound)
+            if (!commaFound && !rightParen)
             {
                 ThrowExpected("',' or ')' after column definition", PeekToken());
+            }
+
+            if (rightParen && (!commaFound || _options.TrailingCommas))
+            {
+                ConsumeToken<RightParen>();
+                break;
             }
         }
 
@@ -9683,6 +9688,9 @@ public class Parser
         }
         else
         {
+            var oldValue = _options.TrailingCommas;
+            _options.TrailingCommas = false;
+
             var permissions = ParseCommaSeparated(ParseGrantPermission);
             var actions = permissions.Select(permission =>
             {
@@ -9702,12 +9710,14 @@ public class Parser
                     Keyword.CREATE => new Ast.Action.Create(),
                     Keyword.EXECUTE => new Ast.Action.Execute(),
                     Keyword.TEMPORARY => new Ast.Action.Temporary(),
-                    //// This will cover all future added keywords to
-                    //// parse_grant_permission and unhandled in this match
+                    // This will cover all future added keywords to
+                    // parse_grant_permission and unhandled in this match
                     _ => throw Expected("grant privilege keyword", PeekToken())
                 };
                 return action;
             }).ToSequence();
+
+            _options.TrailingCommas = oldValue;
 
             privileges = new Privileges.Actions(actions);
         }
@@ -10053,6 +10063,11 @@ public class Parser
         if (wildcardExpr is Wildcard)
         {
             return new SelectItem.Wildcard(ParseWildcardAdditionalOptions());
+        }
+
+        if (wildcardExpr is Identifier v && v.Ident.Value.ToLower().Equals("from"))
+        {
+            throw Expected($"Expected an expression, found: {v}");
         }
 
         var alias = ParseOptionalAlias(Keywords.ReservedForColumnAlias);

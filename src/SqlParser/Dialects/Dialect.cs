@@ -140,4 +140,6 @@ public abstract class Dialect
     public virtual bool SupportsParenthesizedSetVariables => false;
     public virtual bool SupportsTripleQuotedString => false;
     public virtual bool SupportsSelectWildcardExcept => false;
+    public virtual bool SupportsTrailingCommas => false;
+    public virtual bool SupportsProjectionTrailingCommas => false;
 }
