@@ -160,7 +160,7 @@ namespace SqlParser.Tests.Dialects
             var create =
                 VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (bar INT PRIMARY KEY AUTO_INCREMENT)");
 
-            Assert.Equal("foo", create.Name);
+            Assert.Equal("foo", create.Element.Name);
             Assert.Equal(new ColumnDef[]
             {
                 new("bar", new DataType.Int(),
@@ -170,7 +170,7 @@ namespace SqlParser.Tests.Dialects
                         new(new ColumnOption.DialectSpecific(new[] {new Word("AUTO_INCREMENT")}))
 
                     })
-            }, create.Columns);
+            }, create.Element.Columns);
         }
 
         [Fact]
@@ -179,12 +179,12 @@ namespace SqlParser.Tests.Dialects
             var create =
                 VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (bar SET('a', 'b'), baz ENUM('a', 'b'))");
 
-            Assert.Equal("foo", create.Name);
+            Assert.Equal("foo", create.Element.Name);
             Assert.Equal(new ColumnDef[]
             {
                 new("bar", new DataType.Set(new[] {"a", "b"})),
                 new("baz", new DataType.Enum(new[] {"a", "b"}))
-            }, create.Columns);
+            }, create.Element.Columns);
         }
 
         [Fact]
@@ -194,14 +194,14 @@ namespace SqlParser.Tests.Dialects
                 VerifiedStatement<Statement.CreateTable>(
                     "CREATE TABLE foo (id INT(11)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3");
 
-            Assert.Equal("foo", create.Name);
-            Assert.Equal("InnoDB", create.Engine);
-            Assert.Equal("utf8mb3", create.DefaultCharset);
+            Assert.Equal("foo", create.Element.Name);
+            Assert.Equal("InnoDB", create.Element.Engine);
+            Assert.Equal("utf8mb3", create.Element.DefaultCharset);
             Assert.Equal(new ColumnDef[]
             {
                 new("id", new DataType.Int(11))
 
-            }, create.Columns);
+            }, create.Element.Columns);
         }
 
         [Fact]
@@ -210,9 +210,9 @@ namespace SqlParser.Tests.Dialects
             var create =
                 VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (id INT(11)) COLLATE=utf8mb4_0900_ai_ci");
 
-            Assert.Equal("foo", create.Name);
-            Assert.Equal("utf8mb4_0900_ai_ci", create.Collation);
-            Assert.Equal(new ColumnDef[] { new("id", new DataType.Int(11)) }, create.Columns);
+            Assert.Equal("foo", create.Element.Name);
+            Assert.Equal("utf8mb4_0900_ai_ci", create.Element.Collation);
+            Assert.Equal(new ColumnDef[] { new("id", new DataType.Int(11)) }, create.Element.Columns);
         }
 
         [Fact]
@@ -222,7 +222,7 @@ namespace SqlParser.Tests.Dialects
                 VerifiedStatement<Statement.CreateTable>(
                     "CREATE TABLE foo (s TEXT CHARACTER SET utf8mb4 COMMENT 'comment')");
 
-            Assert.Equal("foo", create.Name);
+            Assert.Equal("foo", create.Element.Name);
             Assert.Equal(new ColumnDef[]
             {
                 new("s", new DataType.Text(),
@@ -231,7 +231,7 @@ namespace SqlParser.Tests.Dialects
                         new(new ColumnOption.CharacterSet("utf8mb4")),
                         new(new ColumnOption.Comment("comment"))
                     })
-            }, create.Columns);
+            }, create.Element.Columns);
         }
 
         [Fact]
@@ -239,14 +239,14 @@ namespace SqlParser.Tests.Dialects
         {
             var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE `PRIMARY` (`BEGIN` INT PRIMARY KEY)");
 
-            Assert.Equal("`PRIMARY`", create.Name);
+            Assert.Equal("`PRIMARY`", create.Element.Name);
             Assert.Equal(new ColumnDef[]
             {
                 new(new Ident("BEGIN", Symbols.Backtick), new DataType.Int(), Options: new ColumnOptionDef[]
                 {
                     new(new ColumnOption.Unique(true))
                 })
-            }, create.Columns);
+            }, create.Element.Columns);
         }
 
         [Fact]
@@ -333,8 +333,8 @@ namespace SqlParser.Tests.Dialects
                 new("bar_bigint", new DataType.BigInt(20)),
             };
 
-            Assert.Equal("foo", create.Name.Values[0]);
-            Assert.Equal(expected, create.Columns);
+            Assert.Equal("foo", create.Element.Name.Values[0]);
+            Assert.Equal(expected, create.Element.Columns);
         }
 
         [Fact]
@@ -353,8 +353,8 @@ namespace SqlParser.Tests.Dialects
                 new("bar_bigint", new DataType.UnsignedBigInt(20)),
             };
 
-            Assert.Equal("foo", create.Name.Values[0]);
-            Assert.Equal(expected, create.Columns);
+            Assert.Equal("foo", create.Element.Name.Values[0]);
+            Assert.Equal(expected, create.Element.Columns);
         }
 
         [Fact]
@@ -656,7 +656,7 @@ namespace SqlParser.Tests.Dialects
             var create =
                 VerifiedStatement<Statement.CreateTable>(
                     "CREATE TABLE foo (`modification_time` DATETIME ON UPDATE CURRENT_TIMESTAMP())");
-            Assert.Equal("foo", create.Name);
+            Assert.Equal("foo", create.Element.Name);
 
             Assert.Equal([
                 new(new Ident("modification_time", Symbols.Backtick), new DataType.Datetime(),
@@ -668,7 +668,7 @@ namespace SqlParser.Tests.Dialects
                         }))
                         
                     })
-            ], create.Columns);
+            ], create.Element.Columns);
         }
 
         [Fact]
@@ -863,8 +863,8 @@ namespace SqlParser.Tests.Dialects
                 new TableConstraint.Unique(["bar"]){ Name = "bar_key" }
             };
 
-            Assert.Equal("foo", create.Name);
-            Assert.Equal(constraints, create.Constraints);
+            Assert.Equal("foo", create.Element.Name);
+            Assert.Equal(constraints, create.Element.Constraints);
 
             var columns = new Sequence<ColumnDef>
             {
@@ -878,7 +878,7 @@ namespace SqlParser.Tests.Dialects
                     new(new ColumnOption.NotNull())
                 })
             };
-            Assert.Equal(columns, create.Columns);
+            Assert.Equal(columns, create.Element.Columns);
         }
 
         [Fact]
@@ -890,8 +890,8 @@ namespace SqlParser.Tests.Dialects
             foreach (var sql in new[] { canonical, withEqual })
             {
                 var create = (Statement.CreateTable)OneStatementParsesTo(sql, canonical);
-                Assert.Equal("foo", create.Name);
-                Assert.Equal("baz", create.Comment);
+                Assert.Equal("foo", create.Element.Name);
+                Assert.Equal("baz", create.Element.Comment);
             }
         }
 
@@ -925,7 +925,7 @@ namespace SqlParser.Tests.Dialects
             {
                 var create = (Statement.CreateTable)OneStatementParsesTo(sql, canonical);
 
-                Assert.Equal(123, create.AutoIncrementOffset!.Value);
+                Assert.Equal(123, create.Element.AutoIncrementOffset!.Value);
             }
         }
 
@@ -1091,12 +1091,12 @@ namespace SqlParser.Tests.Dialects
 
             var create = OneStatementParsesTo(sql, canonical);
 
-            var expected = new Statement.CreateTable("tb", [
+            var expected = new Statement.CreateTable(new CreateTable("tb", [
                 new("id", new DataType.Text(), "utf8mb4_0900_ai_ci", new Sequence<ColumnOptionDef>
                 {
                     new(new ColumnOption.CharacterSet("utf8mb4"))
                 })
-            ]);
+            ]));
 
             Assert.Equal(expected, create);
         }

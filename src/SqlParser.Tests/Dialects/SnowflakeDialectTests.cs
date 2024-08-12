@@ -21,7 +21,7 @@ namespace SqlParser.Tests.Dialects
 
             var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE _my_$table (am00unt number)");
 
-            Assert.Equal("_my_$table", create.Name);
+            Assert.Equal("_my_$table", create.Element.Name);
         }
 
         [Fact]
@@ -32,8 +32,8 @@ namespace SqlParser.Tests.Dialects
             var create =
                 VerifiedStatement<Statement.CreateTable>("CREATE TRANSIENT TABLE CUSTOMER (id INT, name VARCHAR(255))");
 
-            Assert.Equal("CUSTOMER", create.Name);
-            Assert.True(create.Transient);
+            Assert.Equal("CUSTOMER", create.Element.Name);
+            Assert.True(create.Element.Transient);
         }
 
         [Fact]
@@ -735,7 +735,7 @@ namespace SqlParser.Tests.Dialects
         public void Parse_Position_Not_Function_Columns()
         {
             VerifiedStatement("SELECT position FROM tbl1 WHERE position NOT IN ('first', 'last')",
-                new Dialect[] { new SnowflakeDialect(), new GenericDialect() });
+                [new SnowflakeDialect(), new GenericDialect()]);
         }
 
         [Fact]

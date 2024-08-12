@@ -3426,7 +3426,7 @@ public class Parser
 
         if (ParseKeyword(Keyword.TABLE))
         {
-            return ParseCreateTable(orReplace, temporary, global, transient);
+            return new Statement.CreateTable(ParseCreateTable(orReplace, temporary, global, transient));
         }
 
         if (ParseKeyword(Keyword.MATERIALIZED) || ParseKeyword(Keyword.VIEW))
@@ -3437,7 +3437,7 @@ public class Parser
 
         if (ParseKeyword(Keyword.EXTERNAL))
         {
-            return ParseCreateExternalTable(orReplace);
+            return new Statement.CreateTable(ParseCreateExternalTable(orReplace));
         }
 
         if (ParseKeyword(Keyword.FUNCTION))
@@ -3467,12 +3467,12 @@ public class Parser
 
         if (ParseKeyword(Keyword.INDEX))
         {
-            return ParseCreateIndex(false);
+            return new Statement.CreateIndex(ParseCreateIndex(false));
         }
 
         if (ParseKeywordSequence(Keyword.UNIQUE, Keyword.INDEX))
         {
-            return ParseCreateIndex(true);
+            return new Statement.CreateIndex(ParseCreateIndex(true));
         }
 
         if (ParseKeyword(Keyword.VIRTUAL))
@@ -4145,7 +4145,7 @@ public class Parser
         return new MacroArg(name, defaultExpression);
     }
 
-    public CreateTable ParseCreateExternalTable(bool orReplace)
+    public Ast.CreateTable ParseCreateExternalTable(bool orReplace)
     {
         ExpectKeyword(Keyword.TABLE);
 
@@ -4165,7 +4165,7 @@ public class Parser
         var location = hiveFormats?.Location;
         var tableProperties = ParseOptions(Keyword.TBLPROPERTIES);
 
-        return new CreateTable(tableName, columns)
+        return new Ast.CreateTable(tableName, columns)
         {
             Constraints = constraints.Any() ? constraints : null,
             HiveDistribution = hiveDistribution,
@@ -4973,7 +4973,7 @@ public class Parser
         return new CreateExtension(name, ifNot, cascade, schema, version);
     }
 
-    public CreateIndex ParseCreateIndex(bool unique)
+    public Ast.CreateIndex ParseCreateIndex(bool unique)
     {
         var concurrently = ParseKeyword(Keyword.CONCURRENTLY);
         var ifNotExists = ParseIfNotExists();
@@ -5009,7 +5009,7 @@ public class Parser
             predicate = ParseExpr();
         }
 
-        return new CreateIndex(indexName, tableName)
+        return new Ast.CreateIndex(indexName, tableName)
         {
             Using = @using,
             Columns = columns,
@@ -5191,7 +5191,7 @@ public class Parser
         return new HiveRowFormat.Delimited(rowDelimiters);
     }
 
-    public CreateTable ParseCreateTable(bool orReplace, bool temporary, bool? global, bool transient)
+    public Ast.CreateTable ParseCreateTable(bool orReplace, bool temporary, bool? global, bool transient)
     {
         var allowUnquotedHyphen = _dialect is BigQueryDialect;
         var ifNotExists = ParseIfNotExists();
@@ -5329,7 +5329,7 @@ public class Parser
             throw Expected("Comment", PeekToken());
         });
 
-        return new CreateTable(tableName, columns)
+        return new Ast.CreateTable(tableName, columns)
         {
             Temporary = temporary,
             Constraints = constraints.Any() ? constraints : null,

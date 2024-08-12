@@ -1489,6 +1489,7 @@ namespace SqlParser.Tests
                                      """;
 
             var create = OneStatementParsesTo<Statement.CreateTable>(sql, canonical);
+            var element = create.Element;
 
             var columns = new ColumnDef[]
             {
@@ -1541,16 +1542,16 @@ namespace SqlParser.Tests
                 }
             };
 
-            Assert.Equal("uk_cities", create.Name);
-            Assert.Equal(columns[0], create.Columns[0]);
-            Assert.Equal(columns[1], create.Columns[1]);
-            Assert.Equal(columns[2], create.Columns[2]);
-            Assert.Equal(columns[3], create.Columns[3]);
-            Assert.Equal(columns[4], create.Columns[4]);
-            Assert.Equal(columns[5], create.Columns[5]);
+            Assert.Equal("uk_cities", element.Name);
+            Assert.Equal(columns[0], element.Columns[0]);
+            Assert.Equal(columns[1], element.Columns[1]);
+            Assert.Equal(columns[2], element.Columns[2]);
+            Assert.Equal(columns[3], element.Columns[3]);
+            Assert.Equal(columns[4], element.Columns[4]);
+            Assert.Equal(columns[5], element.Columns[5]);
 
-            Assert.Equal(columns, create.Columns);
-            Assert.Equal(constraints, create.Constraints!);
+            Assert.Equal(columns, element.Columns);
+            Assert.Equal(constraints, element.Constraints!);
         }
 
         [Fact]
@@ -1580,6 +1581,7 @@ namespace SqlParser.Tests
                                      """;
 
             var create = OneStatementParsesTo<Statement.CreateTable>(sql, canonical);
+            var element = create.Element;
 
             var columns = new ColumnDef[]
             {
@@ -1638,13 +1640,13 @@ namespace SqlParser.Tests
                 }
             };
 
-            Assert.Equal("uk_cities", create.Name);
-            Assert.Equal(columns[0], create.Columns[0]);
-            Assert.Equal(columns[1], create.Columns[1]);
-            Assert.Equal(columns[2], create.Columns[2]);
+            Assert.Equal("uk_cities", element.Name);
+            Assert.Equal(columns[0], element.Columns[0]);
+            Assert.Equal(columns[1], element.Columns[1]);
+            Assert.Equal(columns[2], element.Columns[2]);
 
-            Assert.Equal(columns, create.Columns);
-            Assert.Equal(constraints, create.Constraints!);
+            Assert.Equal(columns, element.Columns);
+            Assert.Equal(constraints, element.Constraints!);
 
             Assert.Throws<ParserException>(() => ParseSqlStatements(
                 """
@@ -1734,7 +1736,7 @@ namespace SqlParser.Tests
                     })
                 };
 
-                Assert.Equal(columnDef, ast.Columns);
+                Assert.Equal(columnDef, ast.Element.Columns);
             }
         }
 
@@ -1768,9 +1770,9 @@ namespace SqlParser.Tests
                     new(new Ident("val"), new DataType.Array(expected))
                 };
 
-                Assert.True(create.IfNotExists);
-                Assert.Equal((ObjectName)"something", create.Name);
-                Assert.Equal(columns, create.Columns);
+                Assert.True(create.Element.IfNotExists);
+                Assert.Equal((ObjectName)"something", create.Element.Name);
+                Assert.Equal(columns, create.Element.Columns);
             }
 
             var testDialects = new Dialect[]
@@ -1869,33 +1871,37 @@ namespace SqlParser.Tests
         public void Parse_Create_Table_As()
         {
             var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE t AS SELECT * FROM a");
+            var element = create.Element;
 
-            Assert.Equal("t", create.Name);
-            Assert.Equal(VerifiedQuery("SELECT * FROM a"), create.Query);
+            Assert.Equal("t", element.Name);
+            Assert.Equal(VerifiedQuery("SELECT * FROM a"), element.Query);
 
             // BigQuery allows specifying table schema in CTAS
             create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE t (a INT, b INT) AS SELECT 1 AS b, 2 AS a");
-            Assert.Equal(2, create.Columns.Count);
-            Assert.Equal("a INT", create.Columns[0].ToSql());
-            Assert.Equal("b INT", create.Columns[1].ToSql());
-            Assert.Equal(VerifiedQuery("SELECT 1 AS b, 2 AS a"), create.Query);
+            element = create.Element;
+            Assert.Equal(2, element.Columns.Count);
+            Assert.Equal("a INT", element.Columns[0].ToSql());
+            Assert.Equal("b INT", element.Columns[1].ToSql());
+            Assert.Equal(VerifiedQuery("SELECT 1 AS b, 2 AS a"), element.Query);
         }
 
         [Fact]
         public void Parse_Create_Table_As_Table()
         {
             var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE new_table AS TABLE old_table");
+            var element = create.Element;
 
             var expected = new Query(new SetExpression.TableExpression(new Table("old_table")));
 
-            Assert.Equal((ObjectName)"new_table", create.Name);
-            Assert.Equal(expected, create.Query);
+            Assert.Equal((ObjectName)"new_table", element.Name);
+            Assert.Equal(expected, element.Query);
 
             expected = new Query(new SetExpression.TableExpression(new Table("old_table", "schema_name")));
 
             create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE new_table AS TABLE schema_name.old_table");
-            Assert.Equal((ObjectName)"new_table", create.Name);
-            Assert.Equal(expected, create.Query);
+            element = create.Element;
+            Assert.Equal((ObjectName)"new_table", element.Name);
+            Assert.Equal(expected, element.Query);
         }
 
         [Fact]
@@ -1903,27 +1909,27 @@ namespace SqlParser.Tests
         {
             var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE t ON CLUSTER '{cluster}' (a INT, b INT)");
 
-            var expected = new Statement.CreateTable("t", new ColumnDef[]
+            var expected = new Statement.CreateTable(new CreateTable( "t", new ColumnDef[]
             {
                 new("a", new Int()),
                 new("b", new Int()),
             })
             {
                 OnCluster = "{cluster}"
-            };
+            });
 
             Assert.Equal(expected, create);
 
             create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE t ON CLUSTER my_cluster (a INT, b INT)");
 
-            expected = new Statement.CreateTable("t", new[]
+            expected = new Statement.CreateTable(new CreateTable("t", new[]
             {
                 new ColumnDef("a", new Int()),
                 new ColumnDef("b", new Int()),
             })
             {
                 OnCluster = "my_cluster"
-            };
+            });
 
             Assert.Equal(expected, create);
         }
@@ -1932,18 +1938,19 @@ namespace SqlParser.Tests
         public void Parse_Create_Or_Replace_Table()
         {
             var create = VerifiedStatement<Statement.CreateTable>("CREATE OR REPLACE TABLE t (a INT)");
-            Assert.Equal("t", create.Name);
-            Assert.True(create.OrReplace);
+            var element = create.Element;
+            Assert.Equal("t", element.Name);
+            Assert.True(element.OrReplace);
 
             create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE t (a INT, b INT) AS SELECT 1 AS b, 2 AS a");
-            var expected = new Statement.CreateTable("t", new ColumnDef[]
+            var expected = new Statement.CreateTable(new CreateTable("t", new ColumnDef[]
             {
                 new ("a", new Int()),
                 new ("b", new Int()),
             })
             {
                 Query = VerifiedQuery("SELECT 1 AS b, 2 AS a")
-            };
+            });
 
             Assert.Equal(expected, create);
         }
@@ -1973,8 +1980,8 @@ namespace SqlParser.Tests
         {
             var create = VerifiedStatement<Statement.CreateTable>("CREATE OR REPLACE TABLE a CLONE a_tmp");
 
-            Assert.Equal("a", create.Name);
-            Assert.Equal((ObjectName)"a_tmp", create.CloneClause);
+            Assert.Equal("a", create.Element.Name);
+            Assert.Equal((ObjectName)"a_tmp", create.Element.CloneClause);
         }
 
         [Fact]
@@ -2013,11 +2020,11 @@ namespace SqlParser.Tests
                 new ("lng", new DataType.Double())
             };
 
-            Assert.Equal("uk_cities", create.Name);
-            Assert.Equal(columns, create.Columns);
-            Assert.True(create.External);
-            Assert.Equal("/tmp/example.csv", create.Location);
-            Assert.False(create.IfNotExists);
+            Assert.Equal("uk_cities", create.Element.Name);
+            Assert.Equal(columns, create.Element.Columns);
+            Assert.True(create.Element.External);
+            Assert.Equal("/tmp/example.csv", create.Element.Location);
+            Assert.False(create.Element.IfNotExists);
         }
 
         [Fact]
@@ -2037,13 +2044,13 @@ namespace SqlParser.Tests
                 }),
             };
 
-            Assert.Equal("uk_cities", create.Name);
-            Assert.Equal(columns, create.Columns);
-            Assert.True(create.External);
-            Assert.Equal(FileFormat.TextFile, create.FileFormat);
-            Assert.Equal("/tmp/example.csv", create.Location);
-            Assert.False(create.IfNotExists);
-            Assert.True(create.OrReplace);
+            Assert.Equal("uk_cities", create.Element.Name);
+            Assert.Equal(columns, create.Element.Columns);
+            Assert.True(create.Element.External);
+            Assert.Equal(FileFormat.TextFile, create.Element.FileFormat);
+            Assert.Equal("/tmp/example.csv", create.Element.Location);
+            Assert.False(create.Element.IfNotExists);
+            Assert.True(create.Element.OrReplace);
         }
 
         [Fact]
@@ -2068,9 +2075,9 @@ namespace SqlParser.Tests
                 new("lng", new DataType.Double())
             };
 
-            Assert.Equal("uk_cities", create.Name);
-            Assert.Equal(columns, create.Columns);
-            Assert.Equal("/tmp/example.csv", create.Location);
+            Assert.Equal("uk_cities", create.Element.Name);
+            Assert.Equal(columns, create.Element.Columns);
+            Assert.Equal("/tmp/example.csv", create.Element.Location);
         }
 
         [Fact]
@@ -4206,13 +4213,13 @@ namespace SqlParser.Tests
 
             var createIndex = VerifiedStatement<Statement.CreateIndex>("CREATE UNIQUE INDEX IF NOT EXISTS idx_name ON test(name,age DESC)");
 
-            Assert.Equal("idx_name", createIndex.Name!);
-            Assert.Equal("test", createIndex.TableName);
-            Assert.Equal(expected, createIndex.Columns!);
-            Assert.True(createIndex.Unique);
-            Assert.True(createIndex.IfNotExists);
-            Assert.False(createIndex.Concurrently);
-            Assert.Null(createIndex.Include);
+            Assert.Equal("idx_name", createIndex.Element.Name!);
+            Assert.Equal("test", createIndex.Element.TableName);
+            Assert.Equal(expected, createIndex.Element.Columns!);
+            Assert.True(createIndex.Element.Unique);
+            Assert.True(createIndex.Element.IfNotExists);
+            Assert.False(createIndex.Element.Concurrently);
+            Assert.Null(createIndex.Element.Include);
         }
 
         [Fact]
@@ -4226,12 +4233,12 @@ namespace SqlParser.Tests
 
             var createIndex = VerifiedStatement<Statement.CreateIndex>("CREATE UNIQUE INDEX IF NOT EXISTS idx_name ON test USING btree(name,age DESC)");
 
-            Assert.Equal("idx_name", createIndex.Name!);
-            Assert.Equal("test", createIndex.TableName);
-            Assert.Equal("btree", createIndex.Using!);
-            Assert.Equal(expected, createIndex.Columns!);
-            Assert.True(createIndex.Unique);
-            Assert.True(createIndex.IfNotExists);
+            Assert.Equal("idx_name", createIndex.Element.Name!);
+            Assert.Equal("test", createIndex.Element.TableName);
+            Assert.Equal("btree", createIndex.Element.Using!);
+            Assert.Equal(expected, createIndex.Element.Columns!);
+            Assert.True(createIndex.Element.Unique);
+            Assert.True(createIndex.Element.IfNotExists);
         }
 
         [Fact]
@@ -5165,7 +5172,7 @@ namespace SqlParser.Tests
                     """;
 
             var statement = (Statement.CreateTable)OneStatementParsesTo(sql, "", [new GenericDialect(), new PostgreSqlDialect()]);
-
+            var element = statement.Element;
             var expectedColumns = new Sequence<ColumnDef>
             {
                 new ("int8_col", new Int8()),
@@ -5176,8 +5183,8 @@ namespace SqlParser.Tests
                 new ("bool_col", new Bool()),
             };
 
-            Assert.Equal("public.datatype_aliases", statement.Name);
-            Assert.Equal(expectedColumns, statement.Columns);
+            Assert.Equal("public.datatype_aliases", element.Name);
+            Assert.Equal(expectedColumns, element.Columns);
         }
 
         [Fact]

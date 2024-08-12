@@ -389,7 +389,7 @@ public class BigQueryDialectTests : ParserTestBase
                 new(new DataType.Int64())
             ]))))
         };
-        var expected = new Statement.CreateTable("table", columns);
+        var expected = new Statement.CreateTable(new CreateTable("table", columns));
         Assert.Equal(expected, create);
     }
 
@@ -549,8 +549,8 @@ public class BigQueryDialectTests : ParserTestBase
             new ("x", new DataType.Int64())
         };
 
-        Assert.Equal(name, create.Name);
-        Assert.Equal(columns, create.Columns);
+        Assert.Equal(name, create.Element.Name);
+        Assert.Equal(columns, create.Element.Columns);
     }
 
     [Fact]

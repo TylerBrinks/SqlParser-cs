@@ -475,8 +475,8 @@ namespace SqlParser.Tests.Dialects
                 })
             };
 
-            Assert.Equal("public.customer", create.Name);
-            Assert.Equal(expected, create.Columns);
+            Assert.Equal("public.customer", create.Element.Name);
+            Assert.Equal(expected, create.Element.Columns);
         }
 
         [Fact]
@@ -554,8 +554,8 @@ namespace SqlParser.Tests.Dialects
                BinaryOperator.Gt,
                 new LiteralValue(Number("1"))
             ), "positive");
-            Assert.Equal("t", create.Name);
-            Assert.Equal(expected, create.Constraints!.Single());
+            Assert.Equal("t", create.Element.Name);
+            Assert.Equal(expected, create.Element.Constraints!.Single());
         }
 
         [Fact]
@@ -594,7 +594,7 @@ namespace SqlParser.Tests.Dialects
 
             var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE IF NOT EXISTS uk_cities ()");
 
-            Assert.Equal("uk_cities", create.Name);
+            Assert.Equal("uk_cities", create.Element.Name);
         }
 
         [Fact]
@@ -2033,17 +2033,17 @@ namespace SqlParser.Tests.Dialects
 
             var createIndex = VerifiedStatement<Statement.CreateIndex>(sql, new[] { new PostgreSqlDialect() });
 
-            Assert.Equal("my_index", createIndex.Name!);
-            Assert.Equal("my_table", createIndex.TableName);
-            Assert.Null(createIndex.Using);
-            Assert.False(createIndex.Unique);
-            Assert.True(createIndex.IfNotExists);
+            Assert.Equal("my_index", createIndex.Element.Name!);
+            Assert.Equal("my_table", createIndex.Element.TableName);
+            Assert.Null(createIndex.Element.Using);
+            Assert.False(createIndex.Element.Unique);
+            Assert.True(createIndex.Element.IfNotExists);
             Assert.Equal(
             [
                new(new Identifier("col1")),
                new(new Identifier("col2"))
-            ], createIndex.Columns);
-            Assert.Null(createIndex.Include);
+            ], createIndex.Element.Columns);
+            Assert.Null(createIndex.Element.Include);
         }
 
         [Fact]

@@ -22,7 +22,7 @@ namespace SqlParser.Tests.Dialects
 
             var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE t (a INT) WITHOUT ROWID");
 
-            Assert.Equal("t", create.Name);
+            Assert.Equal("t", create.Element.Name);
         }
 
         [Fact]
@@ -49,7 +49,7 @@ namespace SqlParser.Tests.Dialects
             var create =
                 VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (bar INT PRIMARY KEY AUTOINCREMENT)");
 
-            Assert.Equal("foo", create.Name);
+            Assert.Equal("foo", create.Element.Name);
 
             var expected = new ColumnDef[]
             {
@@ -60,7 +60,7 @@ namespace SqlParser.Tests.Dialects
                 })
             };
 
-            Assert.Equal(expected, create.Columns);
+            Assert.Equal(expected, create.Element.Columns);
         }
 
         [Fact]
@@ -72,8 +72,8 @@ namespace SqlParser.Tests.Dialects
                 new(new Ident("KEY", Symbols.DoubleQuote), new DataType.Int()),
                 new(new Ident("INDEX", Symbols.SquareBracketOpen), new DataType.Int())
             };
-            Assert.Equal("`PRIMARY`", create.Name);
-            Assert.Equal(expected, create.Columns);
+            Assert.Equal("`PRIMARY`", create.Element.Name);
+            Assert.Equal(expected, create.Element.Columns);
         }
 
         [Fact]
@@ -93,8 +93,8 @@ namespace SqlParser.Tests.Dialects
 
             var create = (Statement.CreateTable) VerifiedStatement(sql);
 
-            Assert.Equal("Fruits", create.Name);
-            Assert.True(create.Strict);
+            Assert.Equal("Fruits", create.Element.Name);
+            Assert.True(create.Element.Strict);
         }
 
         [Fact]
