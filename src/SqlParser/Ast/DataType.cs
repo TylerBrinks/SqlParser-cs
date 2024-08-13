@@ -12,8 +12,8 @@ public abstract record DataType : IWriteSql, IElement
     {
         protected CharacterLength? CharLength = CharacterLength;
 
-        protected ulong? IntegerLength => CharLength is CharacterLength.IntegerLength length 
-            ? length.Length 
+        protected ulong? IntegerLength => CharLength is CharacterLength.IntegerLength length
+            ? length.Length
             : null;
 
         protected void FormatCharacterStringType(SqlTextWriter writer, string sqlType, ulong? length)
@@ -185,7 +185,6 @@ public abstract record DataType : IWriteSql, IElement
             writer.Write("BYTEA");
         }
     }
-
     /// Variable-length binary data with optional length.
     ///
     /// [bigquery]: https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#bytes_type
@@ -204,7 +203,7 @@ public abstract record DataType : IWriteSql, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            
+
             FormatCharacterStringType(writer, "CHAR", IntegerLength);
         }
     }
@@ -311,6 +310,16 @@ public abstract record DataType : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// Date32 with the same range as Datetime64
+    /// </summary>
+    public record Date32 : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("DATE32");
+        }
+    }
+    /// <summary>
     /// Datetime with optional time precision e.g. MySQL
     /// 
     /// <see href="https://dev.mysql.com/doc/refman/8.0/en/datetime.html"/>
@@ -320,6 +329,24 @@ public abstract record DataType : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             FormatTypeWithOptionalLength(writer, "DATETIME", Length);
+        }
+    }
+    /// <summary>
+    /// Datetime with time precision and optional timezone e.g. ClickHouse.
+    /// https://dev.mysql.com/doc/refman/8.0/en/datetime.html
+    /// </summary>
+    public record Datetime64(ulong Precision, string? TimeZone = null) : LengthDataType(Precision)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"DateTime64({Precision}");
+
+            if (TimeZone != null)
+            {
+                writer.WriteSql($", '{TimeZone}'");
+            }
+
+            writer.Write(")");
         }
     }
     /// <summary>
@@ -390,6 +417,17 @@ public abstract record DataType : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// Fixed string
+    /// </summary>
+    /// <param name="Length"></param>
+    public record FixedString(ulong? Length = null) : LengthDataType(Length)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            FormatTypeWithOptionalLength(writer, "FixedString", Length);
+        }
+    }
+    /// <summary>
     /// Floating point with optional precision e.g. FLOAT(8)
     /// </summary>
     public record Float(ulong? Length = null) : LengthDataType(Length)
@@ -417,6 +455,16 @@ public abstract record DataType : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             writer.Write("FLOAT8");
+        }
+    }
+    /// <summary>
+    /// Floating point in Clickhouse
+    /// </summary>
+    public record Float32 : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("FLOAT32");
         }
     }
     /// <summary>
@@ -499,6 +547,28 @@ public abstract record DataType : IWriteSql, IElement
             FormatTypeWithOptionalLength(writer, "INT8", Length);
         }
     }
+    /// <summary>
+    /// Integer type in Clickhouse
+    /// Note: Int16 mean 16 bits in Clickhouse
+    /// https://clickhouse.com/docs/en/sql-reference/data-types/int-uint
+    /// </summary>
+    public record Int16 : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("INT16");
+        }
+    }
+    /// <summary>
+    /// Integer type in Clickhouse, BigQuery
+    /// </summary>
+    public record Int32 : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("INT32");
+        }
+    }
     /// Integer type in [bigquery]
     ///
     /// [bigquery]: https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#integer_types
@@ -507,6 +577,30 @@ public abstract record DataType : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             writer.Write("INT64");
+        }
+    }
+    /// <summary>
+    /// Integer type in Clickhouse
+    /// Note: Int128 mean 128 bits in Clickhouse
+    /// https://clickhouse.com/docs/en/sql-reference/data-types/int-uint
+    /// </summary>
+    public record Int128 : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("INT128");
+        }
+    }
+    /// <summary>
+    /// Integer type in Clickhouse
+    /// Note: Int256 mean 256 bits in Clickhouse
+    /// https://clickhouse.com/docs/en/sql-reference/data-types/int-uint
+    /// </summary>
+    public record Int256 : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("INT256");
         }
     }
     /// <summary>
@@ -530,6 +624,29 @@ public abstract record DataType : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// LowCardinality - changes the internal representation of other data types to be dictionary-encoded.
+    /// </summary>
+    public record LowCardinality(DataType DataType) : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"LowCardinality({DataType})");
+        }
+    }
+    /// <summary>
+    ///
+    /// Map Clickhouse: https://clickhouse.com/docs/en/sql-reference/data-types/map
+    /// </summary>
+    /// <param name="dt1"></param>
+    /// <param name="dt2"></param>
+    public record Map(DataType KeyDataType, DataType ValueDataType) : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"Map({KeyDataType}, {ValueDataType})");
+        }
+    }
+    /// <summary>
     /// MySQL medium integer ([1]) with optional display width e.g. MEDIUMINT or MEDIUMINT(5)
     ///
     /// <see href="https://dev.mysql.com/doc/refman/8.0/en/integer-types.html"/>
@@ -542,12 +659,34 @@ public abstract record DataType : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// Nested Clickhouse:https://clickhouse.com/docs/en/sql-reference/data-types/nested-data-structures/nested
+    /// </summary>
+    /// <param name="Columns"></param>
+    public record Nested(Sequence<ColumnDef> Columns) : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"Tuple({Columns.ToSqlDelimited()})");
+        }
+    }
+    /// <summary>
     /// Empty data type
     /// </summary>
     public record None : DataType
     {
         public override void ToSql(SqlTextWriter writer)
         {
+        }
+    }
+    /// <summary>
+    /// Nullable - special marker NULL represents in ClickHouse as a data type.
+    /// </summary>
+    /// <param name="DataType"></param>
+    public record Nullable(DataType DataType) : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"Nullable({DataType})");
         }
     }
     /// <summary>
@@ -690,6 +829,89 @@ public abstract record DataType : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             FormatTypeWithOptionalLength(writer, "TINYINT", Length);
+        }
+    }
+    /// <summary>
+    /// Tuple Clickhouse: https://clickhouse.com/docs/en/sql-reference/data-types/tuple
+    /// </summary>
+    /// <param name="Fields"></param>
+    public record Tuple(Sequence<StructField> Fields) : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"Tuple({Fields.ToSqlDelimited()})");
+        }
+    }
+    /// <summary>
+    /// Integer type in Clickhouse
+    /// Note: UInt8 mean 8 bits in Clickhouse
+    /// https://clickhouse.com/docs/en/sql-reference/data-types/int-uint
+    /// </summary>
+    public record UInt8 : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("UINT8");
+        }
+    }
+    /// <summary>
+    /// Integer type in Clickhouse
+    /// Note: UInt16 mean 16 bits in Clickhouse
+    /// https://clickhouse.com/docs/en/sql-reference/data-types/int-uint
+    /// </summary>
+    public record UInt16 : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("UINT16");
+        }
+    }
+    /// <summary>
+    /// Integer type in Clickhouse
+    /// Note: UInt32 mean 32 bits in Clickhouse
+    /// https://clickhouse.com/docs/en/sql-reference/data-types/int-uint
+    /// </summary>
+    public record UInt32 : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("UINT32");
+        }
+    }
+    /// <summary>
+    /// Integer type in Clickhouse
+    /// Note: UInt64 mean 64 bits in Clickhouse
+    /// https://clickhouse.com/docs/en/sql-reference/data-types/int-uint
+    /// </summary>
+    public record UInt64 : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("UINT64");
+        }
+    }
+    /// <summary>
+    /// Integer type in Clickhouse
+    /// Note: UInt128 mean 128 bits in Clickhouse
+    /// https://clickhouse.com/docs/en/sql-reference/data-types/int-uint
+    /// </summary>
+    public record UInt128 : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("UINT128");
+        }
+    }
+    /// <summary>
+    /// Integer type in Clickhouse
+    /// Note: UInt256 mean 256 bits in Clickhouse
+    /// https://clickhouse.com/docs/en/sql-reference/data-types/int-uint
+    /// </summary>
+    public record UInt256 : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("UINT256");
         }
     }
     /// <summary>

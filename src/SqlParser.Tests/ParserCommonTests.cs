@@ -990,7 +990,7 @@ namespace SqlParser.Tests
                         new LiteralValue(Number("1")),
                         new LiteralValue(Number("2"))
                     })),
-                new SelectItem.UnnamedExpression(new Nested(new LiteralValue(Number("1")))),
+                new SelectItem.UnnamedExpression(new Expression.Nested(new LiteralValue(Number("1")))),
                 new SelectItem.UnnamedExpression(
                     new Expression.Tuple(new Expression[]
                     {
@@ -3037,13 +3037,13 @@ namespace SqlParser.Tests
             var expression = VerifiedExpr("(a + b) - (c + d)");
 
             var expected = new BinaryOp(
-                new Nested(new BinaryOp(
+                new Expression.Nested(new BinaryOp(
                     new Identifier("a"),
                     BinaryOperator.Plus,
                     new Identifier("b")
                 )),
                 BinaryOperator.Minus,
-                new Nested(new BinaryOp(
+                new Expression.Nested(new BinaryOp(
                     new Identifier("c"),
                     BinaryOperator.Plus,
                     new Identifier("d")

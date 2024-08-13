@@ -1,4 +1,5 @@
-﻿using SqlParser.Ast;
+﻿using FluentAssertions.Equivalency.Steps;
+using SqlParser.Ast;
 using SqlParser.Dialects;
 
 namespace SqlParser.Tests.Dialects;
@@ -33,7 +34,7 @@ public class ClickhouseDialectTests : ParserTestBase
                 new(new Expression.Function("indexOf")
                 {
                     Args = new FunctionArguments.List(new FunctionArgumentList(null, args, null))
-                }, 
+                },
                 MapAccessSyntax.Bracket)
             ]))
         ])
@@ -211,5 +212,111 @@ public class ClickhouseDialectTests : ParserTestBase
         Assert.Equal(columns, view.Columns);
 
         Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE VIEW v (i, f) AS SELECT * FROM t"));
+    }
+
+    [Fact]
+    public void Parse_Clickhouse_Data_Types()
+    {
+        const string sql = """
+                           CREATE TABLE table (
+                           a1 UInt8, a2 UInt16, a3 UInt32, a4 UInt64, a5 UInt128, a6 UInt256, 
+                           b1 Int8, b2 Int16, b3 Int32, b4 Int64, b5 Int128, b6 Int256, 
+                           c1 Float32, c2 Float64, 
+                           d1 Date32, d2 DateTime64(3), d3 DateTime64(3, 'UTC'), 
+                           e1 FixedString(255), 
+                           f1 LowCardinality(Int32)
+                           ) ORDER BY (a1)
+                           """;
+
+        var canonical = sql.Replace("Int8", "INT8")
+            .Replace("Int64", "INT64")
+            .Replace("Float64", "FLOAT64");
+
+        var create = OneStatementParsesTo<Statement.CreateTable>(sql, canonical).Element;
+        var columns = new Sequence<ColumnDef>
+        {
+            new("a1", new DataType.UInt8()),
+            new("a2", new DataType.UInt16()),
+            new("a3", new DataType.UInt32()),
+            new("a4", new DataType.UInt64()),
+            new("a5", new DataType.UInt128()),
+            new("a6", new DataType.UInt256()),
+            new("b1", new DataType.Int8()),
+            new("b2", new DataType.Int16()),
+            new("b3", new DataType.Int32()),
+            new("b4", new DataType.Int64()),
+            new("b5", new DataType.Int128()),
+            new("b6", new DataType.Int256()),
+            new("c1", new DataType.Float32()),
+            new("c2", new DataType.Float64()),
+            new("d1", new DataType.Date32()),
+            new("d2", new DataType.Datetime64(3)),
+            new("d3", new DataType.Datetime64(3, "UTC")),
+            new("e1", new DataType.FixedString(255)),
+            new("f1", new DataType.LowCardinality(new DataType.Int32()))
+        };
+
+        Assert.Equal("table", create.Name);
+        Assert.Equal(columns, create.Columns);
+    }
+
+    [Fact]
+    public void Parse_Create_Table_With_Nullable()
+    {
+        const string sql = "CREATE TABLE table (k UInt8, `a` Nullable(String), `b` Nullable(DateTime64(9, 'UTC')), c Nullable(DateTime64(9)), d Date32 NULL) ENGINE=MergeTree ORDER BY (`k`)";
+
+        var canonical = sql.Replace("String", "STRING");
+
+        var create = OneStatementParsesTo<Statement.CreateTable>(sql, canonical).Element;
+
+        var columns = new Sequence<ColumnDef>
+        {
+            new ("k", new DataType.UInt8()),
+            new (new Ident("a", Symbols.Backtick), new DataType.Nullable(new DataType.StringType())),
+            new (new Ident("b", Symbols.Backtick), new DataType.Nullable(new DataType.Datetime64(9, "UTC"))),
+            new ("c", new DataType.Nullable(new DataType.Datetime64(9))),
+            new ("d", new DataType.Date32(), Options:[new ColumnOptionDef(new ColumnOption.Null())]),
+        };
+
+        Assert.Equal("table", create.Name);
+        Assert.Equal(columns, create.Columns);
+    }
+
+    [Fact]
+    public void Parse_Create_Table_With_Nested_Data_Types()
+    {
+        const string sql = """
+                           CREATE TABLE table ( 
+                           i Nested(a Array(Int16), b LowCardinality(String)), 
+                           k Array(Tuple(FixedString(128), Int128)), 
+                           l Tuple(a DateTime64(9), b Array(UUID)), 
+                           m Map(String, UInt16) 
+                           ) ENGINE=MergeTree ORDER BY (k0)
+                           """;
+
+        var create = OneStatementParsesTo<Statement.CreateTable>(sql, "").Element;
+
+        var columns = new Sequence<ColumnDef>
+        {
+            new ("i", new DataType.Nested([
+                new ColumnDef("a", new DataType.Array(new ArrayElementTypeDef.Parenthesis(new DataType.Int16()))),
+                new ColumnDef("b", new DataType.LowCardinality(new DataType.StringType()))
+            ])),
+
+            new ("k", new DataType.Array(new ArrayElementTypeDef.Parenthesis(new DataType.Tuple([
+                new StructField(new DataType.FixedString(128)),
+                new StructField(new DataType.Int128())
+            ])))),
+
+            new ("l", new DataType.Tuple([
+                new StructField(new DataType.Datetime64(9), "a"),
+                new StructField(new DataType.Array(new ArrayElementTypeDef.Parenthesis(new DataType.Uuid())), "b"),
+            ])),
+            
+            new ("m", new DataType.Map(new DataType.StringType(), new DataType.UInt16()))
+        };
+
+        Assert.Equal("table", create.Name);
+        Assert.Equal(columns, create.Columns);
     }
 }
