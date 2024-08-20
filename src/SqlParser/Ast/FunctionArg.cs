@@ -152,7 +152,7 @@ public abstract record FunctionArgExpression : IWriteSql, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.Write("*");
+            writer.Write('*');
         }
     }
     public abstract void ToSql(SqlTextWriter writer);
@@ -196,7 +196,7 @@ public abstract record FunctionArgOperator : IWriteSql, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.Write("=");
+            writer.Write('=');
         }
     }
 

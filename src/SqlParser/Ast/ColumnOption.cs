@@ -145,7 +145,7 @@ public abstract record ColumnOption : IWriteSql, IElement
             {
                 if (i > 0)
                 {
-                    writer.Write(" ");
+                    writer.Write(' ');
                 }
 
                 writer.Write(Tokens[i]);

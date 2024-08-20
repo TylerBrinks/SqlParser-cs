@@ -93,7 +93,7 @@ public abstract record TableFactor : IWriteSql, IElement
             {
                 writer.WriteSql($" DEFAULT ON NULL ({DefaultOnNull})");
             }
-            writer.Write(")");
+            writer.Write(')');
 
             if (PivotAlias != null)
             {
