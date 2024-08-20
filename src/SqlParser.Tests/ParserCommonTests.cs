@@ -194,7 +194,7 @@ namespace SqlParser.Tests
         public void Parse_Quoted_Delete_Statement()
         {
             var delete = (Statement.Delete)VerifiedStatement("DELETE FROM \"table\"");
-            var relation = ((delete.DeleteOperation.From as FromTable.WithFromKeyword)!).From.First().Relation;
+            var relation = ((FromTable.WithFromKeyword)delete.DeleteOperation.From).From.First().Relation;
 
             var expected = new TableFactor.Table(new ObjectName(new Ident("table", Symbols.DoubleQuote)));
 
@@ -216,7 +216,7 @@ namespace SqlParser.Tests
             var binaryOp = new BinaryOp(new Identifier("name"), BinaryOperator.Eq, new LiteralValue(Number("5")));
 
             var delete = statement.AsDelete();
-            Assert.Equal(table, ((delete.DeleteOperation.From as FromTable.WithFromKeyword)!).From.First().Relation);
+            Assert.Equal(table, ((FromTable.WithFromKeyword)delete.DeleteOperation.From).From.First().Relation);
             Assert.Null(delete.DeleteOperation.Using);
             Assert.Equal(binaryOp, delete.DeleteOperation.Selection);
         }
@@ -233,7 +233,7 @@ namespace SqlParser.Tests
                 BinaryOperator.Lt,
                 new CompoundIdentifier(new Ident[] { "b", "id" }));
 
-            Assert.Equal(table, ((delete.DeleteOperation.From as FromTable.WithFromKeyword)!).From.First().Relation);
+            Assert.Equal(table, ((FromTable.WithFromKeyword)delete.DeleteOperation.From).From.First().Relation);
             Assert.Equal(@using, delete.DeleteOperation.Using);
             Assert.Equal(binaryOp, delete.DeleteOperation.Selection);
             Assert.Null(delete.DeleteOperation.Returning);
