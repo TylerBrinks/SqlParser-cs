@@ -9,17 +9,8 @@
 /// <param name="guard">Parent guard object to increment upon completing of a scoped operation</param>
 public sealed class DepthScope(DepthGuard guard) : IDisposable
 {
-    public void Dispose() => Dispose(true);
-
-    ~DepthScope() => Dispose(false);
-
-    private void Dispose(bool disposing)
+    public void Dispose()
     {
         guard.Increment();
-
-        if (disposing)
-        {
-            GC.SuppressFinalize(this);
-        }
     }
 }
