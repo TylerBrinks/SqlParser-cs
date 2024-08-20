@@ -4587,7 +4587,7 @@ namespace SqlParser.Tests
         {
             var keywords = Keywords.All;
 
-            var names = System.Enum.GetNames(typeof(Keyword))
+            var names = System.Enum.GetNames<Keyword>()
                 .Where(n => n != nameof(Keyword.undefined))
                 .ToArray();
 

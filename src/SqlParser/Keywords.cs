@@ -17,7 +17,7 @@ internal static class Keywords
         {
             {"END_EXEC", "END-EXEC"}
         };
-        var keywords = Enum.GetNames(typeof(Keyword))
+        var keywords = Enum.GetNames<Keyword>()
                 .Where(n => n != nameof(Keyword.undefined))
                 .ToArray();
 
