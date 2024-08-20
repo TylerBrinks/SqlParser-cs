@@ -195,7 +195,7 @@ namespace SqlParser.Tests.Dialects
                     "CREATE TABLE foo (id INT(11)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3");
 
             Assert.Equal("foo", create.Element.Name);
-            Assert.Equal("InnoDB", create.Element.Engine);
+            Assert.Equal(new TableEngine("InnoDB"), create.Element.Engine);
             Assert.Equal("utf8mb3", create.Element.DefaultCharset);
             Assert.Equal(new ColumnDef[]
             {

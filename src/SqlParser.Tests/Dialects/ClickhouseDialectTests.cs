@@ -1,5 +1,4 @@
-﻿using FluentAssertions.Equivalency.Steps;
-using SqlParser.Ast;
+﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 
 namespace SqlParser.Tests.Dialects;
@@ -39,10 +38,10 @@ public class ClickhouseDialectTests : ParserTestBase
             ]))
         ])
         {
-            From = new Sequence<TableWithJoins>
-            {
+            From =
+            [
                 new(new TableFactor.Table("foos"))
-            },
+            ],
             Selection = new Expression.BinaryOp(
                 // Left
                 new Expression.BinaryOp(
@@ -160,16 +159,12 @@ public class ClickhouseDialectTests : ParserTestBase
                      CREATE TABLE "x" ("a" "int") ENGINE=MergeTree ORDER BY ("x")
                      """);
 
-        OneStatementParsesTo(
-            """
-            CREATE TABLE "x" ("a" "int") ENGINE=MergeTree ORDER BY "x"
-            """,
-            """
-            CREATE TABLE "x" ("a" "int") ENGINE=MergeTree ORDER BY ("x")
-            """);
+        VerifiedStatement("""
+                          CREATE TABLE "x" ("a" "int") ENGINE=MergeTree ORDER BY "x"
+                          """);
 
         VerifiedStatement("""
-                          CREATE TABLE "x" ("a" "int") ENGINE=MergeTree ORDER BY ("x") AS SELECT * FROM "t" WHERE true
+                          CREATE TABLE "x" ("a" "int") ENGINE=MergeTree ORDER BY "x" AS SELECT * FROM "t" WHERE true
                           """);
     }
 
@@ -318,5 +313,51 @@ public class ClickhouseDialectTests : ParserTestBase
 
         Assert.Equal("table", create.Name);
         Assert.Equal(columns, create.Columns);
+    }
+
+    [Fact]
+    public void Parse_Create_Table_With_Primary_Key()
+    {
+        const string sql = """
+                CREATE TABLE db.table (`i` INT, `k` INT) 
+                ENGINE=SharedMergeTree('/clickhouse/tables/{uuid}/{shard}', '{replica}') 
+                PRIMARY KEY tuple(i) 
+                ORDER BY tuple(i)
+                """;
+        DefaultDialects = [new ClickHouseDialect()];
+        var statement = VerifiedStatement<Statement.CreateTable>(sql).Element;
+
+        Assert.Equal("db.table", statement.Name);
+        Assert.Equal([
+            new ColumnDef(new Ident("i", Symbols.Backtick), new DataType.Int()),
+            new ColumnDef(new Ident("k", Symbols.Backtick), new DataType.Int()),
+        ], statement.Columns);
+
+        Assert.Equal(new TableEngine("SharedMergeTree", 
+            [
+                new Ident("/clickhouse/tables/{uuid}/{shard}", Symbols.SingleQuote), 
+                new Ident("{replica}", Symbols.SingleQuote)
+            ]),
+            statement.Engine);
+
+        var orderByFn = (Expression.Function)((OneOrManyWithParens<Expression>.One)statement.OrderBy!).Value;
+        AssertFunction((Expression.Function)statement.PrimaryKey!, "tuple", "i");
+        AssertFunction(orderByFn, "tuple", "i");
+        
+        Assert.Throws<ParserException>(() => ParseSqlStatements("""
+                                               CREATE TABLE db.table (`i` Int, `k` Int) 
+                                               ORDER BY tuple(i), tuple(k)
+                                               """));
+        return;
+
+        static void AssertFunction(Expression.Function actual, string name, string arg)
+        {
+            Assert.Equal(new ObjectName(new Ident(name)), actual.Name);
+            Assert.Equal(
+                new FunctionArguments.List(new FunctionArgumentList(null, [
+                    new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.Identifier(new Ident(arg))))
+                ], null)),
+                actual.Args);
+        }
     }
 }

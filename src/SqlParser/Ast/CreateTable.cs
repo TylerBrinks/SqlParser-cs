@@ -19,10 +19,10 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
     public bool WithoutRowId { get; init; }
     [Visit(4)] public ObjectName? Like { get; init; }
     [Visit(5)] public ObjectName? CloneClause { get; init; }
-    public string? Engine { get; init; }
+    public TableEngine? Engine { get; init; }
     // ReSharper disable once MemberHidesStaticFromOuterClass
     public new string? Comment { get; init; }
-    public Sequence<Ident>? OrderBy { get; init; }
+    public OneOrManyWithParens<Expression>? OrderBy { get; init; }
     public Expression? PartitionBy { get; init; }
     public Sequence<Ident>? ClusterBy { get; init; }
     public Sequence<SqlOption>? Options { get; init; }
@@ -33,11 +33,12 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
     // Clickhouse "ON CLUSTER" clause:
     // https://clickhouse.com/docs/en/sql-reference/distributed-ddl/
     public string? OnCluster { get; init; }
+    public Expression? PrimaryKey { get; init; }
     // SQLite "STRICT" clause.
     // if the "STRICT" table-option keyword is added to the end, after the closing ")",
     // then strict typing rules apply to that table.
     public bool Strict { get; init; }
-    
+
     public void ToSql(SqlTextWriter writer)
     {
         var orReplace = OrReplace ? "OR REPLACE " : null;
@@ -188,9 +189,14 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
             writer.Write($" AUTO_INCREMENT {AutoIncrementOffset.Value}");
         }
 
-        if (OrderBy.SafeAny())
+        if (PrimaryKey != null)
         {
-            writer.WriteSql($" ORDER BY ({OrderBy})");
+            writer.WriteSql($" PRIMARY KEY {PrimaryKey}");
+        }
+
+        if (OrderBy != null)
+        {
+            writer.WriteSql($" ORDER BY {OrderBy}");
         }
 
         if (PartitionBy != null)

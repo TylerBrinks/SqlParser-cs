@@ -1154,7 +1154,8 @@ public partial class Parser
                 {
                     return new QualifiedWildcard(new ObjectName(idParts));
                 }
-                else if (ConsumeToken<LeftParen>())
+                
+                if (ConsumeToken<LeftParen>())
                 {
                     if (_dialect is SnowflakeDialect or MsSqlDialect && ConsumeTokens(typeof(Plus), typeof(RightParen)))
                     {
@@ -1165,11 +1166,9 @@ public partial class Parser
 
                         return new OuterJoin(new CompoundIdentifier(idParts));
                     }
-                    else
-                    {
-                        PrevToken();
-                        return ParseFunction(new ObjectName(idParts));
-                    }
+                    
+                    PrevToken();
+                    return ParseFunction(new ObjectName(idParts));
                 }
 
                 return new CompoundIdentifier(idParts);
@@ -1614,20 +1613,20 @@ public partial class Parser
             var nullTreatment = ParseNullTreatment();
             if (nullTreatment != null)
             {
-                clauses ??= new Sequence<FunctionArgumentClause>();
+                clauses ??= [];
                 clauses.Add(new FunctionArgumentClause.IgnoreOrRespectNulls(nullTreatment));
             }
         }
 
         if (ParseKeywordSequence(Keyword.ORDER, Keyword.BY))
         {
-            clauses ??= new Sequence<FunctionArgumentClause>();
+            clauses ??= [];
             clauses.Add(new FunctionArgumentClause.OrderBy(ParseCommaSeparated(ParseOrderByExpr)));
         }
 
         if (ParseKeyword(Keyword.LIMIT))
         {
-            clauses ??= new Sequence<FunctionArgumentClause>();
+            clauses ??= [];
             clauses.Add(new FunctionArgumentClause.Limit(ParseExpr()));
         }
 
@@ -4333,7 +4332,15 @@ public partial class Parser
 
             if (token is Word w)
             {
-                return w.Value;
+                var name = w.Value;
+
+                Sequence<Ident>? parameters = null;
+                var peeked = PeekToken();
+                if (peeked is LeftParen)
+                {
+                    parameters = ExpectParens(() => ParseCommaSeparated(ParseIdentifier));
+                }
+                return new TableEngine(name, parameters);
             }
 
             throw Expected("identifier", token);
@@ -4354,16 +4361,35 @@ public partial class Parser
             }
         }
 
+        Expression? primaryKey = null;
+
+        if (_dialect is ClickHouseDialect or GenericDialect && ParseKeywordSequence(Keyword.PRIMARY, Keyword.KEY))
+        {
+            primaryKey = ParseExpr();
+        }
+
         var orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY), () =>
         {
-            if (!ConsumeToken<LeftParen>())
+            OneOrManyWithParens<Expression> orderExpression;
+
+            if (ConsumeToken<LeftParen>())
             {
-                return new Sequence<Ident> { ParseIdentifier() };
+                Sequence<Expression>? cols = null;
+
+                if (PeekToken() is not RightParen)
+                {
+                    cols = ParseCommaSeparated(ParseExpr);
+                }
+
+                ExpectRightParen();
+                orderExpression = new OneOrManyWithParens<Expression>.Many(cols);
+            }
+            else
+            {
+                orderExpression = new OneOrManyWithParens<Expression>.One(ParseExpr());
             }
 
-            var cols = ParseInit(PeekToken() is not RightParen, () => ParseCommaSeparated(ParseIdentifier));
-            ExpectRightParen();
-            return cols;
+            return orderExpression;
 
         });
 
@@ -4447,6 +4473,7 @@ public partial class Parser
             CloneClause = clone,
             Engine = engine,
             Comment = comment,
+            PrimaryKey = primaryKey,
             OrderBy = orderBy,
             DefaultCharset = defaultCharset,
             Collation = collation,
@@ -8077,6 +8104,13 @@ public partial class Parser
         }
 
         var name = ParseObjectNameWithClause(true);
+
+        Sequence<Ident>? partitions = null;
+        if (_dialect is MySqlDialect or GenericDialect && ParseKeyword(Keyword.PARTITION))
+        {
+            partitions = ParseIdentifiers();
+        }
+
         // Parse potential version qualifier
         var version = ParseTableVersion();
 
@@ -8104,7 +8138,8 @@ public partial class Parser
             Alias = optionalAlias,
             Args = args,
             WithHints = withHints,
-            Version = version
+            Version = version,
+            Partitions = partitions
         };
 
         Keyword kwd;

@@ -119,10 +119,14 @@ public abstract record TableFactor : IWriteSql, IElement
         }
     }
     /// <summary>
-    /// Table0based factor
+    /// Table-based factor
     /// </summary>
     /// <param name="Name">Object name</param>
-    public record Table([property: Visit(0)] ObjectName Name) : TableFactor
+    public record Table(
+        [property: Visit(0)] ObjectName Name,
+        TableVersion? Version = null,
+        Sequence<Ident>? Partitions = null)
+        : TableFactor
     {
         /// Arguments of a table-valued function, as supported by Postgres
         /// and MSSQL. Note that deprecated MSSQL `FROM foo (NOLOCK)` syntax
