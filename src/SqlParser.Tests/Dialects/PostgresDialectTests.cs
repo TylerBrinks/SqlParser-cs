@@ -1,6 +1,6 @@
 ﻿using SqlParser.Ast;
 using SqlParser.Dialects;
-using SqlParser.Tokens;
+
 using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
 using ObjectType = SqlParser.Ast.ObjectType;
@@ -2324,6 +2324,87 @@ namespace SqlParser.Tests.Dialects
                 new Subscript.Index(new LiteralValue(new Value.Number("2"))));
             
             Assert.Equal(expected, expression);
+        }
+
+        [Fact]
+        public void Parse_Pg_Custom_Binary_Ops()
+        {
+            // Postgres supports declaring custom binary operators, using any character in the following set:
+            //  + - * / < > = ~ ! @ # % ^ & | ` ?
+
+            // Here, we test the ones used by common extensions
+            List<string> operators =
+            [
+                // PostGIS
+                "&&&", // n-D bounding boxes intersect
+                "&<", // (is strictly to the left of)
+                "&>", // (is strictly to the right of)
+                "|=|", //  distance between A and B trajectories at their closest point of approach
+                "<<#>>", // n-D distance between A and B bounding boxes
+                "|>>", // A's bounding box is strictly above B's.
+                "~=", // bounding box is the same
+                // PGroonga
+                "&@", // Full text search by a keyword
+                "&@~", // Full text search by easy to use query language
+                "&@*", // Similar search
+                "&`", // Advanced search by ECMAScript like query language
+                "&@|", // Full text search by an array of keywords
+                "&@~|", //  Full text search by an array of queries in easy to use query language
+                // pgtrgm
+                "<<%", // second argument has a continuous extent of an ordered trigram set that matches word boundaries
+                "%>>", // commutator of <<%
+                "<<<->", // distance between arguments
+                // hstore
+                "#=", // Replace fields with matching values from hstore
+                // ranges
+                "-|-", // Is adjacent to
+                // pg_similarity
+                "~++", // L1 distance
+                "~##", // Cosine Distance
+                "~-~", // Dice Coefficient
+                "~!!", // Euclidean Distance
+                "~@~", // Hamming Distance
+                "~??", // Jaccard Coefficient
+                "~%%", // Jaro Distance
+                "~@@", // Jaro-Winkler Distance
+                "~==", // Levenshtein Distance
+                "~^^", // Matching Coefficient
+                "~||", // Monge-Elkan Coefficient
+                "~#~", // Needleman-Wunsch Coefficient
+                "~**", // Overlap Coefficient
+                "~~~", // Q-Gram Distance
+                "~=~", // Smith-Waterman Coefficient
+                "~!~", // Smith-Waterman-Gotoh Coefficient
+                "~*~", // Soundex Distance
+                // soundex_operator
+                ">@@<", // Soundex matches
+                "<@@>", // Soundex doesn't match
+            ];
+
+            foreach (var op in operators)
+            {
+                TestOperator(op, BinaryOperator.Custom);
+            }
+        }
+
+        private void TestOperator(string op, BinaryOperator binaryOp)
+        {
+            var tokenizer = new Tokenizer();
+            var dialect = new PostgreSqlDialect();
+            var tokens = tokenizer.Tokenize($"a{op}b", dialect);
+
+            Assert.Equal(3, tokens.Count);
+
+            var expected = new BinaryOp(
+                new Identifier("a"),
+                binaryOp,
+                new Identifier("b"));
+
+            var canonical = $"a {op} b";
+
+            var dialects = new List<Dialect> { dialect };
+            Assert.Equal(expected, VerifiedExpr(canonical, dialects));
+            Assert.Equal(expected, VerifiedExpr($"a{op}b", dialects));
         }
     }
 }

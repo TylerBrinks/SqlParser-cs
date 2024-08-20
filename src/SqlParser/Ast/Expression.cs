@@ -48,28 +48,6 @@ public abstract record Expression : IWriteSql, IElement
         }
     }
     /// <summary>
-    /// An array index expression
-    /// <example>
-    /// <c>
-    /// (ARRAY[1, 2])[1] or (current_schemas(FALSE))[1]
-    /// </c>
-    /// </example>
-    /// </summary>
-    /// <param name="Expression"></param>
-    /// <param name="Indexes"></param>
-    public record ArrayIndex(Expression Expression, Sequence<Subscript> Indexes) : Expression
-    {
-        public override void ToSql(SqlTextWriter writer)
-        {
-            writer.WriteSql($"{Expression}");
-
-            foreach (var index in Indexes)
-            {
-                writer.WriteSql($"[{index}]");
-            }
-        }
-    }
-    /// <summary>
     /// AT a timestamp to a different timezone
     /// <example>
     /// <c>
@@ -116,7 +94,14 @@ public abstract record Expression : IWriteSql, IElement
         {
             if (Op is not BinaryOperator.PGCustomBinaryOperator)
             {
-                writer.WriteSql($"{Left} {Op} {Right}");
+                if (CustomOperator != null)
+                {
+                    writer.WriteSql($"{Left} {CustomOperator} {Right}");
+                }
+                else
+                {
+                    writer.WriteSql($"{Left} {Op} {Right}");
+                }
             }
             else
             {
@@ -143,6 +128,29 @@ public abstract record Expression : IWriteSql, IElement
         }
 
         public Sequence<string?>? PgOptions { get; init; }
+        internal string? CustomOperator { get; private set; }
+
+        public void SetCustomOperator(string customOperator)
+        {
+            CustomOperator = customOperator;
+        }
+
+        public virtual bool Equals(BinaryOp? other)
+        {
+            if (ReferenceEquals(null, other)){ return false; }
+            if (ReferenceEquals(this, other)){ return true; }
+
+            return base.Equals(other) &&
+                   Equals(PgOptions, other.PgOptions) && 
+                   Left.Equals(other.Left) && 
+                   Op == other.Op && 
+                   Right.Equals(other.Right);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(base.GetHashCode(), PgOptions, Left, (int)Op, Right);
+        }
     }
     /// <summary>
     /// `CASE [operand] WHEN condition THEN result ... [ELSE result] END`

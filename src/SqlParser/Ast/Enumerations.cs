@@ -164,7 +164,8 @@ public enum BinaryOperator
     //
     // https://www.postgresql.org/docs/current/sql-createoperator.html
     PGCustomBinaryOperator,
-    // No binary operation
+
+    Custom
 }
 
 public enum CastKind

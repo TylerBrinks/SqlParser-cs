@@ -29,6 +29,27 @@ public class PostgreSqlDialect : Dialect
 
     public override char? IdentifierQuoteStyle(string identifier) => Symbols.DoubleQuote;
 
+    public override bool IsDelimitedIdentifierStart(char character)=> character is Symbols.DoubleQuote;
+
+    public override bool IsCustomOperatorPart(char character) => character
+            is Symbols.Plus
+            or Symbols.Minus
+            or Symbols.Asterisk
+            or Symbols.Divide
+            or Symbols.LessThan
+            or Symbols.GreaterThan
+            or Symbols.Equal
+            or Symbols.Tilde
+            or Symbols.ExclamationMark
+            or Symbols.At
+            or Symbols.Num
+            or Symbols.Percent
+            or Symbols.Caret
+            or Symbols.Ampersand
+            or Symbols.Pipe
+            or Symbols.Backtick
+            or Symbols.QuestionMark;
+
     public override Statement? ParseStatement(Parser parser)
     {
         return parser.ParseKeyword(Keyword.COMMENT) ? ParseComment(parser) : null;

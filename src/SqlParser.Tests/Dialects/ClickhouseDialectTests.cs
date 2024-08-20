@@ -51,8 +51,8 @@ public class ClickhouseDialectTests : ParserTestBase
                     new Expression.LiteralValue(new Value.SingleQuotedString("test"))),
                 // Op
                 BinaryOperator.And,
-               // Right
-               new Expression.BinaryOp(
+                // Right
+                new Expression.BinaryOp(
                     new Expression.MapAccess(new Expression.Identifier("string_value"),
                     [
                         new Expression.MapAccessKey(new Expression.Function("indexOf")
@@ -312,7 +312,7 @@ public class ClickhouseDialectTests : ParserTestBase
                 new StructField(new DataType.Datetime64(9), "a"),
                 new StructField(new DataType.Array(new ArrayElementTypeDef.Parenthesis(new DataType.Uuid())), "b"),
             ])),
-            
+
             new ("m", new DataType.Map(new DataType.StringType(), new DataType.UInt16()))
         };
 

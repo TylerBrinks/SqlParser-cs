@@ -83,6 +83,15 @@ public abstract class Dialect
         return null;
     }
     /// <summary>
+    /// Most dialects do not have custom operators.This method to provide custom operators.
+    /// </summary>
+    /// <param name="character">Character</param>
+    /// <returns>True if custom operator part; otherwise false</returns>
+    public virtual bool IsCustomOperatorPart(char character)
+    {
+        return false;
+    }
+    /// <summary>
     /// True if the dialect supports filtering during aggregation
     /// </summary>
     /// <returns>True if supported; otherwise false.</returns>

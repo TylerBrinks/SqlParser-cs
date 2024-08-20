@@ -1,4 +1,5 @@
-﻿using SqlParser.Ast;
+﻿using System.Reflection.Metadata.Ecma335;
+using SqlParser.Ast;
 using SqlParser.Dialects;
 
 namespace SqlParser.Tests;
@@ -148,6 +149,20 @@ public class ParserTestBase
     public Sequence<Statement?> ParseSqlStatements(string sql, bool unescape = false, ParserOptions? options = null)
     {
         return ParseSqlStatements(sql, Dialects, unescape, options);
+    }
+
+    public Expression ExpressionParsesTo(string sql, string canonical, IEnumerable<Dialect> dialects)
+    {
+        var expr = VerifiedExpr(sql, dialects);
+
+        if (!string.IsNullOrEmpty(canonical))
+        {
+            var actual = expr.ToSql();
+
+            Assert.Equal(canonical, actual, StringComparer.InvariantCultureIgnoreCase);
+        }
+
+        return expr;
     }
 
     // Ensures that `sql` parses as a single statement and returns it.

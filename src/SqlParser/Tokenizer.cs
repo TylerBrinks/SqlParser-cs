@@ -72,11 +72,11 @@ public ref struct Tokenizer(bool unescape = true)
             // string, but PostgreSQL, at least, allows a lowercase 'x' too.
             'X' or 'x' => TokenizeHex(),
 
-            Symbols.SingleQuote => TokenizeSingle(), //new SingleQuotedString(new string(TokenizeQuotedString(Symbols.SingleQuote, _dialect.SupportsStringLiteralBackslashEscape))),
+            Symbols.SingleQuote => TokenizeSingle(),
 
             Symbols.DoubleQuote when
                 !_dialect.IsDelimitedIdentifierStart(character) &&
-                !_dialect.IsIdentifierStart(character) => TokenizeDouble(), //new DoubleQuotedString(//new string(TokenizeSingleQuotedString(Symbols.DoubleQuote, _dialect.SupportsStringLiteralBackslashEscape))),
+                !_dialect.IsIdentifierStart(character) => TokenizeDouble(),
 
             // Delimited (quoted) identifier
             _ when
@@ -534,7 +534,9 @@ public ref struct Tokenizer(bool unescape = true)
             return new Modulo();
         }
 
-        return _dialect.IsIdentifierStart(Symbols.Percent) ? TokenizeIdentifierOrKeyword([character, next]) : new Modulo();
+        return _dialect.IsIdentifierStart(Symbols.Percent)
+            ? TokenizeIdentifierOrKeyword([character, next])
+            : StartBinOp($"{Symbols.Percent}", new Modulo());
     }
 
     private Token TokenizeByteStringLiteral()
@@ -620,7 +622,7 @@ public ref struct Tokenizer(bool unescape = true)
             // -> or ->> long arrow
             Symbols.GreaterThan => TokenizeLongArrow(),
             // Regular - operator
-            _ => new Minus()
+            _ => StartBinOp("-", new Minus())
         };
     }
 
@@ -636,11 +638,11 @@ public ref struct Tokenizer(bool unescape = true)
         _state.Next();
         if (_state.Peek() != Symbols.GreaterThan)
         {
-            return new Arrow();
+            return StartBinOp("->", new Arrow());
         }
 
         _state.Next();
-        return new LongArrow();
+        return ConsumeForBinOp("->>", new LongArrow());
     }
 
     private Token TokenizeDivide()
@@ -733,14 +735,16 @@ public ref struct Tokenizer(bool unescape = true)
         switch (_state.Peek())
         {
             case Symbols.Divide:
-                return TokenizeSingleCharacter(new PGSquareRoot());
+                return ConsumeForBinOp("|/", new PGSquareRoot());
 
             case Symbols.Pipe:
                 _state.Next();
-                return _state.Peek() == Symbols.Divide ? TokenizeSingleCharacter(new PGCubeRoot()) : new StringConcat();
+                return _state.Peek() == Symbols.Divide
+                    ? ConsumeForBinOp("||/", new PGCubeRoot())
+                    : StartBinOp("||", new StringConcat());
 
             default:
-                return new Pipe();
+                return StartBinOp("|", new Pipe());
         }
     }
 
@@ -797,16 +801,21 @@ public ref struct Tokenizer(bool unescape = true)
         {
             case Symbols.Equal:
                 _state.Next();
-                return _state.Peek() == Symbols.GreaterThan ? TokenizeSingleCharacter(new Spaceship()) : new LessThanOrEqual();
+                return _state.Peek() == Symbols.GreaterThan
+                    ? ConsumeForBinOp("<=>", new Spaceship())
+                    : StartBinOp("<=", new LessThanOrEqual());
 
             case Symbols.GreaterThan:
-                return TokenizeSingleCharacter(new NotEqual());
+                return ConsumeForBinOp("<>", new NotEqual());
+
             case Symbols.LessThan:
-                return TokenizeSingleCharacter(new ShiftLeft());
+                return ConsumeForBinOp("<<", new ShiftLeft());
+
             case Symbols.At:
-                return TokenizeSingleCharacter(new ArrowAt());
+                return ConsumeForBinOp("<@", new ArrowAt());
+
             default:
-                return new LessThan();
+                return StartBinOp("<", new LessThan());
         }
     }
 
@@ -815,9 +824,9 @@ public ref struct Tokenizer(bool unescape = true)
         _state.Next();
         return _state.Peek() switch
         {
-            Symbols.Equal => TokenizeSingleCharacter(new GreaterThanOrEqual()),
-            Symbols.GreaterThan => TokenizeSingleCharacter(new ShiftRight()),
-            _ => new GreaterThan()
+            Symbols.Equal => ConsumeForBinOp(">=", new GreaterThanOrEqual()),
+            Symbols.GreaterThan => ConsumeForBinOp(">=", new ShiftRight()),
+            _ => StartBinOp(">", new GreaterThan())
         };
     }
 
@@ -841,11 +850,11 @@ public ref struct Tokenizer(bool unescape = true)
 
         if (token is not Symbols.Ampersand)
         {
-            return new Ampersand();
+            return StartBinOp("&", new Ampersand());
         }
 
         _state.Next();
-        return new Overlap();
+        return StartBinOp("&&", new Overlap());
     }
 
     private Token TokenizeCaret()
@@ -886,16 +895,16 @@ public ref struct Tokenizer(bool unescape = true)
         switch (peek)
         {
             case Symbols.Asterisk:
-                return TokenizeSingleCharacter(new TildeAsterisk());
+                return ConsumeForBinOp("~*", new TildeAsterisk());
 
             case Symbols.Tilde:
                 _state.Next();
                 return _state.Peek() == Symbols.Asterisk
-                    ? TokenizeSingleCharacter(new DoubleTildeAsterisk())
-                    : new DoubleTilde();
+                    ? ConsumeForBinOp("~~*", new DoubleTildeAsterisk())
+                    : StartBinOp("~~", new DoubleTilde());
 
             default:
-                return new Tilde();
+                return StartBinOp("~", new Tilde());
         }
     }
 
@@ -905,23 +914,24 @@ public ref struct Tokenizer(bool unescape = true)
         switch (_state.Peek())
         {
             case Symbols.Minus:
-                return TokenizeSingleCharacter(new HashMinus());
+                return ConsumeForBinOp("#-", new HashMinus());
 
             case Symbols.GreaterThan:
                 _state.Next();
-                if (_state.Peek() != Symbols.GreaterThan)
+                if (_state.Peek() == Symbols.GreaterThan)
                 {
-                    return new HashArrow();
+                    return ConsumeForBinOp("#>>", new HashLongArrow());
                 }
 
-                _state.Next();
-                return new HashLongArrow();
+                return StartBinOp("#>", new HashArrow());
 
             case Symbols.Space:
                 return new Hash();
 
             default:
-                return _dialect.IsIdentifierStart(Symbols.Num) ? TokenizeIdentifierOrKeyword([character, _state.Peek()]) : new Hash();
+                return _dialect.IsIdentifierStart(Symbols.Num)
+                    ? TokenizeIdentifierOrKeyword([character, _state.Peek()])
+                    : StartBinOp("#", new Hash());
         }
     }
 
@@ -1088,6 +1098,35 @@ public ref struct Tokenizer(bool unescape = true)
         }
 
         return quoted;
+    }
+
+    private Token ConsumeForBinOp(string prefix, Token defaultToken)
+    {
+        _state.Next();
+        return StartBinOp(prefix, defaultToken);
+    }
+
+    private Token StartBinOp(string prefix, Token defaultToken)
+    {
+        List<char>? custom = null;
+        char current;
+
+        while ((current = _state.Peek()) != Symbols.EndOfFile)
+        {
+            if (!_dialect.IsCustomOperatorPart(current))
+            {
+                break;
+            }
+
+            custom ??= [..prefix];
+
+            custom.Add(current);
+            _state.Next();
+        }
+
+        return custom?.Count > 0
+            ? new CustomBinaryOperator(new string(custom.ToArray()))
+            : defaultToken;
     }
 
     private (string, char?) ParseQuotedIdent(char quoteEnd)

@@ -113,9 +113,9 @@ namespace SqlParser.Tests.Dialects
             }), select.Projection[0].AsExpr());
 
             Assert.Equal(new Function(new ObjectName(new Ident("myfun", Symbols.DoubleQuote)))
-                {
-                    Args = new FunctionArguments.List(FunctionArgumentList.Empty())
-                },
+            {
+                Args = new FunctionArguments.List(FunctionArgumentList.Empty())
+            },
                 select.Projection[1].AsExpr());
 
             var withAlias = (SelectItem.ExpressionWithAlias)select.Projection[2];
@@ -242,7 +242,7 @@ namespace SqlParser.Tests.Dialects
             var statement = ParseSqlStatements("DECLARE @foo CURSOR, @bar INT, @baz AS TEXT = 'foobar';")[0];
 
             var expected = new Statement.Declare([
-            
+
                 new Declare(["@foo"], null, null, DeclareType.Cursor),
                 new Declare(["@bar"], new DataType.Int(), null, null),
                 new Declare(["@baz"], new DataType.Text(),
@@ -250,6 +250,12 @@ namespace SqlParser.Tests.Dialects
             ]);
 
             Assert.Equal(expected, statement);
+        }
+
+        [Fact]
+        public void Parse_Ampersand_Arobase()
+        {
+            ExpressionParsesTo("a&@b", "a & @b", new List<Dialect> { new MsSqlDialect() });
         }
     }
 }
