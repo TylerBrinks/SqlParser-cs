@@ -521,7 +521,7 @@ public ref struct Tokenizer(bool unescape = true)
             _state.Next();
         }
 
-        return new Number(new string(number.ToArray()), @long);
+        return new Number(new string(number), @long);
     }
 
     private Token TokenizePercent(char character)
