@@ -82,7 +82,7 @@ public interface IElement
         }
     }
 
-    internal static PropertyInfo[] GetVisitableChildProperties(IElement element)
+    internal static IReadOnlyList<PropertyInfo> GetVisitableChildProperties(IElement element)
     {
         var elementType = element.GetType();
 
@@ -96,13 +96,13 @@ public interface IElement
         // No need to look for additional properties
         if (!decorated.Any())
         {
-            return properties.ToArray();
+            return properties;
         }
 
         // Visit orders are not specified in the constructor; return the decorated list.
         if (decorated.Count == properties.Length)
         {
-            return decorated.ToArray();
+            return decorated;
         }
 
         // Although identified as properties, primary constructor parameters 
@@ -133,7 +133,7 @@ public interface IElement
         // ReSharper disable once EmptyGeneralCatchClause
         catch { }
 
-        return decorated.ToArray();
+        return decorated;
     }
 }
 
