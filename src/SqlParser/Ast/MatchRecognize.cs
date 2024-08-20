@@ -91,10 +91,10 @@ public abstract record MatchRecognizeSymbol : IWriteSql, IElement
                 writer.WriteSql($"{n.Symbol}");
                 break;
             case Start:
-                writer.Write("^");
+                writer.Write('^');
                 break;
             case End:
-                writer.Write("$");
+                writer.Write('$');
                 break;
         }
     }
@@ -154,13 +154,13 @@ public abstract record RepetitionQualifier : IWriteSql, IElement
         switch (this)
         {
             case ZeroOrMore:
-                writer.Write("*");
+                writer.Write('*');
                 break;
             case OneOrMore:
-                writer.Write("+");
+                writer.Write('+');
                 break;
             case AtMostOne:
-                writer.Write("?");
+                writer.Write('?');
                 break;
             case Exactly e:
                 writer.WriteSql($"{{{e.Value}}}");

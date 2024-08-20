@@ -135,7 +135,7 @@ public abstract record Expression : IWriteSql, IElement
 
                         writer.Write(PgOptions[i]);
                     }
-                    writer.Write(")");
+                    writer.Write(')');
                 }
 
                 writer.WriteSql($" {Right}");
@@ -326,7 +326,7 @@ public abstract record Expression : IWriteSql, IElement
                 writer.WriteSql($", {Styles.ToSqlDelimited()}");
             }
 
-            writer.Write(")");
+            writer.Write(')');
         }
     }
     /// <summary>
@@ -357,7 +357,7 @@ public abstract record Expression : IWriteSql, IElement
                 }
             }
 
-            writer.Write(")");
+            writer.Write(')');
         }
     }
     /// <summary>
@@ -1081,7 +1081,7 @@ public abstract record Expression : IWriteSql, IElement
                 }
             }
 
-            writer.Write(")");
+            writer.Write(')');
         }
     }
     /// <summary>
@@ -1228,7 +1228,7 @@ public abstract record Expression : IWriteSql, IElement
                 writer.Write($", {TrimCharacters.ToSqlDelimited()}");
             }
 
-            writer.Write(")");
+            writer.Write(')');
         }
     }
     /// <summary>
@@ -1287,7 +1287,7 @@ public abstract record Expression : IWriteSql, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.Write("*");
+            writer.Write('*');
         }
     }
 

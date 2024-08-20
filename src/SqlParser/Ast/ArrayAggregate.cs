@@ -38,7 +38,7 @@ public record ArrayAggregate([property:Visit(0)]Expression Expression) : IWriteS
             }
         }
 
-        writer.Write(")");
+        writer.Write(')');
 
         if (WithinGroup)
         {

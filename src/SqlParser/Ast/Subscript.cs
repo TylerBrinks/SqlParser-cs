@@ -19,7 +19,7 @@ public abstract record Subscript : IWriteSql
                 {
                     writer.WriteAsync($"{s.LowerBound}");
                 }
-                writer.Write(":");
+                writer.Write(':');
 
                 if (s.UpperBound != null)
                 {

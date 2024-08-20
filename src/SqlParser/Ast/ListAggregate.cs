@@ -25,7 +25,7 @@ public record ListAggregate(Expression Expression, bool Distinct, Expression? Se
             writer.WriteSql($"{OnOverflow}");
         }
 
-        writer.Write(")");
+        writer.Write(')');
 
         if (WithGroup.SafeAny())
         {

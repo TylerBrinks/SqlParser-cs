@@ -346,7 +346,7 @@ public abstract record DataType : IWriteSql, IElement
                 writer.WriteSql($", '{TimeZone}'");
             }
 
-            writer.Write(")");
+            writer.Write(')');
         }
     }
     /// <summary>
@@ -413,7 +413,7 @@ public abstract record DataType : IWriteSql, IElement
                 }
                 writer.Write($"'{Values[i].EscapeSingleQuoteString()}'");
             }
-            writer.Write(")");
+            writer.Write(')');
         }
     }
     /// <summary>
@@ -748,7 +748,7 @@ public abstract record DataType : IWriteSql, IElement
 
                 writer.Write($"'{Values[i].EscapeSingleQuoteString()}'");
             }
-            writer.Write(")");
+            writer.Write(')');
         }
     }
     /// <summary>

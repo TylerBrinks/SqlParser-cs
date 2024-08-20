@@ -47,7 +47,7 @@ public record ObjectName : IWriteSql, IElement
         {
             if (i > 0)
             {
-                writer.Write(".");
+                writer.Write('.');
             }
 
             Values[i].ToSql(writer);
