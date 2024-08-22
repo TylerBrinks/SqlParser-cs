@@ -1014,7 +1014,7 @@ namespace SqlParser.Tests.Dialects
             var on = new OnInsert.Conflict(new OnConflict(new OnConflictAction.DoUpdate(new DoUpdateAction(
                 new Statement.Assignment[]
                 {
-                    new(new Ident[]{"dname"}, new CompoundIdentifier(new Ident[]
+                    new(new AssignmentTarget.ColumnName("dname"), new CompoundIdentifier(new Ident[]
                     {
                         "EXCLUDED", "dname"
                     }))
@@ -1037,13 +1037,13 @@ namespace SqlParser.Tests.Dialects
             on = new OnInsert.Conflict(new OnConflict(new OnConflictAction.DoUpdate(new DoUpdateAction(
                 new Statement.Assignment[]
                 {
-                    new(new Ident[]{"dname"}, new CompoundIdentifier(new Ident[]
+                    new(new AssignmentTarget.ColumnName("dname"), new CompoundIdentifier(new Ident[]
                     {
                         "EXCLUDED",
                         "dname"
                     })),
 
-                    new(new Ident[]{"area"}, new CompoundIdentifier(new Ident[]
+                    new(new AssignmentTarget.ColumnName("area"), new CompoundIdentifier(new Ident[]
                     {
                         "EXCLUDED",
                         "area"

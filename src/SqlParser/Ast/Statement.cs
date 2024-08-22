@@ -149,13 +149,13 @@ public abstract record Statement : IWriteSql, IElement
     /// <summary>
     /// Assignment statement
     /// </summary>
-    /// <param name="Id">ID List</param>
+    /// <param name="Target">Assignment target</param>
     /// <param name="Value">Expression value</param>
-    public record Assignment(Sequence<Ident> Id, Expression Value) : Statement
+    public record Assignment(AssignmentTarget Target, Expression Value) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"{Id.ToSqlDelimited('.')} = {Value}");
+            writer.WriteSql($"{Target} = {Value}");
         }
     }
     /// <summary>
@@ -372,7 +372,7 @@ public abstract record Statement : IWriteSql, IElement
     /// <summary>
     /// COPPY INTO statement
     /// See https://docs.snowflake.com/en/sql-reference/sql/copy-into-table
-    /// Copy Into syntax available for Snowflake is different than the one implemented in
+    /// Copy Into syntax available for Snowflake is different from the one implemented in
     /// Postgres. Although they share common prefix, it is reasonable to implement them
     /// in different enums. This can be refactored later once custom dialects
     /// are allowed to have custom Statements.

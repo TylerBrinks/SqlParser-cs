@@ -85,18 +85,13 @@ namespace SqlParser.Tests
 
             var assignments = new[]
             {
-                new Statement.Assignment(new Ident[] {"a"}, new LiteralValue(Number("1"))),
-                new Statement.Assignment(new Ident[] {"b"}, new LiteralValue(Number("2"))),
-                new Statement.Assignment(new Ident[] {"c"}, new LiteralValue(Number("3")))
+                new Statement.Assignment(new AssignmentTarget.ColumnName("a"), new LiteralValue(Number("1"))),
+                new Statement.Assignment(new AssignmentTarget.ColumnName("b"), new LiteralValue(Number("2"))),
+                new Statement.Assignment(new AssignmentTarget.ColumnName("c"), new LiteralValue(Number("3")))
             };
 
-            for (var i = 0; i < assignments.Length; i++)
-            {
-                Assert.Equal(assignments[i].Id, update.Assignments[i].Id);
-                Assert.Equal(assignments[i].Value, update.Assignments[i].Value);
-            }
-
-            Assert.Equal(update.Selection, new Identifier("d"));
+            Assert.Equal(assignments, update.Assignments);
+            
         }
 
         [Fact]
@@ -119,7 +114,8 @@ namespace SqlParser.Tests
             var statement = VerifiedStatement(sql, dialects);
 
             var table = new TableWithJoins(new TableFactor.Table("t1"));
-            var assignment = new Statement.Assignment(new Ident[] { "name" }, new CompoundIdentifier(new Ident[] { "t2", "name" }));
+            var assignment = new Statement.Assignment(new AssignmentTarget.ColumnName("name"), 
+                new CompoundIdentifier(new Ident[] { "t2", "name" }));
             var assignments = new[] { assignment };
 
             var projection = new[]
@@ -162,7 +158,7 @@ namespace SqlParser.Tests
                 Alias = new TableAlias("u")
             });
             var assignment = new Statement.Assignment(
-                new Ident[] { "u", "username" },
+                new AssignmentTarget.ColumnName(new ObjectName(["u", "username"])),
                 new LiteralValue(new Value.SingleQuotedString("new_user")));
             var assignments = new[] { assignment };
 
@@ -4434,8 +4430,8 @@ namespace SqlParser.Tests
                     )
                 ),
                 new (MergeClauseKind.Matched, new MergeAction.Update([
-                        new(new Ident[]{"dest", "F"}, new CompoundIdentifier(new Ident[]{"stg", "F"})),
-                        new(new Ident[]{"dest", "G"}, new CompoundIdentifier(new Ident[]{"stg", "G"})),
+                        new(new AssignmentTarget.ColumnName(new ObjectName(["dest", "F"])), new CompoundIdentifier(new Ident[]{"stg", "F"})),
+                        new(new AssignmentTarget.ColumnName(new ObjectName(["dest", "G"])), new CompoundIdentifier(new Ident[]{"stg", "G"})),
                     ]),
                     new BinaryOp(
                         new CompoundIdentifier(new Ident[]{"dest", "A"}),

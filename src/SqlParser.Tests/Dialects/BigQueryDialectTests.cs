@@ -29,18 +29,6 @@ public class BigQueryDialectTests : ParserTestBase
                            """triple-double"unescaped"""
                            """";
 
-        /*
-           'single', 
-           "double", 
-           '''triple-single'''
-           """triple-double""",
-           'single\'escaped', 
-           '''triple-single\'escaped''', 
-           '''triple-single'unescaped''', 
-           "double\"escaped", 
-           """triple-double\"escaped""", 
-           """triple-double"unescaped"""
-         */
         var select = VerifiedOnlySelect(sql);
 
         Assert.Equal(10, select.Projection.Count);

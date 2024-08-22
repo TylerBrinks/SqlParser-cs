@@ -8942,11 +8942,24 @@ public partial class Parser
     /// <returns></returns>
     public Statement.Assignment ParseAssignment()
     {
-        var idents = ParseIdentifiers();
+        var target = ParseAssignmentTarget();
         ExpectToken<Equal>();
         var expr = ParseExpr();
-        return new Statement.Assignment(idents, expr);
+        return new Statement.Assignment(target, expr);
     }
+
+    private AssignmentTarget ParseAssignmentTarget()
+    {
+        if (ConsumeToken<LeftParen>())
+        {
+            var columns = ParseCommaSeparated(ParseObjectName);
+            ExpectRightParen();
+            return new AssignmentTarget.Tuple(columns);
+        }
+
+        return new AssignmentTarget.ColumnName(ParseObjectName());
+    }
+
 
     public FunctionArg ParseFunctionArgs()
     {
