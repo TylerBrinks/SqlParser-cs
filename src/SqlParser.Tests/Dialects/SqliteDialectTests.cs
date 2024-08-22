@@ -1,8 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
-using SqlParser.Ast;
+﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
-using Xunit.Sdk;
 using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
 

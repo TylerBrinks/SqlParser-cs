@@ -32,16 +32,16 @@ public class BigQueryDialectTests : ParserTestBase
         var select = VerifiedOnlySelect(sql);
 
         Assert.Equal(10, select.Projection.Count);
-        //Assert.Equal(new LiteralValue(new Value.SingleQuotedString("single")), select.Projection[0].AsExpr());
-        //Assert.Equal(new LiteralValue(new Value.DoubleQuotedString("double")), select.Projection[1].AsExpr());
-        //Assert.Equal(new LiteralValue(new Value.TripleSingleQuotedString("triple-single")), select.Projection[2].AsExpr());
-        //Assert.Equal(new LiteralValue(new Value.TripleDoubleQuotedString("triple-double")), select.Projection[3].AsExpr());
-        //Assert.Equal(new LiteralValue(new Value.SingleQuotedString("single\\'escaped")), select.Projection[4].AsExpr());
-        //Assert.Equal(new LiteralValue(new Value.TripleSingleQuotedString("triple-single\\'escaped")), select.Projection[5].AsExpr());
-        //Assert.Equal(new LiteralValue(new Value.TripleSingleQuotedString("triple-single'unescaped")), select.Projection[6].AsExpr());
-        //Assert.Equal(new LiteralValue(new Value.TripleSingleQuotedString("double\\\"escaped")), select.Projection[7].AsExpr());
-        //Assert.Equal(new LiteralValue(new Value.TripleDoubleQuotedString("triple-double\\\"escaped")), select.Projection[8].AsExpr());
-        //Assert.Equal(new LiteralValue(new Value.TripleDoubleQuotedString("triple-double\"unescaped")), select.Projection[9].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.SingleQuotedString("single")), select.Projection[0].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.DoubleQuotedString("double")), select.Projection[1].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.TripleSingleQuotedString("triple-single")), select.Projection[2].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.TripleDoubleQuotedString("triple-double")), select.Projection[3].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.SingleQuotedString("single\\'escaped")), select.Projection[4].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.TripleSingleQuotedString("triple-single\\'escaped")), select.Projection[5].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.TripleSingleQuotedString("triple-single'unescaped")), select.Projection[6].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.DoubleQuotedString("double\\\"escaped")), select.Projection[7].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.TripleDoubleQuotedString("triple-double\\\"escaped")), select.Projection[8].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.TripleDoubleQuotedString("triple-double\"unescaped")), select.Projection[9].AsExpr());
     }
 
     [Fact]
