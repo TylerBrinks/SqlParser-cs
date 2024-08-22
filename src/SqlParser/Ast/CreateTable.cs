@@ -8,6 +8,7 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
     public bool? Global { get; init; }
     public bool IfNotExists { get; init; }
     public bool Transient { get; init; }
+    public bool Volatile { get; init; }
     [Visit(2)] public Sequence<TableConstraint>? Constraints { get; init; }
     public HiveDistributionStyle? HiveDistribution { get; init; } = new HiveDistributionStyle.None();
     public HiveFormat? HiveFormats { get; init; }
@@ -21,10 +22,10 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
     [Visit(5)] public ObjectName? CloneClause { get; init; }
     public TableEngine? Engine { get; init; }
     // ReSharper disable once MemberHidesStaticFromOuterClass
-    public new string? Comment { get; init; }
+    public CommentDef? Comment { get; init; }
     public OneOrManyWithParens<Expression>? OrderBy { get; init; }
     public Expression? PartitionBy { get; init; }
-    public Sequence<Ident>? ClusterBy { get; init; }
+    public WrappedCollection<Ident>? ClusterBy { get; init; }
     public Sequence<SqlOption>? Options { get; init; }
     public int? AutoIncrementOffset { get; init; }
     public string? DefaultCharset { get; init; }
@@ -38,7 +39,16 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
     // if the "STRICT" table-option keyword is added to the end, after the closing ")",
     // then strict typing rules apply to that table.
     public bool Strict { get; init; }
-
+    public bool? CopyGrants { get; init; }
+    public bool? EnableSchemaEvolution { get; init; }
+    public bool? ChangeTracking { get; init; }
+    public long? DataRetentionTimeInDays { get; init; }
+    public long? MaxDataExtensionTimeInDays { get; init; }
+    public string? DefaultDdlCollation { get; init; }
+    public ObjectName? WithAggregationPolicy { get; init; }
+    public RowAccessPolicy? WithRowAccessPolicy { get; init; }
+    public Sequence<Tag>? WithTags { get; init; }
+    
     public void ToSql(SqlTextWriter writer)
     {
         var orReplace = OrReplace ? "OR REPLACE " : null;
@@ -47,7 +57,9 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
         var temp = Temporary ? "TEMPORARY " : null;
         var transient = Transient ? "TRANSIENT " : null;
         var ifNot = IfNotExists ? $"{((IIfNotExists)this).IfNotExistsText} " : null;
-        writer.WriteSql($"CREATE {orReplace}{external}{global}{temp}{transient}TABLE {ifNot}{Name}");
+        var isVolatile = Volatile ? "VOLATILE " : null;
+
+        writer.WriteSql($"CREATE {orReplace}{external}{global}{temp}{transient}{isVolatile}TABLE {ifNot}{Name}");
 
         if (OnCluster != null)
         {
@@ -94,27 +106,30 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
             writer.WriteSql($" CLONE {CloneClause}");
         }
 
-        if (HiveDistribution is HiveDistributionStyle.Partitioned part)
+        switch (HiveDistribution)
         {
-            writer.WriteSql($" PARTITIONED BY ({part.Columns.ToSqlDelimited()})");
-        }
-        else if (HiveDistribution is HiveDistributionStyle.Clustered clustered)
-        {
-            writer.WriteSql($" CLUSTERED BY ({clustered.Columns.ToSqlDelimited()})");
-
-            if (clustered.SortedBy.SafeAny())
+            case HiveDistributionStyle.Partitioned part:
+                writer.WriteSql($" PARTITIONED BY ({part.Columns.ToSqlDelimited()})");
+                break;
+            case HiveDistributionStyle.Clustered clustered:
             {
-                writer.WriteSql($" SORTED BY ({clustered.SortedBy.ToSqlDelimited()})");
-            }
+                writer.WriteSql($" CLUSTERED BY ({clustered.Columns.ToSqlDelimited()})");
 
-            if (clustered.NumBuckets > 0)
-            {
-                writer.WriteSql($" INTO {clustered.NumBuckets} BUCKETS");
+                if (clustered.SortedBy.SafeAny())
+                {
+                    writer.WriteSql($" SORTED BY ({clustered.SortedBy.ToSqlDelimited()})");
+                }
+
+                if (clustered.NumBuckets > 0)
+                {
+                    writer.WriteSql($" INTO {clustered.NumBuckets} BUCKETS");
+                }
+
+                break;
             }
-        }
-        else if (HiveDistribution is HiveDistributionStyle.Skewed skewed)
-        {
-            writer.WriteSql($" SKEWED BY ({skewed.Columns.ToSqlDelimited()}) ON ({skewed.On.ToSqlDelimited()})");
+            case HiveDistributionStyle.Skewed skewed:
+                writer.WriteSql($" SKEWED BY ({skewed.Columns.ToSqlDelimited()}) ON ({skewed.On.ToSqlDelimited()})");
+                break;
         }
 
         if (HiveFormats != null)
@@ -124,12 +139,14 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
                 case HiveRowFormat.Serde serde:
                     writer.WriteSql($" ROW FORMAT SERDE '{serde.Class}'");
                     break;
+
                 case HiveRowFormat.Delimited d:
                     writer.WriteSql($" ROW FORMAT DELIMITED");
                     if (d.Delimiters.SafeAny())
                     {
                         writer.Write($" {d.Delimiters.ToSqlDelimited(Symbols.Space)}");
                     }
+
                     break;
             }
 
@@ -181,7 +198,15 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
 
         if (Comment != null)
         {
-            writer.WriteSql($" COMMENT '{Comment}'");
+            switch (Comment)
+            {
+                case CommentDef.WithEq:
+                    writer.WriteSql($" COMMENT = '{Comment.Comment}'");
+                    break;
+                case CommentDef.WithoutEq:
+                    writer.Write($" COMMENT '{Comment.Comment}'");
+                    break;
+            }
         }
 
         if (AutoIncrementOffset != null)
@@ -211,7 +236,54 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
 
         if (Options.SafeAny())
         {
-            writer.Write($"OPTIONS({Options.ToSqlDelimited()})");
+            writer.Write($" OPTIONS({Options.ToSqlDelimited()})");
+        }
+
+        if (CopyGrants.HasValue)
+        {
+            writer.Write(" COPY GRANTS");
+        }
+
+        if (EnableSchemaEvolution.HasValue)
+        {
+            var evolution = EnableSchemaEvolution.Value ? "TRUE" : "FALSE";
+            writer.Write($" ENABLE_SCHEMA_EVOLUTION={evolution}");
+        }
+
+        if (ChangeTracking.HasValue)
+        {
+            var tracking = ChangeTracking.Value ? "TRUE" : "FALSE";
+            writer.Write($" CHANGE_TRACKING={tracking}");
+        }
+
+        if (DataRetentionTimeInDays.HasValue)
+        {
+            writer.Write($" DATA_RETENTION_TIME_IN_DAYS={DataRetentionTimeInDays.Value}");
+        }
+
+        if (MaxDataExtensionTimeInDays.HasValue)
+        {
+            writer.Write($" MAX_DATA_EXTENSION_TIME_IN_DAYS={MaxDataExtensionTimeInDays.Value}");
+        }
+
+        if (DefaultDdlCollation != null)
+        {
+            writer.Write($" DEFAULT_DDL_COLLATION='{DefaultDdlCollation}'");
+        }
+
+        if (WithAggregationPolicy != null)
+        {
+            writer.Write($" WITH AGGREGATION POLICY {WithAggregationPolicy}");
+        }
+
+        if (WithTags.SafeAny())
+        {
+            writer.WriteSql($" WITH TAG ({WithTags.ToSqlDelimited()})");
+        }
+
+        if (WithRowAccessPolicy != null)
+        {
+            writer.WriteSql($" {WithRowAccessPolicy}");
         }
 
         if (Query != null)

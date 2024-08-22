@@ -2387,6 +2387,20 @@ namespace SqlParser.Tests.Dialects
             }
         }
 
+        [Fact]
+        public void Parse_Create_Table_With_ColumnOption_Options()
+        {
+            const string sql = "CREATE TABLE t (c INT) WITH (foo = 'bar', a = 123)";
+
+            var create = VerifiedStatement<Statement.CreateTable>(sql);
+
+            Assert.Equal(new Sequence<SqlOption>
+            {   
+                new("foo", new LiteralValue(new Value.SingleQuotedString("bar"))),
+                new("a", new LiteralValue(new Value.Number("123"))),
+            }, create.Element.WithOptions);
+        }
+
         private void TestOperator(string op, BinaryOperator binaryOp)
         {
             var tokenizer = new Tokenizer();

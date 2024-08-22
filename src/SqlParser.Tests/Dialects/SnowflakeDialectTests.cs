@@ -720,7 +720,6 @@ namespace SqlParser.Tests.Dialects
         public void Parse_Subquery_Function_Argument()
         {
             // Snowflake allows passing an unparenthesized subquery as the single argument to a function.
-            //OneStatementParsesTo("SELECT parse_json(SELECT '{}')", "SELECT parse_json((SELECT '{}'))");
             VerifiedStatement("SELECT parse_json(SELECT '{}')");
 
             // Subqueries that begin with 'WITH' work too.
@@ -1078,6 +1077,155 @@ namespace SqlParser.Tests.Dialects
             };
 
             Assert.Equal(expected, query.From![0]);
+        }
+
+        [Fact]
+        public void Test_Snowflake_Create_Or_Replace_Table()
+        {
+            const string sql= "CREATE OR REPLACE TABLE my_table (a number)";
+            var create = VerifiedStatement<Statement.CreateTable>(sql);
+
+            Assert.Equal("my_table", create.Element.Name);
+            Assert.True(create.Element.OrReplace);
+        }
+
+        [Fact]
+        public void Test_Snowflake_Create_Or_Replace_Table_Copy_Grants()
+        {
+            const string sql = "CREATE OR REPLACE TABLE my_table (a number) COPY GRANTS";
+            var create = VerifiedStatement<Statement.CreateTable>(sql);
+            Assert.Equal("my_table", create.Element.Name);
+            Assert.True(create.Element.OrReplace);
+            Assert.True(create.Element.CopyGrants);
+        }
+
+        [Fact]
+        public void Test_Snowflake_Create_Or_Replace_Table_Copy_Grants_At_End()
+        {
+            const string sql = "CREATE OR REPLACE TABLE my_table COPY GRANTS (a number) ";
+            const string parsed = "CREATE OR REPLACE TABLE my_table (a number) COPY GRANTS";
+
+            var create = OneStatementParsesTo<Statement.CreateTable>(sql, parsed);
+            Assert.Equal("my_table", create.Element.Name);
+            Assert.True(create.Element.OrReplace);
+            Assert.True(create.Element.CopyGrants);
+        }
+
+        [Fact]
+        public void Test_Snowflake_Create_Or_Replace_Table_Copy_Grants_At_Cta()
+        {
+            DefaultDialects = [new SnowflakeDialect()];
+            const string sql = "CREATE OR REPLACE TABLE my_table COPY GRANTS AS SELECT 1 AS a";
+            var create = VerifiedStatement<Statement.CreateTable>(sql);
+
+            Assert.Equal("my_table", create.Element.Name);
+            Assert.True(create.Element.OrReplace);
+            Assert.True(create.Element.CopyGrants);
+        }
+
+        [Fact]
+        public void Test_Snowflake_Create_Table_Enable_Schema_Evolution()
+        {
+            const string sql = "CREATE TABLE my_table (a number) ENABLE_SCHEMA_EVOLUTION=TRUE";
+            var create = VerifiedStatement<Statement.CreateTable>(sql);
+
+            Assert.Equal("my_table", create.Element.Name);
+            Assert.True(create.Element.EnableSchemaEvolution);
+        }
+
+        [Fact]
+        public void Test_Snowflake_Create_Table_Change_Tracking()
+        {
+            const string sql = "CREATE TABLE my_table (a number) CHANGE_TRACKING=TRUE";
+            var create = VerifiedStatement<Statement.CreateTable>(sql);
+
+            Assert.Equal("my_table", create.Element.Name);
+            Assert.True(create.Element.ChangeTracking);
+        }
+
+        [Fact]
+        public void Test_Snowflake_Create_Table_Data_Retention_Time_In_Days()
+        {
+            const string sql = "CREATE TABLE my_table (a number) DATA_RETENTION_TIME_IN_DAYS=5";
+            var create = VerifiedStatement<Statement.CreateTable>(sql);
+
+            Assert.Equal("my_table", create.Element.Name);
+            Assert.Equal(5, create.Element.DataRetentionTimeInDays);
+        }
+
+        [Fact]
+        public void Test_Snowflake_Create_Table_Max_Data_Extension_Time_In_Days()
+        {
+            const string sql = "CREATE TABLE my_table (a number) MAX_DATA_EXTENSION_TIME_IN_DAYS=5";
+            var create = VerifiedStatement<Statement.CreateTable>(sql);
+
+            Assert.Equal("my_table", create.Element.Name);
+            Assert.Equal(5, create.Element.MaxDataExtensionTimeInDays);
+        }
+
+        [Fact]
+        public void Test_Snowflake_Create_Table_With_Aggregation_Policy()
+        {
+            DefaultDialects = [new SnowflakeDialect()];
+            const string sql = "CREATE TABLE my_table (a number) WITH AGGREGATION POLICY policy_name";
+            var create = VerifiedStatement<Statement.CreateTable>(sql);
+
+            Assert.Equal("my_table", create.Element.Name);
+            Assert.Equal("policy_name", create.Element.WithAggregationPolicy!);
+
+            create = (Statement.CreateTable)ParseSqlStatements("CREATE TABLE my_table (a number) AGGREGATION POLICY policy_name")[0]!;
+
+            Assert.Equal("my_table", create.Element.Name);
+            Assert.Equal("policy_name", create.Element.WithAggregationPolicy!);
+        }
+
+        [Fact]
+        public void Test_Snowflake_Create_Table_With_Row_Access_Policy()
+        {
+            DefaultDialects = [new SnowflakeDialect()];
+            const string sql = "CREATE TABLE my_table (a number, b number) WITH ROW ACCESS POLICY policy_name ON (a)";
+            var create = VerifiedStatement<Statement.CreateTable>(sql);
+
+            Assert.Equal("my_table", create.Element.Name);
+            Assert.Equal("WITH ROW ACCESS POLICY policy_name ON (a)", create.Element.WithRowAccessPolicy!.ToSql());
+
+            create = (Statement.CreateTable)ParseSqlStatements("CREATE TABLE my_table (a number, b number) ROW ACCESS POLICY policy_name ON (a)")[0]!;
+
+            Assert.Equal("my_table", create.Element.Name);
+            Assert.Equal("WITH ROW ACCESS POLICY policy_name ON (a)", create.Element.WithRowAccessPolicy!.ToSql());
+        }
+
+        [Fact]
+        public void Test_Snowflake_Create_Table_With_Tag()
+        {
+            DefaultDialects = [new SnowflakeDialect()];
+            const string sql = "CREATE TABLE my_table (a number) WITH TAG (A='TAG A', B='TAG B')";
+            var create = VerifiedStatement<Statement.CreateTable>(sql);
+
+            Assert.Equal("my_table", create.Element.Name);
+            Assert.Equal(
+            [
+                new ("A", "TAG A"),
+                new ("B", "TAG B")
+            ], create.Element.WithTags);
+
+            create = (Statement.CreateTable)ParseSqlStatements("CREATE TABLE my_table (a number) TAG (A='TAG A', B='TAG B')")[0]!;
+            Assert.Equal("my_table", create.Element.Name);
+            Assert.Equal(
+            [
+                new ("A", "TAG A"),
+                new ("B", "TAG B")
+            ], create.Element.WithTags);
+        }
+
+        [Fact]
+        public void Test_Snowflake_Create_Table_Default_Ddl_Collation()
+        {
+            const string sql = "CREATE TABLE my_table (a number) DEFAULT_DDL_COLLATION='de'";
+            var create = VerifiedStatement<Statement.CreateTable>(sql);
+            
+            Assert.Equal("my_table", create.Element.Name);
+            Assert.Equal("de", create.Element.DefaultDdlCollation);
         }
     }
 }

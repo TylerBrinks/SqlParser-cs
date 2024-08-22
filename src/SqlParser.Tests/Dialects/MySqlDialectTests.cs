@@ -891,7 +891,7 @@ namespace SqlParser.Tests.Dialects
             {
                 var create = (Statement.CreateTable)OneStatementParsesTo(sql, canonical);
                 Assert.Equal("foo", create.Element.Name);
-                Assert.Equal("baz", create.Element.Comment);
+                Assert.Equal("baz", create.Element.Comment!.Comment);
             }
         }
 

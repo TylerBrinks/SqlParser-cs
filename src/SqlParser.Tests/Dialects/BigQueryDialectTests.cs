@@ -571,4 +571,56 @@ public class BigQueryDialectTests : ParserTestBase
         VerifiedExpr("ANY_VALUE(fruit HAVING MAX sold)");
         VerifiedExpr("ANY_VALUE(fruit HAVING MIN sold)");
     }
+
+    [Fact]
+    public void Parse_Create_Table_With_Options()
+    {
+        var sql = """
+              CREATE TABLE mydataset.newtable 
+              (x INT64 NOT NULL OPTIONS(description = "field x"), 
+              y BOOL OPTIONS(description = "field y")) 
+              PARTITION BY _PARTITIONDATE 
+              CLUSTER BY userid, age 
+              OPTIONS(partition_expiration_days = 1, description = "table option description")
+              """;
+        var create = VerifiedStatement<Statement.CreateTable>(sql).Element;
+
+        var columns = new Sequence<ColumnDef>
+        {
+            new ("x", new DataType.Int64(), Options:
+            [
+                new (new ColumnOption.NotNull()),
+                new (new ColumnOption.Options([
+                    new SqlOption("description", new LiteralValue(new Value.DoubleQuotedString("field x")))
+                ])),
+            ]),
+            new ("y", new DataType.Bool(), Options:
+            [
+                new (new ColumnOption.Options([
+                    new SqlOption("description", new LiteralValue(new Value.DoubleQuotedString("field y")))
+                ])),
+            ]),
+        };
+
+        Assert.Equal(new ObjectName(["mydataset", "newtable"]), create.Name);
+        Assert.Equal(columns, create.Columns);
+        Assert.Equal(new Identifier("_PARTITIONDATE"), create.PartitionBy);
+        Assert.Equal(new WrappedCollection<Ident>.NoWrapping(["userid", "age"]), create.ClusterBy);
+        Assert.Equal(new Sequence<SqlOption>
+        {
+            new ("partition_expiration_days", new LiteralValue(new Value.Number("1"))),
+            new ("description", new LiteralValue(new Value.DoubleQuotedString("table option description")))
+        }, create.Options);
+
+        sql = """
+              CREATE TABLE mydataset.newtable 
+              (x INT64 NOT NULL OPTIONS(description = "field x"), 
+              y BOOL OPTIONS(description = "field y")) 
+              CLUSTER BY userid 
+              OPTIONS(partition_expiration_days = 1, 
+              description = "table option description")
+              """;
+        
+        VerifiedStatement(sql);
+    }
 }

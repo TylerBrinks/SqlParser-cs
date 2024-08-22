@@ -13,7 +13,7 @@ public class SnowflakeDialect : Dialect
 {
     public override bool IsIdentifierStart(char character)
         => character.IsLetter() || character is Symbols.Underscore;
-    
+
 
     public override bool IsIdentifierPart(char character)
         => character.IsAlphaNumeric() || character is Symbols.Dollar or Symbols.Underscore;
@@ -34,12 +34,43 @@ public class SnowflakeDialect : Dialect
             // possibly CREATE STAGE
             //[ OR  REPLACE ]
             var orReplace = parser.ParseKeywordSequence(Keyword.OR, Keyword.REPLACE);
-            var temp = parser.ParseKeyword(Keyword.TEMPORARY);
+
+            bool? global = parser.ParseOneOfKeywords(Keyword.OR, Keyword.REPLACE) switch
+            {
+                Keyword.LOCAL => false,
+                Keyword.GLOBAL => true,
+                _ => null
+            };
+            
+            var temp = false;
+            var @volatile = false;
+            var transient = false;
+
+            switch (parser.ParseOneOfKeywords(Keyword.TEMP, Keyword.TEMPORARY, Keyword.VOLATILE, Keyword.TRANSIENT))
+            {
+                case Keyword.TEMP or Keyword.TEMPORARY:
+                    temp = true;
+                    break;
+
+                case Keyword.VOLATILE:
+                    @volatile = true;
+                    break;
+
+                case Keyword.TRANSIENT:
+                    transient = true;
+                    break;
+            }
+
 
             if (parser.ParseKeyword(Keyword.STAGE))
             {
                 // CREATE STAGE statement
                 return ParseCreateStage(orReplace, temp, parser);
+            }
+
+            if (parser.ParseKeyword(Keyword.TABLE))
+            {
+                return ParseCreateTable(orReplace, global, temp, @volatile, transient, parser);
             }
 
             // Rewind parser
@@ -66,6 +97,225 @@ public class SnowflakeDialect : Dialect
         }
 
         return null;
+    }
+
+    private Statement.CreateTable ParseCreateTable(bool orReplace, bool? global, bool temp, bool @volatile, bool transient, Parser parser)
+    {
+        var ifNotExists = parser.ParseIfNotExists();
+        var tableName = parser.ParseObjectName(false);
+
+        Sequence<ColumnDef> columns = [];
+        bool? copyGrants = null;
+        CommentDef? comment = null;
+        Query? query = null;
+        ObjectName? clone = null;
+        ObjectName? like = null;
+        WrappedCollection<Ident>? clusterBy = null;
+        bool? enableSchemaEvolution = null;
+        bool? changeTracking = null;
+        long? dataRetentionTimeInDays = null;
+        long? maxDataExtensionTimeInDays = null;
+        string? defaultDdlCollation = null;
+        RowAccessPolicy? withRowAccessPolicy = null;
+        ObjectName? aggregationPolicy = null;
+        Sequence<Tag>? tags = null;
+        Sequence<TableConstraint>? constraints = null;
+        
+        var loop = true;
+
+        while (loop)
+        {
+            var next = parser.NextToken();
+
+            switch (next)
+            {
+                case Word w:
+                    {
+                        switch (w.Keyword)
+                        {
+                            case Keyword.COPY:
+                                parser.ExpectKeyword(Keyword.GRANTS);
+                                copyGrants = true;
+                                break;
+
+                            case Keyword.COMMENT:
+                                parser.ExpectToken<Equal>();
+                                next = parser.NextToken();
+
+                                if (next is SingleQuotedString s)
+                                {
+                                    comment = new CommentDef.WithEq(s.Value);
+                                }
+                                else
+                                {
+                                    throw Parser.Expected("comment", next);
+                                }
+                                break;
+
+                            case Keyword.AS:
+                                query = parser.ParseQuery();
+                                loop = false;
+                                break;
+
+                            case Keyword.CLONE:
+                                clone = parser.ParseObjectName();
+                                loop = false;
+                                break;
+
+                            case Keyword.LIKE:
+                                like = parser.ParseObjectName();
+                                loop = false;
+
+                                break;
+
+                            case Keyword.CLUSTER:
+                                parser.ExpectKeyword(Keyword.BY);
+                                clusterBy = parser.ExpectParens(() =>
+                                {
+                                    var idents = parser.ParseCommaSeparated(parser.ParseIdentifier);
+                                    return new WrappedCollection<Ident>.Parentheses(idents);
+                                });
+
+                                break;
+
+                            case Keyword.ENABLE_SCHEMA_EVOLUTION:
+                                parser.ExpectToken<Equal>();
+                                var kwd = parser.ParseOneOfKeywords(Keyword.TRUE, Keyword.FALSE);
+                                enableSchemaEvolution = kwd switch
+                                {
+                                    Keyword.TRUE => true,
+                                    Keyword.FALSE => false,
+                                    _ => throw Parser.Expected("TRUE or FALSE")
+                                };
+                                break;
+
+                            case Keyword.CHANGE_TRACKING:
+                                parser.ExpectToken<Equal>();
+                                changeTracking = parser.ParseOneOfKeywords(Keyword.TRUE, Keyword.FALSE) switch
+                                {
+                                    Keyword.TRUE => true,
+                                    Keyword.FALSE => false,
+                                    _ => throw Parser.Expected("TRUE or FALSE")
+                                };
+                                break;
+
+                            case Keyword.DATA_RETENTION_TIME_IN_DAYS:
+                                parser.ExpectToken<Equal>();
+                                dataRetentionTimeInDays = (long)parser.ParseLiteralUnit();
+                                break;
+
+                            case Keyword.MAX_DATA_EXTENSION_TIME_IN_DAYS:
+                                parser.ExpectToken<Equal>();
+                                maxDataExtensionTimeInDays = (long)parser.ParseLiteralUnit();
+                                break;
+
+                            case Keyword.DEFAULT_DDL_COLLATION:
+                                parser.ExpectToken<Equal>();
+                                defaultDdlCollation = parser.ParseLiteralString();
+                                break;
+
+                            // WITH is optional, we just verify that next token is one of the expected ones and
+                            // fallback to the default match statement
+                            case Keyword.WITH:
+                                parser.ExpectOneOfKeywords(Keyword.AGGREGATION, Keyword.TAG, Keyword.ROW);
+                                parser.PrevToken();
+                                break;
+
+                            case Keyword.AGGREGATION:
+                                parser.ExpectKeywords(Keyword.POLICY);
+                                aggregationPolicy = parser.ParseObjectName();
+                                break;
+
+                            case Keyword.ROW:
+                                parser.ExpectKeywords(Keyword.ACCESS, Keyword.POLICY);
+                                var policy = parser.ParseObjectName();
+                                parser.ExpectKeywords(Keyword.ON);
+                                var cols = parser.ExpectParens(() => parser.ParseCommaSeparated(parser.ParseIdentifier));
+                                withRowAccessPolicy = new RowAccessPolicy(policy, cols);
+                                break;
+
+                            case Keyword.TAG:
+
+                                tags = parser.ExpectParens(() => parser.ParseCommaSeparated(ParseTag));
+                                break;
+
+                                Tag ParseTag()
+                                {
+                                    var name = parser.ParseIdentifier();
+                                    parser.ExpectToken<Equal>();
+                                    var value = parser.ParseLiteralString();
+                                    return new Tag(name, value);
+                                }
+
+                            default:
+                                throw Parser.Expected("end of statement", next);
+                        }
+
+                        break;
+                    }
+
+                case LeftParen:
+                    {
+                        parser.PrevToken();
+                        (columns, constraints) = parser.ParseColumns();
+
+                        break;
+                    }
+
+                case EOF:
+                {
+                    if (!columns.SafeAny())
+                    {
+                        throw new ParserException("unexpected end of input");
+                    }
+
+                    loop = false;
+                    break;
+                }
+
+                case SemiColon:
+                    {
+                        if (!columns.SafeAny())
+                        {
+                            throw new ParserException("unexpected end of input");
+                        }
+
+                        parser.PrevToken();
+                        loop = false;
+                        break;
+                    }
+
+                default:
+                    throw Parser.Expected("end of statement", next);
+            }
+        }
+
+        var create = new CreateTable(tableName, columns)
+        {
+            OrReplace = orReplace,
+            Global = global,
+            Temporary = temp,
+            Volatile = @volatile,
+            Transient = transient,
+            IfNotExists = ifNotExists,
+            Comment = comment,
+            Query = query,
+            ChangeTracking = changeTracking,
+            CopyGrants = copyGrants,
+            CloneClause = clone,
+            Like = like,
+            ClusterBy = clusterBy,
+            EnableSchemaEvolution = enableSchemaEvolution,
+            DataRetentionTimeInDays = dataRetentionTimeInDays,
+            MaxDataExtensionTimeInDays = maxDataExtensionTimeInDays,
+            DefaultDdlCollation = defaultDdlCollation,
+            WithRowAccessPolicy = withRowAccessPolicy,
+            WithAggregationPolicy = aggregationPolicy,
+            WithTags = tags,
+            Constraints = constraints,
+        };
+
+        return new Statement.CreateTable(create);
     }
 
     private static Statement ParseCreateStage(bool orReplace, bool temp, Parser parser)

@@ -1632,11 +1632,13 @@ public partial class Parser
 
         if (_dialect is GenericDialect or BigQueryDialect && ParseKeyword(Keyword.HAVING))
         {
+#pragma warning disable CS8509 // The switch expression does not handle all possible values of its input type (it is not exhaustive).
             var kind = ParseOneOfKeywords(Keyword.MIN, Keyword.MAX) switch
             {
                 Keyword.MIN => HavingBoundKind.Min,
                 Keyword.MAX => HavingBoundKind.Max,
             };
+#pragma warning restore CS8509 // The switch expression does not handle all possible values of its input type (it is not exhaustive).
 
             clauses ??= [];
             clauses.Add(new FunctionArgumentClause.Having(new HavingBound(kind, ParseExpr())));
@@ -4449,7 +4451,7 @@ public partial class Parser
             var next = NextToken();
             if (next is SingleQuotedString str)
             {
-                return str.Value;
+                return new CommentDef.WithoutEq(str.Value);
             }
 
             throw Expected("Comment", PeekToken());
@@ -4487,10 +4489,10 @@ public partial class Parser
         };
     }
 
-    public (Expression? PartitionBy, Sequence<Ident>? ClusterBy, Sequence<SqlOption>? Options) ParseOptionalBigQueryCreateTableConfig()
+    public (Expression? PartitionBy, WrappedCollection<Ident>? ClusterBy, Sequence<SqlOption>? Options) ParseOptionalBigQueryCreateTableConfig()
     {
         Expression? partitionBy = null;
-        Sequence<Ident>? clusterBy = null;
+        WrappedCollection<Ident>? clusterBy = null;
         Sequence<SqlOption>? options = null;
 
         if (ParseKeywordSequence(Keyword.PARTITION, Keyword.BY))
@@ -4500,7 +4502,7 @@ public partial class Parser
 
         if (ParseKeywordSequence(Keyword.CLUSTER, Keyword.BY))
         {
-            clusterBy = ParseCommaSeparated(ParseIdentifier);
+            clusterBy = new WrappedCollection<Ident>.NoWrapping(ParseCommaSeparated(ParseIdentifier));
         }
 
         if (PeekToken() is Word { Keyword: Keyword.OPTIONS })
