@@ -22,6 +22,8 @@ public record InsertOperation([property: Visit(0)] ObjectName Name, [property: V
     /// whether the insert has the table keyword (Hive)
     public bool Table { get; init; }
     public OnInsert? On { get; init; }
+    /// OUTPUT
+    public Sequence<SelectItem>? Output { get; init; }
     /// RETURNING
     [Visit(3)] public Sequence<SelectItem>? Returning { get; init; }
     /// Only for mysql

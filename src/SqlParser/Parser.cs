@@ -6859,6 +6859,8 @@ public partial class Parser
     public Delete ParseDelete()
     {
         Sequence<ObjectName>? tables = null;
+        Sequence<TableWithJoins>? from = null;
+        Sequence<SelectItem>? output = null;
         bool withFromKeyword = true;
 
         if (!ParseKeyword(Keyword.FROM))
@@ -6866,16 +6868,34 @@ public partial class Parser
             if (_dialect is BigQueryDialect or GenericDialect)
             {
                 withFromKeyword = false;
+
+                output = ParseInit(ParseKeyword(Keyword.OUTPUT), () => ParseCommaSeparated(ParseSelectItem));
             }
             else
             {
                 tables = ParseCommaSeparated(ParseObjectName);
+
+                if (_dialect is MsSqlDialect)
+                {
+                    output = ParseInit(ParseKeyword(Keyword.OUTPUT), () => ParseCommaSeparated(ParseSelectItem));
+                }
+
                 ExpectKeyword(Keyword.FROM);
                 withFromKeyword = true;
             }
+
+            from = ParseCommaSeparated(ParseTableAndJoins);
+        }
+        else
+        {
+            from = ParseCommaSeparated(ParseTableAndJoins);
+
+            if (_dialect is MsSqlDialect or GenericDialect)
+            {
+                output = ParseInit(ParseKeyword(Keyword.OUTPUT), () => ParseCommaSeparated(ParseSelectItem));
+            }
         }
 
-        var from = ParseCommaSeparated(ParseTableAndJoins);
         var @using = ParseInit(ParseKeyword(Keyword.USING), ParseTableFactor);
 
         var selection = ParseInit(ParseKeyword(Keyword.WHERE), ParseExpr);
@@ -6885,7 +6905,7 @@ public partial class Parser
 
         FromTable fromTable = withFromKeyword ? new FromTable.WithFromKeyword(from) : new FromTable.WithoutKeyword(from);
 
-        return new Delete(new DeleteOperation(tables, fromTable, orderBy, @using, selection, returning, limit));
+        return new Delete(new DeleteOperation(tables, output, fromTable, orderBy, @using, selection, returning, limit));
     }
     /// <summary>
     /// KILL[CONNECTION | QUERY | MUTATION] processlist_id
@@ -8791,6 +8811,7 @@ public partial class Parser
         Sequence<Ident>? columns = null;
         Sequence<Expression>? partitioned = null;
         Sequence<Ident>? afterColumns = null;
+        Sequence<SelectItem>? output = null;
         Statement.Select? source = null;
 
         if (!ParseKeywordSequence(Keyword.DEFAULT, Keyword.VALUES))
@@ -8804,6 +8825,11 @@ public partial class Parser
             if (_dialect is HiveDialect)
             {
                 afterColumns = ParseParenthesizedColumnList(IsOptional.Optional, false);
+            }
+
+            if (_dialect is MsSqlDialect or GenericDialect)
+            {
+                output = ParseInit(ParseKeyword(Keyword.OUTPUT), () => ParseCommaSeparated(ParseSelectItem));
             }
 
             source = ParseQuery();
@@ -8871,6 +8897,7 @@ public partial class Parser
             AfterColumns = afterColumns,
             Table = table,
             On = on,
+            Output = output,
             Returning = returning,
             ReplaceInto = false,
             Priority = priority,
@@ -8910,6 +8937,8 @@ public partial class Parser
         var assignments = ParseCommaSeparated(ParseAssignment);
         TableWithJoins? from = null;
 
+        var output = _dialect is MsSqlDialect or GenericDialect ? ParseInit(ParseKeyword(Keyword.OUTPUT), () => ParseCommaSeparated(ParseSelectItem)) : null;
+
         if (ParseKeyword(Keyword.FROM) && _dialect
                 is GenericDialect
                 or PostgreSqlDialect
@@ -8926,7 +8955,7 @@ public partial class Parser
         var selection = ParseInit(ParseKeyword(Keyword.WHERE), ParseExpr);
         var returning = ParseInit(ParseKeyword(Keyword.RETURNING), () => ParseCommaSeparated(ParseSelectItem));
 
-        return new Update(table, assignments, from, selection, returning);
+        return new Update(table, assignments, output, from, selection, returning);
     }
 
     /// <summary>
@@ -9444,7 +9473,7 @@ public partial class Parser
 
         while (true)
         {
-            if (PeekToken() is EOF or SemiColon)
+            if (PeekToken() is EOF or SemiColon or Word { Keyword: Keyword.OUTPUT })
             {
                 break;
             }
@@ -9540,7 +9569,8 @@ public partial class Parser
         ExpectKeyword(Keyword.ON);
         var on = ParseExpr();
         var clauses = ParseMergeClauses();
-        return new Merge(into, table, source, on, clauses);
+        var output = _dialect is MsSqlDialect or GenericDialect ? ParseInit(ParseKeyword(Keyword.OUTPUT), () => ParseCommaSeparated(ParseSelectItem)) : null;
+        return new Merge(into, table, source, on, clauses, output);
     }
 
     public Statement ParsePragma()

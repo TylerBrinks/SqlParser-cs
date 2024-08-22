@@ -1071,9 +1071,23 @@ public abstract record Statement : IWriteSql, IElement
             if (DeleteOperation.Tables is { Count: > 0 })
             {
                 writer.WriteDelimited(DeleteOperation.Tables, ", ");
-            }
 
-            writer.WriteSql($"{DeleteOperation.From}");
+                if (DeleteOperation.Output != null)
+                {
+                    writer.WriteSql($" OUTPUT {DeleteOperation.Output} ");
+                }
+
+                writer.WriteSql($"{DeleteOperation.From}");
+            }
+            else
+            {
+                writer.WriteSql($"{DeleteOperation.From}");
+
+                if (DeleteOperation.Output != null)
+                {
+                    writer.WriteSql($" OUTPUT {DeleteOperation.Output}");
+                }
+            }
 
             if (DeleteOperation.Using != null)
             {
@@ -1451,6 +1465,11 @@ public abstract record Statement : IWriteSql, IElement
                 writer.WriteSql($"({InsertOperation.Columns}) ");
             }
 
+            if (InsertOperation.Output != null)
+            {
+                writer.WriteSql($"OUTPUT {InsertOperation.Output} ");
+            }
+
             if (InsertOperation.Partitioned.SafeAny())
             {
                 writer.WriteSql($"PARTITION ({InsertOperation.Partitioned}) ");
@@ -1529,12 +1548,18 @@ public abstract record Statement : IWriteSql, IElement
     /// <param name="Source">Source table factor</param>
     /// <param name="On">ON expression</param>
     /// <param name="Clauses">Merge Clauses</param>
-    public record Merge(bool Into, TableFactor Table, TableFactor Source, Expression On, Sequence<MergeClause> Clauses) : Statement
+    /// <param name="Output">Select output values</param>
+    public record Merge(bool Into, TableFactor Table, TableFactor Source, Expression On, Sequence<MergeClause> Clauses, Sequence<SelectItem>? Output) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
             var into = Into ? " INTO" : null;
             writer.WriteSql($"MERGE{into} {Table} USING {Source} ON {On} {Clauses.ToSqlDelimited(Symbols.Space)}");
+
+            if (Output != null)
+            {
+                writer.WriteSql($" OUTPUT {Output}");
+            }
         }
     }
     /// <summary>
@@ -2065,10 +2090,11 @@ public abstract record Statement : IWriteSql, IElement
     /// </summary>
     /// <param name="Table">Table with joins to update</param>
     /// <param name="Assignments">Assignments</param>
+    /// <param name="Output">Select output values</param>
     /// <param name="From">Update source</param>
     /// <param name="Selection">Selection expression</param>
     /// <param name="Returning">Select returning values</param>
-    public record Update(TableWithJoins Table, Sequence<Assignment> Assignments, TableWithJoins? From = null, Expression? Selection = null, Sequence<SelectItem>? Returning = null) : Statement
+    public record Update(TableWithJoins Table, Sequence<Assignment> Assignments, Sequence<SelectItem>? Output = null, TableWithJoins? From = null, Expression? Selection = null, Sequence<SelectItem>? Returning = null) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -2077,6 +2103,11 @@ public abstract record Statement : IWriteSql, IElement
             if (Assignments.SafeAny())
             {
                 writer.WriteSql($" SET {Assignments}");
+            }
+
+            if (Output != null)
+            {
+                writer.WriteSql($" OUTPUT {Output}");
             }
 
             if (From != null)

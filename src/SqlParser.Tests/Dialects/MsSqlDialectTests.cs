@@ -79,6 +79,98 @@ namespace SqlParser.Tests.Dialects
         }
 
         [Fact]
+        public void Parse_MsSql_Output_Merge()
+        {
+            var mergeInto = VerifiedStatement<Statement.Merge>("""
+                MERGE INTO s.bar AS dest USING (SELECT * FROM s.foo) AS stg ON dest.D = stg.D AND dest.E = stg.E 
+                WHEN NOT MATCHED THEN INSERT (A, B, C) VALUES (stg.A, stg.B, stg.C) 
+                WHEN MATCHED AND dest.A = 'a' THEN UPDATE SET dest.F = stg.F, dest.G = stg.G 
+                WHEN MATCHED THEN DELETE 
+                OUTPUT $action, inserted.*, deleted.*
+                """);
+
+            Assert.Equal([
+                new SelectItem.UnnamedExpression(new LiteralValue(new Value.Placeholder("$action"))),
+                new SelectItem.QualifiedWildcard(new ObjectName(new Ident("inserted")), new WildcardAdditionalOptions()),
+                new SelectItem.QualifiedWildcard(new ObjectName(new Ident("deleted")), new WildcardAdditionalOptions()),
+            ], mergeInto.Output);
+        }
+
+        [Fact]
+        public void Parse_MsSql_Output_Insert()
+        {
+            var insert = VerifiedStatement<Statement.Insert>("""
+                                                             INSERT INTO foo (id) 
+                                                             OUTPUT INSERTED.* 
+                                                             VALUES (1, 2, 3)
+                                                             """);
+
+            Assert.Equal([
+                new SelectItem.QualifiedWildcard(new ObjectName(new Ident("INSERTED")), new WildcardAdditionalOptions()),
+            ], insert.InsertOperation.Output);
+        }
+
+        [Fact]
+        public void Parse_MsSql_Output_Delete()
+        {
+            var delete = VerifiedStatement<Statement.Delete>("""
+                                                             DELETE FROM users 
+                                                             OUTPUT deleted.id, deleted.name 
+                                                             WHERE age > 30
+                                                             """);
+
+            Assert.Equal([
+                new SelectItem.UnnamedExpression(new CompoundIdentifier(new Sequence<Ident>{new Ident("deleted"), new Ident("id")})),
+                new SelectItem.UnnamedExpression(new CompoundIdentifier(new Sequence<Ident>{new Ident("deleted"), new Ident("name")})),
+            ], delete.DeleteOperation.Output);
+
+            delete = VerifiedStatement<Statement.Delete>("""
+                                                             DELETE u 
+                                                             OUTPUT deleted.id, deleted.name 
+                                                             FROM users 
+                                                             WHERE age > 30
+                                                             """);
+
+            Assert.Equal([
+                new SelectItem.UnnamedExpression(new CompoundIdentifier(new Sequence<Ident>{new Ident("deleted"), new Ident("id")})),
+                new SelectItem.UnnamedExpression(new CompoundIdentifier(new Sequence<Ident>{new Ident("deleted"), new Ident("name")})),
+            ], delete.DeleteOperation.Output);
+        }
+
+        [Fact]
+        public void Parse_MsSql_Output_Update()
+        {
+            var delete = VerifiedStatement<Statement.Update>("""
+                                                             UPDATE users 
+                                                             SET age = age + 1 
+                                                             OUTPUT deleted.age AS OldAge, inserted.age AS NewAge 
+                                                             WHERE name = 'Alice'
+                                                             """);
+
+            Assert.Equal([
+                new SelectItem.ExpressionWithAlias(new CompoundIdentifier(new Ident[] { "deleted", "age" }),
+                    new Ident("OldAge")),
+                new SelectItem.ExpressionWithAlias(new CompoundIdentifier(new Ident[] { "inserted", "age" }),
+                    new Ident("NewAge")),
+            ], delete.Output);
+
+            delete = VerifiedStatement<Statement.Update>("""
+                                                             UPDATE u 
+                                                             SET age = age + 1 
+                                                             OUTPUT deleted.age AS OldAge, inserted.age AS NewAge 
+                                                             FROM users 
+                                                             WHERE name = 'Alice'
+                                                             """);
+
+            Assert.Equal([
+                new SelectItem.ExpressionWithAlias(new CompoundIdentifier(new Ident[] { "deleted", "age" }),
+                    new Ident("OldAge")),
+                new SelectItem.ExpressionWithAlias(new CompoundIdentifier(new Ident[] { "inserted", "age" }),
+                    new Ident("NewAge")),
+            ], delete.Output);
+        }
+
+        [Fact]
         public void Parse_MsSql_Bin_Literal()
         {
             DefaultDialects = [new MsSqlDialect(), new GenericDialect()];

@@ -146,7 +146,7 @@ namespace SqlParser.Tests
             var right = new CompoundIdentifier(new Ident[] { "t2", "id" });
             var selection = new BinaryOp(left, BinaryOperator.Eq, right);
 
-            var expected = new Statement.Update(table, assignments, from, selection);
+            var expected = new Statement.Update(table, assignments, null, from, selection);
 
             Assert.Equal(expected, statement);
         }
@@ -5015,7 +5015,7 @@ namespace SqlParser.Tests
                             new ExpressionWithAlias(new LiteralValue(new Value.SingleQuotedString("two")), null),
                             new ExpressionWithAlias(new Identifier("three"), "y"),
                     ]),
-                null, 
+                null,
                 new TableAlias("p", new Ident[] { "c", "d" }));
 
             Assert.Equal(expected, relation);
@@ -5062,7 +5062,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Parser_Manages_Recursion_Depth()
         {
-            // No exception thrown guarantees recursion did not reach zero. 
+            // No exception thrown guarantees recursion did not reach zero.
             // The default depth is 50 which, if the scope is set correctly,
             // will never be reached.
             var range = Enumerable.Range(0, 100).Select(_ => "select * from tablename;");
@@ -6058,7 +6058,7 @@ namespace SqlParser.Tests
                 ExceptOption = new ExceptSelectItem("col_a", [])
             });
             Assert.Equal(expected, select.Projection[0]);
-            
+
             select = VerifiedOnlySelect("SELECT * EXCEPT (department_id, employee_id) FROM employee_table", dialects);
 
             expected = new SelectItem.Wildcard(new WildcardAdditionalOptions

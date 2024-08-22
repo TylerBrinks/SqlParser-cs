@@ -948,7 +948,7 @@ namespace SqlParser.Tests.Dialects
             var delete = VerifiedStatement(sql);
 
             var from = new FromTable.WithFromKeyword([new(new TableFactor.Table("customers"))]);
-            var expected = new Statement.Delete(new DeleteOperation(null, from,
+            var expected = new Statement.Delete(new DeleteOperation(null, null, from,
                 OrderBy: new Sequence<OrderByExpression>
                 {
                     new (new Identifier("id"), Asc:false)
@@ -963,7 +963,7 @@ namespace SqlParser.Tests.Dialects
             const string sql = "DELETE FROM customers LIMIT 100";
             var delete = VerifiedStatement(sql);
             var from = new FromTable.WithFromKeyword([new(new TableFactor.Table("customers"))]);
-            var expected = new Statement.Delete(new DeleteOperation(null, from,
+            var expected = new Statement.Delete(new DeleteOperation(null, null, from,
                 Limit: new LiteralValue(new Value.Number("100"))
             ));
             Assert.Equal(expected, delete);
