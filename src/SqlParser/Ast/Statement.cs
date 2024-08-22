@@ -793,6 +793,7 @@ public abstract record Statement : IWriteSql, IElement
         public bool WithNoSchemaBinding { get; init; }
         public bool IfNotExists { get; init; }
         public bool Temporary { get; init; }
+        public ObjectName? To { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
@@ -800,8 +801,9 @@ public abstract record Statement : IWriteSql, IElement
             var materialized = Materialized ? "MATERIALIZED " : null;
             var temporary = Temporary ? "TEMPORARY " : null;
             var ifNotExists = IfNotExists ? "IF NOT EXISTS " : null;
+            var to = To != null ? $" TO {To.ToSql()}" : null;
 
-            writer.WriteSql($"CREATE {orReplace}{materialized}{temporary}VIEW {ifNotExists}{Name}");
+            writer.WriteSql($"CREATE {orReplace}{materialized}{temporary}VIEW {ifNotExists}{Name}{to}");
 
             if (Comment != null)
             {

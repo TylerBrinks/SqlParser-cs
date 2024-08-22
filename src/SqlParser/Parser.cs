@@ -3332,6 +3332,10 @@ public partial class Parser
             }
         }
 
+        var to = (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.TO)) 
+            ? ParseObjectName() 
+            : null;
+
         string? comment = null;
 
         if (_dialect is SnowflakeDialect or GenericDialect && ParseKeyword(Keyword.COMMENT))
@@ -3364,7 +3368,8 @@ public partial class Parser
             WithNoSchemaBinding = withNoBinding,
             IfNotExists = ifNotExists,
             Temporary = temporary,
-            Options = options
+            Options = options,
+            To = to
         };
     }
 
