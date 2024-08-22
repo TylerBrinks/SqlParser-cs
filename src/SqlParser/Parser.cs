@@ -5898,8 +5898,11 @@ public partial class Parser
     public static Value.Number ParseNumeric(Number number)
     {
         var value = number.Value;
+#if NET6_0
+        var parsed = double.TryParse(value, out _);
+#else
         var parsed = double.TryParse(value, CultureInfo.InvariantCulture, out _);
-
+#endif
         if (!parsed)
         {
             parsed = Regex.IsMatch(value, "\\d+(\\.\\d+)?e( ([-+])?\\d+)?");
