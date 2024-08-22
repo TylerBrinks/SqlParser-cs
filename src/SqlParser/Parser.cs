@@ -2779,21 +2779,11 @@ public partial class Parser
     /// <returns></returns>
     public UNCache ParseUncacheTable()
     {
-        var hasTable = ParseKeyword(Keyword.TABLE);
-        if (hasTable)
-        {
-            var ifExists = ParseIfExists();
-            var tableName = ParseObjectName();
-
-            if (PeekToken() is EOF)
-            {
-                return new UNCache(tableName, ifExists);
-            }
-
-            throw Expected("EOF", PeekToken());
-        }
-
-        throw Expected("'TABLE' keyword", PeekToken());
+        ExpectKeyword(Keyword.TABLE);
+        var ifExists = ParseKeywordSequence(Keyword.IF, Keyword.EXISTS);
+        var tableName = ParseObjectName();
+       
+        return new UNCache(tableName, ifExists);
     }
     /// <summary>
     /// SQLite-specific `CREATE VIRTUAL TABLE`

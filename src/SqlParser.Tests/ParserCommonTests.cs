@@ -4872,13 +4872,13 @@ namespace SqlParser.Tests
             Assert.Equal(expected, cache);
 
             var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("UNCACHE TABLE 'table_name' foo"));
-            Assert.Equal("Expected EOF, found foo, Line: 1, Col: 28", ex.Message);
+            Assert.Equal("Expected end of statement, found foo, Line: 1, Col: 28", ex.Message);
 
             ex = Assert.Throws<ParserException>(() => ParseSqlStatements("UNCACHE 'table_name' foo"));
-            Assert.Equal("Expected 'TABLE' keyword, found 'table_name', Line: 1, Col: 9", ex.Message);
+            Assert.Equal("Expected TABLE, found 'table_name', Line: 1, Col: 9", ex.Message);
 
             ex = Assert.Throws<ParserException>(() => ParseSqlStatements("UNCACHE IF EXISTS 'table_name' foo"));
-            Assert.Equal("Expected 'TABLE' keyword, found IF, Line: 1, Col: 9", ex.Message);
+            Assert.Equal("Expected TABLE, found IF, Line: 1, Col: 9", ex.Message);
         }
 
         [Fact]
