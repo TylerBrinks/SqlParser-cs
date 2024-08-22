@@ -3563,6 +3563,12 @@ namespace SqlParser.Tests
             VerifiedStatement("SELECT foo FROM tab UNION SELECT bar FROM TAB");
             VerifiedStatement("(SELECT * FROM new EXCEPT SELECT * FROM old) UNION ALL (SELECT * FROM old EXCEPT SELECT * FROM new) ORDER BY 1");
             VerifiedStatement("(SELECT * FROM new EXCEPT DISTINCT SELECT * FROM old) UNION DISTINCT (SELECT * FROM old EXCEPT DISTINCT SELECT * FROM new) ORDER BY 1");
+            VerifiedStatement("SELECT 1 AS x, 2 AS y EXCEPT BY NAME SELECT 9 AS y, 8 AS x");
+            VerifiedStatement("SELECT 1 AS x, 2 AS y EXCEPT ALL BY NAME SELECT 9 AS y, 8 AS x");
+            VerifiedStatement("SELECT 1 AS x, 2 AS y EXCEPT DISTINCT BY NAME SELECT 9 AS y, 8 AS x");
+            VerifiedStatement("SELECT 1 AS x, 2 AS y INTERSECT BY NAME SELECT 9 AS y, 8 AS x");
+            VerifiedStatement("SELECT 1 AS x, 2 AS y INTERSECT ALL BY NAME SELECT 9 AS y, 8 AS x");
+            VerifiedStatement("SELECT 1 AS x, 2 AS y INTERSECT DISTINCT BY NAME SELECT 9 AS y, 8 AS x");
         }
 
         [Fact]
@@ -3577,14 +3583,14 @@ namespace SqlParser.Tests
         [Fact]
         public void Parse_Multiple_Statements()
         {
-            //Test("SELECT foo", "SELECT", " bar");
+            Test("SELECT foo", "SELECT", " bar");
             //// ensure that SELECT/WITH is not parsed as a table or column alias if ';'
             //// separating the statements is omitted:
-            //Test("SELECT foo FROM baz", "SELECT", " bar");
-            //Test("SELECT foo", "WITH", " cte AS (SELECT 1 AS s) SELECT bar");
-            //Test("SELECT foo FROM baz", "WITH", " cte AS (SELECT 1 AS s) SELECT bar");
-            //Test("DELETE FROM foo", "SELECT", " bar");
-            //Test("INSERT INTO foo VALUES (1)", "SELECT", " bar");
+            Test("SELECT foo FROM baz", "SELECT", " bar");
+            Test("SELECT foo", "WITH", " cte AS (SELECT 1 AS s) SELECT bar");
+            Test("SELECT foo FROM baz", "WITH", " cte AS (SELECT 1 AS s) SELECT bar");
+            Test("DELETE FROM foo", "SELECT", " bar");
+            Test("INSERT INTO foo VALUES (1)", "SELECT", " bar");
             Test("CREATE TABLE foo (baz INT)", "SELECT", " bar");
             // Make sure that empty statements do not cause an error:
             Assert.Empty(ParseSqlStatements(";;"));

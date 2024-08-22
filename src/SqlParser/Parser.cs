@@ -7230,7 +7230,6 @@ public partial class Parser
                 Word { Keyword: Keyword.EXCEPT } => SetOperator.Except,
                 Word { Keyword: Keyword.INTERSECT } => SetOperator.Intersect,
                 _ => SetOperator.None
-                //_ => null
             };
         }
 
@@ -7238,16 +7237,23 @@ public partial class Parser
         {
             return op switch
             {
-                SetOperator.Union when ParseKeywordSequence(Keyword.DISTINCT, Keyword.BY, Keyword.NAME) => SetQuantifier.DistinctByName,
-                SetOperator.Union when ParseKeywordSequence(Keyword.BY, Keyword.NAME) => SetQuantifier.ByName,
-                SetOperator.Union when ParseKeyword(Keyword.ALL) => ParseKeywordSequence(Keyword.BY, Keyword.NAME)
+                SetOperator.Except or SetOperator.Intersect or SetOperator.Union 
+                    when ParseKeywordSequence(Keyword.DISTINCT, Keyword.BY, Keyword.NAME) =>
+                    SetQuantifier.DistinctByName,
+
+                SetOperator.Except or SetOperator.Intersect or SetOperator.Union
+                    when ParseKeywordSequence(Keyword.BY, Keyword.NAME) =>
+                    SetQuantifier.ByName,
+                
+                SetOperator.Except or SetOperator.Intersect or SetOperator.Union 
+                    when ParseKeyword(Keyword.ALL) => ParseKeywordSequence(Keyword.BY, Keyword.NAME)
                     ? SetQuantifier.AllByName
                     : SetQuantifier.All,
-                SetOperator.Union when ParseKeyword(Keyword.DISTINCT) => SetQuantifier.Distinct,
-                SetOperator.Union => SetQuantifier.None,
-                SetOperator.Except or SetOperator.Intersect when ParseKeyword(Keyword.ALL) => SetQuantifier.All,
-                SetOperator.Except or SetOperator.Intersect when ParseKeyword(Keyword.DISTINCT) => SetQuantifier.Distinct,
-                SetOperator.Except or SetOperator.Intersect => SetQuantifier.None,
+
+                SetOperator.Except or SetOperator.Intersect or SetOperator.Union
+                    when ParseKeyword(Keyword.DISTINCT) => 
+                    SetQuantifier.Distinct,
+
                 _ => SetQuantifier.None
             };
         }
@@ -7603,7 +7609,6 @@ public partial class Parser
 
                     var snapshotId = ParseValue();
                     return new SetTransaction(null, snapshotId);
-
                 }
 
             default:
