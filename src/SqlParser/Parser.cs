@@ -1531,7 +1531,7 @@ public partial class Parser
     {
         ExpectLeftParen();
 
-        if ((_dialect is SnowflakeDialect) && ParseOneOfKeywords(Keyword.WITH, Keyword.SELECT) != Keyword.undefined)
+        if (_dialect is SnowflakeDialect && ParseOneOfKeywords(Keyword.WITH, Keyword.SELECT) != Keyword.undefined)
         {
             var subquery = ParseQuery(true);
             ExpectRightParen();
@@ -1542,6 +1542,15 @@ public partial class Parser
         }
 
         var args = ParseFunctionArgumentList();
+        FunctionArguments? parameters = null;
+        // ClickHouse aggregations support parametric functions like `HISTOGRAM(0.5, 0.6)(x, y)`
+        // which (0.5, 0.6) is a parameter to the function.
+        if (_dialect is ClickHouseDialect or GenericDialect && ConsumeToken<LeftParen>())
+        {
+            parameters = new FunctionArguments.List(args);
+            args = ParseFunctionArgumentList();
+        }
+
         Sequence<OrderByExpression>? withinGroup = null;
 
         if (ParseKeywordSequence(Keyword.WITHIN, Keyword.GROUP))
@@ -1593,7 +1602,8 @@ public partial class Parser
             Filter = filter,
             Over = over,
             NullTreatment = nullTreatment,
-            WithinGroup = withinGroup
+            WithinGroup = withinGroup,
+            Parameters = parameters
         };
     }
 
@@ -7195,6 +7205,14 @@ public partial class Parser
             throw Expected("SELECT, VALUES, or a subquery in the query body", PeekToken());
         }
 
+        return ParseRemainingSetExpressions(expr, precedence);
+
+
+    }
+
+    private SetExpression ParseRemainingSetExpressions(SetExpression expr, int precedence)
+    {
+
         while (true)
         {
             var @operator = ParseSetOperator();
@@ -7217,6 +7235,7 @@ public partial class Parser
 
         return expr;
 
+
         SetOperator ParseSetOperator()
         {
             return PeekToken() switch
@@ -7232,28 +7251,27 @@ public partial class Parser
         {
             return op switch
             {
-                SetOperator.Except or SetOperator.Intersect or SetOperator.Union 
+                SetOperator.Except or SetOperator.Intersect or SetOperator.Union
                     when ParseKeywordSequence(Keyword.DISTINCT, Keyword.BY, Keyword.NAME) =>
                     SetQuantifier.DistinctByName,
 
                 SetOperator.Except or SetOperator.Intersect or SetOperator.Union
                     when ParseKeywordSequence(Keyword.BY, Keyword.NAME) =>
                     SetQuantifier.ByName,
-                
-                SetOperator.Except or SetOperator.Intersect or SetOperator.Union 
-                    when ParseKeyword(Keyword.ALL) => ParseKeywordSequence(Keyword.BY, Keyword.NAME)
-                    ? SetQuantifier.AllByName
-                    : SetQuantifier.All,
 
                 SetOperator.Except or SetOperator.Intersect or SetOperator.Union
-                    when ParseKeyword(Keyword.DISTINCT) => 
+                    when ParseKeyword(Keyword.ALL) => ParseKeywordSequence(Keyword.BY, Keyword.NAME)
+                        ? SetQuantifier.AllByName
+                        : SetQuantifier.All,
+
+                SetOperator.Except or SetOperator.Intersect or SetOperator.Union
+                    when ParseKeyword(Keyword.DISTINCT) =>
                     SetQuantifier.Distinct,
 
                 _ => SetQuantifier.None
             };
         }
     }
-
     /// <summary>
     /// Parse a restricted `SELECT` statement (no CTEs / `UNION` / `ORDER BY`),
     /// assuming the initial `SELECT` was already consumed

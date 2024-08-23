@@ -375,4 +375,23 @@ public class ClickhouseDialectTests : ParserTestBase
 
         VerifiedStatement(sql);
     }
+
+    [Fact]
+    public void Parse_Select_Parametric_Function()
+    {
+        var projection = VerifiedStatement("SELECT HISTOGRAM(0.5, 0.6)(x, y) FROM t").AsQuery()!.Body.AsSelect().Projection;
+
+        var expected = new SelectItem.UnnamedExpression(new Expression.Function("HISTOGRAM")
+        {
+            Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.Identifier("x"))),
+                new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.Identifier("y"))),
+            ], null)),
+            Parameters = new FunctionArguments.List(new FunctionArgumentList(null, [
+                new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.LiteralValue(new Value.Number("0.5")))),
+                new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.LiteralValue(new Value.Number("0.6"))))
+            ], null))
+        });
+        Assert.Equal(expected, projection[0]);
+    }
 }
