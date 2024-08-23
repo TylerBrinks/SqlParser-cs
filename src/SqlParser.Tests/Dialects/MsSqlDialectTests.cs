@@ -171,6 +171,14 @@ namespace SqlParser.Tests.Dialects
         }
 
         [Fact]
+        public void Parse_MsSql_Delete_NoForm_NoWhere()
+        {
+            var statement = VerifiedStatement<Statement.Delete>("DELETE foo");
+
+            Assert.Equal(new FromTable.WithoutKeyword([]), statement.DeleteOperation.From);
+        }
+
+        [Fact]
         public void Parse_MsSql_Bin_Literal()
         {
             DefaultDialects = [new MsSqlDialect(), new GenericDialect()];

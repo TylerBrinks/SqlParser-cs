@@ -6870,6 +6870,8 @@ public partial class Parser
                 withFromKeyword = false;
 
                 output = ParseInit(ParseKeyword(Keyword.OUTPUT), () => ParseCommaSeparated(ParseSelectItem));
+
+                from = ParseCommaSeparated(ParseTableAndJoins);
             }
             else
             {
@@ -6878,13 +6880,25 @@ public partial class Parser
                 if (_dialect is MsSqlDialect)
                 {
                     output = ParseInit(ParseKeyword(Keyword.OUTPUT), () => ParseCommaSeparated(ParseSelectItem));
+
+                    if (ParseKeyword(Keyword.FROM))
+                    {
+                        from = ParseCommaSeparated(ParseTableAndJoins);
+                    }
+                    else
+                    {
+                        withFromKeyword = false;
+                        from = [];
+                    }
                 }
+                else
+                {
+                    ExpectKeyword(Keyword.FROM);
+                    withFromKeyword = true;
 
-                ExpectKeyword(Keyword.FROM);
-                withFromKeyword = true;
+                    from = ParseCommaSeparated(ParseTableAndJoins);
+                }
             }
-
-            from = ParseCommaSeparated(ParseTableAndJoins);
         }
         else
         {
