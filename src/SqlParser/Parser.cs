@@ -1487,23 +1487,23 @@ public partial class Parser
     public Sequence<StructField> ParseClickHouseTupleDef()
     {
         ExpectKeyword(Keyword.TUPLE);
-        var fieldDefs = ExpectParens(() =>
+        var fieldDefinitions = ExpectParens(() =>
         {
-            var defs = new Sequence<StructField>();
+            var definitions = new Sequence<StructField>();
             while (true)
             {
                 var (def, _) = ParseStructFieldDef();
-                defs.Add(def);
+                definitions.Add(def);
                 if (!ConsumeToken<Comma>())
                 {
                     break;
                 }
             }
 
-            return defs;
+            return definitions;
         });
 
-        return fieldDefs;
+        return fieldDefinitions;
     }
 
     private bool ExpectClosingAngleBracket(bool trailingBracket)
@@ -1543,6 +1543,7 @@ public partial class Parser
 
         var args = ParseFunctionArgumentList();
         FunctionArguments? parameters = null;
+        // ReSharper disable once GrammarMistakeInComment
         // ClickHouse aggregations support parametric functions like `HISTOGRAM(0.5, 0.6)(x, y)`
         // which (0.5, 0.6) is a parameter to the function.
         if (_dialect is ClickHouseDialect or GenericDialect && ConsumeToken<LeftParen>())
@@ -9064,7 +9065,11 @@ public partial class Parser
     /// <returns></returns>
     public WildcardAdditionalOptions ParseWildcardAdditionalOptions()
     {
-        //todo ilike
+        IlikeSelectItem? ilikeSelectItem = null;
+        if (_dialect is SnowflakeDialect or GenericDialect)
+        {
+            ilikeSelectItem = ParseOptionalSelectItemIlike();
+        }
 
         ExcludeSelectItem? optExclude = null;
         if (_dialect is GenericDialect or DuckDbDialect or SnowflakeDialect)
@@ -9078,12 +9083,6 @@ public partial class Parser
             optExcept = ParseOptionalSelectItemExcept();
         }
 
-        RenameSelectItem? optRename = null;
-        if (_dialect is GenericDialect or SnowflakeDialect)
-        {
-            optRename = ParseOptionalSelectItemRename();
-        }
-
         ReplaceSelectItem? optReplace = null;
         if (_dialect is GenericDialect
             or BigQueryDialect
@@ -9094,13 +9093,43 @@ public partial class Parser
             optReplace = ParseOptionalSelectItemReplace();
         }
 
+        RenameSelectItem? optRename = null;
+        if (_dialect is GenericDialect or SnowflakeDialect)
+        {
+            optRename = ParseOptionalSelectItemRename();
+        }
+
         return new WildcardAdditionalOptions
         {
+            ILikeOption = ilikeSelectItem,
             ExcludeOption = optExclude,
             ExceptOption = optExcept,
             RenameOption = optRename,
             ReplaceOption = optReplace
         };
+    }
+    /// <summary>
+    /// Parse an [`Ilike`](IlikeSelectItem) information for wildcard select items.
+    ///
+    /// If it is not possible to parse it, will return an option.
+    /// </summary>
+    /// <returns></returns>
+    public IlikeSelectItem? ParseOptionalSelectItemIlike()
+    {
+        IlikeSelectItem? iLIke = null;
+
+        if (!ParseKeyword(Keyword.ILIKE)){ return iLIke; }
+
+        var next = NextToken();
+        var pattern = next switch
+        {
+            SingleQuotedString s => s.Value,
+            _ => throw Expected("ilike pattern", next)
+        };
+
+        iLIke = new IlikeSelectItem(pattern);
+
+        return iLIke;
     }
     /// <summary>
     /// Parse an [`Exclude`](ExcludeSelectItem) information for wildcard select items.

@@ -5,6 +5,7 @@
 /// </summary>
 public record WildcardAdditionalOptions : IWriteSql, IElement
 {
+    public IlikeSelectItem? ILikeOption { get; init; }
     // [EXCLUDE...]
     public ExcludeSelectItem? ExcludeOption { get; init; }
     // [EXCEPT...]
@@ -17,6 +18,11 @@ public record WildcardAdditionalOptions : IWriteSql, IElement
     
     public void ToSql(SqlTextWriter writer)
     {
+        if (ILikeOption != null)
+        {
+            writer.WriteSql($" {ILikeOption}");
+        }
+
         if (ExcludeOption != null)
         {
             writer.WriteSql($" {ExcludeOption}");
@@ -27,14 +33,14 @@ public record WildcardAdditionalOptions : IWriteSql, IElement
             writer.WriteSql($" {ExceptOption}");
         }
 
-        if (RenameOption != null)
-        {
-            writer.WriteSql($" {RenameOption}");
-        }
-
         if (ReplaceOption != null)
         {
             writer.WriteSql($" {ReplaceOption}");
+        }
+
+        if (RenameOption != null)
+        {
+            writer.WriteSql($" {RenameOption}");
         }
     }
 }
@@ -59,5 +65,13 @@ public record ReplaceSelectElement(Expression Expr, Ident Name, bool AsKeyword) 
         {
             writer.WriteSql($"{Expr} {Name}");
         }
+    }
+}
+
+public record IlikeSelectItem(string Pattern) : IWriteSql, IElement
+{
+    public void ToSql(SqlTextWriter writer)
+    {
+        writer.WriteSql($"ILIKE '{Pattern}'");
     }
 }

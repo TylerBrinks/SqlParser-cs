@@ -1,7 +1,9 @@
-﻿using SqlParser.Ast;
+﻿using System.ComponentModel.DataAnnotations;
+using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
 using static SqlParser.Ast.Expression;
+using DataType = SqlParser.Ast.DataType;
 
 // ReSharper disable StringLiteralTypo
 
@@ -1223,9 +1225,31 @@ namespace SqlParser.Tests.Dialects
         {
             const string sql = "CREATE TABLE my_table (a number) DEFAULT_DDL_COLLATION='de'";
             var create = VerifiedStatement<Statement.CreateTable>(sql);
-            
+
             Assert.Equal("my_table", create.Element.Name);
             Assert.Equal("de", create.Element.DefaultDdlCollation);
+        }
+
+        [Fact]
+        public void Test_Select_Wildcard_With_Replace_And_Rename()
+        {
+            var select = VerifiedOnlySelect("SELECT * REPLACE (col_z || col_z AS col_z) RENAME (col_z AS col_zz) FROM data");
+
+            var expected = new SelectItem.Wildcard(new WildcardAdditionalOptions
+            {
+                ReplaceOption = new ReplaceSelectItem([
+                    new (new BinaryOp(
+                            new Identifier("col_z"),
+                            BinaryOperator.StringConcat,
+                            new Identifier("col_z")
+                        ), "col_z", true)
+                ]),
+                RenameOption = new RenameSelectItem.Multiple([
+                    new IdentWithAlias("col_z", "col_zz")
+                ])
+            });
+
+            Assert.Equal(expected, select.Projection[0]);
         }
     }
 }
