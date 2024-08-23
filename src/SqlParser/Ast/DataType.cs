@@ -637,8 +637,8 @@ public abstract record DataType : IWriteSql, IElement
     ///
     /// Map Clickhouse: https://clickhouse.com/docs/en/sql-reference/data-types/map
     /// </summary>
-    /// <param name="dt1"></param>
-    /// <param name="dt2"></param>
+    /// <param name="KeyDataType"></param>
+    /// <param name="ValueDataType"></param>
     public record Map(DataType KeyDataType, DataType ValueDataType) : DataType
     {
         public override void ToSql(SqlTextWriter writer)
@@ -773,7 +773,7 @@ public abstract record DataType : IWriteSql, IElement
     }
     /// Struct
     ///
-    /// Bive: https://docs.cloudera.com/cdw-runtime/cloud/impala-sql-reference/topics/impala-struct.html
+    /// Hive: https://docs.cloudera.com/cdw-runtime/cloud/impala-sql-reference/topics/impala-struct.html
     /// BigQuery: https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#struct_type
     public record Struct(Sequence<StructField> Fields) : DataType
     {
@@ -912,6 +912,19 @@ public abstract record DataType : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             writer.Write("UINT256");
+        }
+    }
+    /// <summary>
+    /// Union
+    ///
+    /// DuckDb https://duckdb.org/docs/sql/data_types/union.html
+    /// </summary>
+    /// <param name="Values"></param>
+    public record Union(Sequence<UnionField> Fields) : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"UNION({Fields.ToSqlDelimited()})");
         }
     }
     /// <summary>

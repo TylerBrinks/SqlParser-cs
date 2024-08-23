@@ -3874,6 +3874,21 @@ public partial class Parser
         return new Statement.Declare(statements);
     }
 
+    public Sequence<UnionField> ParseUnionTypeDef()
+    {
+        ExpectKeyword(Keyword.UNION);
+
+        return ExpectParens(() =>
+        {
+            return ParseCommaSeparated(() =>
+            {
+                var identifier = ParseIdentifier();
+                var fieldType = ParseDataType();
+                return new UnionField(identifier, fieldType);
+            });
+        });
+    }
+
     public DeclareAssignment? ParseMsSqlVariableDeclarationExpression()
     {
         if (PeekToken() is Equal)
@@ -6019,7 +6034,7 @@ public partial class Parser
             Word { Keyword: Keyword.SET } => new DataType.Set(ParseStringValue()),
             Word { Keyword: Keyword.ARRAY } => ParseArray(),
             Word { Keyword: Keyword.STRUCT } when _dialect is BigQueryDialect or GenericDialect => ParseStruct(),
-
+            Word { Keyword: Keyword.UNION } when _dialect is DuckDbDialect or GenericDialect => ParseUnion(), 
             Word { Keyword: Keyword.NULLABLE } when _dialect is ClickHouseDialect or GenericDialect =>
                 ParseSubtype(child => new DataType.Nullable(child)),
             Word { Keyword: Keyword.LOWCARDINALITY } when _dialect is ClickHouseDialect or GenericDialect =>
@@ -6201,6 +6216,12 @@ public partial class Parser
             PrevToken();
             (var fieldDefinitions, trailingBracket) = ParseStructTypeDef(ParseStructFieldDef);
             return new DataType.Struct(fieldDefinitions);
+        }
+
+        DataType ParseUnion()
+        {
+            PrevToken();
+            return new DataType.Union(ParseUnionTypeDef());
         }
 
         DataType ParseUnmatched()
