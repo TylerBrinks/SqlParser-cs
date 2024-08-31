@@ -1,5 +1,6 @@
 ﻿using SqlParser.Ast;
 using SqlParser.Dialects;
+using System.Linq;
 
 namespace SqlParser.Tests.Dialects;
 
@@ -393,5 +394,60 @@ public class ClickhouseDialectTests : ParserTestBase
             ], null))
         });
         Assert.Equal(expected, projection[0]);
+    }
+
+    [Fact]
+    public void Parse_Group_By_With_Modifier()
+    {
+        var clauses = new []{"x", "a, b", "ALL"};
+        var modifiers = new[]{
+            "WITH ROLLUP",
+            "WITH CUBE",
+            "WITH TOTALS",
+            "WITH ROLLUP WITH CUBE",
+        };
+
+        var expectedModifiers = new Sequence<GroupByWithModifier>[]{
+            [GroupByWithModifier.Rollup],
+            [GroupByWithModifier.Cube],
+            [GroupByWithModifier.Totals],
+            [GroupByWithModifier.Rollup, GroupByWithModifier.Cube],
+        };
+
+        foreach (var clause in clauses)
+        {
+            foreach (var (modifier, expectedModifier) in modifiers.Zip(expectedModifiers))
+            {
+                var sql = $"SELECT * FROM T GROUP BY {clause} {modifier}";
+
+                var statement = VerifiedStatement(sql);
+                var query = statement.AsQuery();
+                var groupBy = query.Body.AsSelect().GroupBy;
+
+                if (clause == "ALL")
+                {
+                    Assert.Equal(new GroupByExpression.All(expectedModifier), groupBy);
+                }
+                else
+                {
+                    var columnNames = new Sequence<Expression>(clause.Split(", ").Select(c => new Expression.Identifier(c)));
+                    var expected = new GroupByExpression.Expressions(columnNames, expectedModifier);
+                    Assert.Equal(expected, groupBy);
+                }
+            }
+        }
+
+        var invalidClauses = new[]
+        {
+            "SELECT * FROM t GROUP BY x WITH",
+            "SELECT * FROM t GROUP BY x WITH ROLLUP CUBE",
+            "SELECT * FROM t GROUP BY x WITH WITH ROLLUP",
+            "SELECT * FROM t GROUP BY WITH ROLLUP"
+        };
+
+        foreach (var invalid in invalidClauses)
+        {
+            Assert.Throws<ParserException>(() => ParseSqlStatements(invalid));
+        }
     }
 }

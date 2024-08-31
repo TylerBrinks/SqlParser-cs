@@ -311,6 +311,13 @@ public enum GeneratedExpressionMode
     Sorted
 }
 
+public enum GroupByWithModifier
+{
+    Rollup,
+    Cube,
+    Totals,
+}
+
 public enum HavingBoundKind
 {
     Min,

@@ -5195,7 +5195,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Parse_Select_Group_By_All()
         {
-            var sql = "SELECT id, fname, lname, SUM(order) FROM customer GROUP BY ALL";
+            const string sql = "SELECT id, fname, lname, SUM(order) FROM customer GROUP BY ALL";
             var select = VerifiedOnlySelect(sql);
 
             Assert.Equal(new GroupByExpression.All(), select.GroupBy);
@@ -5683,7 +5683,7 @@ namespace SqlParser.Tests
 
                 return new Function(new ObjectName(new Ident(function)))
                 {
-                    Args = new FunctionArguments.List(new FunctionArgumentList(null, functionArgs, null))
+                    Args = new FunctionArguments.List(new FunctionArgumentList(null, functionArgs!, null))
                 };
             }
         }

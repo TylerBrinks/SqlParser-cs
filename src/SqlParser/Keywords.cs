@@ -765,6 +765,7 @@ public enum Keyword
     TINYINT,
     TO,
     TOP,
+    TOTALS,
     TRAILING,
     TRANSACTION,
     TRANSIENT,

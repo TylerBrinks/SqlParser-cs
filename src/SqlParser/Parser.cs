@@ -247,7 +247,7 @@ public partial class Parser
             _ => throw Expected("a SQL statement", PeekToken())
         };
     }
-   
+
     public Statement ParseFlush()
     {
         string? channel = null;
@@ -1154,7 +1154,7 @@ public partial class Parser
                 {
                     return new QualifiedWildcard(new ObjectName(idParts));
                 }
-                
+
                 if (ConsumeToken<LeftParen>())
                 {
                     if (_dialect is SnowflakeDialect or MsSqlDialect && ConsumeTokens(typeof(Plus), typeof(RightParen)))
@@ -1166,7 +1166,7 @@ public partial class Parser
 
                         return new OuterJoin(new CompoundIdentifier(idParts));
                     }
-                    
+
                     PrevToken();
                     return ParseFunction(new ObjectName(idParts));
                 }
@@ -2187,7 +2187,7 @@ public partial class Parser
     {
         return Extensions.DateTimeFields.Any(kwd => kwd == keyword) ? ParseDateTimeField() : new DateTimeField.None();
     }
-    
+
     public Subscript ParseSubscriptInner()
     {
         Expression? lowerBound = null;
@@ -2793,7 +2793,7 @@ public partial class Parser
         ExpectKeyword(Keyword.TABLE);
         var ifExists = ParseKeywordSequence(Keyword.IF, Keyword.EXISTS);
         var tableName = ParseObjectName();
-       
+
         return new UNCache(tableName, ifExists);
     }
     /// <summary>
@@ -3333,8 +3333,8 @@ public partial class Parser
             }
         }
 
-        var to = (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.TO)) 
-            ? ParseObjectName() 
+        var to = (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.TO))
+            ? ParseObjectName()
             : null;
 
         string? comment = null;
@@ -6034,7 +6034,7 @@ public partial class Parser
             Word { Keyword: Keyword.SET } => new DataType.Set(ParseStringValue()),
             Word { Keyword: Keyword.ARRAY } => ParseArray(),
             Word { Keyword: Keyword.STRUCT } when _dialect is BigQueryDialect or GenericDialect => ParseStruct(),
-            Word { Keyword: Keyword.UNION } when _dialect is DuckDbDialect or GenericDialect => ParseUnion(), 
+            Word { Keyword: Keyword.UNION } when _dialect is DuckDbDialect or GenericDialect => ParseUnion(),
             Word { Keyword: Keyword.NULLABLE } when _dialect is ClickHouseDialect or GenericDialect =>
                 ParseSubtype(child => new DataType.Nullable(child)),
             Word { Keyword: Keyword.LOWCARDINALITY } when _dialect is ClickHouseDialect or GenericDialect =>
@@ -7014,7 +7014,7 @@ public partial class Parser
             return new ExplainTable(describeAlias, ParseObjectName(), hiveFormat);
         }
     }
-   
+
     public CommonTableExpression ParseCommonTableExpression()
     {
         var name = ParseIdentifier();
@@ -7373,14 +7373,46 @@ public partial class Parser
 
         if (ParseKeywordSequence(Keyword.GROUP, Keyword.BY))
         {
-            if (ParseKeyword(Keyword.ALL))
+            Sequence<Expression>? expressions = null;
+
+            if (!ParseKeyword(Keyword.ALL))
             {
-                groupBy = new GroupByExpression.All();
+                expressions = ParseCommaSeparated(ParseGroupByExpr);
             }
-            else
+
+            Sequence<GroupByWithModifier>? modifiers = null;
+
+            if (_dialect is ClickHouseDialect or GenericDialect)
             {
-                groupBy = new GroupByExpression.Expressions(ParseCommaSeparated(ParseGroupByExpr));
+                while (true)
+                {
+                    if (!ParseKeyword(Keyword.WITH))
+                    {
+                        break;
+                    }
+
+                    var keyword = ExpectOneOfKeywords(Keyword.ROLLUP, Keyword.CUBE, Keyword.TOTALS);
+
+                    var modifier = keyword switch
+                    {
+                        Keyword.ROLLUP => GroupByWithModifier.Rollup,
+                        Keyword.CUBE => GroupByWithModifier.Cube,
+                        Keyword.TOTALS => GroupByWithModifier.Totals,
+                        _ => throw Expected("to match GroupBy modifier keyword", PeekToken())
+                    };
+
+                    modifiers ??= [];
+                    modifiers.Add(modifier);
+                }
             }
+
+            groupBy = expressions == null
+                ? new GroupByExpression.All(modifiers)
+                : new GroupByExpression.Expressions(expressions, modifiers);
+        }
+        else
+        {
+            groupBy = new GroupByExpression.Expressions(null, null);
         }
 
         var clusterBy = ParseInit(ParseKeywordSequence(Keyword.CLUSTER, Keyword.BY), () => ParseCommaSeparated(ParseExpr));
@@ -9139,7 +9171,7 @@ public partial class Parser
     {
         IlikeSelectItem? iLIke = null;
 
-        if (!ParseKeyword(Keyword.ILIKE)){ return iLIke; }
+        if (!ParseKeyword(Keyword.ILIKE)) { return iLIke; }
 
         var next = NextToken();
         var pattern = next switch
