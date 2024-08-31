@@ -112,6 +112,7 @@ internal static class Keywords
         Keyword.FOR,
         // for MYSQL PARTITION SELECTION
         Keyword.PARTITION,
+        Keyword.PREWHERE,
         Keyword.SETTINGS,
         // for Snowflake START WITH .. CONNECT BY
         Keyword.START,
@@ -607,6 +608,7 @@ public enum Keyword
     PRECISION,
     PREPARE,
     PRESERVE,
+    PREWHERE,
     PRIMARY,
     PRIOR,
     PRIVILEGES,
@@ -848,5 +850,5 @@ public enum Keyword
     YEAR,
     ZONE,
 
-    undefined,
+    undefined
 }

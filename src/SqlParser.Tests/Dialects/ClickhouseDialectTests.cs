@@ -473,4 +473,26 @@ public class ClickhouseDialectTests : ParserTestBase
             Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
         }
     }
+
+    [Fact]
+    public void Test_Prewhere()
+    {
+        var select = VerifiedStatement("SELECT * FROM t PREWHERE x = 1 WHERE y = 2").AsQuery()!.Body.AsSelect()!;
+
+        var expected = new Expression.BinaryOp(
+            new Expression.Identifier("x"),
+            BinaryOperator.Eq,
+            new Expression.LiteralValue(new Value.Number("1"))
+        );
+
+        Assert.Equal(expected, select.PreWhere);
+
+        expected = new Expression.BinaryOp(
+            new Expression.Identifier("y"),
+            BinaryOperator.Eq,
+            new Expression.LiteralValue(new Value.Number("2"))
+        );
+
+        Assert.Equal(expected, select.Selection);
+    }
 }

@@ -7367,6 +7367,12 @@ public partial class Parser
             }
         }
 
+        Expression? preWhere = null;
+        if (_dialect is ClickHouseDialect or GenericDialect&& ParseKeyword(Keyword.PREWHERE))
+        {
+            preWhere = ParseExpr();
+        }
+
         var selection = ParseInit(ParseKeyword(Keyword.WHERE), ParseExpr);
 
         GroupByExpression? groupBy = null;
@@ -7440,7 +7446,8 @@ public partial class Parser
             QualifyBy = qualify,
             ValueTableMode = valueTableMode,
             ConnectBy = connectBy,
-            WindowBeforeQualify = windowBeforeQualify
+            WindowBeforeQualify = windowBeforeQualify,
+            PreWhere = preWhere
         };
 
         ConnectBy? ParseConnect()
