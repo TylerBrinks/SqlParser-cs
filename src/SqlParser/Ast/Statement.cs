@@ -1275,6 +1275,20 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
+
+    public record DropProcedure(bool IfExists, Sequence<DropFunctionDesc> ProcDescription, ReferentialAction? Option) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            var ifEx = IfExists ? " IF EXISTS" : null;
+            writer.WriteSql($"DROP PROCEDURE{ifEx} {ProcDescription.ToSqlDelimited()}");
+
+            if (Option != null)
+            {
+                writer.Write($" {Option}");
+            }
+        }
+    }
     /// <summary>
     /// EXPLAIN / DESCRIBE statement
     /// </summary>

@@ -3621,6 +3621,10 @@ public partial class Parser
         {
             return ParseDropFunction();
         }
+        else if (ParseKeyword(Keyword.PROCEDURE))
+        {
+            return ParseDropProcedure();
+        }
         else if (ParseKeyword(Keyword.SECRET))
         {
             return ParseDropSecret(temporary, persistent);
@@ -3628,7 +3632,7 @@ public partial class Parser
 
         if (objectType == null)
         {
-            throw Expected("TABLE, VIEW, INDEX, ROLE, SCHEMA, FUNCTION or SEQUENCE after DROP", PeekToken());
+            throw Expected("TABLE, VIEW, INDEX, ROLE, SCHEMA, FUNCTION PROCEDURE, STAGE, or SEQUENCE after DROP", PeekToken());
         }
 
         // Many dialects support the non-standard `IF EXISTS` clause and allow
@@ -3658,6 +3662,39 @@ public partial class Parser
             Purge = purge,
             Temporary = temporary
         };
+    }
+
+    private DropProcedure ParseDropProcedure()
+    {
+        var ifExists = ParseIfExists();
+        var procDesc = ParseCommaSeparated(ParseDropFunctionDescription);
+        var keyword = ParseOneOfKeywords(Keyword.CASCADE, Keyword.RESTRICT);
+
+        ReferentialAction? option = keyword switch
+        {
+            Keyword.CASCADE => ReferentialAction.Cascade,
+            Keyword.RESTRICT  => ReferentialAction.Restrict,
+            _ => null
+        };
+
+        return new DropProcedure(ifExists, procDesc, option);
+    }
+
+    public DropFunctionDesc ParseDropFunctionDescription()
+    {
+        var name = ParseObjectName();
+        Sequence<OperateFunctionArg>? args = null;
+
+        if (ConsumeToken<LeftParen>())
+        {
+            if (!ConsumeToken<RightParen>())
+            { 
+                args = ParseCommaSeparated(ParseFunctionArg);
+                ExpectToken<RightParen>();
+            }
+        }
+
+        return new DropFunctionDesc(name, args);
     }
 
     private DropSecret ParseDropSecret(bool temporary, bool persistent)

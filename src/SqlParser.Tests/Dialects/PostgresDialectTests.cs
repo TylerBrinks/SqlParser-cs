@@ -46,7 +46,7 @@ namespace SqlParser.Tests.Dialects
                  column30 TEXT)
                 """);
 
-            //With out primary key
+            //Without primary key
             sql = """
                 CREATE TABLE table2 (
                 column22 bigint generated always as identity    ,
@@ -2419,6 +2419,17 @@ namespace SqlParser.Tests.Dialects
             var dialects = new List<Dialect> { dialect };
             Assert.Equal(expected, VerifiedExpr(canonical, dialects));
             Assert.Equal(expected, VerifiedExpr($"a{op}b", dialects));
+        }
+
+        [Fact]
+        public void Parse_Drop_Procedure()
+        {
+            const string sql = "DROP PROCEDURE IF EXISTS test_proc";
+
+            var drop = VerifiedStatement<Statement.DropProcedure>(sql);
+
+            Assert.True(drop.IfExists);
+            Assert.Equal([new(new ObjectName("test_proc"))], drop.ProcDescription);
         }
     }
 }
