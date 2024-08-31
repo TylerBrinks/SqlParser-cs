@@ -1,6 +1,5 @@
 ﻿using SqlParser.Ast;
 using SqlParser.Dialects;
-using System.Linq;
 
 namespace SqlParser.Tests.Dialects;
 
@@ -421,8 +420,7 @@ public class ClickhouseDialectTests : ParserTestBase
                 var sql = $"SELECT * FROM T GROUP BY {clause} {modifier}";
 
                 var statement = VerifiedStatement(sql);
-                var query = statement.AsQuery();
-                var groupBy = query.Body.AsSelect().GroupBy;
+                var groupBy = statement.AsQuery()!.Body.AsSelect().GroupBy; ;
 
                 if (clause == "ALL")
                 {
@@ -448,6 +446,31 @@ public class ClickhouseDialectTests : ParserTestBase
         foreach (var invalid in invalidClauses)
         {
             Assert.Throws<ParserException>(() => ParseSqlStatements(invalid));
+        }
+    }
+
+    [Fact]
+    public void Parse_Settings_In_Query()
+    {
+        var query = VerifiedStatement("SELECT * FROM t SETTINGS max_threads = 1, max_block_size = 10000").AsQuery()!;
+
+        Assert.Equal(
+            [
+                new ("max_threads", new Value.Number("1")),
+                new ("max_block_size", new Value.Number("10000"))
+            ],
+            query.Settings);
+
+        foreach (var sql in new []
+                 {
+                     "SELECT * FROM t SETTINGS a",
+                     "SELECT * FROM t SETTINGS a=",
+                     "SELECT * FROM t SETTINGS a=1, b",
+                     "SELECT * FROM t SETTINGS a=1, b=",
+                     "SELECT * FROM t SETTINGS a=1, b=c",
+                 })
+        {
+            Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
         }
     }
 }

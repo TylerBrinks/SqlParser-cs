@@ -112,6 +112,7 @@ internal static class Keywords
         Keyword.FOR,
         // for MYSQL PARTITION SELECTION
         Keyword.PARTITION,
+        Keyword.SETTINGS,
         // for Snowflake START WITH .. CONNECT BY
         Keyword.START,
         Keyword.CONNECT,
@@ -694,6 +695,7 @@ public enum Keyword
     SESSION_USER,
     SET,
     SETS,
+    SETTINGS,
     SHARE,
     SHOW,
     SIMILAR,

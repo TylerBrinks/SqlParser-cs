@@ -7410,10 +7410,6 @@ public partial class Parser
                 ? new GroupByExpression.All(modifiers)
                 : new GroupByExpression.Expressions(expressions, modifiers);
         }
-        else
-        {
-            groupBy = new GroupByExpression.Expressions(null, null);
-        }
 
         var clusterBy = ParseInit(ParseKeywordSequence(Keyword.CLUSTER, Keyword.BY), () => ParseCommaSeparated(ParseExpr));
 

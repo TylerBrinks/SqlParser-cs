@@ -1079,6 +1079,7 @@ public partial class Parser
         Sequence<LockClause>? locks = null;
         Sequence<Expression>? limitBy = null;
         ForClause? forClause = null;
+        Sequence<Setting>? settings = null;
 
         if (!ParseKeyword(Keyword.INSERT))
         {
@@ -1116,6 +1117,18 @@ public partial class Parser
                 limitBy = ParseCommaSeparated(ParseExpr);
             }
 
+            if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.SETTINGS))
+            {
+                settings = ParseCommaSeparated(() =>
+                {
+                    var key = ParseIdentifier();
+                    ExpectToken<Equal>();
+                    var value = ParseValue();
+
+                    return new Setting(key, value);
+                });
+            }
+
             if (ParseKeyword(Keyword.FETCH))
             {
                 fetch = ParseFetch();
@@ -1143,7 +1156,8 @@ public partial class Parser
                 Fetch = fetch,
                 Locks = locks,
                 LimitBy = limitBy,
-                ForClause = forClause
+                ForClause = forClause,
+                Settings = settings
             });
         }
 

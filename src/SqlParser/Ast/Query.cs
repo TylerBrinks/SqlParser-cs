@@ -14,6 +14,7 @@ public record Query([Visit(1)] SetExpression Body) : IWriteSql, IElement
     [Visit(6)] public Sequence<LockClause>? Locks { get; init; }
     [Visit(7)] public Sequence<Expression>? LimitBy { get; init; }
     [Visit(8)] public ForClause? ForClause { get; init; }
+    [Visit(9)] public Sequence<Setting>? Settings { get; init; }
 
     public static implicit operator Query(Statement.Select select)
     {
@@ -52,6 +53,11 @@ public record Query([Visit(1)] SetExpression Body) : IWriteSql, IElement
         if (LimitBy.SafeAny())
         {
             writer.Write($" BY {LimitBy.ToSqlDelimited()}");
+        }
+
+        if (Settings.SafeAny())
+        {
+            writer.WriteSql($" SETTINGS {Settings.ToSqlDelimited()}");
         }
 
         if (Fetch != null)
