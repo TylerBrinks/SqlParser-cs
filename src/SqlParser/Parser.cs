@@ -7368,7 +7368,7 @@ public partial class Parser
         }
 
         Expression? preWhere = null;
-        if (_dialect is ClickHouseDialect or GenericDialect&& ParseKeyword(Keyword.PREWHERE))
+        if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.PREWHERE))
         {
             preWhere = ParseExpr();
         }
@@ -8709,10 +8709,7 @@ public partial class Parser
         }
         else
         {
-            var oldValue = _options.TrailingCommas;
-            _options.TrailingCommas = false;
-
-            var permissions = ParseCommaSeparated(ParseGrantPermission);
+            var permissions = ParseActionsList();
             var actions = permissions.Select(permission =>
             {
                 var (keyword, columns) = permission;
@@ -8738,7 +8735,7 @@ public partial class Parser
                 return action;
             }).ToSequence();
 
-            _options.TrailingCommas = oldValue;
+            //_options.TrailingCommas = oldValue;
 
             privileges = new Privileges.Actions(actions);
         }
@@ -8771,7 +8768,31 @@ public partial class Parser
         return (privileges, grantObjects);
     }
 
-    public (Keyword, Sequence<Ident>?) ParseGrantPermission()
+    public Sequence<ParsedAction> ParseActionsList()
+    {
+        var values = new Sequence<ParsedAction>();
+
+        while (true)
+        {
+            values.Add(ParseGrantPermission());
+            if (!ConsumeToken<Comma>())
+            {
+                break;
+            }
+
+            if (!_options.TrailingCommas){ continue; }
+            var next = PeekToken();
+
+            if (next is Word { Keyword: Keyword.ON } or RightParen or SemiColon or RightBracket or RightBrace or EOF)
+            {
+                break;
+            }
+        }
+
+        return values;
+    }
+
+    public ParsedAction ParseGrantPermission()
     {
         var keyword = ParseOneOfKeywords(
             Keyword.CONNECT,
@@ -8798,14 +8819,14 @@ public partial class Parser
                         columns = cols;
                     }
 
-                    return (keyword, columns);
+                    return new ParsedAction(keyword, columns);
                 }
 
             case Keyword.undefined:
                 throw Expected("a privilege keyword", PeekToken());
 
             default:
-                return (keyword, null);
+                return new ParsedAction(keyword);
         }
     }
 
@@ -9802,3 +9823,5 @@ public partial class Parser
         return $", found {token}{location}";
     }
 }
+
+public record ParsedAction(Keyword Keyword, Sequence<Ident>? Idents = null);

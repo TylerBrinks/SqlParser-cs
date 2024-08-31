@@ -1,6 +1,7 @@
 ﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
+using System.Linq;
 using static SqlParser.Ast.Expression;
 
 using DataType = SqlParser.Ast.DataType;
@@ -1032,7 +1033,9 @@ public partial class Parser
                 var token = PeekToken();
                 if (token is Word w)
                 {
-                    if (Keywords.ReservedForColumnAlias.Any(k => k == w.Keyword))
+                    
+                    //if (Keywords.ReservedForColumnAlias.Any(k => k == w.Keyword))
+                    if (Keywords.ReservedForColumnAlias.Contains(w.Keyword))
                     {
                         break;
                     }
@@ -1041,8 +1044,6 @@ public partial class Parser
                 {
                     break;
                 }
-
-                // continue
             }
         }
 
