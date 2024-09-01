@@ -286,11 +286,6 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
             writer.WriteSql($" {WithRowAccessPolicy}");
         }
 
-        if (Query != null)
-        {
-            writer.WriteSql($" AS {Query}");
-        }
-
         if (DefaultCharset != null)
         {
             writer.WriteSql($" DEFAULT CHARSET={DefaultCharset}");
@@ -320,5 +315,11 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
         {
             writer.Write(" STRICT");
         }
+
+        if (Query != null)
+        {
+            writer.WriteSql($" AS {Query}");
+        }
+
     }
 }

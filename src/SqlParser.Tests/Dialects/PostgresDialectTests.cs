@@ -2493,6 +2493,18 @@ public class PostgresDialectTests : ParserTestBase
             , partition.Args);
     }
 
+    [Fact]
+    public void Parse_Create_Table_On_Commit_And_As_Query()
+    {
+        var create = VerifiedStatement<Statement.CreateTable>("CREATE LOCAL TEMPORARY TABLE test ON COMMIT PRESERVE ROWS AS SELECT 1").Element;
+
+        Assert.Equal("test", create.Name);
+        Assert.Equal(OnCommit.PreserveRows , create.OnCommit);
+        Assert.Equal(new Sequence<SelectItem.UnnamedExpression>
+        {
+            new (new LiteralValue(new Value.Number("1")))
+        }, create.Query!.Body.AsSelect().Projection);
+    }
 }
 
 public record TestCase(string Sql, Owner ExpectedOwner);

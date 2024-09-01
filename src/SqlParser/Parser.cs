@@ -4455,9 +4455,6 @@ public partial class Parser
 
         var createTableConfig = ParseOptionalCreateTableConfig();
 
-        // Parse optional `AS ( query )`
-        var query = ParseInit<Query>(ParseKeyword(Keyword.AS), () => ParseQuery());
-
         var defaultCharset = ParseInit(ParseKeywordSequence(Keyword.DEFAULT, Keyword.CHARSET), () =>
         {
             ExpectToken<Equal>();
@@ -4512,6 +4509,9 @@ public partial class Parser
 
             throw Expected("Comment", PeekToken());
         });
+
+        // Parse optional `AS ( query )`
+        var query = ParseInit<Query>(ParseKeyword(Keyword.AS), () => ParseQuery());
 
         return new Ast.CreateTable(tableName, columns)
         {
