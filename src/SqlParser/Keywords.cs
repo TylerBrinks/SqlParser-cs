@@ -569,6 +569,7 @@ public enum Keyword
     OR,
     ORC,
     ORDER,
+    ORDINALITY,
     OUT,
     OUTER,
     OUTPUTFORMAT,

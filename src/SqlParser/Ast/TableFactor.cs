@@ -141,6 +141,7 @@ public abstract record TableFactor : IWriteSql, IElement
 
         /// Optional version qualifier to facilitate table time-travel, as supported by BigQuery and MSSQL.
         public TableVersion? Version { get; init; }
+        public bool WithOrdinality { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
@@ -149,6 +150,11 @@ public abstract record TableFactor : IWriteSql, IElement
             if (Args != null)
             {
                 writer.WriteSql($"({Args})");
+            }
+
+            if(WithOrdinality)
+            {
+                writer.Write(" WITH ORDINALITY");
             }
 
             if (Alias != null)
@@ -206,10 +212,16 @@ public abstract record TableFactor : IWriteSql, IElement
     {
         public bool WithOffset { get; init; }
         public Ident? WithOffsetAlias { get; init; }
+        public bool WithOrdinality { get; set; }
 
         public override void ToSql(SqlTextWriter writer)
         {
             writer.Write($"UNNEST({ArrayExpressions.ToSqlDelimited()})");
+         
+            if (WithOrdinality)
+            {
+                writer.Write(" WITH ORDINALITY");
+            }
 
             if (Alias != null)
             {

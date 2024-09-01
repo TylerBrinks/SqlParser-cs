@@ -8185,6 +8185,8 @@ public partial class Parser
             //var expr = ExpectParens(ParseExpr);
             var expressions = ExpectParens(() => ParseCommaSeparated(ParseExpr));
 
+            var withOrdinality = ParseKeywordSequence(Keyword.WITH, Keyword.ORDINALITY);
+
             var alias = ParseOptionalTableAlias(Keywords.ReservedForColumnAlias);
 
             var withOffset = ParseKeywordSequence(Keyword.WITH, Keyword.OFFSET);
@@ -8193,7 +8195,8 @@ public partial class Parser
             {
                 Alias = alias,
                 WithOffset = withOffset,
-                WithOffsetAlias = withOffsetAlias
+                WithOffsetAlias = withOffsetAlias,
+                WithOrdinality = withOrdinality
             };
         }
 
@@ -8244,7 +8247,7 @@ public partial class Parser
 
         // Postgres, MSSQL: table-valued functions:
         var args = ParseInit(ConsumeToken<LeftParen>(), ParseOptionalArgs);
-
+        var ordinality = ParseKeywordSequence(Keyword.WITH, Keyword.ORDINALITY);
         var optionalAlias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
 
         Sequence<Expression>? withHints = null;
@@ -8267,7 +8270,8 @@ public partial class Parser
             Args = args,
             WithHints = withHints,
             Version = version,
-            Partitions = partitions
+            Partitions = partitions,
+            WithOrdinality = ordinality
         };
 
         Keyword kwd;

@@ -1,5 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using SqlParser.Ast;
+﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 
 using static SqlParser.Ast.Expression;
@@ -2458,6 +2457,24 @@ namespace SqlParser.Tests.Dialects
 
             Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE tab OWNER TO CREATE FOO"));
             Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE tab OWNER TO 4"));
+        }
+
+        [Fact]
+        public void Test_Table_Function_With_Ordinality()
+        {
+            var select = VerifiedOnlySelect("SELECT * FROM generate_series(1, 10) WITH ORDINALITY AS t");
+            Assert.Single(select.From!);
+            var relation = (TableFactor.Table)select.From![0].Relation!;
+            Assert.True(relation.WithOrdinality);
+        }
+
+        [Fact]
+        public void Test_Table_Unnest_With_Ordinality()
+        {
+            var select = VerifiedOnlySelect("SELECT * FROM UNNEST([10, 20, 30]) WITH ORDINALITY AS t");
+            Assert.Single(select.From!);
+            var relation = (TableFactor.UnNest)select.From![0].Relation!;
+            Assert.True(relation.WithOrdinality);
         }
 
         private record TestCase(string Sql, Owner ExpectedOwner);
