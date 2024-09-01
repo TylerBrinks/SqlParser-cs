@@ -3673,7 +3673,7 @@ public partial class Parser
         ReferentialAction? option = keyword switch
         {
             Keyword.CASCADE => ReferentialAction.Cascade,
-            Keyword.RESTRICT  => ReferentialAction.Restrict,
+            Keyword.RESTRICT => ReferentialAction.Restrict,
             _ => null
         };
 
@@ -3688,7 +3688,7 @@ public partial class Parser
         if (ConsumeToken<LeftParen>())
         {
             if (!ConsumeToken<RightParen>())
-            { 
+            {
                 args = ParseCommaSeparated(ParseFunctionArg);
                 ExpectToken<RightParen>();
             }
@@ -5564,6 +5564,20 @@ public partial class Parser
         {
             ExpectKeyword(Keyword.WITH);
             operation = new SwapWith(ParseObjectName());
+        }
+        else if (_dialect is PostgreSqlDialect or GenericDialect && ParseKeywordSequence(Keyword.OWNER, Keyword.TO))
+        {
+            var keyword = ParseOneOfKeywords(Keyword.CURRENT_USER, Keyword.CURRENT_ROLE, Keyword.SESSION_USER);
+            Owner newOwner = keyword switch
+            {
+                Keyword.CURRENT_USER => new Owner.CurrentUser(),
+                Keyword.CURRENT_ROLE => new Owner.CurrentRole(),
+                Keyword.SESSION_USER => new Owner.SessionUser(),
+                Keyword.undefined => new Owner.Identity(ParseIdentifier()),
+                _ => throw new ParserException("Unable to parse alter table operation")
+            };
+
+            return new OwnerTo(newOwner);
         }
         else
         {
@@ -8817,7 +8831,7 @@ public partial class Parser
                 break;
             }
 
-            if (!_options.TrailingCommas){ continue; }
+            if (!_options.TrailingCommas) { continue; }
             var next = PeekToken();
 
             if (next is Word { Keyword: Keyword.ON } or RightParen or SemiColon or RightBracket or RightBrace or EOF)

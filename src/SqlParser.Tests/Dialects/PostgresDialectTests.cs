@@ -1,4 +1,5 @@
-﻿using SqlParser.Ast;
+﻿using System.Runtime.CompilerServices;
+using SqlParser.Ast;
 using SqlParser.Dialects;
 
 using static SqlParser.Ast.Expression;
@@ -2431,5 +2432,34 @@ namespace SqlParser.Tests.Dialects
             Assert.True(drop.IfExists);
             Assert.Equal([new(new ObjectName("test_proc"))], drop.ProcDescription);
         }
+
+        [Fact]
+        public void Parse_Alter_Table_Owner_To()
+        {
+            DefaultDialects = new List<Dialect> { new PostgreSqlDialect() };
+            var testCases = new TestCase[]
+            {
+                new ("ALTER TABLE tab OWNER TO new_owner", new Owner.Identity("new_owner")),
+                new ("ALTER TABLE tab OWNER TO postgres", new Owner.Identity("postgres")),
+                new ("ALTER TABLE tab OWNER TO CREATE", new Owner.Identity("CREATE")),
+                new ("ALTER TABLE tab OWNER TO \"new_owner\"", new Owner.Identity(new Ident("new_owner", Symbols.DoubleQuote))),
+                new ("ALTER TABLE tab OWNER TO CURRENT_USER", new Owner.CurrentUser()),
+                new ("ALTER TABLE tab OWNER TO CURRENT_ROLE", new Owner.CurrentRole()),
+                new ("ALTER TABLE tab OWNER TO SESSION_USER", new Owner.SessionUser())
+            };
+
+            foreach (var testCase in testCases)
+            {
+                var alter = VerifiedStatement<Statement.AlterTable>(testCase.Sql);
+
+                Assert.Equal("tab", alter.Name);
+                Assert.Equal([new AlterTableOperation.OwnerTo(testCase.ExpectedOwner)], alter.Operations);
+            }
+
+            Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE tab OWNER TO CREATE FOO"));
+            Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE tab OWNER TO 4"));
+        }
+
+        private record TestCase(string Sql, Owner ExpectedOwner);
     }
 }

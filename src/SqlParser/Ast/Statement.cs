@@ -787,7 +787,6 @@ public abstract record Statement : IWriteSql, IElement
         public bool Materialized { get; init; }
         public Sequence<ViewColumnDef>? Columns { get; init; }
         public required CreateTableOptions Options { get; init; }
-        //[Visit(2)] public Sequence<SqlOption>? WithOptions { get; init; }
         public Sequence<Ident>? ClusterBy { get; init; }
         public string? Comment { get; init; }
         public bool WithNoSchemaBinding { get; init; }

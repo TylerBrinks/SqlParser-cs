@@ -578,6 +578,7 @@ public enum Keyword
     OVERLAY,
     OVERWRITE,
     OWNED,
+    OWNER,
     PARALLEL,
     PARAMETER,
     PARQUET,
