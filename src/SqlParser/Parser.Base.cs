@@ -1076,11 +1076,12 @@ public partial class Parser
 
         Expression? limit = null;
         Offset? offset = null;
-        Ast.Fetch? fetch = null;
+        Fetch? fetch = null;
         Sequence<LockClause>? locks = null;
         Sequence<Expression>? limitBy = null;
         ForClause? forClause = null;
         Sequence<Setting>? settings = null;
+        FormatClause? formatClause = null;
 
         if (!ParseKeyword(Keyword.INSERT))
         {
@@ -1148,6 +1149,18 @@ public partial class Parser
                 locks.Add(ParseLock());
             }
 
+            if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.FORMAT))
+            {
+                if (ParseKeyword(Keyword.NULL))
+                {
+                    formatClause = new FormatClause.Null();
+                }
+                else
+                {
+                    formatClause = new FormatClause.Identifier(ParseIdentifier());
+                }
+            }
+
             return new Statement.Select(new Query(body)
             {
                 With = with,
@@ -1158,7 +1171,8 @@ public partial class Parser
                 Locks = locks,
                 LimitBy = limitBy,
                 ForClause = forClause,
-                Settings = settings
+                Settings = settings,
+                FormatClause = formatClause
             });
         }
 
@@ -1234,7 +1248,6 @@ public partial class Parser
             return null;
         }
     }
-
 
     public static void ThrowExpectedToken(Token expected, Token actual)
     {

@@ -1,4 +1,5 @@
-﻿using SqlParser.Ast;
+﻿using FluentAssertions.Formatting;
+using SqlParser.Ast;
 using SqlParser.Dialects;
 
 namespace SqlParser.Tests.Dialects;
@@ -333,9 +334,9 @@ public class ClickhouseDialectTests : ParserTestBase
             new ColumnDef(new Ident("k", Symbols.Backtick), new DataType.Int()),
         ], statement.Columns);
 
-        Assert.Equal(new TableEngine("SharedMergeTree", 
+        Assert.Equal(new TableEngine("SharedMergeTree",
             [
-                new Ident("/clickhouse/tables/{uuid}/{shard}", Symbols.SingleQuote), 
+                new Ident("/clickhouse/tables/{uuid}/{shard}", Symbols.SingleQuote),
                 new Ident("{replica}", Symbols.SingleQuote)
             ]),
             statement.Engine);
@@ -343,7 +344,7 @@ public class ClickhouseDialectTests : ParserTestBase
         var orderByFn = (Expression.Function)((OneOrManyWithParens<Expression>.One)statement.OrderBy!).Value;
         AssertFunction((Expression.Function)statement.PrimaryKey!, "tuple", "i");
         AssertFunction(orderByFn, "tuple", "i");
-        
+
         Assert.Throws<ParserException>(() => ParseSqlStatements("""
                                                CREATE TABLE db.table (`i` Int, `k` Int) 
                                                ORDER BY tuple(i), tuple(k)
@@ -398,7 +399,7 @@ public class ClickhouseDialectTests : ParserTestBase
     [Fact]
     public void Parse_Group_By_With_Modifier()
     {
-        var clauses = new []{"x", "a, b", "ALL"};
+        var clauses = new[] { "x", "a, b", "ALL" };
         var modifiers = new[]{
             "WITH ROLLUP",
             "WITH CUBE",
@@ -420,7 +421,7 @@ public class ClickhouseDialectTests : ParserTestBase
                 var sql = $"SELECT * FROM T GROUP BY {clause} {modifier}";
 
                 var statement = VerifiedStatement(sql);
-                var groupBy = statement.AsQuery()!.Body.AsSelect().GroupBy; ;
+                var groupBy = statement.AsQuery()!.Body.AsSelect().GroupBy;
 
                 if (clause == "ALL")
                 {
@@ -461,7 +462,7 @@ public class ClickhouseDialectTests : ParserTestBase
             ],
             query.Settings);
 
-        foreach (var sql in new []
+        foreach (var sql in new[]
                  {
                      "SELECT * FROM t SETTINGS a",
                      "SELECT * FROM t SETTINGS a=",
@@ -477,7 +478,7 @@ public class ClickhouseDialectTests : ParserTestBase
     [Fact]
     public void Test_Prewhere()
     {
-        var select = VerifiedStatement("SELECT * FROM t PREWHERE x = 1 WHERE y = 2").AsQuery()!.Body.AsSelect()!;
+        var select = VerifiedStatement("SELECT * FROM t PREWHERE x = 1 WHERE y = 2").AsQuery()!.Body.AsSelect();
 
         var expected = new Expression.BinaryOp(
             new Expression.Identifier("x"),
@@ -494,5 +495,36 @@ public class ClickhouseDialectTests : ParserTestBase
         );
 
         Assert.Equal(expected, select.Selection);
+    }
+
+    [Fact]
+    public void Test_Query_With_Format_Clause()
+    {
+        var formatOptions = new Sequence<string> { "TabSeparated", "JSONCompact", "NULL" };
+        foreach (var format in formatOptions)
+        {
+            var sql = $"SELECT * FROM t FORMAT {format}";
+            var query = VerifiedStatement(sql).AsQuery()!;
+
+            if (format == "NULL")
+            {
+                Assert.Equal(new FormatClause.Null(), query.FormatClause);
+            }
+            else
+            {
+                Assert.Equal(new FormatClause.Identifier(format), query.FormatClause);
+            }
+        }
+
+        var invalidCases =new []{
+            "SELECT * FROM t FORMAT",
+            "SELECT * FROM t FORMAT TabSeparated JSONCompact",
+            "SELECT * FROM t FORMAT TabSeparated TabSeparated",
+        };
+
+        foreach(var sql in invalidCases)
+        {
+            Assert.Throws<ParserException>(() =>  ParseSqlStatements(sql));
+        }
     }
 }

@@ -114,6 +114,7 @@ internal static class Keywords
         Keyword.PARTITION,
         Keyword.PREWHERE,
         Keyword.SETTINGS,
+        Keyword.FORMAT,
         // for Snowflake START WITH .. CONNECT BY
         Keyword.START,
         Keyword.CONNECT,
