@@ -4453,9 +4453,7 @@ public partial class Parser
 
         });
 
-        var bigQueryConfig = _dialect is BigQueryDialect or GenericDialect
-            ? ParseOptionalBigQueryCreateTableConfig()
-            : (null, null, null);
+        var createTableConfig = ParseOptionalCreateTableConfig();
 
         // Parse optional `AS ( query )`
         var query = ParseInit<Query>(ParseKeyword(Keyword.AS), () => ParseQuery());
@@ -4541,34 +4539,37 @@ public partial class Parser
             OnCluster = onCluster,
             Strict = strict,
             AutoIncrementOffset = autoIncrementOffset,
-            PartitionBy = bigQueryConfig.PartitionBy,
-            ClusterBy = bigQueryConfig.ClusterBy,
-            Options = bigQueryConfig.Options
+            PartitionBy = createTableConfig.PartitionBy,
+            ClusterBy = createTableConfig.ClusterBy,
+            Options = createTableConfig.Options
         };
     }
 
-    public (Expression? PartitionBy, WrappedCollection<Ident>? ClusterBy, Sequence<SqlOption>? Options) ParseOptionalBigQueryCreateTableConfig()
+    public CreateTableConfiguration ParseOptionalCreateTableConfig()
     {
         Expression? partitionBy = null;
         WrappedCollection<Ident>? clusterBy = null;
         Sequence<SqlOption>? options = null;
 
-        if (ParseKeywordSequence(Keyword.PARTITION, Keyword.BY))
+        if (_dialect is BigQueryDialect or PostgreSqlDialect && ParseKeywordSequence(Keyword.PARTITION, Keyword.BY))
         {
             partitionBy = ParseExpr();
         }
 
-        if (ParseKeywordSequence(Keyword.CLUSTER, Keyword.BY))
+        if (_dialect is BigQueryDialect or PostgreSqlDialect)
         {
-            clusterBy = new WrappedCollection<Ident>.NoWrapping(ParseCommaSeparated(ParseIdentifier));
+            if (ParseKeywordSequence(Keyword.CLUSTER, Keyword.BY))
+            {
+                clusterBy = new WrappedCollection<Ident>.NoWrapping(ParseCommaSeparated(ParseIdentifier));
+            }
+
+            if (PeekToken() is Word { Keyword: Keyword.OPTIONS })
+            {
+                options = ParseOptions(Keyword.OPTIONS);
+            }
         }
 
-        if (PeekToken() is Word { Keyword: Keyword.OPTIONS })
-        {
-            options = ParseOptions(Keyword.OPTIONS);
-        }
-
-        return (partitionBy, clusterBy, options);
+        return new CreateTableConfiguration(partitionBy, clusterBy, options);
     }
 
     public (Sequence<ColumnDef>, Sequence<TableConstraint>) ParseColumns()
