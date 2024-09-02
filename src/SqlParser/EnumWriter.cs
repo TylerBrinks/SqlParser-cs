@@ -100,6 +100,10 @@ public static class EnumWriter
             FunctionParallel.Restricted => "PARALLEL RESTRICTED",
             FunctionParallel.Safe => "PARALLEL SAFE",
 
+            GroupByWithModifier.Rollup => "WITH ROLLUP",
+            GroupByWithModifier.Cube =>  "WITH CUBE",
+            GroupByWithModifier.Totals => "WITH TOTALS",
+
             HavingBoundKind.Min => "MIN",
             HavingBoundKind.Max => "MAX",
 

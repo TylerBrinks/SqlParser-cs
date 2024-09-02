@@ -192,7 +192,7 @@ public abstract record AlterTableOperation : IWriteSql
     /// </c>
     /// </example>
     /// </summary>
-    /// <param name="Partitions">Partitions sto drop</param>
+    /// <param name="Partitions">Partitions</param>
     /// <param name="IfExists">Contains If Not Exists</param>
     public record DropPartitions(Sequence<Expression> Partitions, bool IfExists) : AlterTableOperation
     {
@@ -418,6 +418,14 @@ public abstract record AlterTableOperation : IWriteSql
         public override void ToSql(SqlTextWriter writer)
         {
             writer.WriteSql($"SWAP WITH {Name}");
+        }
+    }
+
+    public record OwnerTo(Owner NewOwner) : AlterTableOperation
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"OWNER TO {NewOwner}");
         }
     }
 

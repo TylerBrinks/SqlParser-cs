@@ -1,4 +1,5 @@
-﻿using SqlParser.Ast;
+﻿using FluentAssertions.Formatting;
+using SqlParser.Ast;
 using SqlParser.Dialects;
 
 namespace SqlParser.Tests.Dialects;
@@ -333,9 +334,9 @@ public class ClickhouseDialectTests : ParserTestBase
             new ColumnDef(new Ident("k", Symbols.Backtick), new DataType.Int()),
         ], statement.Columns);
 
-        Assert.Equal(new TableEngine("SharedMergeTree", 
+        Assert.Equal(new TableEngine("SharedMergeTree",
             [
-                new Ident("/clickhouse/tables/{uuid}/{shard}", Symbols.SingleQuote), 
+                new Ident("/clickhouse/tables/{uuid}/{shard}", Symbols.SingleQuote),
                 new Ident("{replica}", Symbols.SingleQuote)
             ]),
             statement.Engine);
@@ -343,7 +344,7 @@ public class ClickhouseDialectTests : ParserTestBase
         var orderByFn = (Expression.Function)((OneOrManyWithParens<Expression>.One)statement.OrderBy!).Value;
         AssertFunction((Expression.Function)statement.PrimaryKey!, "tuple", "i");
         AssertFunction(orderByFn, "tuple", "i");
-        
+
         Assert.Throws<ParserException>(() => ParseSqlStatements("""
                                                CREATE TABLE db.table (`i` Int, `k` Int) 
                                                ORDER BY tuple(i), tuple(k)
@@ -358,6 +359,172 @@ public class ClickhouseDialectTests : ParserTestBase
                     new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.Identifier(new Ident(arg))))
                 ], null)),
                 actual.Args);
+        }
+    }
+
+    [Fact]
+    public void Parse_Create_Materialize_View()
+    {
+        const string sql = """
+                           CREATE MATERIALIZED VIEW analytics.monthly_aggregated_data_mv 
+                           TO analytics.monthly_aggregated_data 
+                           AS SELECT toDate(toStartOfMonth(event_time)) 
+                           AS month, domain_name, sumState(count_views) 
+                           AS sumCountViews FROM analytics.hourly_data 
+                           GROUP BY domain_name, month
+                           """;
+
+        VerifiedStatement(sql);
+    }
+
+    [Fact]
+    public void Parse_Select_Parametric_Function()
+    {
+        var projection = VerifiedStatement("SELECT HISTOGRAM(0.5, 0.6)(x, y) FROM t").AsQuery()!.Body.AsSelect().Projection;
+
+        var expected = new SelectItem.UnnamedExpression(new Expression.Function("HISTOGRAM")
+        {
+            Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.Identifier("x"))),
+                new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.Identifier("y"))),
+            ], null)),
+            Parameters = new FunctionArguments.List(new FunctionArgumentList(null, [
+                new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.LiteralValue(new Value.Number("0.5")))),
+                new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.LiteralValue(new Value.Number("0.6"))))
+            ], null))
+        });
+        Assert.Equal(expected, projection[0]);
+    }
+
+    [Fact]
+    public void Parse_Group_By_With_Modifier()
+    {
+        var clauses = new[] { "x", "a, b", "ALL" };
+        var modifiers = new[]{
+            "WITH ROLLUP",
+            "WITH CUBE",
+            "WITH TOTALS",
+            "WITH ROLLUP WITH CUBE",
+        };
+
+        var expectedModifiers = new Sequence<GroupByWithModifier>[]{
+            [GroupByWithModifier.Rollup],
+            [GroupByWithModifier.Cube],
+            [GroupByWithModifier.Totals],
+            [GroupByWithModifier.Rollup, GroupByWithModifier.Cube],
+        };
+
+        foreach (var clause in clauses)
+        {
+            foreach (var (modifier, expectedModifier) in modifiers.Zip(expectedModifiers))
+            {
+                var sql = $"SELECT * FROM T GROUP BY {clause} {modifier}";
+
+                var statement = VerifiedStatement(sql);
+                var groupBy = statement.AsQuery()!.Body.AsSelect().GroupBy;
+
+                if (clause == "ALL")
+                {
+                    Assert.Equal(new GroupByExpression.All(expectedModifier), groupBy);
+                }
+                else
+                {
+                    var columnNames = new Sequence<Expression>(clause.Split(", ").Select(c => new Expression.Identifier(c)));
+                    var expected = new GroupByExpression.Expressions(columnNames, expectedModifier);
+                    Assert.Equal(expected, groupBy);
+                }
+            }
+        }
+
+        var invalidClauses = new[]
+        {
+            "SELECT * FROM t GROUP BY x WITH",
+            "SELECT * FROM t GROUP BY x WITH ROLLUP CUBE",
+            "SELECT * FROM t GROUP BY x WITH WITH ROLLUP",
+            "SELECT * FROM t GROUP BY WITH ROLLUP"
+        };
+
+        foreach (var invalid in invalidClauses)
+        {
+            Assert.Throws<ParserException>(() => ParseSqlStatements(invalid));
+        }
+    }
+
+    [Fact]
+    public void Parse_Settings_In_Query()
+    {
+        var query = VerifiedStatement("SELECT * FROM t SETTINGS max_threads = 1, max_block_size = 10000").AsQuery()!;
+
+        Assert.Equal(
+            [
+                new ("max_threads", new Value.Number("1")),
+                new ("max_block_size", new Value.Number("10000"))
+            ],
+            query.Settings);
+
+        foreach (var sql in new[]
+                 {
+                     "SELECT * FROM t SETTINGS a",
+                     "SELECT * FROM t SETTINGS a=",
+                     "SELECT * FROM t SETTINGS a=1, b",
+                     "SELECT * FROM t SETTINGS a=1, b=",
+                     "SELECT * FROM t SETTINGS a=1, b=c",
+                 })
+        {
+            Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
+        }
+    }
+
+    [Fact]
+    public void Test_Prewhere()
+    {
+        var select = VerifiedStatement("SELECT * FROM t PREWHERE x = 1 WHERE y = 2").AsQuery()!.Body.AsSelect();
+
+        var expected = new Expression.BinaryOp(
+            new Expression.Identifier("x"),
+            BinaryOperator.Eq,
+            new Expression.LiteralValue(new Value.Number("1"))
+        );
+
+        Assert.Equal(expected, select.PreWhere);
+
+        expected = new Expression.BinaryOp(
+            new Expression.Identifier("y"),
+            BinaryOperator.Eq,
+            new Expression.LiteralValue(new Value.Number("2"))
+        );
+
+        Assert.Equal(expected, select.Selection);
+    }
+
+    [Fact]
+    public void Test_Query_With_Format_Clause()
+    {
+        var formatOptions = new Sequence<string> { "TabSeparated", "JSONCompact", "NULL" };
+        foreach (var format in formatOptions)
+        {
+            var sql = $"SELECT * FROM t FORMAT {format}";
+            var query = VerifiedStatement(sql).AsQuery()!;
+
+            if (format == "NULL")
+            {
+                Assert.Equal(new FormatClause.Null(), query.FormatClause);
+            }
+            else
+            {
+                Assert.Equal(new FormatClause.Identifier(format), query.FormatClause);
+            }
+        }
+
+        var invalidCases =new []{
+            "SELECT * FROM t FORMAT",
+            "SELECT * FROM t FORMAT TabSeparated JSONCompact",
+            "SELECT * FROM t FORMAT TabSeparated TabSeparated",
+        };
+
+        foreach(var sql in invalidCases)
+        {
+            Assert.Throws<ParserException>(() =>  ParseSqlStatements(sql));
         }
     }
 }

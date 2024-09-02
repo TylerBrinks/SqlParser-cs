@@ -1,8 +1,8 @@
 ﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
-using Xunit.Sdk;
 using static SqlParser.Ast.Expression;
+using DataType = SqlParser.Ast.DataType;
 
 // ReSharper disable CommentTypo
 
@@ -254,6 +254,26 @@ namespace SqlParser.Tests.Dialects
 
             Assert.Equal("table_info", pragma.Name);
             Assert.Equal("?", pragma.Value!.ToSql());
+        }
+
+        [Fact]
+        public void Parse_Update_Tuple_Row_Values()
+        {
+            var update = VerifiedStatement<Statement.Update>("UPDATE x SET (a, b) = (1, 2)");
+
+            var expected = new Sequence<Statement.Assignment>
+            {
+                new (new AssignmentTarget.Tuple([
+                        new ObjectName("a"),
+                        new ObjectName("b")
+                    ]), 
+                    new Expression.Tuple([
+                        new LiteralValue(new Value.Number("1")),
+                        new LiteralValue(new Value.Number("2")),
+                    ]))
+            };
+
+            Assert.Equal(expected, update.Assignments);
         }
     }
 }

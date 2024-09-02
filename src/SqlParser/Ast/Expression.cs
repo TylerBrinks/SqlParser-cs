@@ -454,6 +454,8 @@ public abstract record Expression : IWriteSql, IElement
         /// </summary>
         public FunctionArguments Args { get; internal set; }
 
+        public FunctionArguments Parameters { get; init; }
+
         /// <summary>
         /// e.g. `x > 5` in `COUNT(x) FILTER (WHERE x > 5)`
         /// </summary>
@@ -477,7 +479,7 @@ public abstract record Expression : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
 
-            writer.WriteSql($"{Name}{Args}");
+            writer.WriteSql($"{Name}{Parameters}{Args}");
 
             if (WithinGroup.SafeAny())
             {

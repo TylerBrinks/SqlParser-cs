@@ -433,35 +433,35 @@ namespace SqlParser.Tests.Dialects
 
             var update = new OnInsert.DuplicateKeyUpdate(new Statement.Assignment[]
             {
-                new(new Ident[] {"description"}, new Function("VALUES")
+                new(new AssignmentTarget.ColumnName("description") , new Function("VALUES")
                 {
                     Args = new FunctionArguments.List(new FunctionArgumentList(null, [
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("description")))
                     ], null))
                 }),
 
-                new(new Ident[] {"perm_create"}, new Function("VALUES")
+                new(new AssignmentTarget.ColumnName("perm_create"), new Function("VALUES")
                 {
                     Args = new FunctionArguments.List(new FunctionArgumentList(null, [
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("perm_create")))
                     ], null))
                 }),
 
-                new(new Ident[] {"perm_read"}, new Function("VALUES")
+                new(new AssignmentTarget.ColumnName("perm_read"), new Function("VALUES")
                 {
                     Args = new FunctionArguments.List(new FunctionArgumentList(null, [
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("perm_read")))
                     ], null))
                 }),
 
-                new(new Ident[] {"perm_update"}, new Function("VALUES")
+                new(new AssignmentTarget.ColumnName("perm_update"), new Function("VALUES")
                 {
                     Args = new FunctionArguments.List(new FunctionArgumentList(null, [
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("perm_update")))
                     ], null))
                 }),
 
-                new(new Ident[] {"perm_delete"}, new Function("VALUES")
+                new(new AssignmentTarget.ColumnName("perm_delete"), new Function("VALUES")
                 {
                     Args = new FunctionArguments.List(new FunctionArgumentList(null, [
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("perm_delete")))
@@ -503,7 +503,7 @@ namespace SqlParser.Tests.Dialects
 
             var assignments = new Statement.Assignment[]
             {
-                new(new Ident[] {"o", "completed"}, new LiteralValue(new Value.Boolean(true)))
+                new(new AssignmentTarget.ColumnName(new ObjectName(["o", "completed"])), new LiteralValue(new Value.Boolean(true)))
             };
 
             var op = new BinaryOp(
@@ -891,7 +891,7 @@ namespace SqlParser.Tests.Dialects
             {
                 var create = (Statement.CreateTable)OneStatementParsesTo(sql, canonical);
                 Assert.Equal("foo", create.Element.Name);
-                Assert.Equal("baz", create.Element.Comment);
+                Assert.Equal("baz", create.Element.Comment!.Comment);
             }
         }
 
@@ -1352,6 +1352,21 @@ namespace SqlParser.Tests.Dialects
             VerifiedExpr("GROUP_CONCAT(test_score ORDER BY test_score)");
             VerifiedExpr("GROUP_CONCAT(test_score SEPARATOR ' ')");
             VerifiedExpr("GROUP_CONCAT(DISTINCT test_score ORDER BY test_score DESC SEPARATOR ' ')");
+        }
+
+        [Fact]
+        public void Parse_Create_Table_Both_Options_And_As_Query()
+        {
+            var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE foo (id INT(11)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb4_0900_ai_ci AS SELECT 1").Element;
+
+            Assert.Equal("foo", create.Name);
+            Assert.Equal("utf8mb4_0900_ai_ci", create.Collation);
+            Assert.Equal(new Sequence<SelectItem.UnnamedExpression>
+            {
+                new (new LiteralValue(new Value.Number("1")))
+            }, create.Query!.Body.AsSelect().Projection);
+
+            Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE TABLE foo (id INT(11)) ENGINE=InnoDB AS SELECT 1 DEFAULT CHARSET=utf8mb3"));
         }
     }
 }

@@ -149,13 +149,13 @@ public abstract record Statement : IWriteSql, IElement
     /// <summary>
     /// Assignment statement
     /// </summary>
-    /// <param name="Id">ID List</param>
+    /// <param name="Target">Assignment target</param>
     /// <param name="Value">Expression value</param>
-    public record Assignment(Sequence<Ident> Id, Expression Value) : Statement
+    public record Assignment(AssignmentTarget Target, Expression Value) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"{Id.ToSqlDelimited('.')} = {Value}");
+            writer.WriteSql($"{Target} = {Value}");
         }
     }
     /// <summary>
@@ -372,7 +372,7 @@ public abstract record Statement : IWriteSql, IElement
     /// <summary>
     /// COPPY INTO statement
     /// See https://docs.snowflake.com/en/sql-reference/sql/copy-into-table
-    /// Copy Into syntax available for Snowflake is different than the one implemented in
+    /// Copy Into syntax available for Snowflake is different from the one implemented in
     /// Postgres. Although they share common prefix, it is reasonable to implement them
     /// in different enums. This can be refactored later once custom dialects
     /// are allowed to have custom Statements.
@@ -787,12 +787,12 @@ public abstract record Statement : IWriteSql, IElement
         public bool Materialized { get; init; }
         public Sequence<ViewColumnDef>? Columns { get; init; }
         public required CreateTableOptions Options { get; init; }
-        //[Visit(2)] public Sequence<SqlOption>? WithOptions { get; init; }
         public Sequence<Ident>? ClusterBy { get; init; }
         public string? Comment { get; init; }
         public bool WithNoSchemaBinding { get; init; }
         public bool IfNotExists { get; init; }
         public bool Temporary { get; init; }
+        public ObjectName? To { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
@@ -800,8 +800,9 @@ public abstract record Statement : IWriteSql, IElement
             var materialized = Materialized ? "MATERIALIZED " : null;
             var temporary = Temporary ? "TEMPORARY " : null;
             var ifNotExists = IfNotExists ? "IF NOT EXISTS " : null;
+            var to = To != null ? $" TO {To.ToSql()}" : null;
 
-            writer.WriteSql($"CREATE {orReplace}{materialized}{temporary}VIEW {ifNotExists}{Name}");
+            writer.WriteSql($"CREATE {orReplace}{materialized}{temporary}VIEW {ifNotExists}{Name}{to}");
 
             if (Comment != null)
             {
@@ -1284,6 +1285,20 @@ public abstract record Statement : IWriteSql, IElement
             if (Args.SafeAny())
             {
                 writer.WriteSql($"({Args})");
+            }
+        }
+    }
+
+    public record DropProcedure(bool IfExists, Sequence<DropFunctionDesc> ProcDescription, ReferentialAction? Option) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            var ifEx = IfExists ? " IF EXISTS" : null;
+            writer.WriteSql($"DROP PROCEDURE{ifEx} {ProcDescription.ToSqlDelimited()}");
+
+            if (Option != null)
+            {
+                writer.Write($" {Option}");
             }
         }
     }

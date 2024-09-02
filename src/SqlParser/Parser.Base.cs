@@ -1,6 +1,7 @@
 ﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
+using System.Linq;
 using static SqlParser.Ast.Expression;
 
 using DataType = SqlParser.Ast.DataType;
@@ -1032,7 +1033,9 @@ public partial class Parser
                 var token = PeekToken();
                 if (token is Word w)
                 {
-                    if (Keywords.ReservedForColumnAlias.Any(k => k == w.Keyword))
+                    
+                    //if (Keywords.ReservedForColumnAlias.Any(k => k == w.Keyword))
+                    if (Keywords.ReservedForColumnAlias.Contains(w.Keyword))
                     {
                         break;
                     }
@@ -1041,8 +1044,6 @@ public partial class Parser
                 {
                     break;
                 }
-
-                // continue
             }
         }
 
@@ -1075,10 +1076,12 @@ public partial class Parser
 
         Expression? limit = null;
         Offset? offset = null;
-        Ast.Fetch? fetch = null;
+        Fetch? fetch = null;
         Sequence<LockClause>? locks = null;
         Sequence<Expression>? limitBy = null;
         ForClause? forClause = null;
+        Sequence<Setting>? settings = null;
+        FormatClause? formatClause = null;
 
         if (!ParseKeyword(Keyword.INSERT))
         {
@@ -1116,6 +1119,18 @@ public partial class Parser
                 limitBy = ParseCommaSeparated(ParseExpr);
             }
 
+            if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.SETTINGS))
+            {
+                settings = ParseCommaSeparated(() =>
+                {
+                    var key = ParseIdentifier();
+                    ExpectToken<Equal>();
+                    var value = ParseValue();
+
+                    return new Setting(key, value);
+                });
+            }
+
             if (ParseKeyword(Keyword.FETCH))
             {
                 fetch = ParseFetch();
@@ -1134,6 +1149,18 @@ public partial class Parser
                 locks.Add(ParseLock());
             }
 
+            if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.FORMAT))
+            {
+                if (ParseKeyword(Keyword.NULL))
+                {
+                    formatClause = new FormatClause.Null();
+                }
+                else
+                {
+                    formatClause = new FormatClause.Identifier(ParseIdentifier());
+                }
+            }
+
             return new Statement.Select(new Query(body)
             {
                 With = with,
@@ -1143,7 +1170,9 @@ public partial class Parser
                 Fetch = fetch,
                 Locks = locks,
                 LimitBy = limitBy,
-                ForClause = forClause
+                ForClause = forClause,
+                Settings = settings,
+                FormatClause = formatClause
             });
         }
 
@@ -1219,7 +1248,6 @@ public partial class Parser
             return null;
         }
     }
-
 
     public static void ThrowExpectedToken(Token expected, Token actual)
     {

@@ -333,4 +333,28 @@ public class DuckDbDialectTests : ParserTestBase
 
         Assert.Equal(expected, expr);
     }
+
+    [Fact]
+    public void Test_DuckDb_Union_Datatype()
+    {
+        const string sql = "CREATE TABLE tbl1 (one UNION(a INT), two UNION(a INT, b INT), nested UNION(a UNION(b INT)))";
+        var create = VerifiedStatement<Statement.CreateTable>(sql);
+
+        var expected = new Statement.CreateTable(new CreateTable("tbl1", [
+            new ColumnDef("one", new DataType.Union([
+                new UnionField("a", new DataType.Int())
+            ])),
+            new ColumnDef("two", new DataType.Union([
+                new UnionField("a", new DataType.Int()),
+                new UnionField("b", new DataType.Int())
+            ])),
+            new ColumnDef("nested", new DataType.Union([
+                new UnionField("a", new DataType.Union([
+                        new UnionField("b", new DataType.Int())
+                    ]))
+            ])),
+        ]));
+
+        Assert.Equal(expected, create);
+    }
 }

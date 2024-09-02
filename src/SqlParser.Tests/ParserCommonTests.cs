@@ -85,18 +85,13 @@ namespace SqlParser.Tests
 
             var assignments = new[]
             {
-                new Statement.Assignment(new Ident[] {"a"}, new LiteralValue(Number("1"))),
-                new Statement.Assignment(new Ident[] {"b"}, new LiteralValue(Number("2"))),
-                new Statement.Assignment(new Ident[] {"c"}, new LiteralValue(Number("3")))
+                new Statement.Assignment(new AssignmentTarget.ColumnName("a"), new LiteralValue(Number("1"))),
+                new Statement.Assignment(new AssignmentTarget.ColumnName("b"), new LiteralValue(Number("2"))),
+                new Statement.Assignment(new AssignmentTarget.ColumnName("c"), new LiteralValue(Number("3")))
             };
 
-            for (var i = 0; i < assignments.Length; i++)
-            {
-                Assert.Equal(assignments[i].Id, update.Assignments[i].Id);
-                Assert.Equal(assignments[i].Value, update.Assignments[i].Value);
-            }
-
-            Assert.Equal(update.Selection, new Identifier("d"));
+            Assert.Equal(assignments, update.Assignments);
+            
         }
 
         [Fact]
@@ -119,7 +114,8 @@ namespace SqlParser.Tests
             var statement = VerifiedStatement(sql, dialects);
 
             var table = new TableWithJoins(new TableFactor.Table("t1"));
-            var assignment = new Statement.Assignment(new Ident[] { "name" }, new CompoundIdentifier(new Ident[] { "t2", "name" }));
+            var assignment = new Statement.Assignment(new AssignmentTarget.ColumnName("name"), 
+                new CompoundIdentifier(new Ident[] { "t2", "name" }));
             var assignments = new[] { assignment };
 
             var projection = new[]
@@ -162,7 +158,7 @@ namespace SqlParser.Tests
                 Alias = new TableAlias("u")
             });
             var assignment = new Statement.Assignment(
-                new Ident[] { "u", "username" },
+                new AssignmentTarget.ColumnName(new ObjectName(["u", "username"])),
                 new LiteralValue(new Value.SingleQuotedString("new_user")));
             var assignments = new[] { assignment };
 
@@ -1907,6 +1903,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Parse_Create_Table_On_Cluster()
         {
+            DefaultDialects = new List<Dialect> { new GenericDialect() };
             var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE t ON CLUSTER '{cluster}' (a INT, b INT)");
 
             var expected = new Statement.CreateTable(new CreateTable( "t", new ColumnDef[]
@@ -1968,6 +1965,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Parse_Create_Table_With_Options()
         {
+            DefaultDialects = new List<Dialect> { new GenericDialect() };
             const string prefix = "create table X (y_id int references Y (id) ";
             ParseSqlStatements($"{prefix}on update cascade on delete no action)");
             ParseSqlStatements($"{prefix}on delete cascade on update cascade)");
@@ -3561,6 +3559,12 @@ namespace SqlParser.Tests
             VerifiedStatement("SELECT foo FROM tab UNION SELECT bar FROM TAB");
             VerifiedStatement("(SELECT * FROM new EXCEPT SELECT * FROM old) UNION ALL (SELECT * FROM old EXCEPT SELECT * FROM new) ORDER BY 1");
             VerifiedStatement("(SELECT * FROM new EXCEPT DISTINCT SELECT * FROM old) UNION DISTINCT (SELECT * FROM old EXCEPT DISTINCT SELECT * FROM new) ORDER BY 1");
+            VerifiedStatement("SELECT 1 AS x, 2 AS y EXCEPT BY NAME SELECT 9 AS y, 8 AS x");
+            VerifiedStatement("SELECT 1 AS x, 2 AS y EXCEPT ALL BY NAME SELECT 9 AS y, 8 AS x");
+            VerifiedStatement("SELECT 1 AS x, 2 AS y EXCEPT DISTINCT BY NAME SELECT 9 AS y, 8 AS x");
+            VerifiedStatement("SELECT 1 AS x, 2 AS y INTERSECT BY NAME SELECT 9 AS y, 8 AS x");
+            VerifiedStatement("SELECT 1 AS x, 2 AS y INTERSECT ALL BY NAME SELECT 9 AS y, 8 AS x");
+            VerifiedStatement("SELECT 1 AS x, 2 AS y INTERSECT DISTINCT BY NAME SELECT 9 AS y, 8 AS x");
         }
 
         [Fact]
@@ -3576,8 +3580,8 @@ namespace SqlParser.Tests
         public void Parse_Multiple_Statements()
         {
             Test("SELECT foo", "SELECT", " bar");
-            // ensure that SELECT/WITH is not parsed as a table or column alias if ';'
-            // separating the statements is omitted:
+            //// ensure that SELECT/WITH is not parsed as a table or column alias if ';'
+            //// separating the statements is omitted:
             Test("SELECT foo FROM baz", "SELECT", " bar");
             Test("SELECT foo", "WITH", " cte AS (SELECT 1 AS s) SELECT bar");
             Test("SELECT foo FROM baz", "WITH", " cte AS (SELECT 1 AS s) SELECT bar");
@@ -4426,8 +4430,8 @@ namespace SqlParser.Tests
                     )
                 ),
                 new (MergeClauseKind.Matched, new MergeAction.Update([
-                        new(new Ident[]{"dest", "F"}, new CompoundIdentifier(new Ident[]{"stg", "F"})),
-                        new(new Ident[]{"dest", "G"}, new CompoundIdentifier(new Ident[]{"stg", "G"})),
+                        new(new AssignmentTarget.ColumnName(new ObjectName(["dest", "F"])), new CompoundIdentifier(new Ident[]{"stg", "F"})),
+                        new(new AssignmentTarget.ColumnName(new ObjectName(["dest", "G"])), new CompoundIdentifier(new Ident[]{"stg", "G"})),
                     ]),
                     new BinaryOp(
                         new CompoundIdentifier(new Ident[]{"dest", "A"}),
@@ -4868,13 +4872,13 @@ namespace SqlParser.Tests
             Assert.Equal(expected, cache);
 
             var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("UNCACHE TABLE 'table_name' foo"));
-            Assert.Equal("Expected EOF, found foo, Line: 1, Col: 28", ex.Message);
+            Assert.Equal("Expected end of statement, found foo, Line: 1, Col: 28", ex.Message);
 
             ex = Assert.Throws<ParserException>(() => ParseSqlStatements("UNCACHE 'table_name' foo"));
-            Assert.Equal("Expected 'TABLE' keyword, found 'table_name', Line: 1, Col: 9", ex.Message);
+            Assert.Equal("Expected TABLE, found 'table_name', Line: 1, Col: 9", ex.Message);
 
             ex = Assert.Throws<ParserException>(() => ParseSqlStatements("UNCACHE IF EXISTS 'table_name' foo"));
-            Assert.Equal("Expected 'TABLE' keyword, found IF, Line: 1, Col: 9", ex.Message);
+            Assert.Equal("Expected TABLE, found IF, Line: 1, Col: 9", ex.Message);
         }
 
         [Fact]
@@ -5191,7 +5195,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Parse_Select_Group_By_All()
         {
-            var sql = "SELECT id, fname, lname, SUM(order) FROM customer GROUP BY ALL";
+            const string sql = "SELECT id, fname, lname, SUM(order) FROM customer GROUP BY ALL";
             var select = VerifiedOnlySelect(sql);
 
             Assert.Equal(new GroupByExpression.All(), select.GroupBy);
@@ -5679,7 +5683,7 @@ namespace SqlParser.Tests
 
                 return new Function(new ObjectName(new Ident(function)))
                 {
-                    Args = new FunctionArguments.List(new FunctionArgumentList(null, functionArgs, null))
+                    Args = new FunctionArguments.List(new FunctionArgumentList(null, functionArgs!, null))
                 };
             }
         }

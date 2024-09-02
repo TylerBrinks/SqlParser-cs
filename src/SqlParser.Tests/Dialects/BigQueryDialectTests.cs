@@ -29,31 +29,19 @@ public class BigQueryDialectTests : ParserTestBase
                            """triple-double"unescaped"""
                            """";
 
-        /*
-           'single', 
-           "double", 
-           '''triple-single'''
-           """triple-double""",
-           'single\'escaped', 
-           '''triple-single\'escaped''', 
-           '''triple-single'unescaped''', 
-           "double\"escaped", 
-           """triple-double\"escaped""", 
-           """triple-double"unescaped"""
-         */
         var select = VerifiedOnlySelect(sql);
 
         Assert.Equal(10, select.Projection.Count);
-        //Assert.Equal(new LiteralValue(new Value.SingleQuotedString("single")), select.Projection[0].AsExpr());
-        //Assert.Equal(new LiteralValue(new Value.DoubleQuotedString("double")), select.Projection[1].AsExpr());
-        //Assert.Equal(new LiteralValue(new Value.TripleSingleQuotedString("triple-single")), select.Projection[2].AsExpr());
-        //Assert.Equal(new LiteralValue(new Value.TripleDoubleQuotedString("triple-double")), select.Projection[3].AsExpr());
-        //Assert.Equal(new LiteralValue(new Value.SingleQuotedString("single\\'escaped")), select.Projection[4].AsExpr());
-        //Assert.Equal(new LiteralValue(new Value.TripleSingleQuotedString("triple-single\\'escaped")), select.Projection[5].AsExpr());
-        //Assert.Equal(new LiteralValue(new Value.TripleSingleQuotedString("triple-single'unescaped")), select.Projection[6].AsExpr());
-        //Assert.Equal(new LiteralValue(new Value.TripleSingleQuotedString("double\\\"escaped")), select.Projection[7].AsExpr());
-        //Assert.Equal(new LiteralValue(new Value.TripleDoubleQuotedString("triple-double\\\"escaped")), select.Projection[8].AsExpr());
-        //Assert.Equal(new LiteralValue(new Value.TripleDoubleQuotedString("triple-double\"unescaped")), select.Projection[9].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.SingleQuotedString("single")), select.Projection[0].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.DoubleQuotedString("double")), select.Projection[1].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.TripleSingleQuotedString("triple-single")), select.Projection[2].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.TripleDoubleQuotedString("triple-double")), select.Projection[3].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.SingleQuotedString("single\\'escaped")), select.Projection[4].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.TripleSingleQuotedString("triple-single\\'escaped")), select.Projection[5].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.TripleSingleQuotedString("triple-single'unescaped")), select.Projection[6].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.DoubleQuotedString("double\\\"escaped")), select.Projection[7].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.TripleDoubleQuotedString("triple-double\\\"escaped")), select.Projection[8].AsExpr());
+        Assert.Equal(new LiteralValue(new Value.TripleDoubleQuotedString("triple-double\"unescaped")), select.Projection[9].AsExpr());
     }
 
     [Fact]
@@ -570,5 +558,57 @@ public class BigQueryDialectTests : ParserTestBase
         VerifiedExpr("ANY_VALUE(fruit) OVER (ORDER BY LENGTH(fruit) ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)");
         VerifiedExpr("ANY_VALUE(fruit HAVING MAX sold)");
         VerifiedExpr("ANY_VALUE(fruit HAVING MIN sold)");
+    }
+
+    [Fact]
+    public void Parse_Create_Table_With_Options()
+    {
+        var sql = """
+              CREATE TABLE mydataset.newtable 
+              (x INT64 NOT NULL OPTIONS(description = "field x"), 
+              y BOOL OPTIONS(description = "field y")) 
+              PARTITION BY _PARTITIONDATE 
+              CLUSTER BY userid, age 
+              OPTIONS(partition_expiration_days = 1, description = "table option description")
+              """;
+        var create = VerifiedStatement<Statement.CreateTable>(sql).Element;
+
+        var columns = new Sequence<ColumnDef>
+        {
+            new ("x", new DataType.Int64(), Options:
+            [
+                new (new ColumnOption.NotNull()),
+                new (new ColumnOption.Options([
+                    new SqlOption("description", new LiteralValue(new Value.DoubleQuotedString("field x")))
+                ])),
+            ]),
+            new ("y", new DataType.Bool(), Options:
+            [
+                new (new ColumnOption.Options([
+                    new SqlOption("description", new LiteralValue(new Value.DoubleQuotedString("field y")))
+                ])),
+            ]),
+        };
+
+        Assert.Equal(new ObjectName(["mydataset", "newtable"]), create.Name);
+        Assert.Equal(columns, create.Columns);
+        Assert.Equal(new Identifier("_PARTITIONDATE"), create.PartitionBy);
+        Assert.Equal(new WrappedCollection<Ident>.NoWrapping(["userid", "age"]), create.ClusterBy);
+        Assert.Equal(new Sequence<SqlOption>
+        {
+            new ("partition_expiration_days", new LiteralValue(new Value.Number("1"))),
+            new ("description", new LiteralValue(new Value.DoubleQuotedString("table option description")))
+        }, create.Options);
+
+        sql = """
+              CREATE TABLE mydataset.newtable 
+              (x INT64 NOT NULL OPTIONS(description = "field x"), 
+              y BOOL OPTIONS(description = "field y")) 
+              CLUSTER BY userid 
+              OPTIONS(partition_expiration_days = 1, 
+              description = "table option description")
+              """;
+        
+        VerifiedStatement(sql);
     }
 }
