@@ -7,7 +7,7 @@
 public record Query([Visit(1)] SetExpression Body) : IWriteSql, IElement
 {
     [Visit(0)] public With? With { get; init; }
-    [Visit(2)] public Sequence<OrderByExpression>? OrderBy { get; set; }
+    [Visit(2)] public OrderBy? OrderBy { get; set; }
     [Visit(3)] public Expression? Limit { get; init; }
     [Visit(4)] public Offset? Offset { get; init; }
     [Visit(5)] public Fetch? Fetch { get; init; }
@@ -38,7 +38,24 @@ public record Query([Visit(1)] SetExpression Body) : IWriteSql, IElement
 
         if (OrderBy != null)
         {
-            writer.WriteSql($" ORDER BY {OrderBy}");
+            writer.WriteSql($" ORDER BY");
+
+            if (OrderBy.Expressions.SafeAny())
+            {
+                writer.WriteSql($" {OrderBy.Expressions.ToSqlDelimited()}");
+            }
+
+            if (OrderBy.Interpolate != null)
+            {
+                if (OrderBy.Interpolate.Expressions != null)
+                {
+                    writer.WriteSql($" INTERPOLATE ({OrderBy.Interpolate.Expressions.ToSqlDelimited()})");
+                }
+                else
+                {
+                    writer.WriteSql($" INTERPOLATE");
+                }
+            }
         }
 
         if (Limit != null)

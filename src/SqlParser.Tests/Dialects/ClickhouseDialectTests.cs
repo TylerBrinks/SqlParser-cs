@@ -1,5 +1,4 @@
-﻿using FluentAssertions.Formatting;
-using SqlParser.Ast;
+﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 
 namespace SqlParser.Tests.Dialects;
@@ -526,5 +525,161 @@ public class ClickhouseDialectTests : ParserTestBase
         {
             Assert.Throws<ParserException>(() =>  ParseSqlStatements(sql));
         }
+    }
+
+    [Fact]
+    public void Parse_Select_Order_By_WIth_Fill_Interpolate()
+    {
+        const string sql = """
+                  SELECT id, fname, lname FROM customer WHERE id < 5 
+                  ORDER BY 
+                  fname ASC NULLS FIRST WITH FILL FROM 10 TO 20 STEP 2, 
+                  lname DESC NULLS LAST WITH FILL FROM 30 TO 40 STEP 3 
+                  INTERPOLATE (col1 AS col1 + 1) 
+                  LIMIT 2
+                  """;
+
+        var select = VerifiedQuery(sql, dialects: new []{new ClickHouseDialect()});
+
+        var orderBy = new Sequence<OrderByExpression>
+        {
+            new (new Expression.Identifier("fname"), true, true, new WithFill(
+                    new Expression.LiteralValue(new Value.Number("10")),
+                    new Expression.LiteralValue(new Value.Number("20")),
+                    new Expression.LiteralValue(new Value.Number("2"))
+            )),
+
+            new (new Expression.Identifier("lname"), false, false, new WithFill(
+                new Expression.LiteralValue(new Value.Number("30")),
+                new Expression.LiteralValue(new Value.Number("40")),
+                new Expression.LiteralValue(new Value.Number("3"))
+            ))
+        };
+        var interpolate = new Interpolate([
+            new InterpolateExpression("col1", new Expression.BinaryOp(
+                new Expression.Identifier("col1"),
+                BinaryOperator.Plus,
+                new Expression.LiteralValue(new Value.Number("1"))
+            ))
+        ]);
+
+        Assert.Equal(orderBy, select.OrderBy!.Expressions);
+        Assert.Equal(interpolate, select.OrderBy.Interpolate);
+    }
+
+    [Fact]
+    public void Parse_Select_Order_By_With_Fill_Interpolate_Multi_Interpolates()
+    {
+        const string sql = """
+                           SELECT id, fname, lname FROM customer ORDER BY fname WITH FILL
+                           INTERPOLATE (col1 AS col1 + 1) INTERPOLATE (col2 AS col2 + 2)
+                           """;
+        Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
+    }
+
+    [Fact]
+    public void Parse_Select_Order_By_With_Fill_Interpolate_Multi_With_Fill_Interpolates()
+    {
+        const string sql = """
+                           SELECT id, fname, lname FROM customer 
+                           ORDER BY 
+                           fname WITH FILL INTERPOLATE (col1 AS col1 + 1), 
+                           lname WITH FILL INTERPOLATE (col2 AS col2 + 2)
+                           """;
+        Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
+    }
+
+    [Fact]
+    public void Parse_Select_Order_Interpolate_Not_Last()
+    {
+        const string sql = """
+                           SELECT id, fname, lname FROM customer 
+                           ORDER BY 
+                           fname INTERPOLATE (col2 AS col2 + 2), 
+                           lname
+                           """;
+        Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
+    }
+
+    [Fact]
+    public void Parse_With_Fill()
+    {
+        const string sql = """
+                           SELECT fname FROM customer ORDER BY fname 
+                           WITH FILL FROM 10 TO 20 STEP 2
+                           """;
+        var select = VerifiedQuery(sql, DefaultDialects!);
+        Assert.Equal(new WithFill(
+            new Expression.LiteralValue(new Value.Number("10")),
+            new Expression.LiteralValue(new Value.Number("20")),
+            new Expression.LiteralValue(new Value.Number("2"))
+            ), 
+            select.OrderBy!.Expressions![0].WithFill);
+    }
+
+    [Fact]
+    public void Parse_With_Fill_Missing_Single_Argument()
+    {
+        const string sql = """
+                           SELECT id, fname, lname FROM customer ORDER BY 
+                           fname WITH FILL FROM TO 20
+                           """;
+        Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
+    }
+
+    [Fact]
+    public void Parse_With_Fill_Missing_Incomplete_Argument()
+    {
+        const string sql = """
+                           SELECT id, fname, lname FROM customer ORDER BY 
+                           fname WITH FILL FROM TO 20, lname WITH FILL FROM TO STEP 1
+                           """;
+        Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
+    }
+
+    [Fact]
+    public void Parse_Interpolate_Body_With_Columns()
+    {
+        const string sql = """
+                           SELECT fname FROM customer ORDER BY fname WITH FILL 
+                           INTERPOLATE (col1 AS col1 + 1, col2 AS col3, col4 AS col4 + 4)
+                           """;
+        var select = VerifiedQuery(sql, DefaultDialects!);
+
+        var expected = new Interpolate([
+            new InterpolateExpression("col1", 
+                new Expression.BinaryOp(
+                    new Expression.Identifier("col1"),
+                    BinaryOperator.Plus,
+                    new Expression.LiteralValue(new Value.Number("1"))
+            )),
+
+            new InterpolateExpression("col2", new Expression.Identifier("col3")),
+
+            new InterpolateExpression("col4", 
+                new Expression.BinaryOp(
+                    new Expression.Identifier("col4"),
+                    BinaryOperator.Plus,
+                    new Expression.LiteralValue(new Value.Number("4"))
+            )),
+        ]);
+
+        Assert.Equal(expected, select.OrderBy!.Interpolate);
+    }
+
+    [Fact]
+    public void Parse_Interpolate_Without_Body()
+    {
+        const string sql = "SELECT fname FROM customer ORDER BY fname WITH FILL INTERPOLATE";
+        var select = VerifiedQuery(sql, DefaultDialects!);
+        Assert.Equal(new Interpolate(null), select.OrderBy!.Interpolate);
+    }
+
+    [Fact]
+    public void Parse_Interpolate_With_Empty_Body()
+    {
+        const string sql = "SELECT fname FROM customer ORDER BY fname WITH FILL INTERPOLATE ()";
+        var select = VerifiedQuery(sql, DefaultDialects!);
+        Assert.Equal(new Interpolate([]), select.OrderBy!.Interpolate);
     }
 }

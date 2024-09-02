@@ -1028,7 +1028,7 @@ namespace SqlParser.Tests
                     new (new Identifier("id"))
                 };
 
-                Assert.Equal(expected, select.OrderBy!);
+                Assert.Equal(expected, select.OrderBy!.Expressions);
             }
         }
 
@@ -1042,7 +1042,7 @@ namespace SqlParser.Tests
                 new (new Identifier("lname"), true),
                 new (new Identifier("fname"), false)
             };
-            Assert.Equal(expected, select.OrderBy!);
+            Assert.Equal(expected, select.OrderBy!.Expressions);
             Assert.Equal(new LiteralValue(Number("2")), select.Limit);
         }
 
@@ -1056,7 +1056,7 @@ namespace SqlParser.Tests
                 new (new Identifier("lname"), true, true),
                 new (new Identifier("fname"), false, false)
             };
-            Assert.Equal(expected, select.OrderBy!);
+            Assert.Equal(expected, select.OrderBy!.Expressions);
             Assert.Equal(new LiteralValue(Number("2")), select.Limit);
         }
 

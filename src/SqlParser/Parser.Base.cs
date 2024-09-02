@@ -1,9 +1,7 @@
 ﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
-using System.Linq;
 using static SqlParser.Ast.Expression;
-
 using DataType = SqlParser.Ast.DataType;
 
 namespace SqlParser;
@@ -1010,6 +1008,32 @@ public partial class Parser
     {
         return condition ? initialization() : default;
     }
+
+    /// <summary>
+    /// Parse a comma-separated list of 0+ items accepted by `F`
+    /// `end_token` - expected end token for the closure (e.g. [Token::RParen], [Token::RBrace] ...)
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="action"></param>
+    /// <param name="endToken"></param>
+    /// <returns></returns>
+    public Sequence<T> ParseCommaSeparated0<T>(Func<T> action, Type endTokenType)
+    {
+        var next = PeekToken();
+        if (next.GetType() == endTokenType)
+        {
+            return [];
+        }
+
+        if (_options.TrailingCommas && (next.GetType() == endTokenType || next.GetType() == typeof(Comma)))
+        {
+            _ = ConsumeToken<Comma>();
+            return [];
+        }
+
+        return ParseCommaSeparated(action);
+    }
+
     /// <summary>
     /// Parse a comma-separated list of 1+ items accepted by type T
     /// </summary>
@@ -1033,7 +1057,7 @@ public partial class Parser
                 var token = PeekToken();
                 if (token is Word w)
                 {
-                    
+
                     //if (Keywords.ReservedForColumnAlias.Any(k => k == w.Keyword))
                     if (Keywords.ReservedForColumnAlias.Contains(w.Keyword))
                     {
@@ -1087,10 +1111,17 @@ public partial class Parser
         {
             var body = ParseQueryBody(0);
 
-            Sequence<OrderByExpression>? orderBy = null;
+            OrderBy? orderBy = null;
             if (ParseKeywordSequence(Keyword.ORDER, Keyword.BY))
             {
-                orderBy = ParseCommaSeparated(ParseOrderByExpr);
+                var orderByExpressions = ParseCommaSeparated(ParseOrderByExpr);
+                Interpolate? interpolate = null;
+                if (_dialect is ClickHouseDialect or GenericDialect)
+                {
+                    interpolate = ParseInterpolations();
+                }
+
+                orderBy = new OrderBy(orderByExpressions, interpolate);
             }
 
             for (var i = 0; i < 2; i++)

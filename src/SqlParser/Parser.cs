@@ -9403,7 +9403,55 @@ public partial class Parser
             nullsFirst = false;
         }
 
-        return new OrderByExpression(expr, asc, nullsFirst);
+        WithFill? withFill = null;
+
+        if (_dialect is ClickHouseDialect or GenericDialect && ParseKeywordSequence(Keyword.WITH, Keyword.FILL))
+        {
+            withFill = ParseWithFill();
+        }
+
+        return new OrderByExpression(expr, asc, nullsFirst, withFill);
+    }
+    /// <summary>
+    /// Parse a WITH FILL clause (ClickHouse dialect)
+    /// that follow the WITH FILL keywords in a ORDER BY clause
+    /// </summary>
+    /// <returns>WithFill instance</returns>
+    public WithFill ParseWithFill()
+    {
+        var from = ParseKeyword(Keyword.FROM) ? ParseExpr() : null;
+        var to = ParseKeyword(Keyword.TO) ? ParseExpr() : null;
+        var step = ParseKeyword(Keyword.STEP) ? ParseExpr() : null;
+
+        return new WithFill(from, to, step);
+    }
+    /// <summary>
+    ///Parse a set of comma separated INTERPOLATE expressions (ClickHouse dialect)
+    /// that follow the INTERPOLATE keyword in an ORDER BY clause with the WITH FILL modifier
+    /// </summary>
+    /// <returns>Optional Interpolate</returns>
+    public Interpolate? ParseInterpolations()
+    {
+        if (!ParseKeyword(Keyword.INTERPOLATE))
+        {
+            return null;
+        }
+
+        if (!ConsumeToken<LeftParen>()) { return new Interpolate(null); }
+
+        var interpolations = ParseCommaSeparated0(ParseInterpolation, typeof(RightParen));
+        ExpectRightParen();
+        return new Interpolate(interpolations);
+    }
+    /// <summary>
+    /// Parse a INTERPOLATE expression (ClickHouse dialect)
+    /// </summary>
+    /// <returns>Interpolate expression</returns>
+    private InterpolateExpression ParseInterpolation()
+    {
+        var column = ParseIdentifier();
+        var expression = ParseKeyword(Keyword.AS) ? ParseExpr() : null;
+        return new InterpolateExpression(column, expression);
     }
     /// <summary>
     /// Parse a TOP clause, MSSQL equivalent of LIMIT,
