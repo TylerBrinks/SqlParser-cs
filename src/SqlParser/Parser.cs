@@ -1009,10 +1009,11 @@ public partial class Parser
         {
             Expression expr;
             Expression? lambda;
-            if (ParseKeywordSequence(Keyword.SELECT) || ParseKeyword(Keyword.WITH))
+
+            var subQuery = TryParseExpressionSubQuery();
+            if (subQuery != null)
             {
-                PrevToken();
-                expr = new Subquery(ParseQuery());
+                expr = subQuery;
             }
             else if ((lambda = TryParseLambda()) != null)
             {
@@ -1350,6 +1351,18 @@ public partial class Parser
             return _dialect is not DatabricksDialect || word is { Keyword: Keyword.SELECT } ||
                    word is { Keyword: Keyword.WITH };
         }
+    }
+
+    public Expression? TryParseExpressionSubQuery()
+    {
+        var keyword = ParseOneOfKeywords(Keyword.SELECT, Keyword.WITH);
+        if (keyword == Keyword.undefined)
+        {
+            return null;
+        }
+
+        PrevToken();
+        return new Subquery(ParseQuery());
     }
 
     public Expression? TryParseLambda()
@@ -7681,7 +7694,9 @@ public partial class Parser
             {
                 try
                 {
-                    var value = ParseExpr();
+                    var subQuery = TryParseExpressionSubQuery();
+                    var value = subQuery ?? ParseExpr();
+
                     values.Add(value);
                 }
                 catch (ParserException)

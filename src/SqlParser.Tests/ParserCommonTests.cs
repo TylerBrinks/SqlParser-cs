@@ -4124,8 +4124,30 @@ namespace SqlParser.Tests
                 new LiteralValue(new Value.Number("3"))
             ], variable.Value);
 
+            OneStatementParsesTo(
+                "SET (a) = (SELECT 22 FROM tbl1)",
+                "SET (a) = ((SELECT 22 FROM tbl1))",
+                multiVariableDialects);
+
+            OneStatementParsesTo(
+                "SET (a) = (SELECT 22 FROM tbl1, (SELECT 1 FROM tbl2))",
+                "SET (a) = ((SELECT 22 FROM tbl1, (SELECT 1 FROM tbl2)))",
+                multiVariableDialects);
+
+            OneStatementParsesTo(
+                "SET (a) = ((SELECT 22 FROM tbl1, (SELECT 1 FROM tbl2)))",
+                "SET (a) = ((SELECT 22 FROM tbl1, (SELECT 1 FROM tbl2)))",
+                multiVariableDialects);
+
+            OneStatementParsesTo(
+                "SET (a, b) = ((SELECT 22 FROM tbl1, (SELECT 1 FROM tbl2)), SELECT 33 FROM tbl3)",
+                "SET (a, b) = ((SELECT 22 FROM tbl1, (SELECT 1 FROM tbl2)), (SELECT 33 FROM tbl3))",
+                multiVariableDialects);
+
             Assert.Throws<ParserException>(() => ParseSqlStatements("SET (a, b, c) = (1, 2, 3", multiVariableDialects));
             Assert.Throws<ParserException>(() => ParseSqlStatements("SET (a, b, c) = 1, 2, 3", multiVariableDialects));
+            Assert.Throws<ParserException>(() => ParseSqlStatements("SET (a) = ((SELECT 22 FROM tbl1)", multiVariableDialects));
+            Assert.Throws<ParserException>(() => ParseSqlStatements("SET (a) = ((SELECT 22 FROM tbl1) (SELECT 22 FROM tbl1))", multiVariableDialects));
 
             OneStatementParsesTo("SET SOMETHING TO '1'", "SET SOMETHING = '1'");
         }

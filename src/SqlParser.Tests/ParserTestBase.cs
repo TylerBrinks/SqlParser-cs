@@ -189,15 +189,7 @@ public class ParserTestBase
 
         var map = dialects.Select(action);
 
-        var agg = map.Aggregate(default(T), (result, next) =>
-        {
-            if (result == default(T))
-            {
-                return next;
-            }
-
-            return next;
-        });
+        var agg = map.Aggregate(default(T), (_, next) => next);
 
         return agg!;
     }

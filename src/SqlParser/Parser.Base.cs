@@ -856,17 +856,18 @@ public partial class Parser
 
         if (token is LeftBracket)
         {
-            if (_dialect is PostgreSqlDialect or DuckDbDialect or GenericDialect)
+            switch (_dialect)
             {
-                return ParseSubscript(expr);
-            }
-            else if (_dialect is SnowflakeDialect)
-            {
-                PrevToken();
-                return ParseJsonAccess(expr);
-            }
+                case PostgreSqlDialect or DuckDbDialect or GenericDialect:
+                    return ParseSubscript(expr);
 
-            return ParseMapAccess(expr);
+                case SnowflakeDialect:
+                    PrevToken();
+                    return ParseJsonAccess(expr);
+
+                default:
+                    return ParseMapAccess(expr);
+            }
         }
 
         if (_dialect is SnowflakeDialect or GenericDialect && token is Colon)
