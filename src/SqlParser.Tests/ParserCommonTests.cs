@@ -91,7 +91,7 @@ namespace SqlParser.Tests
             };
 
             Assert.Equal(assignments, update.Assignments);
-            
+
         }
 
         [Fact]
@@ -114,7 +114,7 @@ namespace SqlParser.Tests
             var statement = VerifiedStatement(sql, dialects);
 
             var table = new TableWithJoins(new TableFactor.Table("t1"));
-            var assignment = new Statement.Assignment(new AssignmentTarget.ColumnName("name"), 
+            var assignment = new Statement.Assignment(new AssignmentTarget.ColumnName("name"),
                 new CompoundIdentifier(new Ident[] { "t2", "name" }));
             var assignments = new[] { assignment };
 
@@ -513,7 +513,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Parse_Escaped_Single_Quote_String_Predicate_With_Escape()
         {
-            var select = VerifiedOnlySelect("SELECT id, fname, lname FROM customer WHERE salary <> 'Jim''s salary'", unescape:true);
+            var select = VerifiedOnlySelect("SELECT id, fname, lname FROM customer WHERE salary <> 'Jim''s salary'", unescape: true);
 
             var expected = new BinaryOp(
                 new Identifier("salary"),
@@ -1906,7 +1906,7 @@ namespace SqlParser.Tests
             DefaultDialects = new List<Dialect> { new GenericDialect() };
             var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE t ON CLUSTER '{cluster}' (a INT, b INT)");
 
-            var expected = new Statement.CreateTable(new CreateTable( "t", new ColumnDef[]
+            var expected = new Statement.CreateTable(new CreateTable("t", new ColumnDef[]
             {
                 new("a", new Int()),
                 new("b", new Int()),
@@ -1985,7 +1985,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Parse_Create_Table_Trailing_Comma()
         {
-            DefaultDialects =[ new DuckDbDialect() ];
+            DefaultDialects = [new DuckDbDialect()];
             OneStatementParsesTo(
                 "CREATE TABLE foo (bar int,)",
                 "CREATE TABLE foo (bar INT)");
@@ -2827,7 +2827,7 @@ namespace SqlParser.Tests
                 Args = new FunctionArguments.List(new FunctionArgumentList(null, [
                     new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(zero))
                 ], null))
-            }, new LiteralValue(new Value.SingleQuotedString("UTC-06:00")) );
+            }, new LiteralValue(new Value.SingleQuotedString("UTC-06:00")));
 
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
@@ -5041,7 +5041,7 @@ namespace SqlParser.Tests
                             new ExpressionWithAlias(new LiteralValue(new Value.SingleQuotedString("two")), null),
                             new ExpressionWithAlias(new Identifier("three"), "y"),
                     ]),
-                null, 
+                null,
                 new TableAlias("p", new Ident[] { "c", "d" }));
 
             Assert.Equal(expected, relation);
@@ -6084,7 +6084,7 @@ namespace SqlParser.Tests
                 ExceptOption = new ExceptSelectItem("col_a", [])
             });
             Assert.Equal(expected, select.Projection[0]);
-            
+
             select = VerifiedOnlySelect("SELECT * EXCEPT (department_id, employee_id) FROM employee_table", dialects);
 
             expected = new SelectItem.Wildcard(new WildcardAdditionalOptions
@@ -6094,7 +6094,27 @@ namespace SqlParser.Tests
             Assert.Equal(expected, select.Projection[0]);
 
 
-            Assert.Throws<ParserException>(()=> ParseSqlStatements("SELECT * EXCEPT () FROM employee_table", dialects));
+            Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT * EXCEPT () FROM employee_table", dialects));
+        }
+
+        [Fact]
+        public void Parse_Trailing_Comma()
+        {
+            // At the moment, DuckDB is the only dialect that allows
+            // trailing commas anywhere in the query
+            DefaultDialects = new[] { new DuckDbDialect() };
+
+            OneStatementParsesTo("SELECT album_id, name, FROM track", "SELECT album_id, name FROM track", DefaultDialects);
+            OneStatementParsesTo("SELECT * FROM track ORDER BY milliseconds,", "SELECT * FROM track ORDER BY milliseconds", DefaultDialects);
+            OneStatementParsesTo("SELECT DISTINCT ON (album_id,) name FROM track", "SELECT DISTINCT ON (album_id) name FROM track", DefaultDialects);
+            OneStatementParsesTo("CREATE TABLE employees (name text, age int,)", "CREATE TABLE employees (name TEXT, age INT)", DefaultDialects);
+            OneStatementParsesTo("GRANT USAGE, SELECT, INSERT, ON p TO u", "GRANT USAGE, SELECT, INSERT ON p TO u", DefaultDialects);
+            VerifiedStatement("SELECT album_id, name FROM track", DefaultDialects);
+            VerifiedStatement("SELECT * FROM track ORDER BY milliseconds", DefaultDialects);
+            VerifiedStatement("SELECT DISTINCT ON (album_id) name FROM track", DefaultDialects);
+            OneStatementParsesTo("SELECT \"from\", FROM \"from\"", "SELECT \"from\" FROM \"from\"", DefaultDialects);
+
+            Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT name, age, from employees;", new List<Dialect>{new GenericDialect()}));
         }
     }
 }

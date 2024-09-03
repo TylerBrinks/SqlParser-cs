@@ -9191,7 +9191,7 @@ public partial class Parser
             return new SelectItem.Wildcard(ParseWildcardAdditionalOptions());
         }
 
-        if (wildcardExpr is Identifier v && v.Ident.Value.ToLower().Equals("from"))
+        if (wildcardExpr is Identifier v && v.Ident.Value.ToLower().Equals("from") && v.Ident.QuoteStyle == null)
         {
             throw Expected($"Expected an expression, found: {v}");
         }
