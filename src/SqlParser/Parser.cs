@@ -974,7 +974,7 @@ public partial class Parser
                     trimWhat = expr;
                     expr = ParseExpr();
                 }
-                else if (ConsumeToken<Comma>() && _dialect is SnowflakeDialect or BigQueryDialect or GenericDialect)
+                else if (_dialect is SnowflakeDialect or BigQueryDialect or GenericDialect && ConsumeToken<Comma>())
                 {
                     trimCharacters = ParseCommaSeparated(ParseExpr);
                 }
@@ -4789,17 +4789,19 @@ public partial class Parser
             return new ColumnOption.Check(expr);
         }
 
-        if (ParseKeyword(Keyword.AUTO_INCREMENT) && _dialect is MySqlDialect or GenericDialect)
+        if (_dialect is MySqlDialect or GenericDialect && ParseKeyword(Keyword.AUTO_INCREMENT))
         {
+            // Support AUTO_INCREMENT for MySQL
             return new ColumnOption.DialectSpecific(new[] { new Word("AUTO_INCREMENT") });
         }
 
-        if (ParseKeyword(Keyword.AUTOINCREMENT) && _dialect is MySqlDialect or GenericDialect)
+        if (_dialect is SQLiteDialect or GenericDialect && ParseKeyword(Keyword.AUTOINCREMENT))
         {
+            // Support AUTOINCREMENT for SQLite
             return new ColumnOption.DialectSpecific(new[] { new Word("AUTOINCREMENT") });
         }
 
-        if (ParseKeywordSequence(Keyword.ON, Keyword.UPDATE) && _dialect is MySqlDialect or GenericDialect)
+        if ( _dialect is MySqlDialect or GenericDialect && ParseKeywordSequence(Keyword.ON, Keyword.UPDATE))
         {
             return new ColumnOption.OnUpdate(ParseExpr());
         }
@@ -4815,7 +4817,7 @@ public partial class Parser
             return new ColumnOption.Options(ParseOptions(Keyword.OPTIONS));
         }
 
-        if (ParseKeyword(Keyword.AS) && _dialect is MySqlDialect or SQLiteDialect or DuckDbDialect or GenericDialect)
+        if (_dialect is MySqlDialect or SQLiteDialect or DuckDbDialect or GenericDialect && ParseKeyword(Keyword.AS))
         {
             return ParseOptionalColumnOptionAs();
         }
@@ -4863,9 +4865,7 @@ public partial class Parser
         {
             try
             {
-                //ExpectLeftParen();
                 var expr = ExpectParens(ParseExpr);
-                //ExpectRightParen();
                 GeneratedAs genAs;
                 GeneratedExpressionMode? expressionMode = null;
 
@@ -5454,7 +5454,7 @@ public partial class Parser
                 var cascade = ParseKeyword(Keyword.CASCADE);
                 operation = new DropConstraint(name, ifExists, cascade);
             }
-            else if (ParseKeywordSequence(Keyword.PRIMARY, Keyword.KEY) && _dialect is MySqlDialect or GenericDialect)
+            else if (_dialect is MySqlDialect or GenericDialect && ParseKeywordSequence(Keyword.PRIMARY, Keyword.KEY))
             {
                 operation = new DropPrimaryKey();
             }
@@ -7813,12 +7813,12 @@ public partial class Parser
             return ParseShowCollation();
         }
 
-        if (ParseKeyword(Keyword.VARIABLES) && _dialect is MySqlDialect or GenericDialect)
+        if (_dialect is MySqlDialect or GenericDialect&& ParseKeyword(Keyword.VARIABLES))
         {
             return new ShowVariables(ParseShowStatementFilter(), global, session);
         }
 
-        if (ParseKeyword(Keyword.STATUS) && _dialect is MySqlDialect or GenericDialect)
+        if ( _dialect is MySqlDialect or GenericDialect && ParseKeyword(Keyword.STATUS))
         {
             return new ShowStatus(ParseShowStatementFilter(), session, global);
         }
