@@ -4789,14 +4789,18 @@ public partial class Parser
             return new ColumnOption.Check(expr);
         }
 
-        if (ParseKeyword(Keyword.AUTO_INCREMENT) && _dialect is MySqlDialect or GenericDialect)
+        if (_dialect is MySqlDialect or GenericDialect) 
         {
-            return new ColumnOption.DialectSpecific(new[] { new Word("AUTO_INCREMENT") });
-        }
-
-        if (ParseKeyword(Keyword.AUTOINCREMENT) && _dialect is MySqlDialect or GenericDialect)
-        {
-            return new ColumnOption.DialectSpecific(new[] { new Word("AUTOINCREMENT") });
+            if (ParseKeyword(Keyword.AUTO_INCREMENT)) 
+            {
+                return new ColumnOption.DialectSpecific(new[] { new Word("AUTO_INCREMENT") });
+            }
+        } 
+        else {
+            if (ParseKeyword(Keyword.AUTOINCREMENT)) 
+            {
+                return new ColumnOption.DialectSpecific(new[] { new Word("AUTOINCREMENT") });
+            }
         }
 
         if (ParseKeywordSequence(Keyword.ON, Keyword.UPDATE) && _dialect is MySqlDialect or GenericDialect)
