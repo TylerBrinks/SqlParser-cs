@@ -4602,11 +4602,11 @@ public partial class Parser
             {
                 constraints.Add(constraint);
             }
-            else if (PeekToken() is Word)
+            else if ((PeekToken() is Word) || (PeekToken() is SingleQuotedString))
             {
                 columns.Add(ParseColumnDef());
             }
-            else
+            else 
             {
                 ThrowExpected("column name or constraint definition", PeekToken());
             }
