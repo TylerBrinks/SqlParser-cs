@@ -5014,9 +5014,9 @@ public partial class Parser
         }
     }
 
-    public TableConstraint? ParseOptionalTableConstraint(bool noThrowOnDefault = false)
+    public TableConstraint? ParseOptionalTableConstraint(bool isSubsequentConstraint = false)
     {
-        var name = ParseInit(ParseKeyword(Keyword.CONSTRAINT), ParseIdentifier);
+        var name = isSubsequentConstraint ? null : ParseInit(ParseKeyword(Keyword.CONSTRAINT), ParseIdentifier);
 
         var token = NextToken();
 
@@ -5144,7 +5144,7 @@ public partial class Parser
 
         TableConstraint? ParseDefault()
         {
-            if ((name != null) && !noThrowOnDefault)
+            if ((name != null) && !isSubsequentConstraint)
             {
                 ThrowExpected("PRIMARY, UNIQUE, FOREIGN, or CHECK", token);
             }
