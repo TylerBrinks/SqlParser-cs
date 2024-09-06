@@ -5144,7 +5144,7 @@ public partial class Parser
 
         TableConstraint? ParseDefault()
         {
-            if ((name != null) && !isSubsequentConstraint)
+            if (name != null)
             {
                 ThrowExpected("PRIMARY, UNIQUE, FOREIGN, or CHECK", token);
             }
