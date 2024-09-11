@@ -15,6 +15,7 @@ using Select = SqlParser.Ast.Select;
 using Declare = SqlParser.Ast.Declare;
 using HiveRowDelimiter = SqlParser.Ast.HiveRowDelimiter;
 using Subscript = SqlParser.Ast.Subscript;
+using System.Data;
 
 namespace SqlParser;
 
@@ -4692,6 +4693,11 @@ public partial class Parser
         }
     }
 
+    public Keyword? ParseColumnConflictClause () {
+        if (!ParseKeywordSequence(Keyword.ON, Keyword.CONFLICT)) return null;
+        return ParseOneOfKeywords(Keyword.ROLLBACK, Keyword.ABORT, Keyword.FAIL, Keyword.IGNORE, Keyword.REPLACE);
+    }
+
     public ColumnOption? ParseOptionalColumnOption()
     {
         if (ParseKeywordSequence(Keyword.CHARACTER, Keyword.SET))
@@ -4727,19 +4733,26 @@ public partial class Parser
 
         if (ParseKeywordSequence(Keyword.PRIMARY, Keyword.KEY))
         {
+            var order = _dialect is SQLiteDialect ? ParseOneOfKeywords([Keyword.ASC, Keyword.DESC]) : Keyword.undefined;
+            var conflict = _dialect is SQLiteDialect ? ParseColumnConflictClause() : Keyword.undefined;
+            var autoincrement = _dialect is SQLiteDialect && ParseKeyword(Keyword.AUTOINCREMENT);
             var characteristics = ParseConstraintCharacteristics();
-            return new ColumnOption.Unique(true)
-            {
-                Characteristics = characteristics
+            return new ColumnOption.Unique(true) {
+                Characteristics = characteristics,
+                Order = order != Keyword.undefined ? order : null,
+                Conflict = conflict != Keyword.undefined ? conflict : null,
+                Autoincrement = autoincrement
             };
         }
 
         if (ParseKeyword(Keyword.UNIQUE))
         {
+            var conflict = _dialect is SQLiteDialect ? ParseColumnConflictClause() : Keyword.undefined;
             var characteristics = ParseConstraintCharacteristics();
             return new ColumnOption.Unique(false)
             {
-                Characteristics = characteristics
+                Characteristics = characteristics,
+                Conflict = conflict
             };
         }
 
