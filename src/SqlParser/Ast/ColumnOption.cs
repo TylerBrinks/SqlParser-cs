@@ -57,11 +57,23 @@ public abstract record ColumnOption : IWriteSql, IElement
     public record Unique(bool IsPrimary) : ColumnOption
     {
         public ConstraintCharacteristics? Characteristics { get; init; }
-       
+        public Keyword? Order { get; internal set; }
+        public Keyword? Conflict { get; internal set; }
+        public bool Autoincrement { get; internal set; }
+
         public override void ToSql(SqlTextWriter writer)
         {
             writer.Write(IsPrimary ? "PRIMARY KEY" : "UNIQUE");
 
+            if (Order != null) {
+                writer.WriteSql($" {Order}");
+            }
+            if (Conflict != null) {
+                writer.WriteSql($" ON CONFLICT {Conflict}");
+            }
+            if (Autoincrement) {
+                writer.WriteSql($" AUTOINCREMENT");
+            }
             if (Characteristics != null)
             {
                 writer.WriteSql($" {Characteristics}");
