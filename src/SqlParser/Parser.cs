@@ -4598,17 +4598,13 @@ public partial class Parser
 
         while (true)
         {
-            var constraint = ParseOptionalTableConstraint();
-            if (constraint != null)
-            {
-                constraints.Add(constraint);
+            if (ParseAnyOptionalTableConstraints(constraint => constraints.Add(constraint))) {
+                // work has been done already
             }
-            else if ((PeekToken() is Word) || (PeekToken() is SingleQuotedString))
-            {
+            else if (PeekToken() is Word) {
                 columns.Add(ParseColumnDef());
             }
-            else 
-            {
+            else {
                 ThrowExpected("column name or constraint definition", PeekToken());
             }
 
@@ -5021,9 +5017,19 @@ public partial class Parser
         throw Expected("Expected one of RESTRICT, CASCADE, SET NULL, NO ACTION or SET DEFAULT", PeekToken());
     }
 
-    public TableConstraint? ParseOptionalTableConstraint()
+    bool ParseAnyOptionalTableConstraints(Action<TableConstraint> action) {
+        bool any = false;
+        while (true) {
+            var constraint = ParseOptionalTableConstraint(any);
+            if (constraint == null) return any;
+            action(constraint);
+            any = true;
+        }
+    }
+
+    public TableConstraint? ParseOptionalTableConstraint(bool isSubsequentConstraint = false)
     {
-        var name = ParseInit(ParseKeyword(Keyword.CONSTRAINT), ParseIdentifier);
+        var name = isSubsequentConstraint ? null : ParseInit(ParseKeyword(Keyword.CONSTRAINT), ParseIdentifier);
 
         var token = NextToken();
 
