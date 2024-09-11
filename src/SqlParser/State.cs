@@ -29,7 +29,7 @@ public ref struct State
 
         if (_index >= _characters.Length)
         {
-            throw new ParserException($"Parser unable to read character at index {_index}");
+            return Symbols.EndOfFile;
         }
         return _finished ? Symbols.EndOfFile : _characters[_index];
     }
