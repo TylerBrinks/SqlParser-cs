@@ -4747,7 +4747,7 @@ public partial class Parser
 
         if (ParseKeyword(Keyword.UNIQUE))
         {
-            var conflict = _dialect is SQLiteDialect ? ParseColumnConflictClause() : Keyword.undefined;
+            var conflict = _dialect is SQLiteDialect ? ParseColumnConflictClause() : null;
             var characteristics = ParseConstraintCharacteristics();
             return new ColumnOption.Unique(false)
             {

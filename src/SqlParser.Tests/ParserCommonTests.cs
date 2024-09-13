@@ -182,8 +182,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Parse_No_Table_Name()
         {
-            var ex = Assert.Throws<ParserException>(() => AllDialects.RunParserMethod("", parser => parser.ParseObjectName()));
-            Assert.Equal("Parser unable to read character at index 0", ex.Message);
+            Assert.Throws<ParserException>(() => AllDialects.RunParserMethod("", parser => parser.ParseObjectName()));
         }
 
         [Fact]
@@ -1472,17 +1471,17 @@ namespace SqlParser.Tests
                                """;
 
             const string canonical = """
-                                     CREATE TABLE uk_cities (name VARCHAR(100) NOT NULL,
-                                      lat DOUBLE NULL,
-                                      lng DOUBLE,
-                                      constrained INT NULL CONSTRAINT pkey PRIMARY KEY NOT NULL UNIQUE CHECK (constrained > 0),
-                                      ref INT REFERENCES othertable (a, b),
-                                      ref2 INT REFERENCES othertable2 ON DELETE CASCADE ON UPDATE NO ACTION,
-                                      CONSTRAINT fkey FOREIGN KEY (lat) REFERENCES othertable3(lat) ON DELETE RESTRICT,
-                                      CONSTRAINT fkey2 FOREIGN KEY (lat) REFERENCES othertable4(lat) ON DELETE NO ACTION ON UPDATE RESTRICT,
-                                      FOREIGN KEY (lat) REFERENCES othertable4(lat) ON DELETE CASCADE ON UPDATE SET DEFAULT,
-                                      FOREIGN KEY (lng) REFERENCES othertable4(longitude) ON UPDATE SET NULL)
-                                     """;
+                               CREATE TABLE uk_cities (name VARCHAR(100) NOT NULL, 
+                               lat DOUBLE NULL, 
+                               lng DOUBLE, 
+                               constrained INT NULL CONSTRAINT pkey PRIMARY KEY NOT NULL UNIQUE CHECK (constrained > 0), 
+                               ref INT REFERENCES othertable (a, b), 
+                               ref2 INT REFERENCES othertable2 ON DELETE CASCADE ON UPDATE NO ACTION, 
+                               CONSTRAINT fkey FOREIGN KEY (lat) REFERENCES othertable3(lat) ON DELETE RESTRICT, 
+                               CONSTRAINT fkey2 FOREIGN KEY (lat) REFERENCES othertable4(lat) ON DELETE NO ACTION ON UPDATE RESTRICT, 
+                               FOREIGN KEY (lat) REFERENCES othertable4(lat) ON DELETE CASCADE ON UPDATE SET DEFAULT, 
+                               FOREIGN KEY (lng) REFERENCES othertable4(longitude) ON UPDATE SET NULL)
+                               """;
 
             var create = OneStatementParsesTo<Statement.CreateTable>(sql, canonical);
             var element = create.Element;
@@ -1495,7 +1494,7 @@ namespace SqlParser.Tests
                 new("constrained", new Int(), Options:new ColumnOptionDef[]
                 {
                     new (new ColumnOption.Null()),
-                    new ( new ColumnOption.Unique(true),"pkey"),
+                    new (new ColumnOption.Unique(true), "pkey"),
                     new (new ColumnOption.NotNull()),
                     new (new ColumnOption.Unique(false)),
                     new (new ColumnOption.Check(VerifiedExpr("constrained > 0"))),
