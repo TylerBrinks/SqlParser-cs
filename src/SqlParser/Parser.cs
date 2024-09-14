@@ -2026,9 +2026,19 @@ public partial class Parser
                 return CreateGroupExpr(true, true, e => new Cube(e));
             }
 
-            return ParseKeyword(Keyword.ROLLUP)
-                ? CreateGroupExpr(true, true, e => new Rollup(e))
-                : ParseExpr();
+            if (ParseKeyword(Keyword.ROLLUP))
+            {
+                return CreateGroupExpr(true, true, e => new Rollup(e));
+            }
+
+            if (ConsumeTokens(typeof(LeftParen), typeof(RightParen)))
+            {
+                // PostgreSQL allow to use empty tuple as a group by expression,
+                // e.g. `GROUP BY (), name`. Please refer to GROUP BY Clause section in
+                return new Expression.Tuple([]);
+            }
+
+            return ParseExpr();
         }
 
         return ParseExpr();

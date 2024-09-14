@@ -6151,12 +6151,30 @@ namespace SqlParser.Tests
                     new(new LiteralValue(new Value.SingleQuotedString("b")), new LiteralValue(new Value.Number("20")))
                 ])),
                 new Subscript.Index(new LiteralValue(new Value.SingleQuotedString("a")))));
+            
+            return;
 
             void Check(string sql, Expression expected)
             {
                 var dialects = AllDialects.Where(d => d.SupportMapLiteralSyntax);
                 Assert.Equal(expected, VerifiedExpr(sql, dialects));
             }
+        }
+
+        [Fact]
+        public void Test_Group_By_Nothing()
+        {
+            var dialects = AllDialects.Where(d => d.SupportsGroupByExpression);
+
+            var select = VerifiedOnlySelect("SELECT count(1) FROM t GROUP BY ()", dialects);
+            var expected = new GroupByExpression.Expressions([new Expression.Tuple([])]);
+            Assert.Equal(expected, select.GroupBy);
+
+            select = VerifiedOnlySelect("SELECT name, count(1) FROM t GROUP BY name, ()", dialects);
+            expected = new GroupByExpression.Expressions([
+                new Identifier("name"),
+                new Expression.Tuple([])]);
+            Assert.Equal(expected, select.GroupBy);
         }
     }
 }
