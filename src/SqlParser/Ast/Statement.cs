@@ -1333,16 +1333,29 @@ public abstract record Statement : IWriteSql, IElement
     /// </summary>
     /// <param name="DescribeAlias">Query used the DESCRIBE alias for explain</param>
     /// <param name="Name">Table name</param>
-    public record ExplainTable(DescribeAlias DescribeAlias, ObjectName Name, HiveDescribeFormat? HiveFormat) : Statement
+    /// <param name="HiveFormat">Hive format</param>
+    /// <param name="HasTableKeyword">True if statement has Table keyword; otherwise false</param>
+    public record ExplainTable(
+        DescribeAlias DescribeAlias, 
+        ObjectName Name, 
+        HiveDescribeFormat? HiveFormat,
+        bool HasTableKeyword = false) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
             // writer.Write(DescribeAlias ? "DESCRIBE " : "EXPLAIN ");
             writer.WriteSql($"{DescribeAlias} ");
+          
             if (HiveFormat != null)
             {
                 writer.WriteSql($"{HiveFormat} ");
             }
+
+            if (HasTableKeyword)
+            {
+                writer.Write("TABLE ");
+            }
+
             writer.Write(Name);
         }
     }

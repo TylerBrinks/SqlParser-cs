@@ -2307,13 +2307,17 @@ namespace SqlParser.Tests
         {
             Test("EXPLAIN test_identifier", DescribeAlias.Explain);
             Test("DESCRIBE test_identifier", DescribeAlias.Describe);
+            Test("DESC test_identifier", DescribeAlias.Desc);
+            Test("EXPLAIN TABLE test_identifier", DescribeAlias.Explain, true);
+
             return;
 
-            void Test(string sql, DescribeAlias expected)
+            void Test(string sql, DescribeAlias expected, bool hasTable = false)
             {
                 var explain = VerifiedStatement<Statement.ExplainTable>(sql);
                 Assert.Equal(expected, explain.DescribeAlias);
                 Assert.Equal("test_identifier", explain.Name);
+                Assert.Equal(hasTable, explain.HasTableKeyword);
             }
         }
 

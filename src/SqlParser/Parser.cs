@@ -7107,7 +7107,7 @@ public partial class Parser
                 DescribeAlias = describeAlias,
                 Analyze = analyze,
                 Verbose = verbose,
-                Format = format,
+                Format = format
             },
             _ => ParseDescribeFormat()
         };
@@ -7136,6 +7136,9 @@ public partial class Parser
         {
             HiveDescribeFormat? hiveFormat = null;
             var kwd = ParseOneOfKeywords(Keyword.EXTENDED, Keyword.FORMATTED);
+            var hasTableKeyword = ParseKeyword(Keyword.TABLE);
+            var tableName = ParseObjectName();
+
             switch (kwd)
             {
                 case Keyword.EXTENDED:
@@ -7147,7 +7150,7 @@ public partial class Parser
                     break;
             }
 
-            return new ExplainTable(describeAlias, ParseObjectName(), hiveFormat);
+            return new ExplainTable(describeAlias, tableName, hiveFormat, hasTableKeyword);
         }
     }
 
