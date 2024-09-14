@@ -21,13 +21,13 @@ public abstract record FunctionArguments : IWriteSql, IElement
 }
 
 public record FunctionArgumentList(
-    DuplicateTreatment? DuplicateTreatment,
-    Sequence<FunctionArg>? Args,
-    Sequence<FunctionArgumentClause>? Clauses) : IWriteSql
+    Sequence<FunctionArg>? Args = null,
+    DuplicateTreatment? DuplicateTreatment = null,
+    Sequence<FunctionArgumentClause>? Clauses = null) : IWriteSql
 {
     public static FunctionArgumentList Empty()
     {
-        return new FunctionArgumentList(null, null, null);
+        return new FunctionArgumentList();
     }
 
     public void ToSql(SqlTextWriter writer)

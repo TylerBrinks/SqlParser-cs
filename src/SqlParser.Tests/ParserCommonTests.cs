@@ -410,9 +410,9 @@ namespace SqlParser.Tests
 
             Expression expected = new Function("COUNT")
             {
-                Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                Args = new FunctionArguments.List(new FunctionArgumentList([
                     new FunctionArg.Unnamed(new FunctionArgExpression.Wildcard())
-                ], null))
+                ]))
             };
 
             Assert.Equal(expected, select.Projection.Single().AsExpr());
@@ -425,9 +425,9 @@ namespace SqlParser.Tests
 
             Expression expected = new Function("COUNT")
             {
-                Args = new FunctionArguments.List(new FunctionArgumentList(DuplicateTreatment.Distinct, [
+                Args = new FunctionArguments.List(new FunctionArgumentList([
                     new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new UnaryOp(new Identifier("x"), UnaryOperator.Plus)))
-                ], null))
+                ], DuplicateTreatment.Distinct))
             };
 
             Assert.Equal(expected, select.Projection.Single().AsExpr());
@@ -1156,9 +1156,9 @@ namespace SqlParser.Tests
             var expected = new BinaryOp(
                 new Function("COUNT")
                 {
-                    Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                    Args = new FunctionArguments.List(new FunctionArgumentList([
                         new FunctionArg.Unnamed(new FunctionArgExpression.Wildcard())
-                    ], null))
+                    ]))
                 },
                 BinaryOperator.Gt,
                 new LiteralValue(Number("1"))
@@ -1409,11 +1409,11 @@ namespace SqlParser.Tests
             var expected = new Function("LISTAGG")
             {
                 Args = new FunctionArguments.List(new FunctionArgumentList(
-                    DuplicateTreatment.Distinct,
                     [
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("dateid"))),
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.SingleQuotedString(", "))))
                     ],
+                    DuplicateTreatment.Distinct,
                     [
                         new FunctionArgumentClause.OnOverflow(new ListAggOnOverflow.Truncate
                         {
@@ -2293,9 +2293,9 @@ namespace SqlParser.Tests
                 var select = VerifiedOnlySelect(sql);
                 var expected = new Function(fnName)
                 {
-                    Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                    Args = new FunctionArguments.List(new FunctionArgumentList([
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("id")))
-                    ], null))
+                    ]))
                 };
 
                 Assert.Equal(expected, select.Projection.Single().AsExpr());
@@ -2363,7 +2363,7 @@ namespace SqlParser.Tests
             var select = VerifiedOnlySelect("SELECT FUN(a => '1', b => '2') FROM foo");
             var expected = new Function("FUN")
             {
-                Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                Args = new FunctionArguments.List(new FunctionArgumentList( [
                         new FunctionArg.Named(
                             "a",
                             new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.SingleQuotedString("1"))),
@@ -2372,7 +2372,7 @@ namespace SqlParser.Tests
                             "b",
                             new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.SingleQuotedString("2"))),
                             new FunctionArgOperator.RightArrow())
-                ], null))
+                ]))
             };
             Assert.Equal(expected, select.Projection.Single().AsExpr());
         }
@@ -2385,7 +2385,7 @@ namespace SqlParser.Tests
             var select = VerifiedOnlySelect("SELECT FUN(a = '1', b = '2') FROM foo");
             var expected = new Function("FUN")
             {
-                Args = new FunctionArguments.List(new FunctionArgumentList(null,
+                Args = new FunctionArguments.List(new FunctionArgumentList(
                 [
                     new FunctionArg.Named(
                         "a",
@@ -2395,8 +2395,7 @@ namespace SqlParser.Tests
                         "b",
                         new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.SingleQuotedString("2"))),
                         new FunctionArgOperator.Equal())
-                ]
-                , null))
+                ]))
             };
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
@@ -2405,7 +2404,7 @@ namespace SqlParser.Tests
 
             expected = new Function("foo")
             {
-                Args = new FunctionArguments.List(new FunctionArgumentList(null,
+                Args = new FunctionArguments.List(new FunctionArgumentList(
                 [
                    new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(
                        new BinaryOp(
@@ -2413,8 +2412,7 @@ namespace SqlParser.Tests
                            BinaryOperator.Eq,
                            new LiteralValue(new Value.Number("42"))
                         )))
-                ]
-                , null))
+                ]))
             };
             var actual = VerifiedExpr("foo(bar = 42)", dialects);
             Assert.Equal(expected, actual);
@@ -2551,17 +2549,17 @@ namespace SqlParser.Tests
             {
                 new SelectItem.ExpressionWithAlias(new Function("MIN")
                 {
-                    Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                    Args = new FunctionArguments.List(new FunctionArgumentList([
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("c12")))
-                    ], null)),
+                    ])),
                     Over = new WindowType.NamedWindow("window1")
                 }, "min1"),
 
                 new SelectItem.ExpressionWithAlias(new Function("MAX")
                 {
-                    Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                    Args = new FunctionArguments.List(new FunctionArgumentList([
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("c12")))
-                    ], null)),
+                    ])),
                     Over = new WindowType.NamedWindow("window2")
                 }, "max1"),
             };
@@ -2829,9 +2827,9 @@ namespace SqlParser.Tests
 
             var expected = new AtTimeZone(new Function("FROM_UNIXTIME")
             {
-                Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                Args = new FunctionArguments.List(new FunctionArgumentList([
                     new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(zero))
-                ], null))
+                ]))
             }, new LiteralValue(new Value.SingleQuotedString("UTC-06:00")));
 
             Assert.Equal(expected, select.Projection.Single().AsExpr());
@@ -2840,17 +2838,17 @@ namespace SqlParser.Tests
             select = VerifiedOnlySelect("SELECT DATE_FORMAT(FROM_UNIXTIME(0) AT TIME ZONE 'UTC-06:00', '%Y-%m-%dT%H') AS \"hour\" FROM t");
             var expr = new SelectItem.ExpressionWithAlias(new Function("DATE_FORMAT")
             {
-                Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                Args = new FunctionArguments.List(new FunctionArgumentList([
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(
                             new AtTimeZone(new Function("FROM_UNIXTIME")
                             {
-                                Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                                Args = new FunctionArguments.List(new FunctionArgumentList([
                                     new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(zero))
-                                ], null))
+                                ]))
                             },  new LiteralValue(new Value.SingleQuotedString("UTC-06:00")) ))
                         ),
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.SingleQuotedString("%Y-%m-%dT%H"))))
-                ], null))
+                ]))
             }, new Ident("hour", Symbols.DoubleQuote));
 
             Assert.Equal(expr, select.Projection.Single());
@@ -2957,10 +2955,10 @@ namespace SqlParser.Tests
 
             var expected = new Function("FUN")
             {
-                Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                Args = new FunctionArguments.List(new FunctionArgumentList([
                     new FunctionArg.Unnamed(
                         new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.SingleQuotedString("1"))))
-                ], null))
+                ]))
             };
 
             var actual = (TableFactor.TableFunction)select.From!.Single().Relation!;
@@ -4711,20 +4709,27 @@ namespace SqlParser.Tests
         [Fact]
         public void Parse_Position()
         {
-            var select = VerifiedOnlySelect("SELECT POSITION('@' IN field)");
+            Expression expected = new Position(new LiteralValue(new Value.SingleQuotedString("@")), new Identifier("field"));
+            var position = VerifiedExpr("POSITION('@' IN field)");
+            Assert.Equal(expected, position);
 
-            var position = new Position(new LiteralValue(new Value.SingleQuotedString("@")), new Identifier("field"));
-            Assert.Equal(position, select.Projection.Single().AsExpr());
+            expected = new Function("position")
+            {
+                Args = new FunctionArguments.List(new FunctionArgumentList([
+                    new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.SingleQuotedString("an")))),
+                    new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.SingleQuotedString("banana")))),
+                    new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.Number("1")))),
+                ]))
+            };
+            position = VerifiedExpr("position('an', 'banana', 1)");
+            Assert.Equal(expected, position);
         }
 
         [Fact]
         public void Parse_Position_Negative()
         {
-            var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT POSITION(foo) from bar"));
-            Assert.Equal("Position function must include IN keyword", ex.Message);
-
-            ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT POSITION(foo IN) from bar"));
-            Assert.Equal("Expected an expression, found ), Line: 1, Col: 23", ex.Message);
+            var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT POSITION(foo IN) from bar"));
+            Assert.Equal("Expected (, found ), Line: 1, Col: 23", ex.Message);
         }
 
         [Fact]
@@ -5056,10 +5061,10 @@ namespace SqlParser.Tests
             {
                 var expr = new Function("SUM")
                 {
-                    Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                    Args = new FunctionArguments.List(new FunctionArgumentList([
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(
                             new CompoundIdentifier([new Ident(t), new Ident("amount")])))
-                    ], null))
+                    ]))
                 };
                 return new ExpressionWithAlias(expr, alias != null ? new Ident(alias) : null);
             }
@@ -5393,12 +5398,12 @@ namespace SqlParser.Tests
             var call = (Statement.Call)VerifiedStatement("CALL my_procedure('a')");
             var expected = new Statement.Call(new Function("my_procedure")
             {
-                Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                Args = new FunctionArguments.List(new FunctionArgumentList([
                         new FunctionArg.Unnamed(
                             new FunctionArgExpression.FunctionExpression(
                                 new LiteralValue(
                                     new Value.SingleQuotedString("a"))))
-                ], null))
+                ]))
             });
 
             Assert.Equal(expected, call);
@@ -5495,9 +5500,9 @@ namespace SqlParser.Tests
                     new MapAccessKey(new UnaryOp(new LiteralValue(new Value.Number("1")), UnaryOperator.Minus), MapAccessSyntax.Bracket),
                     new MapAccessKey(new Function("safe_offset")
                     {
-                        Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                        Args = new FunctionArguments.List(new FunctionArgumentList([
                             new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.Number("2"))))
-                        ], null))
+                        ]))
                     }, MapAccessSyntax.Bracket)
                 ]
             );
@@ -5710,7 +5715,7 @@ namespace SqlParser.Tests
 
                 return new Function(new ObjectName(new Ident(function)))
                 {
-                    Args = new FunctionArguments.List(new FunctionArgumentList(null, functionArgs!, null))
+                    Args = new FunctionArguments.List(new FunctionArgumentList(functionArgs!))
                 };
             }
         }
@@ -5864,20 +5869,20 @@ namespace SqlParser.Tests
             {
                 new SelectItem.UnnamedExpression(new Function("ARRAY_AGG")
                 {
-                    Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                    Args = new FunctionArguments.List(new FunctionArgumentList([
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(
                                 new Identifier("name")
                             ))
-                    ], null)),
+                    ])),
                     Filter = new IsNotNull(new Identifier("name"))
                 }),
                 new SelectItem.ExpressionWithAlias(new Function("ARRAY_AGG")
                 {
-                    Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                    Args = new FunctionArguments.List(new FunctionArgumentList([
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(
                             new Identifier("name")
                         ))
-                    ], null)),
+                    ])),
                     Filter = new Like(new Identifier("name"), false, new LiteralValue(new Value.SingleQuotedString("a%")))
                 }, "agg2"),
             };
@@ -6168,7 +6173,7 @@ namespace SqlParser.Tests
         [Fact]
         public void Test_Group_By_Nothing()
         {
-            var dialects = AllDialects.Where(d => d.SupportsGroupByExpression);
+            var dialects = AllDialects.Where(d => d.SupportsGroupByExpression).ToList();
 
             var select = VerifiedOnlySelect("SELECT count(1) FROM t GROUP BY ()", dialects);
             var expected = new GroupByExpression.Expressions([new Expression.Tuple([])]);

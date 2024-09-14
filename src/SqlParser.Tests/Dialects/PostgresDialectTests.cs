@@ -1508,13 +1508,13 @@ public class PostgresDialectTests : ParserTestBase
                         "_pg_expandarray"
                 ]))
             {
-                Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                Args = new FunctionArguments.List(new FunctionArgumentList([
                     new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.Array(new ArrayExpression(new[]
                         {
                             new LiteralValue(new Value.SingleQuotedString("i")),
                             new LiteralValue(new Value.SingleQuotedString("i"))
                         }, true))))
-                ], null))
+                ]))
             }), "n")
         );
 
@@ -2269,9 +2269,9 @@ public class PostgresDialectTests : ParserTestBase
         expected = new Subscript.Slice(
             new BinaryOp(new Function("array_length")
             {
-                Args = new FunctionArguments.List(new FunctionArgumentList(null,
-                        [new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("arr")))],
-                        null))
+                Args = new FunctionArguments.List(new FunctionArgumentList(
+                        [new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("arr")))]
+                        ))
             },
                 BinaryOperator.Minus,
                 new LiteralValue(new Value.Number("3"))),
@@ -2279,9 +2279,8 @@ public class PostgresDialectTests : ParserTestBase
             new BinaryOp(new Function("array_length")
             {
                 Args = new FunctionArguments.List(new FunctionArgumentList(
-                        null,
-                        [new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("arr")))],
-                        null))
+                        [new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("arr")))]
+                        ))
             },
                 BinaryOperator.Minus,
                 new LiteralValue(new Value.Number("1"))),
@@ -2312,13 +2311,11 @@ public class PostgresDialectTests : ParserTestBase
                 new Function("make_array")
                 {
                     Args = new FunctionArguments.List(new FunctionArgumentList(
-                        null,
                         [
                             new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.Number("1")))),
                                 new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.Number("2")))),
                                 new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.Number("3"))))
-                        ],
-                        null))
+                        ]))
                 },
                 new Subscript.Slice(new LiteralValue(new Value.Number("1")), new LiteralValue(new Value.Number("2")), null)),
             new Subscript.Index(new LiteralValue(new Value.Number("2"))));
@@ -2487,9 +2484,9 @@ public class PostgresDialectTests : ParserTestBase
         var partition = (Function)create.PartitionBy!;
 
         Assert.Equal("RANGE", partition.Name);
-        Assert.Equal(new FunctionArguments.List(new FunctionArgumentList(null, [
+        Assert.Equal(new FunctionArguments.List(new FunctionArgumentList([
                 new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("a")))
-            ], null))
+            ]))
             , partition.Args);
     }
 

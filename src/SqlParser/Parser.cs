@@ -881,20 +881,29 @@ public partial class Parser
             });
         }
 
-        Position ParsePositionExpr()
+        Expression ParsePositionExpr(Ident ident)
         {
-            ExpectLeftParen();
-
-            var expr = ParseSubExpression(BetweenPrecedence);
-
-            if (ParseKeyword(Keyword.IN))
+            var positionExpression = MaybeParse(() =>
             {
+                ExpectLeftParen();
+
+                var expr = ParseSubExpression(BetweenPrecedence);
+
+                ExpectKeyword(Keyword.IN);
+
                 var from = ParseExpr();
                 ExpectRightParen();
+
                 return new Position(expr, from);
+            });
+           
+
+            if (positionExpression != null)
+            {
+                return positionExpression;
             }
 
-            throw new ParserException("Position function must include IN keyword");
+            return ParseFunction(new ObjectName(ident));
         }
 
         Substring ParseSubstringExpr()
@@ -1294,7 +1303,7 @@ public partial class Parser
             Word { Keyword: Keyword.EXTRACT } => ParseExtractExpr(),
             Word { Keyword: Keyword.CEIL } => ParseCeilFloorExpr(true),
             Word { Keyword: Keyword.FLOOR } => ParseCeilFloorExpr(false),
-            Word { Keyword: Keyword.POSITION } when PeekToken() is LeftParen => ParsePositionExpr(),
+            Word { Keyword: Keyword.POSITION } p when PeekToken() is LeftParen => ParsePositionExpr(p.ToIdent()),
             Word { Keyword: Keyword.SUBSTRING } => ParseSubstringExpr(),
             Word { Keyword: Keyword.OVERLAY } => ParseOverlayExpr(),
             Word { Keyword: Keyword.TRIM } => ParseTrimExpr(),
@@ -1703,7 +1712,7 @@ public partial class Parser
 
         ExpectToken<RightParen>();
 
-        return new FunctionArgumentList(duplicateTreatment, args, clauses);
+        return new FunctionArgumentList(args, duplicateTreatment, clauses);
     }
 
     public ListAggOnOverflow? ParseListAggOnOverflow()

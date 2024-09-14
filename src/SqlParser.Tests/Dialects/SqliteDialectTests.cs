@@ -128,9 +128,9 @@ namespace SqlParser.Tests.Dialects
                 {
                     Over = new WindowType.WindowSpecType(new WindowSpec()),
                     Filter = new Identifier("y"),
-                    Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                    Args = new FunctionArguments.List(new FunctionArgumentList([
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("x")))
-                    ], null))
+                    ]))
                 });
                 Assert.Equal(expected, select.Projection.First());
             }

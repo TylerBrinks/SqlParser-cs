@@ -435,37 +435,37 @@ namespace SqlParser.Tests.Dialects
             {
                 new(new AssignmentTarget.ColumnName("description") , new Function("VALUES")
                 {
-                    Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                    Args = new FunctionArguments.List(new FunctionArgumentList([
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("description")))
-                    ], null))
+                    ]))
                 }),
 
                 new(new AssignmentTarget.ColumnName("perm_create"), new Function("VALUES")
                 {
-                    Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                    Args = new FunctionArguments.List(new FunctionArgumentList([
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("perm_create")))
-                    ], null))
+                    ]))
                 }),
 
                 new(new AssignmentTarget.ColumnName("perm_read"), new Function("VALUES")
                 {
-                    Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                    Args = new FunctionArguments.List(new FunctionArgumentList([
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("perm_read")))
-                    ], null))
+                    ]))
                 }),
 
                 new(new AssignmentTarget.ColumnName("perm_update"), new Function("VALUES")
                 {
-                    Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                    Args = new FunctionArguments.List(new FunctionArgumentList([
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("perm_update")))
-                    ], null))
+                    ]))
                 }),
 
                 new(new AssignmentTarget.ColumnName("perm_delete"), new Function("VALUES")
                 {
-                    Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                    Args = new FunctionArguments.List(new FunctionArgumentList([
                         new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Identifier("perm_delete")))
-                    ], null))
+                    ]))
                 })
             });
 

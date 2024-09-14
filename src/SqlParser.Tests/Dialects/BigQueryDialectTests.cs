@@ -301,7 +301,7 @@ public class BigQueryDialectTests : ParserTestBase
             new(new UnaryOp(new LiteralValue(new Value.Number("1")), UnaryOperator.Minus), MapAccessSyntax.Bracket),
             new(new Function("safe_offset")
             {
-                Args = new FunctionArguments.List(new FunctionArgumentList(null, args, null))
+                Args = new FunctionArguments.List(new FunctionArgumentList(Args: args))
             }, MapAccessSyntax.Bracket),
 
             new(new CompoundIdentifier(["a", "b"]), MapAccessSyntax.Period)

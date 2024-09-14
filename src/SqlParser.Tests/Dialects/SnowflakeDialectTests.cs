@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using SqlParser.Ast;
+﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
 using static SqlParser.Ast.Expression;
@@ -786,13 +785,13 @@ namespace SqlParser.Tests.Dialects
             left = new Identifier("c1");
             right = new Function("myudf")
             {
-                Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                Args = new FunctionArguments.List(new FunctionArgumentList( [
                     new FunctionArg.Unnamed(
                         new FunctionArgExpression.FunctionExpression(
                             new UnaryOp(
                                 new LiteralValue(
                                     new Value.Number("42")), UnaryOperator.Plus)))
-                ], null))
+                ]))
 
             };
             Assert.Equal(select.Selection!.AsBinaryOp().Left, left);
@@ -1250,6 +1249,13 @@ namespace SqlParser.Tests.Dialects
             });
 
             Assert.Equal(expected, select.Projection[0]);
+        }
+
+        [Fact]
+        public void Test_Parse_Position()
+        {
+            VerifiedQuery("SELECT position('an', 'banana', 1)");
+            VerifiedQuery("SELECT n, h, POSITION(n IN h) FROM pos");
         }
     }
 }
