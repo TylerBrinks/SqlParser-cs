@@ -88,4 +88,5 @@ public class PostgreSqlDialect : Dialect
     }
 
     public override bool SupportsGroupByExpression => true;
+    public override bool SupportsUnicodeStringLiteral => true;
 }

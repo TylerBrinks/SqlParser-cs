@@ -968,6 +968,7 @@ public partial class Parser
             SingleQuotedString s => s.Value,
             DoubleQuotedString s => s.Value,
             EscapedStringLiteral s when _dialect is PostgreSqlDialect or GenericDialect => s.Value,
+            UnicodeStringLiteral s => s.Value,
             _ => throw Expected("literal string", token)
         };
     }

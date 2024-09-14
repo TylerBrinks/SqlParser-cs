@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Text;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
 
@@ -68,6 +69,8 @@ public ref struct Tokenizer(bool unescape = true)
             'N' or 'n' => TokenizeNationalStringLiteral(character),
             // PostgreSQL accepts "escape" string constants, which are an extension to the SQL standard.
             'E' or 'e' => TokenizeEscape(character),
+            // Unicode string literals like U&'first \000A second' are supported in some dialects, including PostgreSQL
+            'U' or 'u' when _dialect.SupportsUnicodeStringLiteral  => TokenizeUnicodeStringLiteral(character),
             // The spec only allows an uppercase 'X' to introduce a hex
             // string, but PostgreSQL, at least, allows a lowercase 'x' too.
             'X' or 'x' => TokenizeHex(),
@@ -597,7 +600,7 @@ public ref struct Tokenizer(bool unescape = true)
     /// Read a single quoted string, starting with the opening quote.
     private string TokenizeEscapedSingleQuotedString(Location start)
     {
-        var unescaped = UnescapeSingleQuotedString();
+        var unescaped = new Unescaper(ref _state).Unescape();
 
         if (unescaped != null)
         {
@@ -607,10 +610,26 @@ public ref struct Tokenizer(bool unescape = true)
         throw new TokenizeException("Unterminated encoded string literal", start);
     }
 
-    private string? UnescapeSingleQuotedString()
+    private Token TokenizeUnicodeStringLiteral(char character)
     {
-        return new Unescaper(ref _state).Unescape();
+        _state.Next();
+        var next = _state.Peek();
+
+        if (next == Symbols.Ampersand)
+        {
+            var clone = _state.Clone();
+            clone.Next();
+            if (clone.Peek() == Symbols.SingleQuote)
+            {
+                _state.Next();
+                var unicode = new Unescaper(ref _state).UnescapeUnicode();
+                return new UnicodeStringLiteral(unicode!);
+            }
+        }
+
+        return new Word(new string(TokenizeWord(character)), null);
     }
+
 
     private Token TokenizeMinus()
     {

@@ -1355,6 +1355,7 @@ public partial class Parser
                 or RawStringLiteral
                 or NationalStringLiteral
                 or HexStringLiteral
+                or UnicodeStringLiteral
                 => ParseTokenValue(),
 
             LeftParen => ParseLeftParen(),
@@ -1740,6 +1741,7 @@ public partial class Parser
             else if (token
                      is SingleQuotedString
                      or EscapedStringLiteral
+                     or UnicodeStringLiteral
                      or NationalStringLiteral
                      or HexStringLiteral)
             {
@@ -6029,6 +6031,9 @@ public partial class Parser
 
             case EscapedStringLiteral e:
                 return new Value.EscapedStringLiteral(e.Value);
+
+            case UnicodeStringLiteral u:
+                return new Value.UnicodeStringLiteral(u.Value);
 
             case HexStringLiteral h:
                 return new Value.HexStringLiteral(h.Value);

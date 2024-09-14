@@ -211,6 +211,59 @@ internal static class Extensions
     /// <param name="value">Value to escape</param>
     /// <returns>Escaped string</returns>
     public static string? EscapeDoubleQuoteString(this string? value) => EscapeQuotedString(value, Symbols.DoubleQuote);
+
+    public static string? EscapeUnicodeString(this string? value)
+    {
+        if (value == null)
+        {
+            return value;
+        }
+
+        var builder = StringBuilderPool.Get();
+
+        foreach (var ch in value)
+        {
+
+            switch (ch)
+            {
+                case Symbols.SingleQuote:
+                    builder.Append("''");
+                    break;
+                case Symbols.Backslash:
+                    builder.Append(@"\\");
+                    break;
+                case Symbols.NewLine:
+                    builder.Append(@"\n");
+                    break;
+
+                default:
+                {
+                    if (char.IsAscii(ch))
+                    {
+                        builder.Append(ch);
+                    }
+                    else
+                    {
+                        uint codepoint = ch;
+                        // if the character fits in 32 bits, we can use the \XXXX format
+                        // otherwise, we need to use the \+XXXXXX format
+                        if (codepoint < 0xFFFF)
+                        {
+                            builder.Append($"\\{ch:XXXX}");
+                        }
+                        else
+                        {
+                            builder.Append($"\\+{ch:XXXXXX}");
+                        }
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        return StringBuilderPool.Return(builder);
+    }
     /// <summary>
     /// Escapes a string by replacing requiring escape substitution
     ///
@@ -259,43 +312,3 @@ internal static class Extensions
         return StringBuilderPool.Return(builder);
     }
 }
-
-//if (string.IsNullOrEmpty(value))
-//{
-//    return value;
-//}
-
-//var builder = StringBuilderPool.Get();
-
-//char? previous = null;
-//var peekable = new State(value);
-
-//char character;
-//while ((character = peekable.Peek()) != Symbols.EndOfFile)
-//{
-//    if (character == quote)
-//    {
-//        if (previous == Symbols.Backslash)
-//        {
-//            builder.Append(character);
-//            continue;
-//        }
-
-//        peekable.Next();
-//        builder.Append($"{character}{character}");
-
-//        if (peekable.Peek() == quote)
-//        {
-//            peekable.Next();
-//        }
-//    }
-//    else
-//    {
-//        builder.Append(character);
-//        peekable.Next();
-//    }
-
-//    previous = character;
-//}
-
-//return StringBuilderPool.Return(builder);

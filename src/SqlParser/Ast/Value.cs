@@ -249,6 +249,14 @@ public abstract record Value : IWriteSql, IElement
         }
     }
 
+    public record UnicodeStringLiteral(string Value) : StringBasedValue(Value)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write($"U&'{Value.EscapeUnicodeString()}'");
+        }
+    }
+
     public abstract void ToSql(SqlTextWriter writer);
 
     public T As<T>() where T : Value

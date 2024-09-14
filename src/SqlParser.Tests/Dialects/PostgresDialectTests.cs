@@ -2502,6 +2502,35 @@ public class PostgresDialectTests : ParserTestBase
             new (new LiteralValue(new Value.Number("1")))
         }, create.Query!.Body.AsSelect().Projection);
     }
+
+    [Fact]
+    public void Test_Escaped_String_Literal()
+    {
+        var expr = (LiteralValue)VerifiedExpr("E'\\n'");
+        var value = (Value.EscapedStringLiteral)expr.Value;
+
+        Assert.Equal("\n", value.Value);
+    }
+
+    [Fact]
+    public void Test_Unicode_String_Literal()
+    {
+        var pairs = new List<(string Sql, string Expected)>
+        {
+            new ("U&'\\0441\\043B\\043E\\043D'", "слон"),
+            new ("U&'\\+01F418'",  """🐘"""),
+            new ("U&'\\\\'", "\\"),
+            new ("U&''''", "'"),
+        };
+
+        foreach (var pair in pairs)
+        {
+            var expr = (LiteralValue)VerifiedExpr(pair.Sql);
+            var value = (Value.UnicodeStringLiteral)expr.Value;
+
+            Assert.Equal(pair.Expected, value.Value);
+        }
+    }
 }
 
 public record TestCase(string Sql, Owner ExpectedOwner);

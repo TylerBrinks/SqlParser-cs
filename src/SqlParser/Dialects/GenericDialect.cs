@@ -35,4 +35,5 @@ public class GenericDialect : Dialect
     public override bool SupportsParenthesizedSetVariables => true;
     public override bool SupportsSelectWildcardExcept => true;
     public override bool SupportMapLiteralSyntax => true;
+    public override bool SupportsUnicodeStringLiteral => true;
 }
