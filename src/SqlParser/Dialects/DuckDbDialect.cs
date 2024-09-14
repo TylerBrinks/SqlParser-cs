@@ -33,4 +33,5 @@ public class DuckDbDialect : Dialect
     public override bool SupportsNamedFunctionArgsWithEqOperator => true;
     public override bool SupportsDictionarySyntax => true;
     public override bool SupportsTrailingCommas => true;
+    public override bool SupportMapLiteralSyntax => true;
 }

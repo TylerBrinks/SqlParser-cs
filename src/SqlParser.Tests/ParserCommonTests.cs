@@ -5,6 +5,8 @@ using static SqlParser.Ast.DataType;
 using static SqlParser.Ast.Expression;
 using Action = SqlParser.Ast.Action;
 using DataType = SqlParser.Ast.DataType;
+using Map = SqlParser.Ast.Map;
+using Subscript = SqlParser.Ast.Subscript;
 
 // ReSharper disable StringLiteralTypo
 // ReSharper disable CommentTypo
@@ -6114,6 +6116,47 @@ namespace SqlParser.Tests
             OneStatementParsesTo("SELECT \"from\", FROM \"from\"", "SELECT \"from\" FROM \"from\"", DefaultDialects);
 
             Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT name, age, from employees;", new List<Dialect>{new GenericDialect()}));
+        }
+
+        [Fact]
+        public void Test_Map_Syntax()
+        {
+            Check("MAP {'Alberta': 'Edmonton', 'Manitoba': 'Winnipeg'}", new Expression.Map(new Map([
+                new (new LiteralValue(new Value.SingleQuotedString("Alberta")), new LiteralValue(new Value.SingleQuotedString("Edmonton"))),
+                new (new LiteralValue(new Value.SingleQuotedString("Manitoba")), new LiteralValue(new Value.SingleQuotedString("Winnipeg")))
+            ])));
+
+            Check("MAP {1: 10.0, 2: 20.0}", new Expression.Map(new Map([
+                new(new LiteralValue(new Value.Number("1")), new LiteralValue(new Value.Number("10.0"))),
+                new(new LiteralValue(new Value.Number("2")), new LiteralValue(new Value.Number("20.0")))
+            ])));
+
+            Check("MAP {[1, 2, 3]: 10.0, [4, 5, 6]: 20.0}", new Expression.Map(new Map([
+                new(new Expression.Array(new ArrayExpression([
+                    new LiteralValue(new Value.Number("1")),
+                    new LiteralValue(new Value.Number("2")),
+                    new LiteralValue(new Value.Number("3"))
+                ])), new LiteralValue(new Value.Number("10.0"))),
+
+                new(new Expression.Array(new ArrayExpression([
+                    new LiteralValue(new Value.Number("4")),
+                    new LiteralValue(new Value.Number("5")),
+                    new LiteralValue(new Value.Number("6"))
+                ])), new LiteralValue(new Value.Number("20.0")))
+            ])));
+
+            Check("MAP {'a': 10, 'b': 20}['a']", new Expression.Subscript(
+                new Expression.Map(new Map([
+                    new(new LiteralValue(new Value.SingleQuotedString("a")), new LiteralValue(new Value.Number("10"))),
+                    new(new LiteralValue(new Value.SingleQuotedString("b")), new LiteralValue(new Value.Number("20")))
+                ])),
+                new Subscript.Index(new LiteralValue(new Value.SingleQuotedString("a")))));
+
+            void Check(string sql, Expression expected)
+            {
+                var dialects = AllDialects.Where(d => d.SupportMapLiteralSyntax);
+                Assert.Equal(expected, VerifiedExpr(sql, dialects));
+            }
         }
     }
 }

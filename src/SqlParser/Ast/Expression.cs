@@ -862,6 +862,14 @@ public abstract record Expression : IWriteSql, IElement
             Value.ToSql(writer);
         }
     }
+
+    public record Map(Ast.Map MapExpression) : Expression
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+           writer.WriteSql($"{MapExpression}");
+        }
+    }
     /// Access a map-like object by field
     /// 
     /// Note that depending on the dialect, struct like accesses may be

@@ -15,7 +15,6 @@ using Select = SqlParser.Ast.Select;
 using Declare = SqlParser.Ast.Declare;
 using HiveRowDelimiter = SqlParser.Ast.HiveRowDelimiter;
 using Subscript = SqlParser.Ast.Subscript;
-using System.Data;
 
 namespace SqlParser;
 
@@ -1102,6 +1101,25 @@ public partial class Parser
             return new Prior(ParseSubExpression(PlusMinusPrecedence));
         }
 
+        Expression ParseDuckDbMapLiteral()
+        {
+            ExpectToken<LeftBrace>();
+            var fields = ParseCommaSeparated(ParseDuckDbMapField);
+            ExpectToken<RightBrace>();
+            return new Expression.Map(new Ast.Map(fields));
+        }
+
+        MapEntry ParseDuckDbMapField()
+        {
+            var key = ParseExpr();
+
+            ExpectToken<Colon>();
+
+            var value = ParseExpr();
+
+            return new MapEntry(key, value);
+        }
+
         Expression ParseBigQueryStructLiteral()
         {
             //var (fields, trailingBracket) = ParseStructTypeDef(ParseBigQueryStructFieldDef);
@@ -1292,6 +1310,7 @@ public partial class Parser
             Word { Keyword: Keyword.MATCH } when _dialect is MySqlDialect or GenericDialect => ParseMatchAgainst(),
             Word { Keyword: Keyword.STRUCT } when _dialect is BigQueryDialect or GenericDialect => ParseStruct(),
             Word { Keyword: Keyword.PRIOR } when _parserState == ParserState.ConnectBy => ParseConnectByExpression(),
+            Word { Keyword: Keyword.MAP } when _dialect.SupportMapLiteralSyntax && PeekTokenIs<LeftBrace>() => ParseDuckDbMapLiteral(),
             //  
             // Here `word` is a word, check if it's a part of a multipart
             // identifier, a function call, or a simple identifier

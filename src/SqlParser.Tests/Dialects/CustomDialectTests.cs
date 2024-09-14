@@ -63,6 +63,14 @@ public class CustomDialectTests : ParserTestBase
         Assert.True(((Statement.Commit)query).Chain);
     }
 
+    [Fact]
+    public void Test_Map_Syntax_Not_Support_Default()
+    {
+        var dialect = new CustomDialect();
+        Assert.Throws<ParserException>(() => new Parser().ParseSql("SELECT MAP {1: 2}", dialect));
+
+    }
+
     private static Expression? ParsePrefix(Parser parser)
     {
         return parser.ConsumeToken<Number>()
@@ -136,3 +144,21 @@ public class CustomDialect : Dialect
         return ParseStatementAction?.Invoke(parser);
     }
 }
+
+//public class MyDialect : Dialect
+//{
+//    public override bool IsIdentifierStart(char character)
+//    {
+//        return character.IsLetter() ||
+//               character.IsDigit() ||
+//               character is Symbols.Underscore;
+//    }
+
+//    public override bool IsIdentifierPart(char character)
+//    {
+//        return character.IsLetter() ||
+//               character.IsDigit() ||
+//               character is Symbols.Underscore
+//                   or Symbols.Dollar;
+//    }
+//}
