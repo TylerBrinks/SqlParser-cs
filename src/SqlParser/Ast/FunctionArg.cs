@@ -22,7 +22,7 @@ public abstract record FunctionArguments : IWriteSql, IElement
 
 public record FunctionArgumentList(
     DuplicateTreatment? DuplicateTreatment,
-    Sequence<FunctionArg> Args,
+    Sequence<FunctionArg>? Args,
     Sequence<FunctionArgumentClause>? Clauses) : IWriteSql
 {
     public static FunctionArgumentList Empty()

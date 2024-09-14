@@ -4760,6 +4760,29 @@ public partial class Parser
             return new ColumnOption.Default(ParseExpr());
         }
 
+        if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.MATERIALIZED))
+        {
+            return new ColumnOption.Materialized(ParseExpr());
+        }
+
+        if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.ALIAS))
+        {
+            return new ColumnOption.Alias(ParseExpr());
+        }
+
+        if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.EPHEMERAL))
+        {
+            var next = PeekToken();
+
+            if (next is Comma or RightParen)
+            {
+                return new ColumnOption.Ephemeral();
+            }
+
+            return new ColumnOption.Ephemeral(ParseExpr());
+
+        }
+
         if (ParseKeywordSequence(Keyword.PRIMARY, Keyword.KEY))
         {
             var order = _dialect is SQLiteDialect ? ParseOneOfKeywords([Keyword.ASC, Keyword.DESC]) : Keyword.undefined;

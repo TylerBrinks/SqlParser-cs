@@ -48,6 +48,46 @@ public abstract record ColumnOption : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// ClickHouse supports `MATERIALIZE`, `EPHEMERAL` and `ALIAS` expr to generate default values.
+    /// Syntax: `b INT MATERIALIZE (a + 1)`
+    /// </summary>
+    /// <param name="Expression">Expression</param>
+    public record Materialized(Expression Expression) : ColumnOption
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"MATERIALIZED {Expression}");
+        }
+    }
+    /// <summary>
+    /// Ephemeral
+    /// </summary>
+    /// <param name="Expression">Expression</param>
+    public record Ephemeral(Expression? Expression = null) : ColumnOption
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("EPHEMERAL");
+
+            if (Expression != null)
+            {
+                writer.WriteSql($" {Expression}");
+            }
+        }
+    }
+    /// <summary>
+    /// Alias
+    /// </summary>
+    /// <param name="Expression">Expression</param>
+    public record Alias(Expression Expression) : ColumnOption
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"ALIAS {Expression}");
+        }
+    }
+
+    /// <summary>
     /// Unique column option
     /// <example>
     /// <c>{ PRIMARY KEY | UNIQUE }</c>

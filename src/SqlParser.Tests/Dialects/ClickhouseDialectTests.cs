@@ -682,4 +682,51 @@ public class ClickhouseDialectTests : ParserTestBase
         var select = VerifiedQuery(sql, DefaultDialects!);
         Assert.Equal(new Interpolate([]), select.OrderBy!.Interpolate);
     }
+
+    [Fact]
+    public void Parse_Create_Table_With_Variant_Default_Expressions()
+    {
+        const string sql = """
+                  CREATE TABLE table (
+                  a DATETIME MATERIALIZED now(), 
+                  b DATETIME EPHEMERAL now(), 
+                  c DATETIME EPHEMERAL, 
+                  d STRING ALIAS toString(c)
+                  ) ENGINE=MergeTree
+                  """;
+
+        var create = VerifiedStatement<Statement.CreateTable>(sql);
+
+        var expected = new Sequence<ColumnDef>
+        {
+            new ("a", new DataType.Datetime(), Options:[
+                    new ColumnOptionDef(new ColumnOption.Materialized(new Expression.Function("now")
+                    {
+                        Args = new FunctionArguments.List(new FunctionArgumentList(null, null, null))
+                    }))
+                ]),
+
+            new ("b", new DataType.Datetime(), Options:[
+                    new ColumnOptionDef(new ColumnOption.Ephemeral(new Expression.Function("now")
+                    {
+                        Args = new FunctionArguments.List(new FunctionArgumentList(null, null, null))
+                    }))
+                ]),
+
+            new("c", new DataType.Datetime(), Options:[
+                new ColumnOptionDef(new ColumnOption.Ephemeral())
+                ]),
+
+            new("d", new DataType.StringType(), Options:[
+                new ColumnOptionDef(new ColumnOption.Alias(new Expression.Function("toString")
+                {
+                    Args = new FunctionArguments.List(new FunctionArgumentList(null, [
+                        new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.Identifier("c")))
+                    ], null))
+                }))
+            ]),
+        };
+
+        Assert.Equal(expected, create.Element.Columns);
+    }
 }
