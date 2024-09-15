@@ -1,9 +1,14 @@
 ﻿namespace SqlParser.Ast;
 
-public record Join(TableFactor? Relation = null, JoinOperator? JoinOperator = null) : IWriteSql, IElement
+public record Join(TableFactor? Relation = null, JoinOperator? JoinOperator = null, bool Global = false) : IWriteSql, IElement
 {
     public void ToSql(SqlTextWriter writer)
     {
+        if (Global)
+        {
+            writer.Write(" GLOBAL");
+        }
+
         switch (JoinOperator)
         {
             case JoinOperator.CrossApply:

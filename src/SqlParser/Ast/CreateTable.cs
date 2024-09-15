@@ -320,6 +320,5 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
         {
             writer.WriteSql($" AS {Query}");
         }
-
     }
 }

@@ -7998,6 +7998,8 @@ public partial class Parser
 
         while (true)
         {
+            var @global = ParseKeyword(Keyword.GLOBAL);
+
             Join join;
             if (ParseKeyword(Keyword.CROSS))
             {
@@ -8019,7 +8021,8 @@ public partial class Parser
                 join = new Join
                 {
                     Relation = ParseTableFactor(),
-                    JoinOperator = joinOperator
+                    JoinOperator = joinOperator,
+                    Global = @global
                 };
             }
             else if (ParseKeyword(Keyword.OUTER))
@@ -8028,7 +8031,8 @@ public partial class Parser
                 join = new Join
                 {
                     Relation = ParseTableFactor(),
-                    JoinOperator = new JoinOperator.OuterApply()
+                    JoinOperator = new JoinOperator.OuterApply(),
+                    Global = @global
                 };
             }
             else if (ParseKeyword(Keyword.ASOF))
@@ -8038,7 +8042,7 @@ public partial class Parser
                 var asOfRelation = ParseTableFactor();
                 ExpectKeyword(Keyword.MATCH_CONDITION);
                 var matchCondition = ExpectParens(ParseExpr);
-                join = new Join(asOfRelation, new JoinOperator.AsOf(matchCondition, ParseJoinConstraint(false)));
+                join = new Join(asOfRelation, new JoinOperator.AsOf(matchCondition, ParseJoinConstraint(false)), @global);
             }
             else
             {
@@ -8123,7 +8127,8 @@ public partial class Parser
                 join = new Join
                 {
                     Relation = rel,
-                    JoinOperator = joinAction(joniConstraint)
+                    JoinOperator = joinAction(joniConstraint),
+                    Global = @global
                 };
             }
 
