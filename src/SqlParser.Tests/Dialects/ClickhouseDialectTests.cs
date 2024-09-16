@@ -729,4 +729,30 @@ public class ClickhouseDialectTests : ParserTestBase
 
         Assert.Equal(expected, create.Element.Columns);
     }
+
+    [Fact]
+    public void Parse_Optimize_Table()
+    {
+        DefaultDialects = new List<Dialect> { new ClickHouseDialect() };
+        VerifiedStatement("OPTIMIZE TABLE t0");
+        VerifiedStatement("OPTIMIZE TABLE db.t0");
+        VerifiedStatement("OPTIMIZE TABLE t0 ON CLUSTER 'cluster'");
+        VerifiedStatement("OPTIMIZE TABLE t0 ON CLUSTER 'cluster' FINAL");
+        VerifiedStatement("OPTIMIZE TABLE t0 FINAL DEDUPLICATE");
+        VerifiedStatement("OPTIMIZE TABLE t0 DEDUPLICATE");
+        VerifiedStatement("OPTIMIZE TABLE t0 DEDUPLICATE BY id");
+        VerifiedStatement("OPTIMIZE TABLE t0 FINAL DEDUPLICATE BY id");
+        VerifiedStatement("OPTIMIZE TABLE t0 PARTITION tuple('2023-04-22') DEDUPLICATE BY id");
+        var optimize = VerifiedStatement<Statement.OptimizeTable>("OPTIMIZE TABLE t0 ON CLUSTER cluster PARTITION ID '2024-07' FINAL DEDUPLICATE BY id");
+
+        Assert.Equal("t0", optimize.Name);
+        Assert.Equal("cluster", optimize.OnCluster);
+        Assert.Equal(new Partition.Identifier(new Ident("2024-07", Symbols.SingleQuote)), optimize.Partition);
+        Assert.True(optimize.IncludeFinal);
+        Assert.Equal(new Deduplicate.ByExpression(new Expression.Identifier("id")), optimize.Deduplicate);
+
+        Assert.Throws<ParserException>(() => ParseSqlStatements("OPTIMIZE TABLE t0 DEDUPLICATE BY"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("OPTIMIZE TABLE t0 PARTITION"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("OPTIMIZE TABLE t0 PARTITION ID"));
+    }
 }

@@ -243,9 +243,49 @@ public partial class Parser
             Keyword.INSTALL when _dialect is DuckDbDialect or GenericDialect => ParseInstall(),
             // `LOAD` is DuckDb specific https://duckdb.org/docs/extensions/overview
             Keyword.LOAD when _dialect is DuckDbDialect or GenericDialect => ParseLoad(),
+            Keyword.OPTIMIZE when _dialect is ClickHouseDialect or GenericDialect => ParseOptimizeTable(),
 
             _ => throw Expected("a SQL statement", PeekToken())
         };
+    }
+
+    public OptimizeTable ParseOptimizeTable()
+    {
+        ExpectKeyword(Keyword.TABLE);
+
+        var name = ParseObjectName();
+        var onCluster = ParseOptionalOnCluster();
+
+        Partition? partition = null;
+
+        if (ParseKeyword(Keyword.PARTITION))
+        {
+            if (ParseKeywordSequence(Keyword.ID))
+            {
+                partition = new Partition.Identifier(ParseIdentifier());
+            }
+            else
+            {
+                partition = new Partition.Expr(ParseExpr());
+            }
+        }
+
+        var includeFinal = ParseKeyword(Keyword.FINAL);
+        Deduplicate? deduplicate = null;
+
+        if (ParseKeyword(Keyword.DEDUPLICATE))
+        {
+            if (ParseKeyword(Keyword.BY))
+            {
+                deduplicate = new Deduplicate.ByExpression(ParseExpr());
+            }
+            else
+            {
+                deduplicate = new Deduplicate.All();
+            }
+        }
+
+        return new OptimizeTable(name, onCluster, partition, includeFinal, deduplicate);
     }
 
     public Statement ParseFlush()
@@ -5420,7 +5460,7 @@ public partial class Parser
                     if (ParseKeyword(Keyword.PARTITION))
                     {
                         var partition = ExpectParens(() => ParseCommaSeparated(ParseExpr));
-                        newPartitions.Add(new Partition(partition));
+                        newPartitions.Add(new Partition.Partitions(partition));
                     }
                     else
                     {

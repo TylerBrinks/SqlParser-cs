@@ -1595,7 +1595,41 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
+    /// <summary>
+    /// OPTIMIZE TABLE [db.]name [ON CLUSTER cluster] [PARTITION partition | PARTITION ID 'partition_id'] [FINAL] [DEDUPLICATE [BY expression]]
+    /// </summary>
+    public record OptimizeTable(
+        ObjectName Name,
+        Ident? OnCluster = null,
+        Partition? Partition = null,
+        bool IncludeFinal = false,
+        Deduplicate? Deduplicate = null) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"OPTIMIZE TABLE {Name}");
 
+            if (OnCluster != null)
+            {
+                writer.WriteSql($" ON CLUSTER {OnCluster}");
+            }
+
+            if (Partition != null)
+            {
+                writer.WriteSql($" {Partition}");
+            }
+
+            if (IncludeFinal)
+            {
+                writer.Write(" FINAL");
+            }
+
+            if (Deduplicate != null)
+            {
+                writer.WriteSql($" {Deduplicate}");
+            }
+        }
+    }
     public record Pragma(ObjectName Name, Value? Value, bool IsEqual) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
