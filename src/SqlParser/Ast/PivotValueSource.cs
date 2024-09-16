@@ -11,7 +11,7 @@ public abstract record PivotValueSource : IWriteSql
         switch (this)
         {
             case List l:
-                writer.WriteDelimited(l.Values, ", ");
+                writer.WriteDelimited(l.Values, Constants.SpacedComma);
                 break;
 
             case Any a:
@@ -19,7 +19,7 @@ public abstract record PivotValueSource : IWriteSql
                 if (a.OrderBy.SafeAny())
                 {
                     writer.Write(" ORDER BY ");
-                    writer.WriteDelimited(a.OrderBy, ", ");
+                    writer.WriteDelimited(a.OrderBy, Constants.SpacedComma);
                 }
                 break;
 

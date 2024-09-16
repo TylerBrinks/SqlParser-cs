@@ -515,15 +515,15 @@ public class ClickhouseDialectTests : ParserTestBase
             }
         }
 
-        var invalidCases =new []{
+        var invalidCases = new[]{
             "SELECT * FROM t FORMAT",
             "SELECT * FROM t FORMAT TabSeparated JSONCompact",
             "SELECT * FROM t FORMAT TabSeparated TabSeparated",
         };
 
-        foreach(var sql in invalidCases)
+        foreach (var sql in invalidCases)
         {
-            Assert.Throws<ParserException>(() =>  ParseSqlStatements(sql));
+            Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
         }
     }
 
@@ -539,7 +539,7 @@ public class ClickhouseDialectTests : ParserTestBase
                   LIMIT 2
                   """;
 
-        var select = VerifiedQuery(sql, dialects: new []{new ClickHouseDialect()});
+        var select = VerifiedQuery(sql, dialects: new[] { new ClickHouseDialect() });
 
         var orderBy = new Sequence<OrderByExpression>
         {
@@ -613,7 +613,7 @@ public class ClickhouseDialectTests : ParserTestBase
             new Expression.LiteralValue(new Value.Number("10")),
             new Expression.LiteralValue(new Value.Number("20")),
             new Expression.LiteralValue(new Value.Number("2"))
-            ), 
+            ),
             select.OrderBy!.Expressions![0].WithFill);
     }
 
@@ -647,7 +647,7 @@ public class ClickhouseDialectTests : ParserTestBase
         var select = VerifiedQuery(sql, DefaultDialects!);
 
         var expected = new Interpolate([
-            new InterpolateExpression("col1", 
+            new InterpolateExpression("col1",
                 new Expression.BinaryOp(
                     new Expression.Identifier("col1"),
                     BinaryOperator.Plus,
@@ -656,7 +656,7 @@ public class ClickhouseDialectTests : ParserTestBase
 
             new InterpolateExpression("col2", new Expression.Identifier("col3")),
 
-            new InterpolateExpression("col4", 
+            new InterpolateExpression("col4",
                 new Expression.BinaryOp(
                     new Expression.Identifier("col4"),
                     BinaryOperator.Plus,
@@ -746,7 +746,7 @@ public class ClickhouseDialectTests : ParserTestBase
         var optimize = VerifiedStatement<Statement.OptimizeTable>("OPTIMIZE TABLE t0 ON CLUSTER cluster PARTITION ID '2024-07' FINAL DEDUPLICATE BY id");
 
         Assert.Equal("t0", optimize.Name);
-        Assert.Equal("cluster", optimize.OnCluster);
+        Assert.Equal("cluster", optimize.OnCluster!);
         Assert.Equal(new Partition.Identifier(new Ident("2024-07", Symbols.SingleQuote)), optimize.Partition);
         Assert.True(optimize.IncludeFinal);
         Assert.Equal(new Deduplicate.ByExpression(new Expression.Identifier("id")), optimize.Deduplicate);
@@ -754,5 +754,44 @@ public class ClickhouseDialectTests : ParserTestBase
         Assert.Throws<ParserException>(() => ParseSqlStatements("OPTIMIZE TABLE t0 DEDUPLICATE BY"));
         Assert.Throws<ParserException>(() => ParseSqlStatements("OPTIMIZE TABLE t0 PARTITION"));
         Assert.Throws<ParserException>(() => ParseSqlStatements("OPTIMIZE TABLE t0 PARTITION ID"));
+    }
+
+    [Fact]
+    public void Parse_Select_Table_Function_Settings()
+    {
+        var args = new TableFunctionArgs([
+            new FunctionArg.Unnamed(new FunctionArgExpression.FunctionExpression(new Expression.Identifier("arg")))
+        ], [
+            new ("s0", new Value.Number("3")),
+            new ("s1", new Value.SingleQuotedString("s"))
+        ]);
+
+        CheckSettings(args, "SELECT * FROM table_function(arg, SETTINGS s0 = 3, s1 = 's')");
+
+        args = new TableFunctionArgs([], [
+            new ("s0", new Value.Number("3")),
+            new ("s1", new Value.SingleQuotedString("s"))
+        ]);
+        CheckSettings(args, "SELECT * FROM table_function(SETTINGS s0 = 3, s1 = 's')");
+
+        Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT * FROM t(SETTINGS a)"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT * FROM t(SETTINGS a=)"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT * FROM t(SETTINGS a=1, b)"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT * FROM t(SETTINGS a=1, b=)"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT * FROM t(SETTINGS a=1, b=c)"));
+        return;
+
+        void CheckSettings(TableFunctionArgs expected, string sql)
+        {
+            var actual = VerifiedStatement(sql);
+            var select = actual.AsSelect().Query.Body.AsSelect();
+
+            Assert.Single(select.From!);
+            Assert.True(select.From![0].Joins == null);
+
+            var relation = select.From[0].Relation;
+
+            Assert.Equal(relation!.AsTable().Args, expected);
+        }
     }
 }

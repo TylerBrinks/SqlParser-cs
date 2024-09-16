@@ -1015,10 +1015,6 @@ public partial class Parser
     /// Parse a comma-separated list of 0+ items accepted by `F`
     /// `end_token` - expected end token for the closure (e.g. [Token::RParen], [Token::RBrace] ...)
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="action"></param>
-    /// <param name="endToken"></param>
-    /// <returns></returns>
     public Sequence<T> ParseCommaSeparated0<T>(Func<T> action, Type endTokenType)
     {
         var next = PeekToken();
@@ -1049,32 +1045,44 @@ public partial class Parser
         while (true)
         {
             values.Add(action());
-            if (!ConsumeToken<Comma>())
+            if (IsParseCommaSeparatedEnd())
             {
                 break;
-            }
-
-            if (_options.TrailingCommas)
-            {
-                var token = PeekToken();
-                if (token is Word w)
-                {
-
-                    //if (Keywords.ReservedForColumnAlias.Any(k => k == w.Keyword))
-                    if (Keywords.ReservedForColumnAlias.Contains(w.Keyword))
-                    {
-                        break;
-                    }
-                }
-                else if (token is RightParen or SemiColon or EOF or RightBracket or RightBrace)
-                {
-                    break;
-                }
             }
         }
 
         return values;
     }
+    /// <summary>
+    /// Parse the comma of a comma-separated syntax element.
+    /// Returns true if there is a next element
+    /// </summary>
+    /// <returns></returns>
+    public bool IsParseCommaSeparatedEnd()
+    {
+        if (!ConsumeToken<Comma>())
+        {
+            return true;
+        }
+
+        if (_options.TrailingCommas)
+        {
+            var token = PeekToken();
+            switch (token)
+            {
+                case Word w when Keywords.ReservedForColumnAlias.Contains(w.Keyword):
+                case RightParen 
+                    or SemiColon 
+                    or EOF 
+                    or RightBracket 
+                    or RightBrace:
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>
     /// Parse a query expression, i.e. a `SELECT` statement optionally
     /// preceded with some `WITH` CTE declarations and optionally followed
@@ -1106,7 +1114,6 @@ public partial class Parser
         Sequence<LockClause>? locks = null;
         Sequence<Expression>? limitBy = null;
         ForClause? forClause = null;
-        Sequence<Setting>? settings = null;
         FormatClause? formatClause = null;
 
         if (!ParseKeyword(Keyword.INSERT))
@@ -1152,18 +1159,8 @@ public partial class Parser
                 limitBy = ParseCommaSeparated(ParseExpr);
             }
 
-            if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.SETTINGS))
-            {
-                settings = ParseCommaSeparated(() =>
-                {
-                    var key = ParseIdentifier();
-                    ExpectToken<Equal>();
-                    var value = ParseValue();
-
-                    return new Setting(key, value);
-                });
-            }
-
+            var settings = ParseSettings();
+           
             if (ParseKeyword(Keyword.FETCH))
             {
                 fetch = ParseFetch();
@@ -1280,6 +1277,25 @@ public partial class Parser
 
             return null;
         }
+    }
+
+    private Sequence<Setting>? ParseSettings()
+    {
+        Sequence<Setting>? settings = null;
+
+        if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.SETTINGS))
+        {
+            settings = ParseCommaSeparated(() =>
+            {
+                var key = ParseIdentifier();
+                ExpectToken<Equal>();
+                var value = ParseValue();
+
+                return new Setting(key, value);
+            });
+        }
+
+        return settings;
     }
 
     public static void ThrowExpectedToken(Token expected, Token actual)

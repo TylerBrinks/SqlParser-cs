@@ -1081,7 +1081,7 @@ public abstract record Statement : IWriteSql, IElement
 
             if (DeleteOperation.Tables is { Count: > 0 })
             {
-                writer.WriteDelimited(DeleteOperation.Tables, ", ");
+                writer.WriteDelimited(DeleteOperation.Tables, Constants.SpacedComma);
             }
 
             writer.WriteSql($"{DeleteOperation.From}");

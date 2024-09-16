@@ -409,7 +409,7 @@ public abstract record DataType : IWriteSql, IElement
             {
                 if (i > 0)
                 {
-                    writer.Write(", ");
+                    writer.WriteSpacesComma();
                 }
                 writer.Write($"'{Values[i].EscapeSingleQuoteString()}'");
             }
@@ -743,7 +743,7 @@ public abstract record DataType : IWriteSql, IElement
             {
                 if (i > 0)
                 {
-                    writer.Write(", ");
+                    writer.WriteSpacesComma();
                 }
 
                 writer.Write($"'{Values[i].EscapeSingleQuoteString()}'");

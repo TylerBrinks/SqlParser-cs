@@ -75,7 +75,7 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
 
             if (hasColumns && hasConstraints)
             {
-                writer.Write(", ");
+                writer.Write(Constants.SpacedComma);
             }
 
             writer.WriteSql($"{Constraints})");

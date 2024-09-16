@@ -6113,7 +6113,7 @@ namespace SqlParser.Tests
             // At the moment, DuckDB is the only dialect that allows
             // trailing commas anywhere in the query
             DefaultDialects = new[] { new DuckDbDialect() };
-
+            
             OneStatementParsesTo("SELECT album_id, name, FROM track", "SELECT album_id, name FROM track", DefaultDialects);
             OneStatementParsesTo("SELECT * FROM track ORDER BY milliseconds,", "SELECT * FROM track ORDER BY milliseconds", DefaultDialects);
             OneStatementParsesTo("SELECT DISTINCT ON (album_id,) name FROM track", "SELECT DISTINCT ON (album_id) name FROM track", DefaultDialects);

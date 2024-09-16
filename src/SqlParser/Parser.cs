@@ -7435,8 +7435,6 @@ public partial class Parser
         }
 
         return ParseRemainingSetExpressions(expr, precedence);
-
-
     }
 
     private SetExpression ParseRemainingSetExpressions(SetExpression expr, int precedence)
@@ -8409,7 +8407,8 @@ public partial class Parser
         var version = ParseTableVersion();
 
         // Postgres, MSSQL: table-valued functions:
-        var args = ParseInit(ConsumeToken<LeftParen>(), ParseOptionalArgs);
+        var args = ParseInit(ConsumeToken<LeftParen>(), ParseTableFunctionArgs);
+
         var ordinality = ParseKeywordSequence(Keyword.WITH, Keyword.ORDINALITY);
         var optionalAlias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
 
@@ -8454,6 +8453,36 @@ public partial class Parser
         }
 
         return table;
+    }
+
+    private TableFunctionArgs ParseTableFunctionArgs()
+    {
+        if (ConsumeToken<RightParen>())
+        {
+            return new TableFunctionArgs([]);
+        }
+
+        var args = new Sequence<FunctionArg>();
+        Sequence<Setting>? settings = null;
+
+        while (true)
+        {
+            settings = ParseSettings();
+
+            if (settings != null)
+            {
+                break;
+            }
+
+            args.Add(ParseFunctionArgs());
+            if (IsParseCommaSeparatedEnd())
+            {
+                break;
+            }
+        }
+
+        ExpectRightParen();
+        return new TableFunctionArgs(args, settings);
     }
 
     public TableFactor ParseMatchRecognize(TableFactor table)

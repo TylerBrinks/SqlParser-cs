@@ -28,6 +28,11 @@ public class SqlTextWriter : StringWriter
         // no implementation needed; handled by the interpolation handler with
         // "this" passed in as the "" SqlTextWriter constructor parameter argument
     }
+
+    public void WriteSpacesComma()
+    {
+        Write(Constants.SpacedComma);
+    }
     /// <summary>
     /// Writes a given IEnumerable IWriteSql list with a specified
     /// delimiter between each item in the list
@@ -121,7 +126,7 @@ public static class SqlWritingExtensions
     /// <param name="list">List to write enumerated</param>
     /// <param name="delimiter">Delimiter between each IWriteSql object instance; default is comma separated.</param>
     /// <returns></returns>
-    public static string ToSqlDelimited<T>(this IEnumerable<T>? list, string delimiter = ", ") where T : IWriteSql
+    public static string ToSqlDelimited<T>(this IEnumerable<T>? list, string delimiter = Constants.SpacedComma) where T : IWriteSql
     {
         if (list == null)
         {
