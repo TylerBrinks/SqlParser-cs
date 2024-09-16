@@ -21,10 +21,13 @@ public abstract record Statement : IWriteSql, IElement
     /// <summary>
     /// Alter table statement
     /// </summary>
-    /// <param name="Name">Object name</param>
-    /// <param name="Operations">Table operations</param>
-    public record AlterTable(ObjectName Name, bool IfExists, bool Only, Sequence<AlterTableOperation> Operations,
-        HiveSetLocation? Location) : Statement
+    public record AlterTable(
+        ObjectName Name,
+        bool IfExists, 
+        bool Only, 
+        Sequence<AlterTableOperation> Operations,
+        HiveSetLocation? Location, 
+        Ident? OnCluster = null) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -39,7 +42,14 @@ public abstract record Statement : IWriteSql, IElement
                 writer.Write("ONLY ");
             }
 
-            writer.WriteSql($"{Name} {Operations.ToSqlDelimited()}");
+            writer.WriteSql($"{Name} ");
+
+            if (OnCluster != null)
+            {
+                writer.WriteSql($"ON CLUSTER {OnCluster} ");
+            }
+
+            writer.WriteDelimited(Operations);
 
             if (Location != null)
             {

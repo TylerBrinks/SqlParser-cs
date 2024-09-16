@@ -1913,9 +1913,9 @@ namespace SqlParser.Tests
                 new("b", new Int()),
             })
             {
-                OnCluster = "{cluster}"
+                OnCluster = new Ident("{cluster}", Symbols.SingleQuote)
             });
-
+            
             Assert.Equal(expected, create);
 
             create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE t ON CLUSTER my_cluster (a INT, b INT)");
@@ -6184,6 +6184,24 @@ namespace SqlParser.Tests
                 new Identifier("name"),
                 new Expression.Tuple([])]);
             Assert.Equal(expected, select.GroupBy);
+        }
+
+        [Fact]
+        public void Test_Alter_Table_With_On_Cluster()
+        {
+            var alter = VerifiedStatement<Statement.AlterTable>(
+                "ALTER TABLE t ON CLUSTER 'cluster' ADD CONSTRAINT bar PRIMARY KEY (baz)");
+
+            Assert.Equal("t", alter.Name);
+            Assert.Equal(new Ident("cluster", Symbols.SingleQuote), alter.OnCluster);
+
+            alter = VerifiedStatement<Statement.AlterTable>(
+                "ALTER TABLE t ON CLUSTER cluster_name ADD CONSTRAINT bar PRIMARY KEY (baz)");
+
+            Assert.Equal("t", alter.Name);
+            Assert.Equal(new Ident("cluster_name"), alter.OnCluster);
+
+            Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t ON CLUSTER 123 ADD CONSTRAINT bar PRIMARY KEY (baz)"));
         }
     }
 }

@@ -33,7 +33,7 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
     public OnCommit OnCommit { get; init; }
     // Clickhouse "ON CLUSTER" clause:
     // https://clickhouse.com/docs/en/sql-reference/distributed-ddl/
-    public string? OnCluster { get; init; }
+    public Ident? OnCluster { get; init; }
     public Expression? PrimaryKey { get; init; }
     // SQLite "STRICT" clause.
     // if the "STRICT" table-option keyword is added to the end, after the closing ")",
@@ -63,10 +63,7 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
 
         if (OnCluster != null)
         {
-            var cluster = OnCluster
-                .Replace(Symbols.CurlyBracketOpen.ToString(), $"{Symbols.SingleQuote}{Symbols.CurlyBracketOpen}")
-                .Replace(Symbols.CurlyBracketClose.ToString(), $"{Symbols.CurlyBracketClose}{Symbols.SingleQuote}");
-            writer.WriteSql($" ON CLUSTER {cluster}");
+            writer.WriteSql($" ON CLUSTER {OnCluster}");
         }
 
         var hasColumns = Columns.SafeAny();

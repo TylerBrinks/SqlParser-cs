@@ -4410,18 +4410,7 @@ public partial class Parser
         var ifNotExists = ParseIfNotExists();
         var tableName = ParseObjectName(allowUnquotedHyphen);
 
-        // Clickhouse has `ON CLUSTER 'cluster'` syntax for DDLs
-        string? onCluster = null;
-        if (ParseKeywordSequence(Keyword.ON, Keyword.CLUSTER))
-        {
-            var token = NextToken();
-            onCluster = token switch
-            {
-                SingleQuotedString s => s.Value,
-                Word w => w.Value,
-                _ => throw Expected("identifier or cluster literal", token)
-            };
-        }
+        var onCluster = ParseOptionalOnCluster();
 
         var like = ParseInit<ObjectName?>(ParseKeyword(Keyword.LIKE) || ParseKeyword(Keyword.ILIKE), () => ParseObjectName(allowUnquotedHyphen));
 
@@ -4597,6 +4586,17 @@ public partial class Parser
             ClusterBy = createTableConfig.ClusterBy,
             Options = createTableConfig.Options
         };
+    }
+
+    private Ident? ParseOptionalOnCluster()
+    {
+        string? onCluster = null;
+        if (ParseKeywordSequence(Keyword.ON, Keyword.CLUSTER))
+        {
+            return ParseIdentifier();
+        }
+
+        return null;
     }
 
     public CreateTableConfiguration ParseOptionalCreateTableConfig()
@@ -5308,6 +5308,7 @@ public partial class Parser
                     var ifExists = ParseIfExists();
                     var only = ParseKeyword(Keyword.ONLY);
                     var tableName = ParseObjectName();
+                    var onCluster = ParseOptionalOnCluster();
                     var operations = ParseCommaSeparated(ParseAlterTableOperation);
 
                     HiveSetLocation? location = null;
@@ -5321,7 +5322,7 @@ public partial class Parser
                         location = new HiveSetLocation(true, ParseIdentifier());
                     }
 
-                    return new AlterTable(tableName, ifExists, only, operations, location);
+                    return new AlterTable(tableName, ifExists, only, operations, location, onCluster);
                 }
 
             case Keyword.INDEX:
