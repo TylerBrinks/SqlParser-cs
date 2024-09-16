@@ -4641,7 +4641,7 @@ public partial class Parser
             if (ParseAnyOptionalTableConstraints(constraint => constraints.Add(constraint))) {
                 // work has been done already
             }
-            else if (PeekToken() is Word) {
+            else if ((PeekToken() is Word) || (PeekToken() is SingleQuotedString)) {
                 columns.Add(ParseColumnDef());
             }
             else {

@@ -2,6 +2,7 @@
 using Spectre.Console;
 using Spectre.Console.Json;
 using SqlParser;
+using SqlParser.Dialects;
 
 namespace SqlParserDemo;
 
@@ -31,7 +32,7 @@ public class QueryParser
 
             try
             {
-                var statements = new Parser().ParseSql(_sql);
+                var statements = new Parser().ParseSql(_sql, new SQLiteDialect());
                 var choices = new List<string> { "Default (AST)", "SQL", "JSON" };
                 var format = AnsiConsole.Prompt(new SelectionPrompt<string>()
                     .Title("[green]Format the output as[/]?")
