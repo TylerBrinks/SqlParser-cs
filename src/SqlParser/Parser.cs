@@ -1259,13 +1259,7 @@ public partial class Parser
 
         Expression.Array ParseArrayExpr(bool named)
         {
-            if (PeekToken() is RightBracket)
-            {
-                NextToken();
-                return new Expression.Array(new ArrayExpression(new Sequence<Expression>(), named));
-            }
-
-            var expressions = ParseCommaSeparated(ParseExpr);
+            var expressions = ParseCommaSeparated0(ParseExpr, typeof(RightBracket));
             ExpectToken<RightBracket>();
             return new Expression.Array(new ArrayExpression(expressions, named));
         }
