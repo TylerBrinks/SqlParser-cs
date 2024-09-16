@@ -216,7 +216,7 @@ namespace SqlParser.Tests
             {
                 DefaultDialects!.RunParserMethod(sql, parser =>
                 {
-                    var parsedConstraint = parser.ParseOptionalTableConstraint();
+                    var parsedConstraint = parser.ParseOptionalTableConstraint(false, false);
                     Assert.Equal(constraint, parsedConstraint);
                     Assert.Equal(sql, parsedConstraint!.ToSql());
                 });
@@ -321,6 +321,51 @@ namespace SqlParser.Tests
                 new Expression.LiteralValue(new Value.SingleQuotedString("Europe/Brussels")));
             
             Assert.Equal(expected, select.Projection[0].AsExpr());
+        }
+
+        [Fact]
+        public void Parse_Alter_Table_Add_Unique_Using_Index_Constraint()
+        {
+            const string expectedConstraintName = "constraint_name";
+            const string expectedIndexName = "index_name";
+            const string sql = $"ALTER TABLE tab ADD CONSTRAINT {expectedConstraintName} UNIQUE USING INDEX {expectedIndexName}";
+            var postgresDialect = new PostgreSqlDialect();
+            var parser = new Parser();
+            _ = parser.ParseSql(sql, postgresDialect);
+            var addConstraint = (AlterTableOperation.AddConstraint)AlterTableOp(VerifiedStatement(sql, new Dialect[] { postgresDialect }));
+            var addedConstraint = (TableConstraint.PostgresAlterTableIndex) addConstraint.TableConstraint;
+            Assert.Equal(expectedConstraintName, addedConstraint.Name);
+            Assert.Equal(expectedIndexName, addedConstraint.IndexName);
+            Assert.False(addedConstraint.IsPrimaryKey);
+        }
+
+        [Fact]
+        public void Parse_Alter_Table_Add_Primary_Key_Using_Index_Constraint()
+        {
+            const string expectedConstraintName = "constraint_name";
+            const string expectedIndexName = "index_name";
+            const string sql = $"ALTER TABLE tab ADD CONSTRAINT {expectedConstraintName} PRIMARY KEY USING INDEX {expectedIndexName}";
+            var postgresDialect = new PostgreSqlDialect();
+            var parser = new Parser();
+            _ = parser.ParseSql(sql, postgresDialect);
+            var addConstraint = (AlterTableOperation.AddConstraint)AlterTableOp(VerifiedStatement(sql, new Dialect[] { postgresDialect }));
+            var addedConstraint = (TableConstraint.PostgresAlterTableIndex) addConstraint.TableConstraint;
+            Assert.Equal(expectedConstraintName, addedConstraint.Name);
+            Assert.Equal(expectedIndexName, addedConstraint.IndexName);
+            Assert.True(addedConstraint.IsPrimaryKey);
+        }
+
+        [Fact]
+        public void Parse_Alter_Table_Add_Constraint_Using_With_Characteristics()
+        {
+            const string sql = "ALTER TABLE tab ADD CONSTRAINT constraint_name UNIQUE USING INDEX index_name DEFERRABLE";
+            var postgresDialect = new PostgreSqlDialect();
+            var parser = new Parser();
+            _ = parser.ParseSql(sql, postgresDialect);
+            var addConstraint = (AlterTableOperation.AddConstraint)AlterTableOp(VerifiedStatement(sql, new Dialect[] { postgresDialect }));
+            var addedConstraint = (TableConstraint.PostgresAlterTableIndex) addConstraint.TableConstraint;
+            Assert.NotNull(addedConstraint.Characteristics);
+            Assert.True(addedConstraint.Characteristics.Deferrable);
         }
     }
 }

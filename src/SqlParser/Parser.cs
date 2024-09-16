@@ -5083,14 +5083,14 @@ public partial class Parser
     bool ParseAnyOptionalTableConstraints(Action<TableConstraint> action) {
         bool any = false;
         while (true) {
-            var constraint = ParseOptionalTableConstraint(any);
+            var constraint = ParseOptionalTableConstraint(any, false);
             if (constraint == null) return any;
             action(constraint);
             any = true;
         }
     }
 
-    public TableConstraint? ParseOptionalTableConstraint(bool isSubsequentConstraint = false)
+    public TableConstraint? ParseOptionalTableConstraint(bool isSubsequentConstraint, bool isAlterTable)
     {
         var name = isSubsequentConstraint ? null : ParseInit(ParseKeyword(Keyword.CONSTRAINT), ParseIdentifier);
 
@@ -5113,18 +5113,31 @@ public partial class Parser
             var isPrimary = word.Keyword == Keyword.PRIMARY;
             ParseKeyword(Keyword.KEY);
 
-            // Optional constraint name
-            var identName = MaybeParse(ParseIdentifier) ?? name;
-
-            var columns = ParseParenthesizedColumnList(IsOptional.Mandatory, false);
-            var characteristics = ParseConstraintCharacteristics();
-
-            return new TableConstraint.Unique(columns)
+            if (_dialect is PostgreSqlDialect && isAlterTable && PeekToken() is Word { Keyword: Keyword.USING })
             {
-                Name = identName,
-                IsPrimaryKey = isPrimary,
-                Characteristics = characteristics
-            };
+                ParseKeywordSequence(Keyword.USING, Keyword.INDEX);
+                var indexName = ParseIdentifier();
+                var characteristics = ParseConstraintCharacteristics();
+
+                return new TableConstraint.PostgresAlterTableIndex(name, indexName)
+                {
+                    Characteristics = characteristics,
+                    IsPrimaryKey = isPrimary
+                };
+            }
+            else
+            {
+                // Optional constraint name
+                var identName = MaybeParse(ParseIdentifier) ?? name;
+                var columns = ParseParenthesizedColumnList(IsOptional.Mandatory, false);
+                var characteristics = ParseConstraintCharacteristics();
+                return new TableConstraint.Unique(columns)
+                {
+                    Name = identName,
+                    IsPrimaryKey = isPrimary,
+                    Characteristics = characteristics
+                };
+            }
         }
 
         TableConstraint ParseForeign()
@@ -5390,7 +5403,7 @@ public partial class Parser
 
         if (ParseKeyword(Keyword.ADD))
         {
-            var constraint = ParseOptionalTableConstraint();
+            var constraint = ParseOptionalTableConstraint(false, true);
             if (constraint != null)
             {
                 operation = new AddConstraint(constraint);
