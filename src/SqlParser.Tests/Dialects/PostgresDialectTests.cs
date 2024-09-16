@@ -2531,6 +2531,53 @@ public class PostgresDialectTests : ParserTestBase
             Assert.Equal(pair.Expected, value.Value);
         }
     }
+
+    [Fact]
+    public void Arrow_Precedence()
+    {
+        CheckPrecedence("SELECT foo -> 'bar' = 'spam'", BinaryOperator.Arrow);
+        CheckPrecedence("SELECT foo ->> 'bar' = 'spam'", BinaryOperator.LongArrow);
+
+        return;
+
+        void CheckPrecedence(string sql, BinaryOperator @operator)
+        {
+            var query = VerifiedStatement(sql);
+
+            var select = query.AsQuery()!.Body.AsSelectExpression();
+            var expected = new Sequence<SelectItem>
+            {
+                new SelectItem.UnnamedExpression(new BinaryOp(
+                    new BinaryOp(
+                        new Identifier("foo"),
+                        @operator,
+                        new LiteralValue(new Value.SingleQuotedString("bar"))
+                        ),
+                    BinaryOperator.Eq,
+                    new LiteralValue(new Value.SingleQuotedString("spam"))
+                ))
+            };
+            Assert.Equal(expected, select.Select.Projection);
+        }
+    }
+
+    [Fact]
+    public void Arrow_Cast_Precedence()
+    {
+        var query = VerifiedStatement("SELECT foo -> 'bar'::TEXT");
+
+        var select = query.AsQuery()!.Body.AsSelectExpression();
+        var expected = new Sequence<SelectItem>
+        {
+            new SelectItem.UnnamedExpression(new BinaryOp(
+              new Identifier("foo"),
+              BinaryOperator.Arrow,
+              new Cast(new LiteralValue(new Value.SingleQuotedString("bar")), new DataType.Text(), CastKind.DoubleColon)
+            ))
+        };
+
+        Assert.Equal(expected, select.Select.Projection);
+    }
 }
 
 public record TestCase(string Sql, Owner ExpectedOwner);

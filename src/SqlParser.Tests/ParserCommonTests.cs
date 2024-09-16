@@ -4710,7 +4710,7 @@ namespace SqlParser.Tests
         public void Parse_Position()
         {
             Expression expected = new Position(new LiteralValue(new Value.SingleQuotedString("@")), new Identifier("field"));
-            var position = VerifiedExpr("POSITION('@' IN field)");
+            var position = VerifiedExpr("POSITION('@' IN field)", new []{new PostgreSqlDialect()});
             Assert.Equal(expected, position);
 
             expected = new Function("position")

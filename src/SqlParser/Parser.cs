@@ -40,8 +40,6 @@ public partial class Parser
     public const short MulDivModOpPrecedence = 40;
     public const short AtTimeZonePrecedence = 41;
     public const short PlusMinusPrecedence = 30;
-
-    //public const short MultiplyPrecedence = 40;
     public const short ArrowPrecedence = 50;
 
     private int _index;
@@ -923,11 +921,12 @@ public partial class Parser
 
         Expression ParsePositionExpr(Ident ident)
         {
+            var betweenPrec = _dialect.GetBetweenPrecedence();
             var positionExpression = MaybeParse(() =>
             {
                 ExpectLeftParen();
 
-                var expr = ParseSubExpression(BetweenPrecedence);
+                var expr = ParseSubExpression(betweenPrec);
 
                 ExpectKeyword(Keyword.IN);
 
