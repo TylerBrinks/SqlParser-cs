@@ -812,6 +812,7 @@ public enum Keyword
     UNBOUNDED,
     UNCACHE,
     UNCOMMITTED,
+    UNFREEZE,
     UNION,
     UNIQUE,
     UNKNOWN,

@@ -816,4 +816,33 @@ public class ClickhouseDialectTests : ParserTestBase
         Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t0 ATTACH PART"));
         Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t0 DETACH PART"));
     }
+
+    [Fact]
+    public void Parse_Freeze_And_Unfreeze_Partition()
+    {
+        var actual = VerifiedStatement<Statement.AlterTable>("ALTER TABLE t FREEZE PARTITION '2024-08-14'");
+        var partition = new Partition.Expr(new Expression.LiteralValue(new Value.SingleQuotedString("2024-08-14")));
+        AlterTableOperation expected = new AlterTableOperation.FreezePartition(partition);
+        Assert.Equal(expected, actual.Operations[0]);
+
+        actual = VerifiedStatement<Statement.AlterTable>("ALTER TABLE t UNFREEZE PARTITION '2024-08-14'");
+        expected = new AlterTableOperation.UnfreezePartition(partition);
+        Assert.Equal(expected, actual.Operations[0]);
+
+
+        actual = VerifiedStatement<Statement.AlterTable>("ALTER TABLE t FREEZE PARTITION '2024-08-14' WITH NAME 'hello'");
+        expected = new AlterTableOperation.FreezePartition(partition, new Ident("hello", Symbols.SingleQuote));
+        Assert.Equal(expected, actual.Operations[0]);
+
+        actual = VerifiedStatement<Statement.AlterTable>("ALTER TABLE t UNFREEZE PARTITION '2024-08-14' WITH NAME 'hello'");
+        expected = new AlterTableOperation.UnfreezePartition(partition, new Ident("hello", Symbols.SingleQuote));
+        Assert.Equal(expected, actual.Operations[0]);
+
+        Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t0 FREEZE PARTITION"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t0 FREEZE PARTITION p0 WITH"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t0 FREEZE PARTITION p0 WITH NAME"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t0 UNFREEZE PARTITION"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t0 UNFREEZE PARTITION p0 WITH"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t0 UNFREEZE PARTITION p0 WITH NAME"));
+    }
 }

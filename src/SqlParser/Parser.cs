@@ -5943,6 +5943,28 @@ public partial class Parser
         {
             return new DetachPartition(ParsePartOrPartition());
         }
+        else if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.FREEZE))
+        {
+            var partition = ParsePartOrPartition();
+            Ident? withName = null;
+            if (ParseKeyword(Keyword.WITH))
+            {
+                ExpectKeyword(Keyword.NAME);
+                withName = ParseIdentifier();
+            }
+            return new FreezePartition(partition, withName);
+        }
+        else if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.UNFREEZE))
+        {
+            var partition = ParsePartOrPartition();
+            Ident? withName = null;
+            if (ParseKeyword(Keyword.WITH))
+            {
+                ExpectKeyword(Keyword.NAME);
+                withName = ParseIdentifier();
+            }
+            return new UnfreezePartition(partition, withName);
+        }
         else if (_dialect is PostgreSqlDialect or GenericDialect && ParseKeywordSequence(Keyword.OWNER, Keyword.TO))
         {
             var keyword = ParseOneOfKeywords(Keyword.CURRENT_USER, Keyword.CURRENT_ROLE, Keyword.SESSION_USER);

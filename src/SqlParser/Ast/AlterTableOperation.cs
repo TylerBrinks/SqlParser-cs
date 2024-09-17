@@ -301,7 +301,21 @@ public abstract record AlterTableOperation : IWriteSql
             writer.WriteSql($"ENABLE TRIGGER {Name}");
         }
     }
+    /// <summary>
+    /// FREEZE PARTITION partition_expr
+    /// </summary>
+    public record FreezePartition(Partition Partition, Ident? WithName = null) : AlterTableOperation
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"FREEZE {Partition}");
 
+            if (WithName != null)
+            {
+                writer.WriteSql($" WITH NAME {WithName}");
+            }
+        }
+    }
     /// <summary>
     /// CHANGE [ COLUMN ] col_name data_type [ options ]
     /// </summary>
@@ -327,7 +341,6 @@ public abstract record AlterTableOperation : IWriteSql
             }
         }
     }
-    
     /// <summary>
     /// Rename partitions table operation
     /// <example>
@@ -450,6 +463,20 @@ public abstract record AlterTableOperation : IWriteSql
             writer.WriteSql($"OWNER TO {NewOwner}");
         }
     }
+    /// <summary>
+    /// UNFREEZE PARTITION partition_expr
+    /// </summary>
+    public record UnfreezePartition(Partition Partition, Ident? WithName = null) : AlterTableOperation
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"UNFREEZE {Partition}");
 
+            if (WithName != null)
+            {
+                writer.WriteSql($" WITH NAME {WithName}");
+            }
+        }
+    }
     public abstract void ToSql(SqlTextWriter writer);
 }
