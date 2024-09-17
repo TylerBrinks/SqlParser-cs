@@ -4788,7 +4788,7 @@ public partial class Parser
         }
     }
 
-    public Keyword? ParseColumnConflictClause () {
+    public Keyword? ParseSQLiteConflictClause () {
         if (!ParseKeywordSequence(Keyword.ON, Keyword.CONFLICT)) return null;
         return ParseOneOfKeywords(Keyword.ROLLBACK, Keyword.ABORT, Keyword.FAIL, Keyword.IGNORE, Keyword.REPLACE);
     }
@@ -4852,7 +4852,7 @@ public partial class Parser
         if (ParseKeywordSequence(Keyword.PRIMARY, Keyword.KEY))
         {
             var order = _dialect is SQLiteDialect ? ParseOneOfKeywords([Keyword.ASC, Keyword.DESC]) : Keyword.undefined;
-            var conflict = _dialect is SQLiteDialect ? ParseColumnConflictClause() : Keyword.undefined;
+            var conflict = _dialect is SQLiteDialect ? ParseSQLiteConflictClause() : Keyword.undefined;
             var autoincrement = _dialect is SQLiteDialect && ParseKeyword(Keyword.AUTOINCREMENT);
             var characteristics = ParseConstraintCharacteristics();
             return new ColumnOption.Unique(true) {
@@ -4865,7 +4865,7 @@ public partial class Parser
 
         if (ParseKeyword(Keyword.UNIQUE))
         {
-            var conflict = _dialect is SQLiteDialect ? ParseColumnConflictClause() : null;
+            var conflict = _dialect is SQLiteDialect ? ParseSQLiteConflictClause() : null;
             var characteristics = ParseConstraintCharacteristics();
             return new ColumnOption.Unique(false)
             {
@@ -5185,11 +5185,13 @@ public partial class Parser
                 // Optional constraint name
                 var identName = MaybeParse(ParseIdentifier) ?? name;
                 var columns = ParseParenthesizedColumnList(IsOptional.Mandatory, false);
+                var conflict = _dialect is SQLiteDialect ? ParseSQLiteConflictClause() : null;
                 var characteristics = ParseConstraintCharacteristics();
                 return new TableConstraint.Unique(columns)
                 {
                     Name = identName,
                     IsPrimaryKey = isPrimary,
+                    Conflict = conflict,
                     Characteristics = characteristics
                 };
             }
