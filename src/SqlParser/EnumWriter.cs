@@ -101,7 +101,7 @@ public static class EnumWriter
             FunctionParallel.Safe => "PARALLEL SAFE",
 
             GroupByWithModifier.Rollup => "WITH ROLLUP",
-            GroupByWithModifier.Cube =>  "WITH CUBE",
+            GroupByWithModifier.Cube => "WITH CUBE",
             GroupByWithModifier.Totals => "WITH TOTALS",
 
             HavingBoundKind.Min => "MIN",
@@ -157,6 +157,16 @@ public static class EnumWriter
             TransactionIsolationLevel.RepeatableRead => "REPEATABLE READ",
             TransactionAccessMode.ReadOnly => "READ ONLY",
             TransactionAccessMode.ReadWrite => "READ WRITE",
+
+            TriggerObject.Row => "ROW",
+            TriggerObject.Statement => "STATEMENT",
+
+            TriggerPeriod.After => "AFTER",
+            TriggerPeriod.Before => "BEFORE",
+            TriggerPeriod.InsteadOf => "INSTEAD OF",
+
+            TriggerReferencingType.OldTable => "OLD TABLE",
+            TriggerReferencingType.NewTable => "NEW TABLE",
 
             UnaryOperator.Plus => "+",
             UnaryOperator.Minus => "-",

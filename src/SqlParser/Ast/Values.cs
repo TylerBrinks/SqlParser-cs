@@ -16,7 +16,7 @@ public record Values(Sequence<Sequence<Expression>> Rows, bool ExplicitRow = fal
         {
             if (i > 0)
             {
-                writer.WriteSpacesComma();
+                writer.WriteCommaSpaced();
             }
 
             writer.WriteSql($"{prefix}({Rows[i]})");

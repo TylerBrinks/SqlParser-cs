@@ -1833,7 +1833,7 @@ public class PostgresDialectTests : ParserTestBase
     public void Parse_Drop_Function()
     {
         var drop = VerifiedStatement<Statement.DropFunction>("DROP FUNCTION IF EXISTS test_func");
-        var expected = new Statement.DropFunction(true, new Statement.DropFunctionDesc[]
+        var expected = new Statement.DropFunction(true, new Statement.FunctionDesc[]
             {
                     new("test_func")
             },
@@ -1842,7 +1842,7 @@ public class PostgresDialectTests : ParserTestBase
 
 
         drop = VerifiedStatement<Statement.DropFunction>("DROP FUNCTION IF EXISTS test_func(a INTEGER, IN b INTEGER = 1)");
-        expected = new Statement.DropFunction(true, new Statement.DropFunctionDesc[]
+        expected = new Statement.DropFunction(true, new Statement.FunctionDesc[]
             {
                     new("test_func")
                     {
@@ -1862,7 +1862,7 @@ public class PostgresDialectTests : ParserTestBase
 
 
         drop = VerifiedStatement<Statement.DropFunction>("DROP FUNCTION IF EXISTS test_func1(a INTEGER, IN b INTEGER = 1), test_func2(a VARCHAR, IN b INTEGER = 1)");
-        expected = new Statement.DropFunction(true, new Statement.DropFunctionDesc[]
+        expected = new Statement.DropFunction(true, new Statement.FunctionDesc[]
             {
                     new("test_func1")
                     {
@@ -2577,6 +2577,24 @@ public class PostgresDialectTests : ParserTestBase
         };
 
         Assert.Equal(expected, select.Select.Projection);
+    }
+
+    [Fact]
+    public void Parse_Create_Simple_Before_Insert_Trigger()
+    {
+        const string sql = "CREATE TRIGGER check_insert BEFORE INSERT ON accounts FOR EACH ROW EXECUTE FUNCTION check_account_insert";
+
+        var expected = new Statement.CreateTrigger("check_insert")
+        {
+            Period = TriggerPeriod.Before,
+            Events = [new TriggerEvent.Insert()],
+            TableName = "accounts",
+            TriggerObject = TriggerObject.Row,
+            ExecBody = new TriggerExecBody(TriggerExecBodyType.Function, new Statement.FunctionDesc("check_account_insert")),
+            IncludeEach = true
+        };
+
+        Assert.Equal(expected, VerifiedStatement(sql, new []{new PostgreSqlDialect()}));
     }
 }
 

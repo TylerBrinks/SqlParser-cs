@@ -409,7 +409,7 @@ public abstract record DataType : IWriteSql, IElement
             {
                 if (i > 0)
                 {
-                    writer.WriteSpacesComma();
+                    writer.WriteCommaSpaced();
                 }
                 writer.Write($"'{Values[i].EscapeSingleQuoteString()}'");
             }
@@ -743,7 +743,7 @@ public abstract record DataType : IWriteSql, IElement
             {
                 if (i > 0)
                 {
-                    writer.WriteSpacesComma();
+                    writer.WriteCommaSpaced();
                 }
 
                 writer.Write($"'{Values[i].EscapeSingleQuoteString()}'");
@@ -829,6 +829,16 @@ public abstract record DataType : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             FormatTypeWithOptionalLength(writer, "TINYINT", Length);
+        }
+    }
+    /// <summary>
+    /// Trigger data type, returned by functions associated with triggers
+    /// </summary>
+    public record Trigger : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("TRIGGER");
         }
     }
     /// <summary>

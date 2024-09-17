@@ -157,7 +157,7 @@ public abstract record TableFactor : IWriteSql, IElement
                 {
                     if (Args.Arguments.SafeAny())
                     {
-                        writer.WriteSpacesComma();
+                        writer.WriteCommaSpaced();
                     }
 
                     writer.WriteSql($"SETTINGS {Args.Settings.ToSqlDelimited()}");

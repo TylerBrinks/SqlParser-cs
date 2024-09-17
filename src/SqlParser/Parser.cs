@@ -2163,7 +2163,7 @@ public partial class Parser
     {
         var token = NextToken();
 
-        if (_dialect is SnowflakeDialect or GenericDialect && token is SingleQuotedString s)
+        if (_dialect is SnowflakeDialect or GenericDialect && token is SingleQuotedString)
         {
             PrevToken();
             var custom = ParseIdentifier();
@@ -2668,6 +2668,16 @@ public partial class Parser
         if (ParseKeyword(Keyword.FUNCTION))
         {
             return ParseCreateFunction(orReplace, temporary);
+        }
+
+        if (ParseKeyword(Keyword.TRIGGER))
+        {
+            return ParseCreateTrigger(orReplace, false);
+        }
+
+        if (ParseKeywordSequence(Keyword.CONSTRAINT, Keyword.TRIGGER))
+        {
+            return ParseCreateTrigger(orReplace, true);
         }
 
         if (ParseKeyword(Keyword.MACRO))
@@ -3738,10 +3748,14 @@ public partial class Parser
         {
             return ParseDropSecret(temporary, persistent);
         }
+        else if (ParseKeyword(Keyword.TRIGGER))
+        {
+            return ParseDropTrigger();
+        }
 
         if (objectType == null)
         {
-            throw Expected("TABLE, VIEW, INDEX, ROLE, SCHEMA, FUNCTION PROCEDURE, STAGE, or SEQUENCE after DROP", PeekToken());
+            throw Expected("TABLE, VIEW, INDEX, ROLE, SCHEMA, FUNCTION, PROCEDURE, STAGE, TRIGGER, SECRET or SEQUENCE after DROP", PeekToken());
         }
 
         // Many dialects support the non-standard `IF EXISTS` clause and allow
@@ -3773,10 +3787,183 @@ public partial class Parser
         };
     }
 
-    private DropProcedure ParseDropProcedure()
+    public CreateTrigger ParseCreateTrigger(bool orReplace, bool isConstraint)
+    {
+        if (_dialect is not PostgreSqlDialect and not GenericDialect)
+        {
+            PrevToken();
+            throw Expected("an object of type after CREATE", PeekToken());
+        }
+
+        var name = ParseObjectName();
+        var period = ParseTriggerPeriod();
+        var events = ParseKeywordSeparated(Keyword.OR, ParseTriggerEvent);
+        ExpectKeyword(Keyword.ON);
+        var tableName = ParseObjectName();
+
+        ObjectName? referencedTableName = null;
+
+        if (ParseKeyword(Keyword.FROM))
+        {
+            referencedTableName = ParseObjectName(true);
+        }
+
+        var characteristics = ParseConstraintCharacteristics();
+
+        Sequence<TriggerReferencing>? referencing = null;
+
+        if (ParseKeyword(Keyword.REFERENCING))
+        {
+            while (true)
+            {
+                var refer = ParseTriggerReferencing();
+                if (refer != null)
+                {
+                    referencing ??= new Sequence<TriggerReferencing>();
+                    referencing.Add(refer);
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+
+        ExpectKeyword(Keyword.FOR);
+
+        var includeEach = ParseKeyword(Keyword.EACH);
+        TriggerObject triggerObject = ParseOneOfKeywords(Keyword.ROW, Keyword.STATEMENT) switch
+        {
+            Keyword.ROW => TriggerObject.Row,
+            Keyword.STATEMENT => TriggerObject.Statement,
+            _ => throw Expected("ROW or STATEMENT")
+        };
+
+        Expression? condition = null;
+        if (ParseKeyword(Keyword.WHEN))
+        {
+            condition = ParseExpr();
+        }
+
+        ExpectKeyword(Keyword.EXECUTE);
+
+        var execBody = ParseTriggerExecBody();
+
+        return new CreateTrigger(name)
+        {
+            OrReplace = orReplace,
+            IsConstraint = isConstraint,
+            Period = period,
+            Events = events,
+            TableName = tableName,
+            ReferencedTableName = referencedTableName,
+            Referencing = referencing,
+            TriggerObject = triggerObject,
+            IncludeEach = includeEach,
+            Condition = condition,
+            ExecBody = execBody,
+            Characteristics = characteristics
+        };
+    }
+
+    public DropTrigger ParseDropTrigger()
+    {
+        if (_dialect is not PostgreSqlDialect or not GenericDialect)
+        {
+            PrevToken();
+            throw Expected("an object of type after DROP", PeekToken());
+        }
+
+        var ifExists = ParseIfExists();
+        var triggerName = ParseObjectName();
+        ExpectKeyword(Keyword.ON);
+        var tableName = ParseObjectName();
+        var optionKeyword = ParseOneOfKeywords(Keyword.CASCADE, Keyword.RESTRICT);
+
+        var option = optionKeyword switch
+        {
+            Keyword.CASCADE => ReferentialAction.Cascade,
+            Keyword.RESTRICT => ReferentialAction.Restrict,
+            _ => throw Expected("CASCADE or RESTRICT")
+        };
+
+        return new DropTrigger(ifExists, triggerName, tableName, option);
+    }
+
+    public TriggerPeriod ParseTriggerPeriod()
+    {
+        return ExpectOneOfKeywords(Keyword.BEFORE, Keyword.AFTER, Keyword.INSTEAD) switch
+        {
+            Keyword.BEFORE => TriggerPeriod.Before,
+            Keyword.AFTER => TriggerPeriod.After,
+            Keyword.INSTEAD => ParseInstead(),
+            _ => throw Expected("BEFORE, AFTER, INSTEAD")
+        };
+
+        TriggerPeriod ParseInstead()
+        {
+            ExpectKeyword(Keyword.OF);
+            return TriggerPeriod.InsteadOf;
+        }
+    }
+
+    public TriggerEvent ParseTriggerEvent()
+    {
+        return ExpectOneOfKeywords(Keyword.INSERT, Keyword.UPDATE, Keyword.DELETE, Keyword.TRUNCATE) switch
+        {
+            Keyword.INSERT => new TriggerEvent.Insert(),
+            Keyword.UPDATE => ParseTriggerUpdate(),
+            Keyword.DELETE => new TriggerEvent.Delete(),
+            Keyword.TRUNCATE => new TriggerEvent.Truncate(),
+            _ => throw Expected("INSERT, UPDATE, DELETE, TRUNCATE")
+        };
+
+        TriggerEvent ParseTriggerUpdate()
+        {
+            if (ParseKeyword(Keyword.OF))
+            {
+                var cols = ParseCommaSeparated(ParseIdentifier);
+
+                return new TriggerEvent.Update(cols);
+            }
+
+            return new TriggerEvent.Update();
+        }
+    }
+
+    public TriggerReferencing? ParseTriggerReferencing()
+    {
+        TriggerReferencingType referType = ParseOneOfKeywords(Keyword.OLD, Keyword.NEW) switch
+        {
+            Keyword.OLD => TriggerReferencingType.OldTable,
+            Keyword.NEW => TriggerReferencingType.NewTable,
+            _ => throw Expected("OLD or NEW")
+        };
+
+        var isAs = ParseKeyword(Keyword.AS);
+
+        var transitionRelationName = ParseObjectName();
+
+        return new TriggerReferencing(isAs, transitionRelationName, referType);
+    }
+
+    public TriggerExecBody ParseTriggerExecBody()
+    {
+        TriggerExecBodyType bodyType = ExpectOneOfKeywords(Keyword.FUNCTION, Keyword.PROCEDURE) switch
+        {
+            Keyword.FUNCTION => TriggerExecBodyType.Function,
+            Keyword.PROCEDURE => TriggerExecBodyType.Procedure,
+            _ => throw Expected("FUNCTION or PROCEDURE")
+        };
+        var description = ParseFunctionDescription();
+
+        return new TriggerExecBody(bodyType, description);
+    }
+
+    public DropProcedure ParseDropProcedure()
     {
         var ifExists = ParseIfExists();
-        var procDesc = ParseCommaSeparated(ParseDropFunctionDescription);
+        var procDesc = ParseCommaSeparated(ParseFunctionDescription);
         var keyword = ParseOneOfKeywords(Keyword.CASCADE, Keyword.RESTRICT);
 
         ReferentialAction? option = keyword switch
@@ -3789,7 +3976,7 @@ public partial class Parser
         return new DropProcedure(ifExists, procDesc, option);
     }
 
-    public DropFunctionDesc ParseDropFunctionDescription()
+    public FunctionDesc ParseFunctionDescription()
     {
         var name = ParseObjectName();
         Sequence<OperateFunctionArg>? args = null;
@@ -3803,7 +3990,7 @@ public partial class Parser
             }
         }
 
-        return new DropFunctionDesc(name, args);
+        return new FunctionDesc(name, args);
     }
 
     private DropSecret ParseDropSecret(bool temporary, bool persistent)
@@ -3834,7 +4021,7 @@ public partial class Parser
     public DropFunction ParseDropFunction()
     {
         var ifExists = ParseIfExists();
-        var funcDesc = ParseCommaSeparated(ParseDropFunctionDesc);
+        var funcDesc = ParseCommaSeparated(ParseFunctionDesc);
         var keyword = ParseOneOfKeywords(Keyword.CASCADE, Keyword.RESTRICT);
         var option = keyword switch
         {
@@ -3845,7 +4032,7 @@ public partial class Parser
 
         return new DropFunction(ifExists, funcDesc, option);
 
-        DropFunctionDesc ParseDropFunctionDesc()
+        FunctionDesc ParseFunctionDesc()
         {
             var name = ParseObjectName();
             Sequence<OperateFunctionArg>? args = null;
@@ -3854,7 +4041,7 @@ public partial class Parser
             {
                 if (ConsumeToken<RightParen>())
                 {
-                    return new DropFunctionDesc(name);
+                    return new FunctionDesc(name);
                 }
 
                 var opArgs = ParseCommaSeparated(ParseFunctionArg);
@@ -3862,7 +4049,7 @@ public partial class Parser
                 args = opArgs;
             }
 
-            return new DropFunctionDesc(name, args);
+            return new FunctionDesc(name, args);
         }
     }
 
@@ -5768,7 +5955,7 @@ public partial class Parser
         {
             Keyword.PART => new Partition.Part(ParseExpr()),
             Keyword.PARTITION => new Partition.Expr(ParseExpr()),
-            _ => throw new UnreachableException()
+            _ => throw Expected("PART or PARTITION")
         };
     }
 
@@ -6284,6 +6471,7 @@ public partial class Parser
                 new DataType.Nested(ParseCommaSeparated(ParseColumnDef))),
 
             Word { Keyword: Keyword.TUPLE } when _dialect is ClickHouseDialect or GenericDialect => ParseClickhouseTuple(),
+            Word { Keyword: Keyword.TRIGGER } => new DataType.Trigger(),
             _ => ParseUnmatched()
         };
 

@@ -576,6 +576,31 @@ public enum TransactionIsolationLevel
     Serializable
 }
 
+public enum TriggerExecBodyType
+{
+    Function,
+    Procedure,
+}
+
+public enum TriggerObject
+{
+    Row,
+    Statement
+}
+
+public enum TriggerPeriod
+{
+    After,
+    Before,
+    InsteadOf,
+}
+
+public enum TriggerReferencingType
+{
+    OldTable,
+    NewTable,
+}
+
 public enum TrimWhereField
 {
     None,

@@ -29,7 +29,7 @@ public class SqlTextWriter : StringWriter
         // "this" passed in as the "" SqlTextWriter constructor parameter argument
     }
 
-    public void WriteSpacesComma()
+    public void WriteCommaSpaced()
     {
         Write(Constants.SpacedComma);
     }

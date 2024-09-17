@@ -806,10 +806,10 @@ public class ClickhouseDialectTests : ParserTestBase
         Assert.Equal(new AlterTableOperation.DetachPartition(new Partition.Expr(new Expression.Identifier("part"))), statement.Operations[0]);
 
         statement = VerifiedStatement<Statement.AlterTable>("ALTER TABLE t0 ATTACH PART part");
-        Assert.Equal(new AlterTableOperation.AttachPartition(new Partition.Expr(new Expression.Identifier("part"))), statement.Operations[0]);
+        Assert.Equal(new AlterTableOperation.AttachPartition(new Partition.Part(new Expression.Identifier("part"))), statement.Operations[0]);
 
         statement = VerifiedStatement<Statement.AlterTable>("ALTER TABLE t0 DETACH PART part");
-        Assert.Equal(new AlterTableOperation.DetachPartition(new Partition.Expr(new Expression.Identifier("part"))), statement.Operations[0]);
+        Assert.Equal(new AlterTableOperation.DetachPartition(new Partition.Part(new Expression.Identifier("part"))), statement.Operations[0]);
 
         Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t0 ATTACH PARTITION"));
         Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t0 DETACH PARTITION"));

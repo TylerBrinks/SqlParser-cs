@@ -292,6 +292,22 @@ public partial class Parser
         return Keyword.undefined;
     }
 
+    public Sequence<T> ParseKeywordSeparated<T>(Keyword keyword, Func<T> action)
+    {
+        Sequence<T> values = [];
+
+        while (true)
+        {
+            var value = action();
+            values.Add(value);
+            if (!ParseKeyword(keyword))
+            {
+                break;
+            }
+        }
+
+        return values;
+    }
     /// <summary>
     /// Expects the next keyword to be of a specific type.  If the keyword
     /// is not found, an exception is thrown. This makes it possible

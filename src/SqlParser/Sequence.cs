@@ -74,7 +74,7 @@ public class Sequence<T> : List<T>, IWriteSql, IElement
         {
             if (i > 0)
             {
-                writer.WriteSpacesComma();
+                writer.WriteCommaSpaced();
             }
             var item = enumerable[i];
             if (item is IWriteSql sql)

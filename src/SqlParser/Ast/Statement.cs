@@ -23,10 +23,10 @@ public abstract record Statement : IWriteSql, IElement
     /// </summary>
     public record AlterTable(
         ObjectName Name,
-        bool IfExists, 
-        bool Only, 
+        bool IfExists,
+        bool Only,
         Sequence<AlterTableOperation> Operations,
-        HiveSetLocation? Location, 
+        HiveSetLocation? Location,
         Ident? OnCluster = null) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
@@ -605,7 +605,7 @@ public abstract record Statement : IWriteSql, IElement
                 case CreateFunctionBody.AsBeforeOptions b:
                     writer.WriteSql($" AS {b}");
                     break;
-            
+
                 case CreateFunctionBody.Return r:
                     writer.WriteSql($" RETURN {r}");
                     break;
@@ -615,13 +615,13 @@ public abstract record Statement : IWriteSql, IElement
             {
                 writer.WriteSql($" {Using}");
             }
-            if (Options !=null)
+            if (Options != null)
             {
                 writer.WriteSql($" OPTIONS({Options.ToSqlDelimited()})");
             }
             if (FunctionBody is CreateFunctionBody.AsAfterOptions f)
             {
-                writer.WriteSql ($" AS {f}");
+                writer.WriteSql($" AS {f}");
             }
             //writer.WriteSql($"{Parameters}");
         }
@@ -690,7 +690,6 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
-
     public record CreateSecret(
         bool OrReplace,
         bool? Temporary,
@@ -784,6 +783,70 @@ public abstract record Statement : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             writer.WriteSql($"{Element}");
+        }
+    }
+    /// <summary>
+    /// CREATE TRIGGER
+    /// </summary>
+    public record CreateTrigger(ObjectName Name) : Statement
+    {
+        public bool OrReplace { get; init; }
+        public bool IsConstraint { get; init; }
+        public TriggerPeriod Period { get; init; }
+        public ObjectName TableName { get; init; }
+        public Sequence<TriggerEvent> Events { get; init; }
+        public ObjectName? ReferencedTableName { get; init; }
+        public Sequence<TriggerReferencing> Referencing { get; init; }
+        public TriggerObject TriggerObject { get; init; }
+        public bool IncludeEach { get; init; }
+        public Expression? Condition { get; init; }
+        public TriggerExecBody ExecBody { get; init; }
+        public ConstraintCharacteristics? Characteristics { get; init; }
+
+        public override void ToSql(SqlTextWriter writer)
+        {
+            var orReplace = OrReplace ? "OR REPLACE " : string.Empty;
+            var isConstraint = IsConstraint ? " CONSTRAINT " : string.Empty;
+            writer.WriteSql($"CREATE {orReplace}{isConstraint}TRIGGER {Name} {Period}");
+
+            if (Events.SafeAny())
+            {
+                writer.Write(" ");
+                writer.WriteDelimited(Events, " OR ");
+            }
+
+            writer.WriteSql($" ON {TableName}");
+
+            if (ReferencedTableName != null)
+            {
+                writer.WriteSql($" FROM {ReferencedTableName}");
+            }
+
+            if (Characteristics != null)
+            {
+                writer.WriteSql($" {Characteristics}");
+            }
+
+            if (Referencing.SafeAny())
+            {
+                writer.WriteSql($" REFERENCING {Referencing.ToSqlDelimited(" ")}");
+            }
+
+            if (IncludeEach)
+            {
+                writer.WriteSql($" FOR EACH {TriggerObject}");
+            }
+            else
+            {
+                writer.WriteSql($" FOR {TriggerObject}");
+            }
+
+            if (Condition != null)
+            {
+                writer.WriteSql($" WHEN {Condition}");
+            }
+
+            writer.WriteSql($" EXECUTE {ExecBody}");
         }
     }
     /// <summary>
@@ -1150,6 +1213,21 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
+
+    public record DropTrigger(bool IfExists, ObjectName TriggerName, ObjectName TableName, ReferentialAction Option) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("DROP TRIGGER");
+
+            if (IfExists)
+            {
+                writer.Write(" IF EXISTS");
+            }
+
+            writer.WriteSql($" {TriggerName} ON {TableName}");
+        }
+    }
     /// <summary>
     /// EXECUTE name [ ( parameter [, ...] ) ] [USING <expr>]
     /// </summary>
@@ -1255,7 +1333,7 @@ public abstract record Statement : IWriteSql, IElement
     /// <param name="IfExists">True if exists</param>
     /// <param name="FuncDesc">Drop function descriptions</param>
     /// <param name="Option">Referential actions</param>
-    public record DropFunction(bool IfExists, Sequence<DropFunctionDesc> FuncDesc, ReferentialAction Option) : Statement
+    public record DropFunction(bool IfExists, Sequence<FunctionDesc> FuncDesc, ReferentialAction Option) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -1273,7 +1351,7 @@ public abstract record Statement : IWriteSql, IElement
     /// </summary>
     /// <param name="Name">Object name</param>
     /// <param name="Args">Operate function arguments</param>
-    public record DropFunctionDesc(ObjectName Name, Sequence<OperateFunctionArg>? Args = null) : Statement
+    public record FunctionDesc(ObjectName Name, Sequence<OperateFunctionArg>? Args = null) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -1285,7 +1363,7 @@ public abstract record Statement : IWriteSql, IElement
         }
     }
 
-    public record DropProcedure(bool IfExists, Sequence<DropFunctionDesc> ProcDescription, ReferentialAction? Option) : Statement
+    public record DropProcedure(bool IfExists, Sequence<FunctionDesc> ProcDescription, ReferentialAction? Option) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -1346,8 +1424,8 @@ public abstract record Statement : IWriteSql, IElement
     /// <param name="HiveFormat">Hive format</param>
     /// <param name="HasTableKeyword">True if statement has Table keyword; otherwise false</param>
     public record ExplainTable(
-        DescribeAlias DescribeAlias, 
-        ObjectName Name, 
+        DescribeAlias DescribeAlias,
+        ObjectName Name,
         HiveDescribeFormat? HiveFormat,
         bool HasTableKeyword = false) : Statement
     {
@@ -1355,7 +1433,7 @@ public abstract record Statement : IWriteSql, IElement
         {
             // writer.Write(DescribeAlias ? "DESCRIBE " : "EXPLAIN ");
             writer.WriteSql($"{DescribeAlias} ");
-          
+
             if (HiveFormat != null)
             {
                 writer.WriteSql($"{HiveFormat} ");

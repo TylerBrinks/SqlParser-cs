@@ -98,7 +98,7 @@ public abstract record AlterTableOperation : IWriteSql
         }
     }
     /// <summary>
-    /// `ATTACH PART|PARTITION <partition_expr>`
+    /// `ATTACH PART|PARTITION partition_expr`
     /// </summary>
     /// <param name="Partition">Partition</param>
     public record AttachPartition(Partition Partition) : AlterTableOperation
@@ -109,7 +109,7 @@ public abstract record AlterTableOperation : IWriteSql
         }
     }
     /// <summary>
-    /// `DETACH PART|PARTITION <partition_expr>`
+    /// `DETACH PART|PARTITION partition_expr`
     /// </summary>
     /// <param name="Partition">Partition</param>
     public record DetachPartition(Partition Partition) : AlterTableOperation

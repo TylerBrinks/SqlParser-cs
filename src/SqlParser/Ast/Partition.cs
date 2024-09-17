@@ -20,7 +20,7 @@ public abstract record Partition : IWriteSql, IElement
                 break;
 
             case Part pa:
-                writer.WriteSql($"PART ({pa.Expression})");
+                writer.WriteSql($"PART {pa.Expression}");
                 break;
 
             case Partitions p:
