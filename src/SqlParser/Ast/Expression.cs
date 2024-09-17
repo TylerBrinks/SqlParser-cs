@@ -351,7 +351,7 @@ public abstract record Expression : IWriteSql, IElement
             {
                 if (i > 0)
                 {
-                    writer.Write(", ");
+                    writer.WriteSpacesComma();
                 }
 
                 // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
@@ -517,7 +517,7 @@ public abstract record Expression : IWriteSql, IElement
             {
                 if (i > 0)
                 {
-                    writer.Write(", ");
+                    writer.WriteSpacesComma();
                 }
 
                 writer.WriteSql($"({Expressions[i]})");
@@ -1085,7 +1085,7 @@ public abstract record Expression : IWriteSql, IElement
             {
                 if (i > 0)
                 {
-                    writer.Write(", ");
+                    writer.WriteSpacesComma();
                 }
 
                 // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression

@@ -98,6 +98,28 @@ public abstract record AlterTableOperation : IWriteSql
         }
     }
     /// <summary>
+    /// `ATTACH PART|PARTITION <partition_expr>`
+    /// </summary>
+    /// <param name="Partition">Partition</param>
+    public record AttachPartition(Partition Partition) : AlterTableOperation
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"ATTACH {Partition}");
+        }
+    }
+    /// <summary>
+    /// `DETACH PART|PARTITION <partition_expr>`
+    /// </summary>
+    /// <param name="Partition">Partition</param>
+    public record DetachPartition(Partition Partition) : AlterTableOperation
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"DETACH {Partition}");
+        }
+    }
+    /// <summary>
     /// DISABLE ROW LEVEL SECURITY
     /// Note: this is a PostgreSQL-specific operation.
     /// </summary>

@@ -21,10 +21,13 @@ public abstract record Statement : IWriteSql, IElement
     /// <summary>
     /// Alter table statement
     /// </summary>
-    /// <param name="Name">Object name</param>
-    /// <param name="Operations">Table operations</param>
-    public record AlterTable(ObjectName Name, bool IfExists, bool Only, Sequence<AlterTableOperation> Operations,
-        HiveSetLocation? Location) : Statement
+    public record AlterTable(
+        ObjectName Name,
+        bool IfExists, 
+        bool Only, 
+        Sequence<AlterTableOperation> Operations,
+        HiveSetLocation? Location, 
+        Ident? OnCluster = null) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -39,7 +42,14 @@ public abstract record Statement : IWriteSql, IElement
                 writer.Write("ONLY ");
             }
 
-            writer.WriteSql($"{Name} {Operations.ToSqlDelimited()}");
+            writer.WriteSql($"{Name} ");
+
+            if (OnCluster != null)
+            {
+                writer.WriteSql($"ON CLUSTER {OnCluster} ");
+            }
+
+            writer.WriteDelimited(Operations);
 
             if (Location != null)
             {
@@ -1071,7 +1081,7 @@ public abstract record Statement : IWriteSql, IElement
 
             if (DeleteOperation.Tables is { Count: > 0 })
             {
-                writer.WriteDelimited(DeleteOperation.Tables, ", ");
+                writer.WriteDelimited(DeleteOperation.Tables, Constants.SpacedComma);
             }
 
             writer.WriteSql($"{DeleteOperation.From}");
@@ -1585,7 +1595,41 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
+    /// <summary>
+    /// OPTIMIZE TABLE [db.]name [ON CLUSTER cluster] [PARTITION partition | PARTITION ID 'partition_id'] [FINAL] [DEDUPLICATE [BY expression]]
+    /// </summary>
+    public record OptimizeTable(
+        ObjectName Name,
+        Ident? OnCluster = null,
+        Partition? Partition = null,
+        bool IncludeFinal = false,
+        Deduplicate? Deduplicate = null) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"OPTIMIZE TABLE {Name}");
 
+            if (OnCluster != null)
+            {
+                writer.WriteSql($" ON CLUSTER {OnCluster}");
+            }
+
+            if (Partition != null)
+            {
+                writer.WriteSql($" {Partition}");
+            }
+
+            if (IncludeFinal)
+            {
+                writer.Write(" FINAL");
+            }
+
+            if (Deduplicate != null)
+            {
+                writer.WriteSql($" {Deduplicate}");
+            }
+        }
+    }
     public record Pragma(ObjectName Name, Value? Value, bool IsEqual) : Statement
     {
         public override void ToSql(SqlTextWriter writer)

@@ -37,7 +37,7 @@ public record FunctionArgumentList(
             writer.WriteSql($"{DuplicateTreatment} ");
         }
 
-        writer.WriteDelimited(Args, ", ");
+        writer.WriteDelimited(Args, Constants.SpacedComma);
 
         if (Clauses.SafeAny())
         {

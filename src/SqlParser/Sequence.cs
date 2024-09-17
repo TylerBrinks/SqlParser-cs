@@ -25,7 +25,7 @@ public class Sequence<T> : List<T>, IWriteSql, IElement
     /// <returns>String-based display of the sequence elements</returns>
     public override string ToString()
     {
-        return $"[{string.Join(", ", this)}]";
+        return $"[{string.Join(Constants.SpacedComma, this)}]";
     }
     /// <summary>
     /// Checks if two sequences are equal.
@@ -74,7 +74,7 @@ public class Sequence<T> : List<T>, IWriteSql, IElement
         {
             if (i > 0)
             {
-                writer.Write(", ");
+                writer.WriteSpacesComma();
             }
             var item = enumerable[i];
             if (item is IWriteSql sql)

@@ -16,6 +16,6 @@ public abstract record FromTable(Sequence<TableWithJoins> From) : IWriteSql, IEl
             writer.Write("FROM ");
         }
 
-        writer.WriteDelimited(From, ", ");
+        writer.WriteDelimited(From, Constants.SpacedComma);
     }
 }

@@ -128,6 +128,32 @@ public abstract record TableConstraint : IWriteSql, IElement
     }
 
     /// <summary>
+    /// Index constraint added as part of an alter table statement.
+    /// As far as I know, Postgres specific.
+    ///
+    /// `[ CONSTRAINT constraint_name ] { UNIQUE | PRIMARY KEY } USING INDEX index_name [ DEFERRABLE | NOT DEFERRABLE ] [ INITIALLY DEFERRED | INITIALLY IMMEDIATE ]`
+    ///
+    /// <see href="https://www.postgresql.org/docs/current/sql-altertable.html"/>
+    /// </summary>
+    public record PostgresAlterTableIndex(Ident Name, Ident IndexName) : TableConstraint
+    {
+        public ConstraintCharacteristics? Characteristics { get; init; }
+        public bool IsPrimaryKey { get; init; }
+
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("CONSTRAINT");
+            writer.WriteSql($" {Name}");
+            writer.Write(IsPrimaryKey ? " PRIMARY KEY" : " UNIQUE");
+            writer.Write(" USING INDEX");
+            writer.WriteSql($" {IndexName}");
+            if (Characteristics != null)
+            {
+                writer.WriteSql($" {Characteristics}");
+            }
+        }
+    }
+    /// <summary>
     /// MySQLs [fulltext][1] definition. Since the [`SPATIAL`][2] definition is exactly the same,
     /// and MySQL displays both the same way, it is part of this definition as well.
     ///

@@ -1913,9 +1913,9 @@ namespace SqlParser.Tests
                 new("b", new Int()),
             })
             {
-                OnCluster = "{cluster}"
+                OnCluster = new Ident("{cluster}", Symbols.SingleQuote)
             });
-
+            
             Assert.Equal(expected, create);
 
             create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE t ON CLUSTER my_cluster (a INT, b INT)");
@@ -4710,7 +4710,7 @@ namespace SqlParser.Tests
         public void Parse_Position()
         {
             Expression expected = new Position(new LiteralValue(new Value.SingleQuotedString("@")), new Identifier("field"));
-            var position = VerifiedExpr("POSITION('@' IN field)");
+            var position = VerifiedExpr("POSITION('@' IN field)", new []{new PostgreSqlDialect()});
             Assert.Equal(expected, position);
 
             expected = new Function("position")
@@ -6113,7 +6113,7 @@ namespace SqlParser.Tests
             // At the moment, DuckDB is the only dialect that allows
             // trailing commas anywhere in the query
             DefaultDialects = new[] { new DuckDbDialect() };
-
+            
             OneStatementParsesTo("SELECT album_id, name, FROM track", "SELECT album_id, name FROM track", DefaultDialects);
             OneStatementParsesTo("SELECT * FROM track ORDER BY milliseconds,", "SELECT * FROM track ORDER BY milliseconds", DefaultDialects);
             OneStatementParsesTo("SELECT DISTINCT ON (album_id,) name FROM track", "SELECT DISTINCT ON (album_id) name FROM track", DefaultDialects);
@@ -6184,6 +6184,24 @@ namespace SqlParser.Tests
                 new Identifier("name"),
                 new Expression.Tuple([])]);
             Assert.Equal(expected, select.GroupBy);
+        }
+
+        [Fact]
+        public void Test_Alter_Table_With_On_Cluster()
+        {
+            var alter = VerifiedStatement<Statement.AlterTable>(
+                "ALTER TABLE t ON CLUSTER 'cluster' ADD CONSTRAINT bar PRIMARY KEY (baz)");
+
+            Assert.Equal("t", alter.Name);
+            Assert.Equal(new Ident("cluster", Symbols.SingleQuote), alter.OnCluster);
+
+            alter = VerifiedStatement<Statement.AlterTable>(
+                "ALTER TABLE t ON CLUSTER cluster_name ADD CONSTRAINT bar PRIMARY KEY (baz)");
+
+            Assert.Equal("t", alter.Name);
+            Assert.Equal(new Ident("cluster_name"), alter.OnCluster);
+
+            Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t ON CLUSTER 123 ADD CONSTRAINT bar PRIMARY KEY (baz)"));
         }
     }
 }

@@ -1254,8 +1254,8 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Test_Parse_Position()
         {
-            VerifiedQuery("SELECT position('an', 'banana', 1)");
-            VerifiedQuery("SELECT n, h, POSITION(n IN h) FROM pos");
+            VerifiedQuery("SELECT position('an', 'banana', 1)", new[] { new SnowflakeDialect() });
+            VerifiedQuery("SELECT n, h, POSITION(n IN h) FROM pos", new[] { new SnowflakeDialect() });
         }
     }
 }

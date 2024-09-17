@@ -11,9 +11,10 @@ namespace SqlParser.Dialects;
 /// </summary>
 public class SnowflakeDialect : Dialect
 {
+    private const short DoubleColonPrecedence = 50;
+
     public override bool IsIdentifierStart(char character)
         => character.IsLetter() || character is Symbols.Underscore;
-
 
     public override bool IsIdentifierPart(char character)
         => character.IsAlphaNumeric() || character is Symbols.Dollar or Symbols.Underscore;
@@ -891,5 +892,17 @@ public class SnowflakeDialect : Dialect
         }
 
         return new Ident(ident.ToString());
+    }
+
+    public override short? GetNextPrecedence(Parser parser)
+    {
+        var token = parser.PeekToken();
+
+        if (token is Colon)
+        {
+            return DoubleColonPrecedence;
+        }
+
+        return null;
     }
 }

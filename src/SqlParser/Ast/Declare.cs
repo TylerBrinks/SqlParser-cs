@@ -74,7 +74,7 @@ public record Declare(Sequence<Ident> Names, DataType? DataType, DeclareAssignme
 
     public void ToSql(SqlTextWriter writer)
     {
-        writer.WriteDelimited(Names, ", ");
+        writer.WriteDelimited(Names, Constants.SpacedComma);
         if (Binary.HasValue && Binary.Value)
         {
             writer.Write(" BINARY");
