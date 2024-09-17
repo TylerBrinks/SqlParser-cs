@@ -19,12 +19,17 @@ public abstract record TableConstraint : IWriteSql, IElement
         public Ident? Name { get; init; }
         public bool IsPrimaryKey { get; init; }
         public ConstraintCharacteristics? Characteristics { get; init; }
+        public Keyword? Conflict { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
             var primary = IsPrimaryKey ? "PRIMARY KEY" : "UNIQUE";
             writer.WriteConstraint(Name);
             writer.WriteSql($"{primary} ({Columns})");
+            if (Conflict != null) {
+                writer.WriteSql($" ON CONFLICT {Conflict}");
+            }
+
         }
     }
     /// <summary>
