@@ -241,6 +241,12 @@ public enum DuplicateTreatment
     All,
 }
 
+public enum ExtractSyntax
+{
+    From,
+    Comma
+}
+
 public enum FileFormat
 {
     None,

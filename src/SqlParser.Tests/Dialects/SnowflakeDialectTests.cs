@@ -954,7 +954,27 @@ namespace SqlParser.Tests.Dialects
         {
             var select = VerifiedOnlySelect("SELECT EXTRACT(eod FROM d)");
 
-            var expected = new Extract(new Identifier("d"), new DateTimeField.Custom("eod"));
+            var expected = new Extract(new Identifier("d"), new DateTimeField.Custom("eod"), ExtractSyntax.From);
+
+            Assert.Equal(expected, select.Projection.First().AsExpr());
+        }
+
+        [Fact]
+        public void Parse_Extract_Comma()
+        {
+            var select = VerifiedOnlySelect("SELECT EXTRACT(HOUR, d)");
+
+            var expected = new Extract(new Identifier("d"), new DateTimeField.Hour(), ExtractSyntax.Comma);
+
+            Assert.Equal(expected, select.Projection.First().AsExpr());
+        }
+
+        [Fact]
+        public void Parse_Extract_Comma_Quoted()
+        {
+            var select = VerifiedOnlySelect("SELECT EXTRACT('hour', d)");
+
+            var expected = new Extract(new Identifier(new Ident("hour", Symbols.SingleQuote)), new DateTimeField.Hour(), ExtractSyntax.Comma);
 
             Assert.Equal(expected, select.Projection.First().AsExpr());
         }

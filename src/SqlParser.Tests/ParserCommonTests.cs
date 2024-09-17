@@ -1291,7 +1291,7 @@ namespace SqlParser.Tests
         {
             var select = VerifiedOnlySelect("SELECT EXTRACT(YEAR FROM d)");
 
-            var expected = new Extract(new Identifier("d"), new DateTimeField.Year());
+            var expected = new Extract(new Identifier("d"), new DateTimeField.Year(), ExtractSyntax.From);
 
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 

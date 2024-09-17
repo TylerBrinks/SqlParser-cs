@@ -542,11 +542,11 @@ public class BigQueryDialectTests : ParserTestBase
     }
 
     [Fact]
-    public void Parse_Exact_Weekday()
+    public void Parse_Extract_Weekday()
     {
         var select = VerifiedOnlySelect("SELECT EXTRACT(WEEK(MONDAY) FROM d)");
 
-        var expected = new Extract(new Identifier("d"), new DateTimeField.Week("MONDAY"));
+        var expected = new Extract(new Identifier("d"), new DateTimeField.Week("MONDAY"), ExtractSyntax.From);
 
         Assert.Equal(expected, select.Projection.First().AsExpr());
     }

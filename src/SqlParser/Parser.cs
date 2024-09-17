@@ -894,9 +894,23 @@ public partial class Parser
             return ExpectParens(() =>
             {
                 var field = ParseDateTimeField();
-                ExpectKeyword(Keyword.FROM);
+
+                ExtractSyntax syntax;
+                if (ParseKeyword(Keyword.FROM))
+                {
+                    syntax = ExtractSyntax.From;
+                }
+                else if (_dialect is SnowflakeDialect or GenericDialect && ConsumeToken<Comma>())
+                {
+                    syntax = ExtractSyntax.Comma;
+                }
+                else
+                {
+                    throw Expected("'FROM' or ','");
+                }
+               
                 var expr = ParseExpr();
-                return new Extract(expr, field);
+                return new Extract(expr, field, syntax);
             });
         }
 
@@ -2148,6 +2162,13 @@ public partial class Parser
     public DateTimeField ParseDateTimeField()
     {
         var token = NextToken();
+
+        if (_dialect is SnowflakeDialect or GenericDialect && token is SingleQuotedString s)
+        {
+            PrevToken();
+            var custom = ParseIdentifier();
+            return new DateTimeField.Custom(custom);
+        }
 
         if (token is not Word word)
         {

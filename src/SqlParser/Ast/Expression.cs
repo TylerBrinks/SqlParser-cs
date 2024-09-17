@@ -405,11 +405,18 @@ public abstract record Expression : IWriteSql, IElement
     /// </summary>
     /// <param name="Expression">Expression</param>
     /// <param name="Field">Date time field</param>
-    public record Extract(Expression Expression, DateTimeField Field) : Expression
+    public record Extract(Expression Expression, DateTimeField Field, ExtractSyntax Syntax) : Expression
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"EXTRACT({Field} FROM {Expression})");
+            if (Syntax == ExtractSyntax.From)
+            {
+                writer.WriteSql($"EXTRACT({Field} FROM {Expression})");
+            }
+            else
+            {
+                writer.WriteSql($"EXTRACT({Field}, {Expression})");
+            }
         }
     }
     /// <summary>
