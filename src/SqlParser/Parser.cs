@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Diagnostics;
+using System.Text.RegularExpressions;
 using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
@@ -5708,6 +5709,14 @@ public partial class Parser
             ExpectKeyword(Keyword.WITH);
             operation = new SwapWith(ParseObjectName());
         }
+        else if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.ATTACH))
+        {
+            return new AttachPartition(ParsePartOrPartition());
+        }
+        else if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.DETACH))
+        {
+            return new DetachPartition(ParsePartOrPartition());
+        }
         else if (_dialect is PostgreSqlDialect or GenericDialect && ParseKeywordSequence(Keyword.OWNER, Keyword.TO))
         {
             var keyword = ParseOneOfKeywords(Keyword.CURRENT_USER, Keyword.CURRENT_ROLE, Keyword.SESSION_USER);
@@ -5728,6 +5737,18 @@ public partial class Parser
         }
 
         return operation;
+    }
+
+    private Partition ParsePartOrPartition()
+    {
+        var keyword = ExpectOneOfKeywords(Keyword.PART, Keyword.PARTITION);
+
+        return keyword switch
+        {
+            Keyword.PART => new Partition.Part(ParseExpr()),
+            Keyword.PARTITION => new Partition.Expr(ParseExpr()),
+            _ => throw new UnreachableException()
+        };
     }
 
     private MySqlColumnPosition? ParseColumnPosition()

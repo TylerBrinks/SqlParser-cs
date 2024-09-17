@@ -592,6 +592,7 @@ public enum Keyword
     PARALLEL,
     PARAMETER,
     PARQUET,
+    PART,
     PARTITION,
     PARTITIONED,
     PARTITIONS,

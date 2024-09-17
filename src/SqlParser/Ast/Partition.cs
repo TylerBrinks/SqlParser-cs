@@ -5,7 +5,8 @@ public abstract record Partition : IWriteSql, IElement
     public record Identifier(Ident Id) : Partition;
     public record Expr(Expression Expression) : Partition;
     public record Partitions(Sequence<Expression> Expressions) : Partition;
-    
+    public record Part(Expression Expression) : Partition;
+
     public void ToSql(SqlTextWriter writer)
     {
         switch (this)
@@ -16,6 +17,10 @@ public abstract record Partition : IWriteSql, IElement
 
             case Expr e:
                 writer.WriteSql($"PARTITION {e.Expression}");
+                break;
+
+            case Part pa:
+                writer.WriteSql($"PART ({pa.Expression})");
                 break;
 
             case Partitions p:

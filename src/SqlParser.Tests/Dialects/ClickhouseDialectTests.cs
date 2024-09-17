@@ -1,4 +1,5 @@
-﻿using SqlParser.Ast;
+﻿using JetBrains.dotMemoryUnit.Properties;
+using SqlParser.Ast;
 using SqlParser.Dialects;
 
 namespace SqlParser.Tests.Dialects;
@@ -793,5 +794,26 @@ public class ClickhouseDialectTests : ParserTestBase
 
             Assert.Equal(relation!.AsTable().Args, expected);
         }
+    }
+
+    [Fact]
+    public void Parse_Alter_Table_Attach_And_Detach_Partition()
+    {
+        var statement = VerifiedStatement<Statement.AlterTable>("ALTER TABLE t0 ATTACH PARTITION part");
+        Assert.Equal(new AlterTableOperation.AttachPartition(new Partition.Expr(new Expression.Identifier("part"))), statement.Operations[0]);
+
+        statement = VerifiedStatement<Statement.AlterTable>("ALTER TABLE t0 DETACH PARTITION part");
+        Assert.Equal(new AlterTableOperation.DetachPartition(new Partition.Expr(new Expression.Identifier("part"))), statement.Operations[0]);
+
+        statement = VerifiedStatement<Statement.AlterTable>("ALTER TABLE t0 ATTACH PART part");
+        Assert.Equal(new AlterTableOperation.AttachPartition(new Partition.Expr(new Expression.Identifier("part"))), statement.Operations[0]);
+
+        statement = VerifiedStatement<Statement.AlterTable>("ALTER TABLE t0 DETACH PART part");
+        Assert.Equal(new AlterTableOperation.DetachPartition(new Partition.Expr(new Expression.Identifier("part"))), statement.Operations[0]);
+
+        Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t0 ATTACH PARTITION"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t0 DETACH PARTITION"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t0 ATTACH PART"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t0 DETACH PART"));
     }
 }
