@@ -8,22 +8,6 @@ namespace SqlParser.Dialects;
 /// </summary>
 public abstract class Dialect
 {
-    // https://www.postgresql.org/docs/7.0/operators.htm#AEN2026ExpectRightParen
-    private const short OrPrecedence = 5;
-    private const short AndPrecedence = 10;
-    private const short PgOtherPrecedence = 16;
-    private const short IsPrecedence = 17;
-    private const short LikePrecedence = 19;
-    private const short BetweenPrecedence = 20;
-    private const short PipePrecedence = 21;
-    private const short CaretPrecedence = 22;
-    private const short AmpersandPrecedence = 23;
-    private const short XOrPrecedence = 24;
-    private const short MulDivModOpPrecedence = 40;
-    private const short AtTimeZonePrecedence = 41;
-    private const short PlusMinusPrecedence = 30;
-    private const short ArrowPrecedence = 50;
-
     /// <summary>
     /// Determine if a character is the start of an identifier
     /// </summary>
@@ -91,6 +75,35 @@ public abstract class Dialect
         return null;
     }
     /// <summary>
+    /// Decide the lexical Precedence of operators.
+    /// </summary>
+    /// <param name="precedence">Precedence to evaluate</param>
+    /// <returns>Precedence value</returns>
+    public virtual short GetPrecedence(Precedence precedence)
+    {
+        // https://www.postgresql.org/docs/7.0/operators.htm#AEN2026ExpectRightParen
+        return precedence switch
+        {
+            Precedence.DoubleColon => 50,
+            Precedence.AtTz => 41,
+            Precedence.MulDivModOp => 40,
+            Precedence.PlusMinus => 30,
+            Precedence.Xor => 24,
+            Precedence.Ampersand => 23,
+            Precedence.Caret => 22,
+            Precedence.Pipe => 21,
+            Precedence.Between => 20,
+            Precedence.Eq => 20,
+            Precedence.Like => 19,
+            Precedence.Is => 17,
+            Precedence.PgOther => 16,
+            Precedence.UnaryNot => 15,
+            Precedence.And => 10,
+            Precedence.Or => 5,
+            _ => 0
+        };
+    }
+    /// <summary>
     /// Allow dialect implementations to override parser token precedence
     /// </summary>
     /// <param name="parser">Parser instance</param>
@@ -100,7 +113,7 @@ public abstract class Dialect
         return null;
     }
 
-    public short GetNextPrecedenceFull(Parser parser)
+    public short GetNextPrecedenceDefault(Parser parser)
     {
         var dialectPrecedence = GetNextPrecedence(parser);
         if (dialectPrecedence != null)
@@ -113,15 +126,21 @@ public abstract class Dialect
         // use https://www.postgresql.org/docs/7.0/operators.htm#AEN2026 as a reference
         return token switch
         {
-            Word { Keyword: Keyword.OR } => OrPrecedence,
-            Word { Keyword: Keyword.AND } => AndPrecedence,
-            Word { Keyword: Keyword.XOR } => XOrPrecedence,
+            Word { Keyword: Keyword.OR } => GetPrecedence(Precedence.Or),
+            Word { Keyword: Keyword.AND } => GetPrecedence(Precedence.And),
+            Word { Keyword: Keyword.XOR } => GetPrecedence(Precedence.Xor),
             Word { Keyword: Keyword.AT } => GetAtPrecedence(),
             Word { Keyword: Keyword.NOT } => GetNotPrecedence(),
-            Word { Keyword: Keyword.IS } => IsPrecedence,
-            Word { Keyword: Keyword.IN or Keyword.BETWEEN or Keyword.OPERATOR } => BetweenPrecedence,
-            Word { Keyword: Keyword.LIKE or Keyword.ILIKE or Keyword.SIMILAR or Keyword.REGEXP or Keyword.RLIKE } => LikePrecedence,
-            Word { Keyword: Keyword.DIV } => MulDivModOpPrecedence,
+            Word { Keyword: Keyword.IS } => GetPrecedence(Precedence.Is),
+            Word { Keyword: Keyword.IN or Keyword.BETWEEN or Keyword.OPERATOR } => GetPrecedence(Precedence.Between),
+            Word {
+                Keyword: Keyword.LIKE 
+                or Keyword.ILIKE 
+                or Keyword.SIMILAR 
+                or Keyword.REGEXP 
+                or Keyword.RLIKE } => GetPrecedence(Precedence.Like),
+           
+            Word { Keyword: Keyword.DIV } => GetPrecedence(Precedence.MulDivModOp),
 
             Equal
                 or LessThan
@@ -139,25 +158,25 @@ public abstract class Dialect
                 or ExclamationMarkDoubleTilde
                 or ExclamationMarkDoubleTildeAsterisk
                 or Spaceship
-                => BetweenPrecedence,
+                => GetPrecedence(Precedence.Between),
 
-            Pipe => PipePrecedence,
+            Pipe => GetPrecedence(Precedence.Pipe),
 
             Caret
                 or Hash
                 or ShiftRight
                 or ShiftLeft
-                => CaretPrecedence,
+                => GetPrecedence(Precedence.Caret),
 
-            Ampersand => AmpersandPrecedence,
-            Plus or Minus => PlusMinusPrecedence,
+            Ampersand => GetPrecedence(Precedence.Ampersand),
+            Plus or Minus => GetPrecedence(Precedence.PlusMinus),
 
             Multiply
                 or Divide
                 or DuckIntDiv
                 or Modulo
                 or StringConcat
-                => MulDivModOpPrecedence,
+                => GetPrecedence(Precedence.MulDivModOp),
 
             DoubleColon
                 //or Colon
@@ -165,9 +184,9 @@ public abstract class Dialect
                 or LeftBracket
                 or Overlap
                 or CaretAt
-                => ArrowPrecedence,
+                => GetPrecedence(Precedence.DoubleColon),
 
-            Colon when this is SnowflakeDialect => ArrowPrecedence,
+            Colon when this is SnowflakeDialect => GetPrecedence(Precedence.DoubleColon),
 
             Arrow
                 or LongArrow
@@ -182,7 +201,7 @@ public abstract class Dialect
                 or QuestionAnd
                 or QuestionPipe
                 or CustomBinaryOperator
-                => PgOtherPrecedence,
+                => GetPrecedence(Precedence.PgOther),
 
             _ => 0
         };
@@ -192,7 +211,7 @@ public abstract class Dialect
             if (parser.PeekNthToken(1) is Word { Keyword: Keyword.TIME } &&
                 parser.PeekNthToken(2) is Word { Keyword: Keyword.ZONE })
             {
-                return AtTimeZonePrecedence;
+                return GetPrecedence(Precedence.AtTz);
             }
 
             return 0;
@@ -207,18 +226,15 @@ public abstract class Dialect
         {
             return parser.PeekNthToken(1) switch
             {
-                Word { Keyword: Keyword.IN or Keyword.BETWEEN } => BetweenPrecedence,
+                Word { Keyword: Keyword.IN or Keyword.BETWEEN } => GetPrecedence(Precedence.Between),
                 Word
                 {
                     Keyword: Keyword.LIKE or Keyword.ILIKE or Keyword.SIMILAR or Keyword.REGEXP or Keyword.RLIKE
-                } => LikePrecedence,
+                } => GetPrecedence(Precedence.Like), // LikePrecedence,
                 _ => 0
             };
         }
     }
-
-    public virtual short GetBetweenPrecedence() => BetweenPrecedence;
-
     /// <summary>
     /// Most dialects do not have custom operators.This method to provide custom operators.
     /// </summary>

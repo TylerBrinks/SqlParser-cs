@@ -42,7 +42,7 @@ public partial class Parser
     /// <returns>Precedence value</returns>
     public short GetNextPrecedence()
     {
-        return _dialect.GetNextPrecedenceFull(this);
+        return _dialect.GetNextPrecedenceDefault(this);
     }
 
     /// <summary>
@@ -711,7 +711,11 @@ public partial class Parser
                         var rlike = ParseKeyword(Keyword.RLIKE);
                         if (regexp || rlike)
                         {
-                            return new RLike(negated, expr, ParseSubExpression(LikePrecedence), regexp);
+                            return new RLike(
+                                negated, 
+                                expr, 
+                                ParseSubExpression(_dialect.GetPrecedence(Precedence.Like)), 
+                                regexp);
                         }
 
                         if (ParseKeyword(Keyword.IN))
@@ -726,17 +730,27 @@ public partial class Parser
 
                         if (ParseKeyword(Keyword.LIKE))
                         {
-                            return new Like(expr, negated, ParseSubExpression(LikePrecedence), ParseEscapeChar());
+                            return new Like(expr, negated, 
+                                ParseSubExpression(_dialect.GetPrecedence(Precedence.Like)), 
+                                ParseEscapeChar());
                         }
 
                         if (ParseKeyword(Keyword.ILIKE))
                         {
-                            return new ILike(expr, negated, ParseSubExpression(LikePrecedence), ParseEscapeChar());
+                            return new ILike(
+                                expr, 
+                                negated, 
+                                ParseSubExpression(_dialect.GetPrecedence(Precedence.Like)), 
+                                ParseEscapeChar());
                         }
 
                         if (ParseKeywordSequence(Keyword.SIMILAR, Keyword.TO))
                         {
-                            return new SimilarTo(expr, negated, ParseSubExpression(LikePrecedence), ParseEscapeChar());
+                            return new SimilarTo(
+                                expr, 
+                                negated, 
+                                ParseSubExpression(_dialect.GetPrecedence(Precedence.Like)),
+                                ParseEscapeChar());
                         }
 
                         throw Expected("IN or BETWEEN after NOT", PeekToken());

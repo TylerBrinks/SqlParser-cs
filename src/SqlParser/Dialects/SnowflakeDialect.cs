@@ -100,7 +100,7 @@ public class SnowflakeDialect : Dialect
         return null;
     }
 
-    private Statement.CreateTable ParseCreateTable(bool orReplace, bool? global, bool temp, bool @volatile, bool transient, Parser parser)
+    private static Statement.CreateTable ParseCreateTable(bool orReplace, bool? global, bool temp, bool @volatile, bool transient, Parser parser)
     {
         var ifNotExists = parser.ParseIfNotExists();
         var tableName = parser.ParseObjectName(false);
@@ -900,7 +900,7 @@ public class SnowflakeDialect : Dialect
 
         if (token is Colon)
         {
-            return DoubleColonPrecedence;
+            return GetPrecedence(Precedence.DoubleColon);
         }
 
         return null;

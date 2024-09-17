@@ -26,23 +26,6 @@ public record MaybeParsed<T>(bool Parsed, T Result);
 
 public partial class Parser
 {
-    // https://www.postgresql.org/docs/7.0/operators.htm#AEN2026ExpectRightParen
-    public const short OrPrecedence = 5;
-    public const short AndPrecedence = 10;
-    public const short UnaryNotPrecedence = 15;
-    public const short PgOtherPrecedence = 16;
-    public const short IsPrecedence = 17;
-    public const short LikePrecedence = 19;
-    public const short BetweenPrecedence = 20;
-    public const short PipePrecedence = 21;
-    public const short CaretPrecedence = 22;
-    public const short AmpersandPrecedence = 23;
-    public const short XOrPrecedence = 24;
-    public const short MulDivModOpPrecedence = 40;
-    public const short AtTimeZonePrecedence = 41;
-    public const short PlusMinusPrecedence = 30;
-    public const short ArrowPrecedence = 50;
-
     private int _index;
     private Sequence<Token> _tokens = null!;
     private DepthGuard _depthGuard = null!;
@@ -952,7 +935,7 @@ public partial class Parser
 
         Expression ParsePositionExpr(Ident ident)
         {
-            var betweenPrec = _dialect.GetBetweenPrecedence();
+            var betweenPrec = _dialect.GetPrecedence(Precedence.Between);
             var positionExpression = MaybeParse(() =>
             {
                 ExpectLeftParen();
@@ -1132,7 +1115,7 @@ public partial class Parser
                 return ParseExistsExpr(true);
             }
 
-            return new UnaryOp(ParseSubExpression(UnaryNotPrecedence), UnaryOperator.Not);
+            return new UnaryOp(ParseSubExpression(_dialect.GetPrecedence(Precedence.UnaryNot)), UnaryOperator.Not);
         }
 
         MatchAgainst ParseMatchAgainst()
@@ -1177,7 +1160,8 @@ public partial class Parser
 
         Expression ParseConnectByExpression()
         {
-            return new Prior(ParseSubExpression(PlusMinusPrecedence));
+            //return new Prior(ParseSubExpression(PlusMinusPrecedence));
+            return new Prior(ParseSubExpression(_dialect.GetPrecedence(Precedence.PlusMinus)));
         }
 
         Expression ParseDuckDbMapLiteral()
@@ -1318,7 +1302,7 @@ public partial class Parser
                 _ => throw Expected("Postgres operator", tokenOperator)
             };
 
-            return new UnaryOp(ParseSubExpression(PlusMinusPrecedence), op);
+            return new UnaryOp(ParseSubExpression(_dialect.GetPrecedence(Precedence.PlusMinus)), op);
         }
 
         UnaryOp ParseUnary()
@@ -1326,7 +1310,7 @@ public partial class Parser
             try
             {
                 var op = token is Plus ? UnaryOperator.Plus : UnaryOperator.Minus;
-                return new UnaryOp(ParseSubExpression(MulDivModOpPrecedence), op);
+                return new UnaryOp(ParseSubExpression(_dialect.GetPrecedence(Precedence.MulDivModOp)), op);
             }
             catch (ParserException)
             {
@@ -2547,9 +2531,10 @@ public partial class Parser
     /// </summary>
     public Expression ParseBetween(Expression expr, bool negated)
     {
-        var low = ParseSubExpression(BetweenPrecedence);
+        var precedence = _dialect.GetPrecedence(Precedence.Between);
+        var low = ParseSubExpression(precedence);
         ExpectKeyword(Keyword.AND);
-        var high = ParseSubExpression(BetweenPrecedence);
+        var high = ParseSubExpression(precedence);
 
         return new Between(expr, negated, low, high);
     }

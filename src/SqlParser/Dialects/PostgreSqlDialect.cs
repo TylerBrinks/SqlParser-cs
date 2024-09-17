@@ -102,41 +102,15 @@ public class PostgreSqlDialect : Dialect
         return new Statement.Comment(name, objectType, comment, ifExists);
     }
 
-    //public override short? GetNextPrecedence(Parser parser)
-    //{
-    //    var token = parser.PeekToken();
+    public override short GetPrecedence(Precedence precedence)
+    {
+        if (precedence == Precedence.Between)
+        {
+            return BetweenLikePrecedence;
+        }
 
-    //    return token switch
-    //    {
-    //        Word { Keyword: Keyword.COLLATE } => CollatePrecedence,
-    //        LeftBracket => BracketPrecedence,
-
-    //        Arrow
-    //            or LongArrow
-    //            or HashArrow
-    //            or HashLongArrow
-    //            or AtArrow
-    //            or ArrowAt
-    //            or HashMinus
-    //            or AtQuestion
-    //            or AtAt
-    //            or Question
-    //            or QuestionAnd
-    //            or QuestionPipe
-    //            or ExclamationMark
-    //            or Overlap
-    //            or CaretAt
-    //            or StringConcat
-    //            or Hash
-    //            or ShiftRight
-    //            or ShiftLeft
-    //            or Pipe
-    //            or Ampersand
-    //            or CustomBinaryOperator
-    //            => PgOtherPrecedence,
-    //        _ => 0
-    //    };
-    //}
+        return base.GetPrecedence(precedence);
+    }
 
     public override short? GetNextPrecedence(Parser parser)
     {
@@ -253,9 +227,6 @@ public class PostgreSqlDialect : Dialect
             };
         }
     }
-
-    public override short GetBetweenPrecedence() => BetweenLikePrecedence;
-
     public override bool SupportsGroupByExpression => true;
     public override bool SupportsUnicodeStringLiteral => true;
 }
