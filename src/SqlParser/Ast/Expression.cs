@@ -226,18 +226,24 @@ public abstract record Expression : IWriteSql, IElement
     /// </summary>
     /// <param name="Expression">Expression</param>
     /// <param name="Field">Date time field</param>
-    public record Ceil(Expression Expression, DateTimeField Field) : Expression
+    public record Ceil(Expression Expression, CeilFloorKind Field) : Expression
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
-            if (Field is DateTimeField.NoDateTime)
+            switch (Field)
             {
-                writer.WriteSql($"CEIL({Expression})");
-            }
-            else
-            {
-                writer.WriteSql($"CEIL({Expression} TO {Field})");
+                // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
+                case CeilFloorKind.DateTimeFieldKind { Field: DateTimeField.NoDateTime }:
+                    writer.WriteSql($"CEIL({Expression})");
+                    break;
+             
+                case CeilFloorKind.DateTimeFieldKind dt:
+                    writer.WriteSql($"CEIL({Expression} TO {dt.Field})");
+                    break;
+               
+                case CeilFloorKind.Scale s:
+                    writer.WriteSql($"CEIL({Expression}, {s.Field})");
+                    break;
             }
         }
     }
@@ -429,18 +435,24 @@ public abstract record Expression : IWriteSql, IElement
     /// </summary>
     /// <param name="Expression">Expression</param>
     /// <param name="Field">Date time field</param>
-    public record Floor(Expression Expression, DateTimeField Field) : Expression
+    public record Floor(Expression Expression, CeilFloorKind Field) : Expression
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
-            if (Field is DateTimeField.NoDateTime)
+            switch (Field)
             {
-                writer.WriteSql($"FLOOR({Expression})");
-            }
-            else
-            {
-                writer.WriteSql($"FLOOR({Expression} TO {Field})");
+                // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
+                case CeilFloorKind.DateTimeFieldKind { Field: DateTimeField.NoDateTime }:
+                    writer.WriteSql($"FLOOR({Expression})");
+                    break;
+
+                case CeilFloorKind.DateTimeFieldKind dt:
+                    writer.WriteSql($"FLOOR({Expression} TO {dt.Field})");
+                    break;
+
+                case CeilFloorKind.Scale s:
+                    writer.WriteSql($"FLOOR({Expression}, {s.Field})");
+                    break;
             }
         }
     }

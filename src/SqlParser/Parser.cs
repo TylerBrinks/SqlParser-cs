@@ -920,12 +920,28 @@ public partial class Parser
             {
                 var expr = ParseExpr();
                 // Parse `CEIL/FLOOR(expr)`
-                DateTimeField field = new DateTimeField.NoDateTime();
+                CeilFloorKind field = null!;
                 var keywordTo = ParseKeyword(Keyword.TO);
+
                 if (keywordTo)
                 {
-                    // Parse `CEIL/FLOOR(Expression TO DateTimeField)`
-                    field = ParseDateTimeField();
+                    field = new CeilFloorKind.DateTimeFieldKind(ParseDateTimeField());
+                }
+                else if (ConsumeToken<Comma>())
+                {
+                    var parsedValue = ParseValue();
+                    if (parsedValue is Value.Number n)
+                    {
+                        field = new CeilFloorKind.Scale(new Value.Number(n.Value, n.Long));
+                    }
+                    else
+                    {
+                        ThrowExpected("Scale field can only be of number type", PeekToken());
+                    }
+                }
+                else
+                {
+                    field = new CeilFloorKind.DateTimeFieldKind(new DateTimeField.NoDateTime());
                 }
 
                 return isCeiling

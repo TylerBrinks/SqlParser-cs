@@ -1346,6 +1346,13 @@ namespace SqlParser.Tests
         }
 
         [Fact]
+        public void Parse_Ceil_Number_Scale()
+        {
+            VerifiedStatement("SELECT CEIL(1.5, 1)");
+            VerifiedStatement("SELECT CEIL(float_column, 3) FROM my_table");
+        }
+
+        [Fact]
         public void Parse_Floor_Number()
         {
             VerifiedStatement("SELECT FLOOR(1.5)");
@@ -1356,7 +1363,7 @@ namespace SqlParser.Tests
         public void Parse_Ceil_Datetime()
         {
             var select = VerifiedOnlySelect("SELECT CEIL(d TO DAY)");
-            var expected = new Ceil(new Identifier("d"), new DateTimeField.Day());
+            var expected = new Ceil(new Identifier("d"), new CeilFloorKind.DateTimeFieldKind(new DateTimeField.Day()));
 
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
@@ -1374,10 +1381,35 @@ namespace SqlParser.Tests
         }
 
         [Fact]
+        public void Parse_Ceil_Scale()
+        {
+            var select = VerifiedOnlySelect("SELECT CEIL(d, 2)");
+
+            var expected = new Ceil(new Identifier("d"), new CeilFloorKind.Scale(new Value.Number("2")));
+            Assert.Equal(expected, select.Projection[0].AsExpr());
+        }
+
+        [Fact]
+        public void Parse_Floor_Scale()
+        {
+            var select = VerifiedOnlySelect("SELECT FLOOR(d, 2)");
+
+            var expected = new Floor(new Identifier("d"), new CeilFloorKind.Scale(new Value.Number("2")));
+            Assert.Equal(expected, select.Projection[0].AsExpr());
+        }
+
+        [Fact]
+        public void Parse_Floor_Number_Scale()
+        {
+            VerifiedStatement("SELECT FLOOR(1.5, 1)");
+            VerifiedStatement("SELECT FLOOR(float_column, 3) FROM my_table");
+        }
+
+        [Fact]
         public void Parse_Floor_Datetime()
         {
             var select = VerifiedOnlySelect("SELECT FLOOR(d TO DAY)");
-            var expected = new Floor(new Identifier("d"), new DateTimeField.Day());
+            var expected = new Floor(new Identifier("d"), new CeilFloorKind.DateTimeFieldKind(new DateTimeField.Day()));
 
             Assert.Equal(expected, select.Projection.Single().AsExpr());
 
