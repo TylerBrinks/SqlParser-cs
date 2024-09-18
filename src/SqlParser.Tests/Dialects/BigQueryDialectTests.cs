@@ -361,7 +361,7 @@ public class BigQueryDialectTests : ParserTestBase
     }
 
     [Fact]
-    public void Parse_Nested_Data_Type()
+    public void Parse_Nested_Data_Types()
     {
         const string sql = "CREATE TABLE table (x STRUCT<a ARRAY<INT64>, b BYTES(42)>, y ARRAY<STRUCT<INT64>>)";
 
@@ -372,10 +372,10 @@ public class BigQueryDialectTests : ParserTestBase
             new ("x", new DataType.Struct([
                 new(new DataType.Array(new ArrayElementTypeDef.AngleBracket(new DataType.Int64())), "a"),
                 new(new DataType.Bytes(42), "b")
-            ])),
+            ], StructBracketKind.AngleBrackets)),
             new("y", new DataType.Array(new ArrayElementTypeDef.AngleBracket(new DataType.Struct([
-                new(new DataType.Int64())
-            ]))))
+               new(new DataType.Int64())
+            ], StructBracketKind.AngleBrackets))))
         };
         var expected = new Statement.CreateTable(new CreateTable("table", columns));
         Assert.Equal(expected, create);

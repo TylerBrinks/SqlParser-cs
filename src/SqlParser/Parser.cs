@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
@@ -891,7 +890,7 @@ public partial class Parser
                 {
                     throw Expected("'FROM' or ','");
                 }
-               
+
                 var expr = ParseExpr();
                 return new Extract(expr, field, syntax);
             });
@@ -949,7 +948,7 @@ public partial class Parser
 
                 return new Position(expr, from);
             });
-           
+
 
             if (positionExpression != null)
             {
@@ -1501,6 +1500,20 @@ public partial class Parser
         var (fieldType, trailingBracket) = ParseDataTypeHelper();
 
         return (new StructField(fieldType, fieldName), trailingBracket);
+    }
+
+    public Sequence<StructField> ParseDuckDbStructTypeDef()
+    {
+        ExpectKeyword(Keyword.STRUCT);
+        return ExpectParens(() =>
+        {
+            return ParseCommaSeparated(() =>
+            {
+                var fieldName = ParseIdentifier();
+                var fieldType = ParseDataType();
+                return new StructField(fieldType, fieldName);
+            });
+        });
     }
 
     public (Sequence<StructField> Fields, bool MatchingTrailingBracket) ParseStructTypeDef(
@@ -4881,13 +4894,16 @@ public partial class Parser
 
         while (true)
         {
-            if (ParseAnyOptionalTableConstraints(constraint => constraints.Add(constraint))) {
+            if (ParseAnyOptionalTableConstraints(constraint => constraints.Add(constraint)))
+            {
                 // work has been done already
             }
-            else if ((PeekToken() is Word) || (PeekToken() is SingleQuotedString)) {
+            else if ((PeekToken() is Word) || (PeekToken() is SingleQuotedString))
+            {
                 columns.Add(ParseColumnDef());
             }
-            else {
+            else
+            {
                 ThrowExpected("column name or constraint definition", PeekToken());
             }
 
@@ -4976,7 +4992,8 @@ public partial class Parser
         }
     }
 
-    public Keyword? ParseSQLiteConflictClause () {
+    public Keyword? ParseSQLiteConflictClause()
+    {
         if (!ParseKeywordSequence(Keyword.ON, Keyword.CONFLICT)) return null;
         return ParseOneOfKeywords(Keyword.ROLLBACK, Keyword.ABORT, Keyword.FAIL, Keyword.IGNORE, Keyword.REPLACE);
     }
@@ -5043,7 +5060,8 @@ public partial class Parser
             var conflict = _dialect is SQLiteDialect ? ParseSQLiteConflictClause() : Keyword.undefined;
             var autoincrement = _dialect is SQLiteDialect && ParseKeyword(Keyword.AUTOINCREMENT);
             var characteristics = ParseConstraintCharacteristics();
-            return new ColumnOption.Unique(true) {
+            return new ColumnOption.Unique(true)
+            {
                 Characteristics = characteristics,
                 Order = order != Keyword.undefined ? order : null,
                 Conflict = conflict != Keyword.undefined ? conflict : null,
@@ -5116,7 +5134,7 @@ public partial class Parser
             return new ColumnOption.DialectSpecific(new[] { new Word("AUTOINCREMENT") });
         }
 
-        if ( _dialect is MySqlDialect or GenericDialect && ParseKeywordSequence(Keyword.ON, Keyword.UPDATE))
+        if (_dialect is MySqlDialect or GenericDialect && ParseKeywordSequence(Keyword.ON, Keyword.UPDATE))
         {
             return new ColumnOption.OnUpdate(ParseExpr());
         }
@@ -5323,9 +5341,11 @@ public partial class Parser
         throw Expected("Expected one of RESTRICT, CASCADE, SET NULL, NO ACTION or SET DEFAULT", PeekToken());
     }
 
-    bool ParseAnyOptionalTableConstraints(Action<TableConstraint> action) {
+    bool ParseAnyOptionalTableConstraints(Action<TableConstraint> action)
+    {
         bool any = false;
-        while (true) {
+        while (true)
+        {
             var constraint = ParseOptionalTableConstraint(any, false);
             if (constraint == null) return any;
             action(constraint);
@@ -6484,6 +6504,7 @@ public partial class Parser
             Word { Keyword: Keyword.ENUM } => new DataType.Enum(ParseStringValue()),
             Word { Keyword: Keyword.SET } => new DataType.Set(ParseStringValue()),
             Word { Keyword: Keyword.ARRAY } => ParseArray(),
+            Word { Keyword: Keyword.STRUCT } when _dialect is DuckDbDialect => ParseDuckDbStruct(),
             Word { Keyword: Keyword.STRUCT } when _dialect is BigQueryDialect or GenericDialect => ParseStruct(),
             Word { Keyword: Keyword.UNION } when _dialect is DuckDbDialect or GenericDialect => ParseUnion(),
             Word { Keyword: Keyword.NULLABLE } when _dialect is ClickHouseDialect or GenericDialect =>
@@ -6667,7 +6688,7 @@ public partial class Parser
         {
             PrevToken();
             (var fieldDefinitions, trailingBracket) = ParseStructTypeDef(ParseStructFieldDef);
-            return new DataType.Struct(fieldDefinitions);
+            return new DataType.Struct(fieldDefinitions, StructBracketKind.AngleBrackets);
         }
 
         DataType ParseUnion()
@@ -6718,6 +6739,12 @@ public partial class Parser
         {
             PrevToken();
             return new DataType.Tuple(ParseClickHouseTupleDef());
+        }
+
+        DataType ParseDuckDbStruct()
+        {
+            PrevToken();
+            return new DataType.Struct(ParseDuckDbStructTypeDef(), StructBracketKind.Parentheses);
         }
         #endregion
     }
@@ -8201,12 +8228,12 @@ public partial class Parser
             return ParseShowCollation();
         }
 
-        if (_dialect is MySqlDialect or GenericDialect&& ParseKeyword(Keyword.VARIABLES))
+        if (_dialect is MySqlDialect or GenericDialect && ParseKeyword(Keyword.VARIABLES))
         {
             return new ShowVariables(ParseShowStatementFilter(), global, session);
         }
 
-        if ( _dialect is MySqlDialect or GenericDialect && ParseKeyword(Keyword.STATUS))
+        if (_dialect is MySqlDialect or GenericDialect && ParseKeyword(Keyword.STATUS))
         {
             return new ShowStatus(ParseShowStatementFilter(), session, global);
         }

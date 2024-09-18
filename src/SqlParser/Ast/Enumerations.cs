@@ -313,7 +313,7 @@ public enum GeneratedAs
 
 public enum GeneratedExpressionMode
 {
-    Virtual, 
+    Virtual,
     Sorted
 }
 
@@ -482,6 +482,12 @@ public enum ReferentialAction
     SetNull,
     NoAction,
     SetDefault
+}
+
+public enum StructBracketKind
+{
+    Parentheses,
+    AngleBrackets
 }
 
 public enum SearchModifier
