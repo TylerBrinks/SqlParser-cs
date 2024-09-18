@@ -845,4 +845,29 @@ public class ClickhouseDialectTests : ParserTestBase
         Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t0 UNFREEZE PARTITION p0 WITH"));
         Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t0 UNFREEZE PARTITION p0 WITH NAME"));
     }
+
+    [Fact]
+    public void Explain_Describe()
+    {
+        VerifiedStatement("DESCRIBE test.table");
+        VerifiedStatement("DESCRIBE TABLE test.table");
+    }
+
+    [Fact]
+    public void Explain_Desc()
+    {
+        VerifiedStatement("DESC test.table");
+        VerifiedStatement("DESC TABLE test.table");
+    }
+
+    [Fact]
+    public void Parse_Explain_Table()
+    {
+        var explain = VerifiedStatement<Statement.ExplainTable>("EXPLAIN TABLE test_identifier");
+        
+        Assert.Equal(DescribeAlias.Explain, explain.DescribeAlias);
+        Assert.Null(explain.HiveFormat);
+        Assert.True( explain.HasTableKeyword);
+        Assert.Equal("test_identifier", explain.Name);
+    }
 }

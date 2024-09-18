@@ -305,4 +305,5 @@ public abstract class Dialect
     public virtual bool SupportsProjectionTrailingCommas => false;
     public virtual bool SupportMapLiteralSyntax => false;
     public virtual bool SupportsUnicodeStringLiteral => false;
+    public virtual bool DescribeRequiresTableKeyword => false;
 }

@@ -2340,7 +2340,6 @@ namespace SqlParser.Tests
             Test("EXPLAIN test_identifier", DescribeAlias.Explain);
             Test("DESCRIBE test_identifier", DescribeAlias.Describe);
             Test("DESC test_identifier", DescribeAlias.Desc);
-            Test("EXPLAIN TABLE test_identifier", DescribeAlias.Explain, true);
 
             return;
 

@@ -7479,7 +7479,8 @@ public partial class Parser
         {
             HiveDescribeFormat? hiveFormat = null;
             var kwd = ParseOneOfKeywords(Keyword.EXTENDED, Keyword.FORMATTED);
-            var hasTableKeyword = ParseKeyword(Keyword.TABLE);
+            // Only allow to use TABLE keyword for DESC|DESCRIBE statement
+            var hasTableKeyword = _dialect.DescribeRequiresTableKeyword && ParseKeyword(Keyword.TABLE);
             var tableName = ParseObjectName();
 
             switch (kwd)

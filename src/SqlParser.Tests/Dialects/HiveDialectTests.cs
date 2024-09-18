@@ -283,7 +283,9 @@ public class HiveDialectTests : ParserTestBase
     [Fact]
     public void Parse_Describe()
     {
-        VerifiedStatement("DESCRIBE namespace.`table`", [new HiveDialect(), new GenericDialect()]);
+        VerifiedStatement("DESCRIBE namespace.`table`");
+        VerifiedStatement("DESCRIBE namespace.table");
+        VerifiedStatement("DESCRIBE table");
     }
 
     [Fact]
