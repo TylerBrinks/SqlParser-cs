@@ -1037,18 +1037,7 @@ public partial class Parser
         {
             var body = ParseQueryBody(0); //TODO prec_unknown
 
-            OrderBy? orderBy = null;
-            if (ParseKeywordSequence(Keyword.ORDER, Keyword.BY))
-            {
-                var orderByExpressions = ParseCommaSeparated(ParseOrderByExpr);
-                Interpolate? interpolate = null;
-                if (_dialect is ClickHouseDialect or GenericDialect)
-                {
-                    interpolate = ParseInterpolations();
-                }
-
-                orderBy = new OrderBy(orderByExpressions, interpolate);
-            }
+            var orderBy = ParseOptionalOrderBy();
 
             for (var i = 0; i < 2; i++)
             {

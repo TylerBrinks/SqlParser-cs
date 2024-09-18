@@ -5674,6 +5674,10 @@ public partial class Parser
             {
                 operation = new AddConstraint(constraint);
             }
+            else if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.PROJECTION))
+            {
+                return ParseAlterTableAddProjection();
+            }
             else
             {
                 var ifNotExists = ParseIfNotExists();
@@ -5712,6 +5716,7 @@ public partial class Parser
                 return new AddColumn(columnKeyword, ine, columnDef, columnPosition);
             }
         }
+       
         else if (ParseKeyword(Keyword.RENAME))
         {
             if (_dialect is PostgreSqlDialect && ParseKeyword(Keyword.CONSTRAINT))
@@ -5990,6 +5995,65 @@ public partial class Parser
         }
 
         return operation;
+    }
+
+    public GroupByExpression? ParseOptionalGroupBy()
+    {
+        if (ParseKeywordSequence(Keyword.GROUP, Keyword.BY))
+        {
+            var expressions = ParseKeyword(Keyword.ALL) ? null : ParseCommaSeparated(ParseGroupByExpr);
+
+            Sequence<GroupByWithModifier>? modifiers = null;
+          
+            if (_dialect is ClickHouseDialect or GenericDialect)
+            {
+                while (true)
+                {
+                    if (!ParseKeyword(Keyword.WITH))
+                    {
+                        break;
+                    }
+
+                    modifiers ??= [];
+
+                    var keyword = ExpectOneOfKeywords(Keyword.ROLLUP, Keyword.CUBE, Keyword.TOTALS);
+
+                    switch (keyword)
+                    {
+                        case Keyword.ROLLUP:
+                            modifiers.Add(GroupByWithModifier.Rollup);
+                            break;
+
+                        case Keyword.CUBE:
+                            modifiers.Add(GroupByWithModifier.Cube);
+                            break;
+
+                        case Keyword.TOTALS:
+                            modifiers.Add(GroupByWithModifier.Totals);
+                            break;
+                    }
+                }
+            }
+
+            return expressions != null
+                 ? new GroupByExpression.Expressions(expressions, modifiers)
+                 : new GroupByExpression.All(modifiers);
+        }
+
+        return null;
+    }
+
+    public OrderBy? ParseOptionalOrderBy()
+    {
+        if (ParseKeywordSequence(Keyword.ORDER, Keyword.BY))
+        {
+            var orderByExprs = ParseCommaSeparated(ParseOrderByExpr);
+            var interpolate = _dialect is ClickHouseDialect or GenericDialect ? ParseInterpolations() : null;
+
+            return new OrderBy(orderByExprs, interpolate);
+        }
+
+        return null;
     }
 
     private Partition ParsePartOrPartition()
@@ -7713,6 +7777,26 @@ public partial class Parser
         return ParseRemainingSetExpressions(expr, precedence);
     }
 
+    public ProjectionSelect ParseProjectionSelect()
+    {
+        return ExpectParens(() =>
+        {
+            ExpectKeyword(Keyword.SELECT);
+            var projection = ParseProjection();
+            var groupBy = ParseOptionalGroupBy();
+            var orderby = ParseOptionalOrderBy();
+            return new ProjectionSelect(projection, orderby, groupBy);
+        });
+    }
+
+    public AlterTableOperation ParseAlterTableAddProjection()
+    {
+        var ifNotExists = ParseIfNotExists();
+        var name = ParseIdentifier();
+        var query = ParseProjectionSelect();
+        return new AddProjection(ifNotExists, name, query);
+    }
+
     private SetExpression ParseRemainingSetExpressions(SetExpression expr, int precedence)
     {
 
@@ -7856,47 +7940,7 @@ public partial class Parser
 
         var selection = ParseInit(ParseKeyword(Keyword.WHERE), ParseExpr);
 
-        GroupByExpression? groupBy = null;
-
-        if (ParseKeywordSequence(Keyword.GROUP, Keyword.BY))
-        {
-            Sequence<Expression>? expressions = null;
-
-            if (!ParseKeyword(Keyword.ALL))
-            {
-                expressions = ParseCommaSeparated(ParseGroupByExpr);
-            }
-
-            Sequence<GroupByWithModifier>? modifiers = null;
-
-            if (_dialect is ClickHouseDialect or GenericDialect)
-            {
-                while (true)
-                {
-                    if (!ParseKeyword(Keyword.WITH))
-                    {
-                        break;
-                    }
-
-                    var keyword = ExpectOneOfKeywords(Keyword.ROLLUP, Keyword.CUBE, Keyword.TOTALS);
-
-                    var modifier = keyword switch
-                    {
-                        Keyword.ROLLUP => GroupByWithModifier.Rollup,
-                        Keyword.CUBE => GroupByWithModifier.Cube,
-                        Keyword.TOTALS => GroupByWithModifier.Totals,
-                        _ => throw Expected("to match GroupBy modifier keyword", PeekToken())
-                    };
-
-                    modifiers ??= [];
-                    modifiers.Add(modifier);
-                }
-            }
-
-            groupBy = expressions == null
-                ? new GroupByExpression.All(modifiers)
-                : new GroupByExpression.Expressions(expressions, modifiers);
-        }
+        var groupBy = ParseOptionalGroupBy();
 
         var clusterBy = ParseInit(ParseKeywordSequence(Keyword.CLUSTER, Keyword.BY), () => ParseCommaSeparated(ParseExpr));
 

@@ -18,7 +18,6 @@ public abstract record GroupByExpression : IWriteSql, IElement
             case Expressions expressions:
                 writer.Write($"GROUP BY {expressions.ColumnNames.ToSqlDelimited()}");
                 WriteModifiers(expressions.Modifiers);
-
                 break;
         }
 

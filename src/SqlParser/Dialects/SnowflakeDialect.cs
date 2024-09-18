@@ -11,8 +11,6 @@ namespace SqlParser.Dialects;
 /// </summary>
 public class SnowflakeDialect : Dialect
 {
-    private const short DoubleColonPrecedence = 50;
-
     public override bool IsIdentifierStart(char character)
         => character.IsLetter() || character is Symbols.Underscore;
 

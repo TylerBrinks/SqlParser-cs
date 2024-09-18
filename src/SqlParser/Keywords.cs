@@ -629,6 +629,7 @@ public enum Keyword
     PRIVILEGES,
     PROCEDURE,
     PROGRAM,
+    PROJECTION,
     PURGE,
     QUALIFY,
     QUARTER,

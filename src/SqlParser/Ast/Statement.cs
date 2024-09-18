@@ -507,7 +507,7 @@ public abstract record Statement : IWriteSql, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            var ifNotExists = IfNotExists ? "IF NOT EXISTS " : null;
+            var ifNotExists = IfNotExists ? $"{IIfNotExists.IfNotExistsPhrase} " : null;
 
             writer.WriteSql($"CREATE EXTENSION {ifNotExists}{Name}");
 
@@ -872,7 +872,7 @@ public abstract record Statement : IWriteSql, IElement
             var orReplace = OrReplace ? "OR REPLACE " : null;
             var materialized = Materialized ? "MATERIALIZED " : null;
             var temporary = Temporary ? "TEMPORARY " : null;
-            var ifNotExists = IfNotExists ? "IF NOT EXISTS " : null;
+            var ifNotExists = IfNotExists ? $"{IIfNotExists.IfNotExistsPhrase} " : null;
             var to = To != null ? $" TO {To.ToSql()}" : null;
 
             writer.WriteSql($"CREATE {orReplace}{materialized}{temporary}VIEW {ifNotExists}{Name}{to}");

@@ -38,24 +38,7 @@ public record Query([Visit(1)] SetExpression Body) : IWriteSql, IElement
 
         if (OrderBy != null)
         {
-            writer.WriteSql($" ORDER BY");
-
-            if (OrderBy.Expressions.SafeAny())
-            {
-                writer.WriteSql($" {OrderBy.Expressions.ToSqlDelimited()}");
-            }
-
-            if (OrderBy.Interpolate != null)
-            {
-                if (OrderBy.Interpolate.Expressions != null)
-                {
-                    writer.WriteSql($" INTERPOLATE ({OrderBy.Interpolate.Expressions.ToSqlDelimited()})");
-                }
-                else
-                {
-                    writer.WriteSql($" INTERPOLATE");
-                }
-            }
+            writer.WriteSql($" {OrderBy}");
         }
 
         if (Limit != null)

@@ -80,6 +80,21 @@ public abstract record AlterTableOperation : IWriteSql
             writer.WriteSql($"ADD{ifNot} {NewPartitions.ToSqlDelimited(Symbols.Space)}");
         }
     }
+
+    public record AddProjection(bool IfNotExists,  Ident Name, ProjectionSelect Select) : AlterTableOperation, IIfNotExists
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"ADD PROJECTION");
+
+            if (IfNotExists)
+            {
+                writer.Write($" {IIfNotExists.IfNotExistsPhrase}");
+            }
+
+            writer.WriteSql($" {Name} ({Select})");
+        }
+    }
     /// <summary>
     /// Alter column table operation
     /// <example>

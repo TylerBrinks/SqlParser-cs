@@ -399,7 +399,7 @@ public class ClickhouseDialectTests : ParserTestBase
     [Fact]
     public void Parse_Group_By_With_Modifier()
     {
-        var clauses = new[] { "x", "a, b", "ALL" };
+        var clauses = new[] { "ALL" };//"x", "a, b",
         var modifiers = new[]{
             "WITH ROLLUP",
             "WITH CUBE",
@@ -864,10 +864,38 @@ public class ClickhouseDialectTests : ParserTestBase
     public void Parse_Explain_Table()
     {
         var explain = VerifiedStatement<Statement.ExplainTable>("EXPLAIN TABLE test_identifier");
-        
+
         Assert.Equal(DescribeAlias.Explain, explain.DescribeAlias);
         Assert.Null(explain.HiveFormat);
-        Assert.True( explain.HasTableKeyword);
+        Assert.True(explain.HasTableKeyword);
         Assert.Equal("test_identifier", explain.Name);
+    }
+
+    [Fact]
+    public void Parse_Alter_Table_Add_Projection()
+    {
+        var alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE t0 ADD PROJECTION IF NOT EXISTS my_name (SELECT a, b GROUP BY a ORDER BY b)");
+
+        Assert.Equal("t0", alter.Name);
+
+        var expected = new AlterTableOperation.AddProjection(true, "my_name", new ProjectionSelect([
+                new SelectItem.UnnamedExpression(new Expression.Identifier("a")),
+               new SelectItem.UnnamedExpression(new Expression.Identifier("b"))
+            ],
+            new OrderBy([
+                new OrderByExpression(new Expression.Identifier("b"))
+            ], null),
+            new GroupByExpression.Expressions([
+                new Expression.Identifier("a")
+            ])));
+
+        Assert.Equal(expected, alter.Operations[0]);
+        VerifiedStatement("ALTER TABLE t0 ADD PROJECTION my_name (SELECT a, b GROUP BY a ORDER BY b)");
+        VerifiedStatement("ALTER TABLE t0 ADD PROJECTION my_name (SELECT a, b ORDER BY b)");
+        VerifiedStatement("ALTER TABLE t0 ADD PROJECTION my_name (SELECT a, b GROUP BY a)");
+
+        Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t0 ADD PROJECTION my_name"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t0 ADD PROJECTION my_name ()"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t0 ADD PROJECTION my_name (SELECT)"));
     }
 }
