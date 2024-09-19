@@ -4504,6 +4504,29 @@ public partial class Parser
         return new HiveDistributionStyle.None();
     }
 
+    public ClusteredBy? ParseOptionalClusteredBy()
+    {
+        ClusteredBy? clusteredBy =null;
+
+        if (_dialect is HiveDialect or GenericDialect && ParseKeywordSequence(Keyword.CLUSTERED, Keyword.BY))
+        {
+            var columns = ParseParenthesizedColumnList(IsOptional.Mandatory, false);
+            Sequence<OrderByExpression>? sortedBy = null;
+            if (ParseKeywordSequence(Keyword.SORTED, Keyword.BY))
+            {
+                sortedBy = ExpectParens(() => ParseCommaSeparated(ParseOrderByExpr));
+            }
+
+            ExpectKeyword(Keyword.INTO);
+            var numBuckets = ParseNumberValue();
+            ExpectKeyword(Keyword.BUCKETS);
+
+            clusteredBy = new ClusteredBy(columns, sortedBy, numBuckets);
+        }
+
+        return clusteredBy;
+    }
+
     public HiveFormat? ParseHiveFormats()
     {
         HiveFormat? hiveFormat = null;
@@ -4679,6 +4702,7 @@ public partial class Parser
         var withoutRowId = ParseKeywordSequence(Keyword.WITHOUT, Keyword.ROWID);
 
         var hiveDistribution = ParseHiveDistribution();
+        var clusteredBy = ParseOptionalClusteredBy();
         var hiveFormats = ParseHiveFormats();
 
         // PostgreSQL supports `WITH ( options )`, before `AS`
@@ -4841,6 +4865,7 @@ public partial class Parser
             AutoIncrementOffset = autoIncrementOffset,
             PartitionBy = createTableConfig.PartitionBy,
             ClusterBy = createTableConfig.ClusterBy,
+            ClusteredBy = clusteredBy,
             Options = createTableConfig.Options
         };
     }

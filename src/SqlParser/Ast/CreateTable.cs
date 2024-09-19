@@ -26,6 +26,7 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
     public OneOrManyWithParens<Expression>? OrderBy { get; init; }
     public Expression? PartitionBy { get; init; }
     public WrappedCollection<Ident>? ClusterBy { get; init; }
+    public ClusteredBy? ClusteredBy { get; init; }
     public Sequence<SqlOption>? Options { get; init; }
     public int? AutoIncrementOffset { get; init; }
     public string? DefaultCharset { get; init; }
@@ -108,25 +109,31 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
             case HiveDistributionStyle.Partitioned part:
                 writer.WriteSql($" PARTITIONED BY ({part.Columns.ToSqlDelimited()})");
                 break;
-            case HiveDistributionStyle.Clustered clustered:
-            {
-                writer.WriteSql($" CLUSTERED BY ({clustered.Columns.ToSqlDelimited()})");
 
-                if (clustered.SortedBy.SafeAny())
-                {
-                    writer.WriteSql($" SORTED BY ({clustered.SortedBy.ToSqlDelimited()})");
-                }
+            //case HiveDistributionStyle.Clustered clustered:
+            //{
+            //    writer.WriteSql($" CLUSTERED BY ({clustered.Columns.ToSqlDelimited()})");
 
-                if (clustered.NumBuckets > 0)
-                {
-                    writer.WriteSql($" INTO {clustered.NumBuckets} BUCKETS");
-                }
+            //    if (clustered.SortedBy.SafeAny())
+            //    {
+            //        writer.WriteSql($" SORTED BY ({clustered.SortedBy.ToSqlDelimited()})");
+            //    }
 
-                break;
-            }
+            //    if (clustered.NumBuckets > 0)
+            //    {
+            //        writer.WriteSql($" INTO {clustered.NumBuckets} BUCKETS");
+            //    }
+
+            //    break;
+            //}
             case HiveDistributionStyle.Skewed skewed:
                 writer.WriteSql($" SKEWED BY ({skewed.Columns.ToSqlDelimited()}) ON ({skewed.On.ToSqlDelimited()})");
                 break;
+        }
+
+        if (ClusteredBy != null)
+        {
+            writer.WriteSql($" {ClusteredBy}");
         }
 
         if (HiveFormats != null)
@@ -317,5 +324,20 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
         {
             writer.WriteSql($" AS {Query}");
         }
+    }
+}
+
+public record ClusteredBy(Sequence<Ident> Columns, Sequence<OrderByExpression>? SortedBy, Value NumBuckets) : IWriteSql, IElement
+{
+    public void ToSql(SqlTextWriter writer)
+    {
+        writer.WriteSql($"CLUSTERED BY ({Columns.ToSqlDelimited()})");
+
+        if (SortedBy.SafeAny())
+        {
+            writer.WriteSql($" SORTED BY ({SortedBy.ToSqlDelimited()})");
+        }
+
+        writer.WriteSql($" INTO {NumBuckets} BUCKETS");
     }
 }

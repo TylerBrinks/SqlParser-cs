@@ -351,4 +351,34 @@ public class HiveDialectTests : ParserTestBase
 
         Assert.Equal(new Statement.Use(new Use.Default()), VerifiedStatement("USE DEFAULT"));
     }
+
+    [Fact]
+    public void Create_Table_With_Clustered_By()
+    {
+        const string sql = """
+                           CREATE TABLE db.table_name (a INT, b STRING) 
+                           PARTITIONED BY (a INT, b STRING) 
+                           CLUSTERED BY (a, b) SORTED BY (a ASC, b DESC) 
+                           INTO 4 BUCKETS
+                           """;
+
+        var create = VerifiedStatement<Statement.CreateTable>(sql);
+        var expected = new ClusteredBy(
+            [
+                "a", "b"
+            ], 
+            [
+                new OrderByExpression(new Identifier("a"), true),
+                new OrderByExpression(new Identifier("b"), false)
+            ], new Value.Number("4"));
+
+        Assert.Equal(expected, create.Element.ClusteredBy);
+
+        VerifiedStatement("CREATE TABLE db.table_name (a INT, b STRING) PARTITIONED BY (a INT, b STRING) CLUSTERED BY (a, b) INTO 4 BUCKETS");
+
+        Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE TABLE db.table_name (a INT, b STRING) PARTITIONED BY (a INT, b STRING) CLUSTERED BY (a, b)"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE TABLE db.table_name (a INT, b STRING) PARTITIONED BY (a INT, b STRING) CLUSTERED BY () INTO 4 BUCKETS"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE TABLE db.table_name (a INT, b STRING) PARTITIONED BY (a INT, b STRING) CLUSTERED BY (a, b) SORTED BY INTO 4 BUCKETS"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE TABLE db.table_name (a INT, b STRING) PARTITIONED BY (a INT, b STRING) CLUSTERED BY (a, b) SORTED BY (a ASC, b DESC) INTO"));
+    }
 }

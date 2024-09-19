@@ -44,15 +44,6 @@ public abstract record HiveDistributionStyle : IElement
     /// <param name="Columns"></param>
     public record Partitioned(Sequence<ColumnDef> Columns) : HiveDistributionStyle;
     /// <summary>
-    /// Hive clustered distribution
-    /// </summary>
-    public record Clustered : HiveDistributionStyle
-    {
-        public Sequence<Ident>? Columns { get; init; }
-        public Sequence<ColumnDef>? SortedBy { get; init; }
-        public int NumBuckets { get; init; }
-    }
-    /// <summary>
     /// Hive skewed distribution
     /// </summary>
     public record Skewed(Sequence<ColumnDef> Columns, Sequence<ColumnDef> On) : HiveDistributionStyle
