@@ -1335,7 +1335,7 @@ namespace SqlParser.Tests
 
             Assert.Equal("Expected date/time field, found JIFFY, Line: 1, Col: 16", ex.Message);
 
-            VerifiedStatement("SELECT EXTRACT(JIFFY FROM d)", [new SnowflakeDialect(), new GenericDialect()]);
+            VerifiedStatement("SELECT EXTRACT(JIFFY FROM d)", AllDialects.Where(d => d.AllowExtractCustom));
         }
 
         [Fact]
@@ -1377,7 +1377,7 @@ namespace SqlParser.Tests
             var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT CEIL(d TO JIFFY) FROM df"));
             Assert.Equal("Expected date/time field, found JIFFY, Line: 1, Col: 18", ex.Message);
 
-            VerifiedStatement("SELECT CEIL(d TO JIFFY) FROM df", [new SnowflakeDialect(), new GenericDialect()]);
+            VerifiedStatement("SELECT CEIL(d TO JIFFY) FROM df", AllDialects.Where(d => d.AllowExtractCustom));
         }
 
         [Fact]
@@ -6233,6 +6233,36 @@ namespace SqlParser.Tests
             Assert.Equal(new Ident("cluster_name"), alter.OnCluster);
 
             Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t ON CLUSTER 123 ADD CONSTRAINT bar PRIMARY KEY (baz)"));
+        }
+
+        [Fact]
+        public void Test_Extract_Seconds_Ok()
+        {
+            var dialects = AllDialects.Where(d => d.AllowExtractCustom).ToList();
+            var extract = VerifiedExpr("EXTRACT(seconds FROM '2 seconds'::INTERVAL)", dialects);
+
+            var expected = new Extract(
+                new Cast(
+                    new LiteralValue(new Value.SingleQuotedString("2 seconds")), 
+                    new DataType.Interval(), CastKind.DoubleColon),
+                new DateTimeField.Custom("seconds"),
+                ExtractSyntax.From);
+
+            Assert.Equal(expected, extract);
+        }
+
+        [Fact]
+        public void Test_Extract_Seconds_Err()
+        {
+            Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT EXTRACT(seconds FROM '2 seconds'::INTERVAL)", 
+                AllDialects.Where(d => !d.AllowExtractCustom)));
+        }
+
+        [Fact]
+        public void Test_Extract_Seconds_Single_Quote_Err()
+        {
+            Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT EXTRACT('seconds' FROM '2 seconds'::INTERVAL)",
+                AllDialects.Where(d => !d.AllowExtractSingleQuotes)));
         }
     }
 }

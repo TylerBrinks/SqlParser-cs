@@ -1,7 +1,6 @@
 ﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
-using System.Security.AccessControl;
 using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
 

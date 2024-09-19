@@ -2177,7 +2177,7 @@ public partial class Parser
     {
         var token = NextToken();
 
-        if (_dialect is SnowflakeDialect or GenericDialect && token is SingleQuotedString)
+        if (_dialect.AllowExtractSingleQuotes && token is SingleQuotedString)
         {
             PrevToken();
             var custom = ParseIdentifier();
@@ -2226,7 +2226,7 @@ public partial class Parser
             Keyword.TIMEZONE_HOUR => new DateTimeField.TimezoneHour(),
             Keyword.TIMEZONE_MINUTE => new DateTimeField.TimezoneMinute(),
             Keyword.TIMEZONE_REGION => new DateTimeField.TimezoneRegion(),
-            _ when _dialect is SnowflakeDialect or GenericDialect => ParseCustomDate(),
+            _ when _dialect.AllowExtractSingleQuotes => ParseCustomDate(),
             _ => throw Expected("date/time field", token)
         };
 

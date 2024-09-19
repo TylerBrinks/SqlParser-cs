@@ -306,4 +306,6 @@ public abstract class Dialect
     public virtual bool SupportMapLiteralSyntax => false;
     public virtual bool SupportsUnicodeStringLiteral => false;
     public virtual bool DescribeRequiresTableKeyword => false;
+    public virtual bool AllowExtractCustom => false;
+    public virtual bool AllowExtractSingleQuotes => false;
 }

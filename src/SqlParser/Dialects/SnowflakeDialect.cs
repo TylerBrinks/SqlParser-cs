@@ -904,4 +904,6 @@ public class SnowflakeDialect : Dialect
     public override bool SupportsConnectBy => true;
     public override bool SupportsWindowFunctionNullTreatmentArg => true;
     public override bool DescribeRequiresTableKeyword => true;
+    public override bool AllowExtractCustom => true;
+    public override bool AllowExtractSingleQuotes => true;
 }

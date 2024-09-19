@@ -36,4 +36,6 @@ public class GenericDialect : Dialect
     public override bool SupportsSelectWildcardExcept => true;
     public override bool SupportMapLiteralSyntax => true;
     public override bool SupportsUnicodeStringLiteral => true;
+    public override bool AllowExtractCustom => true;
+    public override bool AllowExtractSingleQuotes => true;
 }
