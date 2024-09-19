@@ -1,5 +1,4 @@
-﻿using JetBrains.dotMemoryUnit.Properties;
-using SqlParser.Ast;
+﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 
 namespace SqlParser.Tests.Dialects;

@@ -2,9 +2,9 @@
 using SqlParser.Dialects;
 using SqlParser.Tokens;
 
-namespace SqlParser.Tests.Dialects
-{
-    public class BogusCounterDialect : GenericDialect
+namespace SqlParser.Tests.Dialects;
+
+public class BogusCounterDialect : GenericDialect
     {
         public override Statement ParseStatement(Parser parser)
         {
@@ -36,4 +36,3 @@ namespace SqlParser.Tests.Dialects
             }
         }
     }
-}

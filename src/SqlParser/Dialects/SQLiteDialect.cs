@@ -15,7 +15,8 @@ public class SQLiteDialect : Dialect
                // See https://www.sqlite.org/draft/tokenreq.html
                character is >= (char) 0x007f and < Symbols.EndOfFile
                    or Symbols.Underscore
-                   or Symbols.Dollar;
+                   //or Symbols.Dollar
+                   ;
     }
 
     public override bool IsIdentifierPart(char character)
