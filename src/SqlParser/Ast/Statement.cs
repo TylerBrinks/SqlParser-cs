@@ -2251,11 +2251,11 @@ public abstract record Statement : IWriteSql, IElement
     /// Note: This is a MySQL-specific statement.
     /// </summary>
     /// <param name="Name">Name identifier</param>
-    public record Use(Ident Name) : Statement
+    public record Use(Ast.Use Name) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"USE {Name}");
+            writer.WriteSql($"{Name}");
         }
     }
 

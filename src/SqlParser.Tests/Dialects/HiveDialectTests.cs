@@ -327,4 +327,28 @@ public class HiveDialectTests : ParserTestBase
     {
         VerifiedStatement("DESCRIBE EXTENDED test.table");
     }
+
+    [Fact]
+    public void Parse_Use()
+    {
+        List<string> validObjectNames = ["mydb", "SCHEMA", "DATABASE", "CATALOG", "WAREHOUSE"];
+
+        List<char> quoteStyles = [Symbols.Backtick, Symbols.DoubleQuote, Symbols.Backtick];
+
+        foreach (var objectName in validObjectNames)
+        {
+            var useStatement = VerifiedStatement<Statement.Use>($"USE {objectName}");
+            var expected = new Use.Object(new ObjectName(new Ident(objectName)));
+            Assert.Equal(expected, useStatement.Name);
+
+            foreach (var quote in quoteStyles)
+            {
+                useStatement = VerifiedStatement<Statement.Use>($"USE {quote}{objectName}{quote}");
+                expected = new Use.Object(new ObjectName(new Ident(objectName, quote)));
+                Assert.Equal(expected, useStatement.Name);
+            }
+        }
+
+        Assert.Equal(new Statement.Use(new Use.Default()), VerifiedStatement("USE DEFAULT"));
+    }
 }

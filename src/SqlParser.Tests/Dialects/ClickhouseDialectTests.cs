@@ -898,4 +898,26 @@ public class ClickhouseDialectTests : ParserTestBase
         Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t0 ADD PROJECTION my_name ()"));
         Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t0 ADD PROJECTION my_name (SELECT)"));
     }
+
+    [Fact]
+    public void Parse_Use()
+    {
+        List<string> validObjectNames = ["mydb", "SCHEMA", "DATABASE", "CATALOG", "WAREHOUSE", "DEFAULT"];
+
+        List<char> quoteStyles = [Symbols.DoubleQuote, Symbols.Backtick];
+
+        foreach (var objectName in validObjectNames)
+        {
+            var useStatement = VerifiedStatement<Statement.Use>($"USE {objectName}");
+            var expected = new Use.Object(new ObjectName(new Ident(objectName)));
+            Assert.Equal(expected, useStatement.Name);
+
+            foreach (var quote in quoteStyles)
+            {
+                useStatement = VerifiedStatement<Statement.Use>($"USE {quote}{objectName}{quote}");
+                expected = new Use.Object(new ObjectName(new Ident(objectName, quote)));
+                Assert.Equal(expected, useStatement.Name);
+            }
+        }
+    }
 }

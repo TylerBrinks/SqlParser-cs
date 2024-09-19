@@ -1,6 +1,7 @@
 ﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
+using System.Security.AccessControl;
 using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
 
@@ -785,7 +786,7 @@ namespace SqlParser.Tests.Dialects
             left = new Identifier("c1");
             right = new Function("myudf")
             {
-                Args = new FunctionArguments.List(new FunctionArgumentList( [
+                Args = new FunctionArguments.List(new FunctionArgumentList([
                     new FunctionArg.Unnamed(
                         new FunctionArgExpression.FunctionExpression(
                             new UnaryOp(
@@ -975,7 +976,7 @@ namespace SqlParser.Tests.Dialects
             var select = VerifiedOnlySelect("SELECT EXTRACT('hour', d)");
 
             var expected = new Extract(
-                new Identifier("d"), 
+                new Identifier("d"),
                 new DateTimeField.Custom(new Ident("hour", Symbols.SingleQuote)),
                 ExtractSyntax.Comma);
 
@@ -1087,11 +1088,11 @@ namespace SqlParser.Tests.Dialects
                 Alias = new TableAlias("tu")
             })
             {
-                Joins = [ 
+                Joins = [
                     new Join(new TableFactor.Table("quotes_unixtime")
                         {
                             Alias = new TableAlias("qu")
-                        }, 
+                        },
                         new JoinOperator.AsOf(new BinaryOp(
                                 new CompoundIdentifier(["tu", "trade_time"]),
                                 BinaryOperator.GtEq,
@@ -1106,7 +1107,7 @@ namespace SqlParser.Tests.Dialects
         [Fact]
         public void Test_Snowflake_Create_Or_Replace_Table()
         {
-            const string sql= "CREATE OR REPLACE TABLE my_table (a number)";
+            const string sql = "CREATE OR REPLACE TABLE my_table (a number)";
             var create = VerifiedStatement<Statement.CreateTable>(sql);
 
             Assert.Equal("my_table", create.Element.Name);
@@ -1297,6 +1298,56 @@ namespace SqlParser.Tests.Dialects
             Assert.Null(explain.HiveFormat);
             Assert.True(explain.HasTableKeyword);
             Assert.Equal("test_identifier", explain.Name);
+        }
+
+        [Fact]
+        public void Parse_Use()
+        {
+            List<string> validObjectNames = ["mydb", "CATALOG", "DEFAULT"];
+
+            List<char> quoteStyles = [Symbols.SingleQuote, Symbols.DoubleQuote, Symbols.Backtick];
+
+            foreach (var objectName in validObjectNames)
+            {
+                var useStatement = VerifiedStatement<Statement.Use>($"USE {objectName}");
+                var expected = new Use.Object(new ObjectName(new Ident(objectName)));
+                Assert.Equal(expected, useStatement.Name);
+
+                foreach (var quote in quoteStyles)
+                {
+                    useStatement = VerifiedStatement<Statement.Use>($"USE {quote}{objectName}{quote}");
+                    expected = new Use.Object(new ObjectName(new Ident(objectName, quote)));
+                    Assert.Equal(expected, useStatement.Name);
+                }
+            }
+
+            foreach (var quote in quoteStyles)
+            {
+                var useStatement = VerifiedStatement<Statement.Use>($"USE {quote}CATALOG{quote}.{quote}my_schema{quote}");
+                var expected = new Use.Object(new ObjectName([
+                    new Ident("CATALOG", quote),
+                    new Ident("my_schema", quote)
+                ]));
+                Assert.Equal(expected, useStatement.Name);
+            }
+
+            Assert.Equal(new Statement.Use(new Use.Object(new ObjectName(["mydb", "my_schema"]))), VerifiedStatement("USE mydb.my_schema"));
+
+            foreach (var quote in quoteStyles)
+            {
+                Assert.Equal(new Statement.Use(new Use.Database(new ObjectName(new Ident("my_database", quote)))),
+                    VerifiedStatement($"USE DATABASE {quote}my_database{quote}"));
+
+                Assert.Equal(new Statement.Use(new Use.Schema(new ObjectName(new Ident("my_schema", quote)))),
+                    VerifiedStatement($"USE SCHEMA {quote}my_schema{quote}"));
+
+                Assert.Equal(new Statement.Use(new Use.Schema(new ObjectName(
+                        [
+                            new Ident("CATALOG", quote),
+                            new Ident("my_schema", quote)
+                        ]))),
+                    VerifiedStatement($"USE SCHEMA {quote}CATALOG{quote}.{quote}my_schema{quote}"));
+            }
         }
     }
 }

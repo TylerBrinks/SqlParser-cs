@@ -15,6 +15,7 @@ using Select = SqlParser.Ast.Select;
 using Declare = SqlParser.Ast.Declare;
 using HiveRowDelimiter = SqlParser.Ast.HiveRowDelimiter;
 using Subscript = SqlParser.Ast.Subscript;
+using Use = SqlParser.Ast.Use;
 
 namespace SqlParser;
 
@@ -196,7 +197,7 @@ public partial class Parser
             Keyword.CLOSE => ParseClose(),
             Keyword.SET => ParseSet(),
             Keyword.SHOW => ParseShow(),
-            Keyword.USE => new Use(ParseIdentifier()),
+            Keyword.USE => ParseUse(),
             Keyword.GRANT => ParseGrant(),
             Keyword.REVOKE => ParseRevoke(),
             Keyword.START => ParseStartTransaction(),
@@ -5716,7 +5717,7 @@ public partial class Parser
                 return new AddColumn(columnKeyword, ine, columnDef, columnPosition);
             }
         }
-       
+
         else if (ParseKeyword(Keyword.RENAME))
         {
             if (_dialect is PostgreSqlDialect && ParseKeyword(Keyword.CONSTRAINT))
@@ -6004,7 +6005,7 @@ public partial class Parser
             var expressions = ParseKeyword(Keyword.ALL) ? null : ParseCommaSeparated(ParseGroupByExpr);
 
             Sequence<GroupByWithModifier>? modifiers = null;
-          
+
             if (_dialect is ClickHouseDialect or GenericDialect)
             {
                 while (true)
@@ -8284,6 +8285,40 @@ public partial class Parser
         }
 
         return new ShowVariable(ParseIdentifiers());
+    }
+
+    public Statement ParseUse()
+    {
+        Keyword? parsedKeyword = null;
+
+        if (_dialect is HiveDialect)
+        {
+            if (ParseKeyword(Keyword.DEFAULT))
+            {
+                return new Statement.Use(new Use.Default());
+            }
+        }
+
+        if (_dialect is DatabricksDialect)
+        {
+            parsedKeyword = ParseOneOfKeywords(Keyword.CATALOG, Keyword.DATABASE, Keyword.SCHEMA);
+        }
+        else if (_dialect is SnowflakeDialect)
+        {
+            parsedKeyword = ParseOneOfKeywords(Keyword.DATABASE, Keyword.SCHEMA, Keyword.WAREHOUSE);
+        }
+
+        var objectName = ParseObjectName();
+        Use result = parsedKeyword switch
+        {
+            Keyword.CATALOG => new Use.Catalog(objectName),
+            Keyword.DATABASE => new Use.Database(objectName),
+            Keyword.SCHEMA => new Use.Schema(objectName),
+            Keyword.WAREHOUSE => new Use.Warehouse(objectName),
+            _ => new Use.Object(objectName)
+        };
+
+        return new Statement.Use(result);
     }
 
     public ShowCreate ParseShowCreate()

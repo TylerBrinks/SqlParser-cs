@@ -1,5 +1,6 @@
 ﻿using SqlParser.Ast;
 using SqlParser.Dialects;
+using System.Security.AccessControl;
 using static SqlParser.Ast.Expression;
 
 // ReSharper disable CommentTypo
@@ -54,6 +55,54 @@ namespace SqlParser.Tests.Dialects
             query = VerifiedQuery("WITH values AS (SELECT 42) SELECT * FROM values");
 
             Assert.Equal(tableFactor, query.Body.AsSelect().From![0].Relation);
+        }
+
+        [Fact]
+        public void Parse_Use()
+        {
+            List<string> validObjectNames = ["mydb", "WAREHOUSE", "DEFAULT"];
+
+            List<char> quoteStyles = [Symbols.DoubleQuote, Symbols.Backtick];
+
+            foreach (var objectName in validObjectNames)
+            {
+                var useStatement = VerifiedStatement<Statement.Use>($"USE {objectName}");
+                var expected = new Use.Object(new ObjectName(new Ident(objectName)));
+                Assert.Equal(expected, useStatement.Name);
+
+                foreach (var quote in quoteStyles)
+                {
+                    useStatement = VerifiedStatement<Statement.Use>($"USE {quote}{objectName}{quote}");
+                    expected = new Use.Object(new ObjectName(new Ident(objectName, quote)));
+                    Assert.Equal(expected, useStatement.Name);
+                }
+            }
+
+            foreach (var quote in quoteStyles)
+            {
+                var useStatement = VerifiedStatement<Statement.Use>($"USE CATALOG {quote}my_catalog{quote}");
+                Use expected = new Use.Catalog(new ObjectName(new Ident("my_catalog", quote)));
+                Assert.Equal(expected, useStatement.Name);
+
+                useStatement = VerifiedStatement<Statement.Use>($"USE DATABASE {quote}my_catalog{quote}");
+                expected = new Use.Database(new ObjectName(new Ident("my_catalog", quote)));
+                Assert.Equal(expected, useStatement.Name);
+
+                useStatement = VerifiedStatement<Statement.Use>($"USE SCHEMA {quote}my_catalog{quote}");
+                expected = new Use.Schema(new ObjectName(new Ident("my_catalog", quote)));
+                Assert.Equal(expected, useStatement.Name);
+            }
+
+            Assert.Equal(new Statement.Use(new Use.Catalog("my_catalog")), VerifiedStatement("USE CATALOG my_catalog"));
+            Assert.Equal(new Statement.Use(new Use.Database("my_schema")), VerifiedStatement("USE DATABASE my_schema"));
+            Assert.Equal(new Statement.Use(new Use.Schema("my_schema")), VerifiedStatement("USE SCHEMA my_schema"));
+
+            List<string> invalidCases = ["USE SCHEMA", "USE DATABASE", "USE CATALOG"];
+
+            foreach (var sql in invalidCases)
+            {
+                Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
+            }
         }
     }
 }
