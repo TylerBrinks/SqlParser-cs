@@ -420,11 +420,37 @@ public partial class Parser
     public Truncate ParseTruncate()
     {
         var table = ParseKeyword(Keyword.TABLE);
-        var tableName = ParseObjectName();
+        var only = ParseKeyword(Keyword.ONLY);
+        var tableNames = new Sequence<TruncateTableTarget>(ParseCommaSeparated(ParseObjectName).Select(o => new TruncateTableTarget(o)));
         var partitions = ParseInit(ParseKeyword(Keyword.PARTITION),
             () => { return ExpectParens(() => ParseCommaSeparated(ParseExpr)); });
 
-        return new Truncate(tableName, partitions, table);
+        TruncateIdentityOption? identity = null;
+        TruncateCascadeOption? cascade = null;
+
+        if (_dialect is PostgreSqlDialect or GenericDialect)
+        {
+            if (ParseKeywordSequence(Keyword.RESTART, Keyword.IDENTITY))
+            {
+                identity = TruncateIdentityOption.Restart;
+
+            }
+            else if (ParseKeywordSequence(Keyword.CONTINUE, Keyword.IDENTITY))
+            {
+                identity = TruncateIdentityOption.Continue;
+            }
+
+            if (ParseKeyword(Keyword.CASCADE))
+            {
+                cascade = TruncateCascadeOption.Cascade;
+            }
+            else if (ParseKeyword(Keyword.RESTRICT))
+            {
+                cascade = TruncateCascadeOption.Restrict;
+            }
+        }
+
+        return new Truncate(tableNames, table, only, partitions, identity, cascade);
     }
 
     public Statement ParseAttachDatabase()
@@ -4513,7 +4539,7 @@ public partial class Parser
 
     public ClusteredBy? ParseOptionalClusteredBy()
     {
-        ClusteredBy? clusteredBy =null;
+        ClusteredBy? clusteredBy = null;
 
         if (_dialect is HiveDialect or GenericDialect && ParseKeywordSequence(Keyword.CLUSTERED, Keyword.BY))
         {

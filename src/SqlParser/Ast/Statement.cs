@@ -2158,13 +2158,49 @@ public abstract record Statement : IWriteSql, IElement
     /// </summary>
     /// <param name="Name">Object name</param>
     /// <param name="Partitions">List of partitions</param>
-    public record Truncate(ObjectName Name, Sequence<Expression>? Partitions, bool Table) : Statement
+    public record Truncate(
+        Sequence<TruncateTableTarget> Names,
+        bool Table,
+        bool Only,
+        Sequence<Expression>? Partitions = null,
+        TruncateIdentityOption? Identity = null,
+        TruncateCascadeOption? Cascade = null) : Statement
     {
+
         public override void ToSql(SqlTextWriter writer)
         {
             var table = Table ? "TABLE " : string.Empty;
+            var only = Only ? "ONLY " : string.Empty;
 
-            writer.WriteSql($"TRUNCATE {table}{Name}");
+            writer.WriteSql($"TRUNCATE {table}{only}{Names.ToSqlDelimited()}");
+
+            if (Identity != null)
+            {
+                switch (Identity)
+                {
+                    case TruncateIdentityOption.Restart:
+                        writer.Write(" RESTART IDENTITY");
+                        break;
+
+                    case TruncateIdentityOption.Continue:
+                        writer.Write(" CONTINUE IDENTITY");
+                        break;
+                }
+            }
+
+            if (Cascade != null)
+            {
+                switch (Cascade)
+                {
+                    case TruncateCascadeOption.Cascade:
+                        writer.Write(" CASCADE");
+                        break;
+
+                    case TruncateCascadeOption.Restrict:
+                        writer.Write(" RESTRICT");
+                        break;
+                }
+            }
 
             if (Partitions.SafeAny())
             {

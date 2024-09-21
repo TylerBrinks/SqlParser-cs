@@ -1929,7 +1929,22 @@ public class PostgresDialectTests : ParserTestBase
         var truncate = VerifiedStatement("TRUNCATE db.table_name");
 
         var name = new ObjectName(["db", "table_name"]);
-        var expected = new Statement.Truncate(name, null, false);
+        var expected = new Statement.Truncate([new TruncateTableTarget(name)], false, false);
+        Assert.Equal(expected, truncate);
+    }
+
+    [Fact]
+    public void Parse_Truncate_With_Options()
+    {
+        var truncate = VerifiedStatement("TRUNCATE TABLE ONLY db.table_name RESTART IDENTITY CASCADE");
+        var tableName = new ObjectName(["db", "table_name"]);
+        var tableNames = new Sequence<TruncateTableTarget>
+        {
+            new(tableName)
+        };
+
+        var expected = new Statement.Truncate(tableNames, true, true, null, TruncateIdentityOption.Restart, TruncateCascadeOption.Cascade);
+
         Assert.Equal(expected, truncate);
     }
 
@@ -2082,9 +2097,21 @@ public class PostgresDialectTests : ParserTestBase
     {
         VerifiedStatement("ALTER TABLE tab DISABLE ROW LEVEL SECURITY");
         VerifiedStatement("ALTER TABLE tab DISABLE RULE rule_name");
+    }
+
+    [Fact]
+    public void Parse_Alter_Table_Disable_Trigger()
+    {
         VerifiedStatement("ALTER TABLE tab DISABLE TRIGGER ALL");
         VerifiedStatement("ALTER TABLE tab DISABLE TRIGGER USER");
         VerifiedStatement("ALTER TABLE tab DISABLE TRIGGER trigger_name");
+    }
+
+    [Fact]
+    public void Parse_Truncate_Table()
+    {
+        VerifiedStatement("TRUNCATE TABLE \"users\", \"orders\" RESTART IDENTITY RESTRICT");
+        VerifiedStatement("TRUNCATE users, orders RESTART IDENTITY");
     }
 
     [Fact]

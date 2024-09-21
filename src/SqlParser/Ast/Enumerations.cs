@@ -614,6 +614,20 @@ public enum TrimWhereField
     Leading,
     Trailing
 }
+
+public enum TruncateIdentityOption
+{
+    Restart,
+    Continue,
+}
+
+public enum TruncateCascadeOption
+{
+    Cascade,
+    Restrict
+}
+
+
 // ReSharper disable InconsistentNaming
 public enum UnaryOperator
 {
