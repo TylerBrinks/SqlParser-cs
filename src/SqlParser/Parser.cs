@@ -4473,6 +4473,12 @@ public partial class Parser
             nullsDistinct = !not;
         }
 
+        Sequence<Expression>? withExpressions = null;
+        if (_dialect.SupportsCreateIndexWithClause && ParseKeyword(Keyword.WITH))
+        {
+            withExpressions = ExpectParens(() => ParseCommaSeparated(ParseExpr));
+        }
+
         Expression? predicate = null;
         if (ParseKeyword(Keyword.WHERE))
         {
@@ -4488,6 +4494,7 @@ public partial class Parser
             Concurrently = concurrently,
             Include = include,
             NullsDistinct = nullsDistinct,
+            With = withExpressions,
             Predicate = predicate
         };
     }

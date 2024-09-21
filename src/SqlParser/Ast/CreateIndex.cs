@@ -9,6 +9,7 @@ public record CreateIndex([property: Visit(0)] ObjectName? Name, [property: Visi
     public bool Concurrently { get; init; }
     public Sequence<Ident>? Include { get; init; }
     public bool? NullsDistinct { get; init; }
+    public Sequence<Expression>? With { get; init; }
     public Expression? Predicate { get; init; }
 
     public void ToSql(SqlTextWriter writer)
@@ -41,6 +42,11 @@ public record CreateIndex([property: Visit(0)] ObjectName? Name, [property: Visi
         if (NullsDistinct.HasValue)
         {
             writer.Write(NullsDistinct.Value ? " NULLS DISTINCT" : " NULLS NOT DISTINCT");
+        }
+
+        if (With.SafeAny())
+        {
+            writer.WriteSql($" WITH ({With.ToSqlDelimited()})");
         }
 
         if (Predicate != null)

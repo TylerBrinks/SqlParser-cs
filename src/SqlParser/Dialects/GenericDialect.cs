@@ -1,6 +1,4 @@
-﻿using SqlParser.Ast;
-
-namespace SqlParser.Dialects;
+﻿namespace SqlParser.Dialects;
 
 /// <summary>
 /// Generic SQL dialect
@@ -38,4 +36,5 @@ public class GenericDialect : Dialect
     public override bool SupportsUnicodeStringLiteral => true;
     public override bool AllowExtractCustom => true;
     public override bool AllowExtractSingleQuotes => true;
+    public override bool SupportsCreateIndexWithClause => true;
 }

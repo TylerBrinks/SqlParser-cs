@@ -1,5 +1,4 @@
-﻿using System.Reflection.Metadata.Ecma335;
-using SqlParser.Ast;
+﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 
 namespace SqlParser.Tests;
