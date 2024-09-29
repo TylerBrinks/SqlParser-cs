@@ -16,17 +16,17 @@ public class BigQueryDialectTests : ParserTestBase
     public void Parse_Literal_String()
     {
         const string sql = """"
-                           SELECT 
-                           'single', 
-                           "double", 
-                           '''triple-single''', 
-                           """triple-double""", 
-                           'single\'escaped', 
-                           '''triple-single\'escaped''', 
-                           '''triple-single'unescaped''', 
-                           "double\"escaped", 
-                           """triple-double\"escaped""", 
-                           """triple-double"unescaped"""
+                           SELECT
+                            'single',
+                            "double",
+                            '''triple-single''',
+                            """triple-double""",
+                            'single\'escaped',
+                            '''triple-single\'escaped''',
+                            '''triple-single'unescaped''',
+                            "double\"escaped",
+                            """triple-double\"escaped""",
+                            """triple-double"unescaped"""
                            """";
 
         var select = VerifiedOnlySelect(sql);
@@ -48,15 +48,15 @@ public class BigQueryDialectTests : ParserTestBase
     public void Parse_Byte_Literal()
     {
         var sql = """"
-                  SELECT 
-                  B'abc', 
-                  B"abc", 
-                  B'f\(abc,(.*),def\)', 
-                  B"f\(abc,(.*),def\)", 
-                  B'''abc''', 
-                  B"""abc"""
+                  SELECT
+                   B'abc',
+                   B"abc",
+                   B'f\(abc,(.*),def\)',
+                   B"f\(abc,(.*),def\)",
+                   B'''abc''',
+                   B"""abc"""
                   """";
-  
+
         var statement = VerifiedStatement(sql);
         var projection = statement.AsQuery()!.Body.AsSelect().Projection;
 
@@ -80,15 +80,15 @@ public class BigQueryDialectTests : ParserTestBase
     [Fact]
     public void Parse_Raw_Literal()
     {
-        var sql = """"
-                  SELECT 
-                  R'abc', 
-                  R"abc", 
-                  R'f\(abc,(.*),def\)', 
-                  R"f\(abc,(.*),def\)", 
-                  R'''abc''', 
-                  R"""abc"""
-                  """";
+        const string sql = """"
+                           SELECT
+                            R'abc',
+                            R"abc",
+                            R'f\(abc,(.*),def\)',
+                            R"f\(abc,(.*),def\)",
+                            R'''abc''',
+                            R"""abc"""
+                           """";
 
         var statement = VerifiedStatement(sql);
         var projection = statement.AsQuery()!.Body.AsSelect().Projection;
@@ -564,12 +564,12 @@ public class BigQueryDialectTests : ParserTestBase
     public void Parse_Create_Table_With_Options()
     {
         var sql = """
-              CREATE TABLE mydataset.newtable 
-              (x INT64 NOT NULL OPTIONS(description = "field x"), 
-              y BOOL OPTIONS(description = "field y")) 
-              PARTITION BY _PARTITIONDATE 
-              CLUSTER BY userid, age 
-              OPTIONS(partition_expiration_days = 1, description = "table option description")
+              CREATE TABLE mydataset.newtable
+               (x INT64 NOT NULL OPTIONS(description = "field x"),
+               y BOOL OPTIONS(description = "field y"))
+               PARTITION BY _PARTITIONDATE
+               CLUSTER BY userid, age
+               OPTIONS(partition_expiration_days = 1, description = "table option description")
               """;
         var create = VerifiedStatement<Statement.CreateTable>(sql).Element;
 
@@ -601,14 +601,157 @@ public class BigQueryDialectTests : ParserTestBase
         }, create.Options);
 
         sql = """
-              CREATE TABLE mydataset.newtable 
-              (x INT64 NOT NULL OPTIONS(description = "field x"), 
-              y BOOL OPTIONS(description = "field y")) 
-              CLUSTER BY userid 
-              OPTIONS(partition_expiration_days = 1, 
-              description = "table option description")
+              CREATE TABLE mydataset.newtable
+               (x INT64 NOT NULL OPTIONS(description = "field x"),
+               y BOOL OPTIONS(description = "field y"))
+               CLUSTER BY userid
+               OPTIONS(partition_expiration_days = 1,
+               description = "table option description")
               """;
-        
+
         VerifiedStatement(sql);
+    }
+
+    [Fact]
+    public void Parse_Typed_Struct_Syntax_BigQuery()
+    {
+        var sql = "SELECT STRUCT<INT64>(5), STRUCT<x INT64, y STRING>(1, t.str_col), STRUCT<arr ARRAY<FLOAT64>, str STRUCT<BOOL>>(nested_col)";
+
+        var select = VerifiedOnlySelect(sql);
+
+        Assert.Equal(3, select.Projection.Count);
+        Assert.Equal(new Struct([
+            new LiteralValue(new Value.Number("5"))
+        ], [
+            new StructField(new DataType.Int64())
+        ]), select.Projection[0].AsExpr());
+
+        Assert.Equal(new Struct([
+            new LiteralValue(new Value.Number("1")),
+            new CompoundIdentifier(["t", "str_col"])
+        ], [
+            new StructField(new DataType.Int64(), "x"),
+            new StructField(new DataType.StringType(), "y"),
+        ]), select.Projection[1].AsExpr());
+
+        Assert.Equal(new Struct([
+          new Identifier("nested_col")
+        ], [
+            new StructField(new DataType.Array(new ArrayElementTypeDef.AngleBracket(new DataType.Float64())), "arr"),
+            new StructField(new DataType.Struct([
+                new StructField(new DataType.Bool())
+            ], StructBracketKind.AngleBrackets), "str"),
+        ]), select.Projection[2].AsExpr());
+
+        sql = "SELECT STRUCT<x STRUCT, y ARRAY<STRUCT>>(nested_col)";
+
+        select = VerifiedOnlySelect(sql);
+
+        Assert.Single(select.Projection);
+        Assert.Equal(new Struct([
+            new Identifier("nested_col")
+        ], [
+            new StructField(new DataType.Struct([], StructBracketKind.AngleBrackets), "x"),
+            new StructField(new DataType.Array(new ArrayElementTypeDef.AngleBracket(new DataType.Struct([], StructBracketKind.AngleBrackets))), "y")
+        ]), select.Projection[0].AsExpr());
+
+        sql = "SELECT STRUCT<BOOL>(true), STRUCT<BYTES(42)>(B'abc')";
+        select = VerifiedOnlySelect(sql);
+        Assert.Equal(2, select.Projection.Count);
+
+        Assert.Equal(new Struct([
+            new LiteralValue(new Value.Boolean(true))
+        ], [
+            new StructField(new DataType.Bool())
+        ]), select.Projection[0].AsExpr());
+
+        Assert.Equal(new Struct([
+            new LiteralValue(new Value.SingleQuotedByteStringLiteral("abc"))
+        ], [
+            new StructField(new DataType.Bytes(42))
+        ]), select.Projection[1].AsExpr());
+
+        sql = "SELECT STRUCT<DATE>('2011-05-05'), STRUCT<DATETIME>(DATETIME '1999-01-01 01:23:34.45'), STRUCT<FLOAT64>(5.0), STRUCT<INT64>(1)";
+        select = VerifiedOnlySelect(sql);
+        Assert.Equal(4, select.Projection.Count);
+
+        Assert.Equal(new Struct([
+            new LiteralValue(new Value.SingleQuotedString("2011-05-05"))
+        ], [
+            new StructField(new DataType.Date())
+        ]), select.Projection[0].AsExpr());
+
+        Assert.Equal(new Struct([
+            new TypedString("1999-01-01 01:23:34.45", new DataType.Datetime())
+        ], [
+            new StructField(new DataType.Datetime())
+        ]), select.Projection[1].AsExpr());
+
+        Assert.Equal(new Struct([
+            new LiteralValue(new Value.Number("5.0"))
+        ], [
+            new StructField(new DataType.Float64())
+        ]), select.Projection[2].AsExpr());
+
+        Assert.Equal(new Struct([
+            new LiteralValue(new Value.Number("1"))
+        ], [
+            new StructField(new DataType.Int64())
+        ]), select.Projection[3].AsExpr());
+
+        sql = "SELECT STRUCT<INTERVAL>(INTERVAL '1' MONTH), STRUCT<JSON>(JSON '{\"class\" : {\"students\" : [{\"name\" : \"Jane\"}]}}')";
+        select = VerifiedOnlySelect(sql);
+        Assert.Equal(2, select.Projection.Count);
+
+        Assert.Equal(new Struct([
+            new Interval(new LiteralValue(new Value.SingleQuotedString("1")), new DateTimeField.Month())
+        ], [
+            new StructField(new DataType.Interval())
+        ]), select.Projection[0].AsExpr());
+
+        Assert.Equal(new Struct([
+            new TypedString("{\"class\" : {\"students\" : [{\"name\" : \"Jane\"}]}}", new DataType.Json())
+        ], [
+            new StructField(new DataType.Json())
+        ]), select.Projection[1].AsExpr());
+
+
+        sql = "SELECT STRUCT<STRING(42)>('foo'), STRUCT<TIMESTAMP>(TIMESTAMP '2008-12-25 15:30:00 America/Los_Angeles'), STRUCT<TIME>(TIME '15:30:00')";
+        select = VerifiedOnlySelect(sql);
+        Assert.Equal(3, select.Projection.Count);
+
+        Assert.Equal(new Struct([
+            new LiteralValue(new Value.SingleQuotedString("foo"))
+        ], [
+            new StructField(new DataType.StringType(42))
+        ]), select.Projection[0].AsExpr());
+
+        Assert.Equal(new Struct([
+            new TypedString("2008-12-25 15:30:00 America/Los_Angeles", new DataType.Timestamp(TimezoneInfo.None))
+        ], [
+            new StructField(new DataType.Timestamp(TimezoneInfo.None))
+        ]), select.Projection[1].AsExpr());
+
+        Assert.Equal(new Struct([
+            new TypedString("15:30:00", new DataType.Time(TimezoneInfo.None))
+        ], [
+            new StructField(new DataType.Time(TimezoneInfo.None))
+        ]), select.Projection[2].AsExpr());
+
+        sql = "SELECT STRUCT<NUMERIC>(NUMERIC '1'), STRUCT<BIGNUMERIC>(BIGNUMERIC '1')";
+        select = VerifiedOnlySelect(sql);
+        Assert.Equal(2, select.Projection.Count);
+
+        Assert.Equal(new Struct([
+            new TypedString("1", new DataType.Numeric(new ExactNumberInfo.None()))
+        ], [
+            new StructField(new DataType.Numeric(new ExactNumberInfo.None()))
+        ]), select.Projection[0].AsExpr());
+
+        Assert.Equal(new Struct([
+            new TypedString("1", new DataType.BigNumeric(new ExactNumberInfo.None()))
+        ], [
+            new StructField(new DataType.BigNumeric(new ExactNumberInfo.None()))
+        ]), select.Projection[1].AsExpr());
     }
 }

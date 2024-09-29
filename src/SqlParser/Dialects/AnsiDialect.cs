@@ -24,4 +24,7 @@ public class AnsiDialect : Dialect
     {
         return character.IsAlphaNumeric() || character == Symbols.Underscore;
     }
+
+    public override bool RequireIntervalQualifier => true;
+
 }

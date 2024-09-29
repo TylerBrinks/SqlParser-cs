@@ -633,40 +633,40 @@ public partial class Parser
         return ParseExpr();
     }
 
-    public Expression ParseIntervalExpr()
-    {
-        short precedence = 0;
-        var expr = ParsePrefix();
+    //public Expression ParseIntervalExpr()
+    //{
+    //    short precedence = 0;
+    //    var expr = ParsePrefix();
 
-        while (true)
-        {
-            var nextPrecedence = GetNextIntervalPrecedence();
+    //    while (true)
+    //    {
+    //        var nextPrecedence = GetNextIntervalPrecedence();
 
-            if (precedence >= nextPrecedence)
-            {
-                break;
-            }
+    //        if (precedence >= nextPrecedence)
+    //        {
+    //            break;
+    //        }
 
-            expr = ParseInfix(expr, nextPrecedence);
-        }
+    //        expr = ParseInfix(expr, nextPrecedence);
+    //    }
 
-        return expr;
-    }
+    //    return expr;
+    //}
 
     /// <summary>
     /// Get the precedence of the next token
     /// </summary>
     /// <returns>Precedence value</returns>
-    public short GetNextIntervalPrecedence()
-    {
-        var token = PeekToken();
+    //public short GetNextIntervalPrecedence()
+    //{
+    //    var token = PeekToken();
 
-        return token switch
-        {
-            Word { Keyword: Keyword.AND or Keyword.OR or Keyword.XOR } => 0,
-            _ => GetNextPrecedence()
-        };
-    }
+    //    return token switch
+    //    {
+    //        Word { Keyword: Keyword.AND or Keyword.OR or Keyword.XOR } => 0,
+    //        _ => GetNextPrecedence()
+    //    };
+    //}
 
     public Statement ParseAssert()
     {
@@ -2282,10 +2282,10 @@ public partial class Parser
         // it is not clear if any implementations support that syntax, so we
         // don't currently try to parse it. (The sign can instead be included
         // inside the value string.)
-
-        // The first token in an interval is a string literal which specifies
-        // the duration of the interval.
-        var value = ParseIntervalExpr();
+        
+        // to match the different flavours of INTERVAL syntax, we only allow expressions
+        // if the dialect requires an interval qualifier,
+        var value = _dialect.RequireIntervalQualifier ? ParseExpr() : ParsePrefix();
 
         // Following the string literal is a qualifier which indicates the units
         // of the duration specified in the string literal.
@@ -2295,7 +2295,16 @@ public partial class Parser
 
         var token = PeekToken();
 
-        var leadingField = ParseInit(token is Word, () => GetDateTimeField((token as Word)!.Keyword));
+        DateTimeField? leadingField = null;
+
+        if (NextTokenIsTemporalUnit())
+        {
+            leadingField = ParseDateTimeField();
+        }
+        else if (_dialect.RequireIntervalQualifier)
+        {
+            throw new ParserException("INTERVAL requires a unit after the literal value");
+        }
 
         ulong? leadingPrecision;
         ulong? fractionalPrecision = null;
@@ -2329,12 +2338,13 @@ public partial class Parser
             LeadingPrecision = leadingPrecision,
             FractionalSecondsPrecision = fractionalPrecision
         };
-
     }
 
-    public DateTimeField GetDateTimeField(Keyword keyword)
+    public bool NextTokenIsTemporalUnit()
     {
-        return Extensions.DateTimeFields.Any(kwd => kwd == keyword) ? ParseDateTimeField() : new DateTimeField.None();
+        var next = PeekToken();
+
+        return next is Word w && Extensions.DateTimeFields.Any(kwd => kwd == w.Keyword);
     }
 
     public Subscript ParseSubscriptInner()
@@ -6615,7 +6625,7 @@ public partial class Parser
             Word { Keyword: Keyword.JSON } => new DataType.Json(),
             Word { Keyword: Keyword.JSONB } => new DataType.JsonB(),
             Word { Keyword: Keyword.REGCLASS } => new DataType.Regclass(),
-            Word { Keyword: Keyword.STRING } => new DataType.StringType(),
+            Word { Keyword: Keyword.STRING } => new DataType.StringType(ParseOptionalPrecision()),
             Word { Keyword: Keyword.FIXEDSTRING } => ParseFixedString(),
 
             Word { Keyword: Keyword.TEXT } => new DataType.Text(),

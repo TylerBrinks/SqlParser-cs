@@ -10,7 +10,7 @@ public class DatabricksDialectTests : ParserTestBase
 {
     public DatabricksDialectTests()
     {
-        DefaultDialects = new[] {new DatabricksDialect()};
+        DefaultDialects = new[] { new DatabricksDialect() };
     }
 
     [Fact]

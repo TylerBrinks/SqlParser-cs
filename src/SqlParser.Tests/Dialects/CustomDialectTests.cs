@@ -19,7 +19,7 @@ public class CustomDialectTests : ParserTestBase
         var dialect = new CustomDialect { ParsePrefixAction = ParsePrefix };
         var statements = new Parser().ParseSql("SELECT 1 + 2", dialect);
         var query = statements.First().AsQuery();
-        var body = new SetExpression.SelectExpression(new Select(new []
+        var body = new SetExpression.SelectExpression(new Select(new[]
         {
             new SelectItem.UnnamedExpression(new Expression.BinaryOp(
                 new Expression.LiteralValue(new Value.Null()),
@@ -39,7 +39,7 @@ public class CustomDialectTests : ParserTestBase
 
         var statements = new Parser().ParseSql("SELECT 1 + 2", dialect);
         var query = statements.First();
-        var body = new SetExpression.SelectExpression(new Select(new []
+        var body = new SetExpression.SelectExpression(new Select(new[]
         {
             new SelectItem.UnnamedExpression(new Expression.BinaryOp(
                 new Expression.LiteralValue(Number("1")),
@@ -74,7 +74,7 @@ public class CustomDialectTests : ParserTestBase
     private static Expression? ParsePrefix(Parser parser)
     {
         return parser.ConsumeToken<Number>()
-            ? new Expression.LiteralValue(new Value.Null()) 
+            ? new Expression.LiteralValue(new Value.Null())
             : null;
     }
 

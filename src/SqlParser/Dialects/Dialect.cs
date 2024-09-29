@@ -244,4 +244,8 @@ public abstract partial class Dialect
     {
         return false;
     }
+    /// <summary>
+    /// Returns the precedence when the precedence is otherwise unknown
+    /// </summary>
+    public virtual short PrecedenceUnknown => 0;
 }

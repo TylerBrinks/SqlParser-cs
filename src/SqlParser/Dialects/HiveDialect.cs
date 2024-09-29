@@ -25,4 +25,5 @@ public class HiveDialect : Dialect
 
     public override bool SupportsFilterDuringAggregation => true;
     public override bool SupportsNumericPrefix => true;
+    public override bool RequireIntervalQualifier => true;
 }

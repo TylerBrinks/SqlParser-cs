@@ -509,9 +509,8 @@ public partial class Parser
     /// <returns>Expression</returns>
     public Expression ParseExpr()
     {
-        using var guard = _depthGuard.Decrement();
-        return ParseSubExpression(0);
-    }
+        return ParseSubExpression(_dialect.PrecedenceUnknown);
+    } 
     /// <summary>
     /// Parse tokens until the precedence changes
     /// </summary>
@@ -519,6 +518,7 @@ public partial class Parser
     /// <returns>Parsed sub-expression</returns>
     public Expression ParseSubExpression(short precedence)
     {
+        using var guard = _depthGuard.Decrement();
         var expr = ParsePrefix();
         while (true)
         {
@@ -1035,7 +1035,7 @@ public partial class Parser
 
         if (!ParseKeyword(Keyword.INSERT))
         {
-            var body = ParseQueryBody(0); //TODO prec_unknown
+            var body = ParseQueryBody(_dialect.PrecedenceUnknown);
 
             var orderBy = ParseOptionalOrderBy();
 

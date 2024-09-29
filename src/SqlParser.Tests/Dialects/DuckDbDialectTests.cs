@@ -234,7 +234,7 @@ public class DuckDbDialectTests : ParserTestBase
 
         Assert.Equal(new Expression.Function("FUN")
         {
-            Args =new FunctionArguments.List(new FunctionArgumentList(args))
+            Args = new FunctionArguments.List(new FunctionArgumentList(args))
         }, function);
     }
 

@@ -14,4 +14,5 @@ public class ClickHouseDialect : Dialect
     public override bool SupportsStringLiteralBackslashEscape => true;
     public override bool SupportsSelectWildcardExcept => true;
     public override bool DescribeRequiresTableKeyword => true;
+    public override bool RequireIntervalQualifier => true;
 }

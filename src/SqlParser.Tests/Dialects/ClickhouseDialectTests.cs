@@ -214,12 +214,12 @@ public class ClickhouseDialectTests : ParserTestBase
     {
         const string sql = """
                            CREATE TABLE table (
-                           a1 UInt8, a2 UInt16, a3 UInt32, a4 UInt64, a5 UInt128, a6 UInt256, 
-                           b1 Int8, b2 Int16, b3 Int32, b4 Int64, b5 Int128, b6 Int256, 
-                           c1 Float32, c2 Float64, 
-                           d1 Date32, d2 DateTime64(3), d3 DateTime64(3, 'UTC'), 
-                           e1 FixedString(255), 
-                           f1 LowCardinality(Int32)
+                           a1 UInt8, a2 UInt16, a3 UInt32, a4 UInt64, a5 UInt128, a6 UInt256,
+                            b1 Int8, b2 Int16, b3 Int32, b4 Int64, b5 Int128, b6 Int256,
+                            c1 Float32, c2 Float64,
+                            d1 Date32, d2 DateTime64(3), d3 DateTime64(3, 'UTC'),
+                            e1 FixedString(255),
+                            f1 LowCardinality(Int32)
                            ) ORDER BY (a1)
                            """;
 
@@ -281,12 +281,12 @@ public class ClickhouseDialectTests : ParserTestBase
     public void Parse_Create_Table_With_Nested_Data_Types()
     {
         const string sql = """
-                           CREATE TABLE table ( 
-                           i Nested(a Array(Int16), b LowCardinality(String)), 
-                           k Array(Tuple(FixedString(128), Int128)), 
-                           l Tuple(a DateTime64(9), b Array(UUID)), 
-                           m Map(String, UInt16) 
-                           ) ENGINE=MergeTree ORDER BY (k0)
+                           CREATE TABLE table (
+                           i Nested(a Array(Int16), b LowCardinality(String)),
+                            k Array(Tuple(FixedString(128), Int128)),
+                            l Tuple(a DateTime64(9), b Array(UUID)),
+                            m Map(String, UInt16)
+                            ) ENGINE=MergeTree ORDER BY (k0)
                            """;
 
         var create = OneStatementParsesTo<Statement.CreateTable>(sql, "").Element;
@@ -319,10 +319,10 @@ public class ClickhouseDialectTests : ParserTestBase
     public void Parse_Create_Table_With_Primary_Key()
     {
         const string sql = """
-                CREATE TABLE db.table (`i` INT, `k` INT) 
-                ENGINE=SharedMergeTree('/clickhouse/tables/{uuid}/{shard}', '{replica}') 
-                PRIMARY KEY tuple(i) 
-                ORDER BY tuple(i)
+                CREATE TABLE db.table (`i` INT, `k` INT)
+                 ENGINE=SharedMergeTree('/clickhouse/tables/{uuid}/{shard}', '{replica}')
+                 PRIMARY KEY tuple(i)
+                 ORDER BY tuple(i)
                 """;
         DefaultDialects = [new ClickHouseDialect()];
         var statement = VerifiedStatement<Statement.CreateTable>(sql).Element;
@@ -365,12 +365,12 @@ public class ClickhouseDialectTests : ParserTestBase
     public void Parse_Create_Materialize_View()
     {
         const string sql = """
-                           CREATE MATERIALIZED VIEW analytics.monthly_aggregated_data_mv 
-                           TO analytics.monthly_aggregated_data 
-                           AS SELECT toDate(toStartOfMonth(event_time)) 
-                           AS month, domain_name, sumState(count_views) 
-                           AS sumCountViews FROM analytics.hourly_data 
-                           GROUP BY domain_name, month
+                           CREATE MATERIALIZED VIEW analytics.monthly_aggregated_data_mv
+                            TO analytics.monthly_aggregated_data
+                            AS SELECT toDate(toStartOfMonth(event_time))
+                            AS month, domain_name, sumState(count_views)
+                            AS sumCountViews FROM analytics.hourly_data
+                            GROUP BY domain_name, month
                            """;
 
         VerifiedStatement(sql);
@@ -531,12 +531,12 @@ public class ClickhouseDialectTests : ParserTestBase
     public void Parse_Select_Order_By_WIth_Fill_Interpolate()
     {
         const string sql = """
-                  SELECT id, fname, lname FROM customer WHERE id < 5 
-                  ORDER BY 
-                  fname ASC NULLS FIRST WITH FILL FROM 10 TO 20 STEP 2, 
-                  lname DESC NULLS LAST WITH FILL FROM 30 TO 40 STEP 3 
-                  INTERPOLATE (col1 AS col1 + 1) 
-                  LIMIT 2
+                  SELECT id, fname, lname FROM customer WHERE id < 5
+                   ORDER BY
+                   fname ASC NULLS FIRST WITH FILL FROM 10 TO 20 STEP 2,
+                   lname DESC NULLS LAST WITH FILL FROM 30 TO 40 STEP 3
+                   INTERPOLATE (col1 AS col1 + 1)
+                   LIMIT 2
                   """;
 
         var select = VerifiedQuery(sql, dialects: new[] { new ClickHouseDialect() });
@@ -572,7 +572,7 @@ public class ClickhouseDialectTests : ParserTestBase
     {
         const string sql = """
                            SELECT id, fname, lname FROM customer ORDER BY fname WITH FILL
-                           INTERPOLATE (col1 AS col1 + 1) INTERPOLATE (col2 AS col2 + 2)
+                            INTERPOLATE (col1 AS col1 + 1) INTERPOLATE (col2 AS col2 + 2)
                            """;
         Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
     }
@@ -581,10 +581,10 @@ public class ClickhouseDialectTests : ParserTestBase
     public void Parse_Select_Order_By_With_Fill_Interpolate_Multi_With_Fill_Interpolates()
     {
         const string sql = """
-                           SELECT id, fname, lname FROM customer 
-                           ORDER BY 
-                           fname WITH FILL INTERPOLATE (col1 AS col1 + 1), 
-                           lname WITH FILL INTERPOLATE (col2 AS col2 + 2)
+                           SELECT id, fname, lname FROM customer
+                            ORDER BY
+                            fname WITH FILL INTERPOLATE (col1 AS col1 + 1),
+                            lname WITH FILL INTERPOLATE (col2 AS col2 + 2)
                            """;
         Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
     }
@@ -593,10 +593,10 @@ public class ClickhouseDialectTests : ParserTestBase
     public void Parse_Select_Order_Interpolate_Not_Last()
     {
         const string sql = """
-                           SELECT id, fname, lname FROM customer 
-                           ORDER BY 
-                           fname INTERPOLATE (col2 AS col2 + 2), 
-                           lname
+                           SELECT id, fname, lname FROM customer
+                            ORDER BY
+                            fname INTERPOLATE (col2 AS col2 + 2),
+                            lname
                            """;
         Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
     }
@@ -605,8 +605,8 @@ public class ClickhouseDialectTests : ParserTestBase
     public void Parse_With_Fill()
     {
         const string sql = """
-                           SELECT fname FROM customer ORDER BY fname 
-                           WITH FILL FROM 10 TO 20 STEP 2
+                           SELECT fname FROM customer ORDER BY fname
+                            WITH FILL FROM 10 TO 20 STEP 2
                            """;
         var select = VerifiedQuery(sql, DefaultDialects!);
         Assert.Equal(new WithFill(
@@ -621,8 +621,8 @@ public class ClickhouseDialectTests : ParserTestBase
     public void Parse_With_Fill_Missing_Single_Argument()
     {
         const string sql = """
-                           SELECT id, fname, lname FROM customer ORDER BY 
-                           fname WITH FILL FROM TO 20
+                           SELECT id, fname, lname FROM customer ORDER BY
+                            fname WITH FILL FROM TO 20
                            """;
         Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
     }
@@ -631,8 +631,8 @@ public class ClickhouseDialectTests : ParserTestBase
     public void Parse_With_Fill_Missing_Incomplete_Argument()
     {
         const string sql = """
-                           SELECT id, fname, lname FROM customer ORDER BY 
-                           fname WITH FILL FROM TO 20, lname WITH FILL FROM TO STEP 1
+                           SELECT id, fname, lname FROM customer ORDER BY
+                            fname WITH FILL FROM TO 20, lname WITH FILL FROM TO STEP 1
                            """;
         Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
     }
@@ -641,8 +641,8 @@ public class ClickhouseDialectTests : ParserTestBase
     public void Parse_Interpolate_Body_With_Columns()
     {
         const string sql = """
-                           SELECT fname FROM customer ORDER BY fname WITH FILL 
-                           INTERPOLATE (col1 AS col1 + 1, col2 AS col3, col4 AS col4 + 4)
+                           SELECT fname FROM customer ORDER BY fname WITH FILL
+                            INTERPOLATE (col1 AS col1 + 1, col2 AS col3, col4 AS col4 + 4)
                            """;
         var select = VerifiedQuery(sql, DefaultDialects!);
 
@@ -688,10 +688,10 @@ public class ClickhouseDialectTests : ParserTestBase
     {
         const string sql = """
                   CREATE TABLE table (
-                  a DATETIME MATERIALIZED now(), 
-                  b DATETIME EPHEMERAL now(), 
-                  c DATETIME EPHEMERAL, 
-                  d STRING ALIAS toString(c)
+                  a DATETIME MATERIALIZED now(),
+                   b DATETIME EPHEMERAL now(),
+                   c DATETIME EPHEMERAL,
+                   d STRING ALIAS toString(c)
                   ) ENGINE=MergeTree
                   """;
 

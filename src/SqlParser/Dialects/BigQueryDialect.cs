@@ -35,4 +35,5 @@ public class BigQueryDialect : Dialect
     public override bool SupportsTripleQuotedString => true;
     public override bool SupportsSelectWildcardExcept => true;
     public override bool SupportsProjectionTrailingCommas => true;
+    public override bool RequireIntervalQualifier => true;
 }

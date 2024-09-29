@@ -134,7 +134,7 @@ public class MySqlDialectTests : ParserTestBase
     [Fact]
     public void Parse_Use()
     {
-        List<string> validObjectNames = [ "mydb", "SCHEMA", "DATABASE", "CATALOG", "WAREHOUSE", "DEFAULT"];
+        List<string> validObjectNames = ["mydb", "SCHEMA", "DATABASE", "CATALOG", "WAREHOUSE", "DEFAULT"];
 
         List<char> quoteStyles = [Symbols.SingleQuote, Symbols.DoubleQuote];
 
@@ -679,7 +679,7 @@ public class MySqlDialectTests : ParserTestBase
                     {
                         Args = new FunctionArguments.List(FunctionArgumentList.Empty())
                     }))
-                    
+
                 })
         ], create.Element.Columns);
     }

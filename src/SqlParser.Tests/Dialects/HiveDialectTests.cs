@@ -225,7 +225,7 @@ public class HiveDialectTests : ParserTestBase
         Assert.True(create.Temporary);
         Assert.Equal("mydb.myfunc", create.Name);
         var fnBody = new CreateFunctionBody.AsBeforeOptions(new LiteralValue(new Value.SingleQuotedString("org.random.class.Name")));
-        
+
         Assert.Equal(fnBody, create.FunctionBody);
         Assert.Equal(new CreateFunctionUsing.Jar("hdfs://somewhere.com:8020/very/far"), create.Using);
 
@@ -268,9 +268,9 @@ public class HiveDialectTests : ParserTestBase
         }), select.Projection[0].AsExpr());
 
         Assert.Equal(new Function(new ObjectName(new Ident("myfun", Symbols.DoubleQuote)))
-            {
-                Args = new FunctionArguments.List(FunctionArgumentList.Empty())
-            },
+        {
+            Args = new FunctionArguments.List(FunctionArgumentList.Empty())
+        },
             select.Projection[1].AsExpr());
 
         var withAlias = (SelectItem.ExpressionWithAlias)select.Projection[2];
@@ -356,17 +356,17 @@ public class HiveDialectTests : ParserTestBase
     public void Create_Table_With_Clustered_By()
     {
         const string sql = """
-                           CREATE TABLE db.table_name (a INT, b STRING) 
-                           PARTITIONED BY (a INT, b STRING) 
-                           CLUSTERED BY (a, b) SORTED BY (a ASC, b DESC) 
-                           INTO 4 BUCKETS
+                           CREATE TABLE db.table_name (a INT, b STRING)
+                            PARTITIONED BY (a INT, b STRING)
+                            CLUSTERED BY (a, b) SORTED BY (a ASC, b DESC)
+                            INTO 4 BUCKETS
                            """;
 
         var create = VerifiedStatement<Statement.CreateTable>(sql);
         var expected = new ClusteredBy(
             [
                 "a", "b"
-            ], 
+            ],
             [
                 new OrderByExpression(new Identifier("a"), true),
                 new OrderByExpression(new Identifier("b"), false)

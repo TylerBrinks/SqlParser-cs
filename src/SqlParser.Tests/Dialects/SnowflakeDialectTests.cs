@@ -432,12 +432,12 @@ public class SnowflakeDialectTests : ParserTestBase
         DefaultDialects = [new SnowflakeDialect()];
 
         const string sql = """
-                           CREATE OR REPLACE STAGE my_ext_stage 
-                           URL='s3://load/files/' 
-                           STORAGE_INTEGRATION=myint 
-                           ENDPOINT='<s3_api_compatible_endpoint>' 
-                           CREDENTIALS=(AWS_KEY_ID='1a2b3c' AWS_SECRET_KEY='4x5y6z') 
-                           ENCRYPTION=(MASTER_KEY='key' TYPE='AWS_SSE_KMS')
+                           CREATE OR REPLACE STAGE my_ext_stage
+                            URL='s3://load/files/'
+                            STORAGE_INTEGRATION=myint
+                            ENDPOINT='<s3_api_compatible_endpoint>'
+                            CREDENTIALS=(AWS_KEY_ID='1a2b3c' AWS_SECRET_KEY='4x5y6z')
+                            ENCRYPTION=(MASTER_KEY='key' TYPE='AWS_SSE_KMS')
                            """;
 
         var create = VerifiedStatement<Statement.CreateStage>(sql);
@@ -464,8 +464,8 @@ public class SnowflakeDialectTests : ParserTestBase
         DefaultDialects = [new SnowflakeDialect()];
 
         const string sql = """
-                           CREATE OR REPLACE STAGE my_ext_stage URL='s3://load/files/' 
-                           DIRECTORY=(ENABLE=TRUE REFRESH_ON_CREATE=FALSE NOTIFICATION_INTEGRATION='some-string')
+                           CREATE OR REPLACE STAGE my_ext_stage URL='s3://load/files/'
+                            DIRECTORY=(ENABLE=TRUE REFRESH_ON_CREATE=FALSE NOTIFICATION_INTEGRATION='some-string')
                            """;
 
         var create = VerifiedStatement<Statement.CreateStage>(sql);
@@ -486,9 +486,9 @@ public class SnowflakeDialectTests : ParserTestBase
         DefaultDialects = [new SnowflakeDialect()];
 
         const string sql = """
-                           CREATE OR REPLACE STAGE my_ext_stage 
-                           URL='s3://load/files/' 
-                           FILE_FORMAT=(COMPRESSION=AUTO BINARY_FORMAT=HEX ESCAPE='\\')
+                           CREATE OR REPLACE STAGE my_ext_stage
+                            URL='s3://load/files/'
+                            FILE_FORMAT=(COMPRESSION=AUTO BINARY_FORMAT=HEX ESCAPE='\\')
                            """;
 
         var create = VerifiedStatement<Statement.CreateStage>(sql, options: new ParserOptions
@@ -541,12 +541,12 @@ public class SnowflakeDialectTests : ParserTestBase
     public void Test_Copy_Into_With_Stage_Params()
     {
         var sql = """
-                  COPY INTO my_company.emp_basic 
-                  FROM 's3://load/files/' 
-                  STORAGE_INTEGRATION=myint 
-                  ENDPOINT='<s3_api_compatible_endpoint>' 
-                  CREDENTIALS=(AWS_KEY_ID='1a2b3c' AWS_SECRET_KEY='4x5y6z') 
-                  ENCRYPTION=(MASTER_KEY='key' TYPE='AWS_SSE_KMS')
+                  COPY INTO my_company.emp_basic
+                   FROM 's3://load/files/'
+                   STORAGE_INTEGRATION=myint
+                   ENDPOINT='<s3_api_compatible_endpoint>'
+                   CREDENTIALS=(AWS_KEY_ID='1a2b3c' AWS_SECRET_KEY='4x5y6z')
+                   ENCRYPTION=(MASTER_KEY='key' TYPE='AWS_SSE_KMS')
                   """;
 
         var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
@@ -573,8 +573,8 @@ public class SnowflakeDialectTests : ParserTestBase
         Assert.Equal(expected, copy);
 
         sql = """
-              COPY INTO my_company.emp_basic FROM 
-              (SELECT t1.$1 FROM 's3://load/files/' STORAGE_INTEGRATION=myint)
+              COPY INTO my_company.emp_basic FROM
+               (SELECT t1.$1 FROM 's3://load/files/' STORAGE_INTEGRATION=myint)
               """;
 
         copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
@@ -587,11 +587,11 @@ public class SnowflakeDialectTests : ParserTestBase
     public void Test_Copy_Into_With_Fies_And_Pattern_And_Verification()
     {
         const string sql = """
-                           COPY INTO my_company.emp_basic 
-                           FROM 'gcs://mybucket/./../a.csv' AS some_alias 
-                           FILES = ('file1.json', 'file2.json') 
-                           PATTERN = '.*employees0[1-5].csv.gz' 
-                           VALIDATION_MODE = RETURN_7_ROWS
+                           COPY INTO my_company.emp_basic
+                            FROM 'gcs://mybucket/./../a.csv' AS some_alias
+                            FILES = ('file1.json', 'file2.json')
+                            PATTERN = '.*employees0[1-5].csv.gz'
+                            VALIDATION_MODE = RETURN_7_ROWS
                            """;
 
         var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
@@ -606,10 +606,10 @@ public class SnowflakeDialectTests : ParserTestBase
     public void Test_Copy_Into_With_Transformations()
     {
         const string sql = """
-                           COPY INTO my_company.emp_basic 
-                           FROM (SELECT t1.$1:st AS st, $1:index, t2.$1 FROM @schema.general_finished AS T) 
-                           FILES = ('file1.json', 'file2.json') PATTERN = '.*employees0[1-5].csv.gz' 
-                           VALIDATION_MODE = RETURN_7_ROW
+                           COPY INTO my_company.emp_basic
+                            FROM (SELECT t1.$1:st AS st, $1:index, t2.$1 FROM @schema.general_finished AS T)
+                            FILES = ('file1.json', 'file2.json') PATTERN = '.*employees0[1-5].csv.gz'
+                            VALIDATION_MODE = RETURN_7_ROW
                            """;
 
         var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);
@@ -628,11 +628,11 @@ public class SnowflakeDialectTests : ParserTestBase
     public void Test_Copy_Into_File_Format()
     {
         const string sql = """
-                           COPY INTO my_company.emp_basic 
-                           FROM 'gcs://mybucket/./../a.csv' 
-                           FILES = ('file1.json', 'file2.json') 
-                           PATTERN = '.*employees0[1-5].csv.gz' 
-                           FILE_FORMAT=(COMPRESSION=AUTO BINARY_FORMAT=HEX ESCAPE='\\')
+                           COPY INTO my_company.emp_basic
+                            FROM 'gcs://mybucket/./../a.csv'
+                            FILES = ('file1.json', 'file2.json')
+                            PATTERN = '.*employees0[1-5].csv.gz'
+                            FILE_FORMAT=(COMPRESSION=AUTO BINARY_FORMAT=HEX ESCAPE='\\')
                            """;
 
         var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql, options: new ParserOptions
@@ -654,11 +654,11 @@ public class SnowflakeDialectTests : ParserTestBase
     public void Test_Copy_Into_Copy_Format()
     {
         const string sql = """
-                           COPY INTO my_company.emp_basic 
-                           FROM 'gcs://mybucket/./../a.csv' 
-                           FILES = ('file1.json', 'file2.json') 
-                           PATTERN = '.*employees0[1-5].csv.gz' 
-                           COPY_OPTIONS=(ON_ERROR=CONTINUE FORCE=TRUE)
+                           COPY INTO my_company.emp_basic
+                            FROM 'gcs://mybucket/./../a.csv'
+                            FILES = ('file1.json', 'file2.json')
+                            PATTERN = '.*employees0[1-5].csv.gz'
+                            COPY_OPTIONS=(ON_ERROR=CONTINUE FORCE=TRUE)
                            """;
 
         var copy = VerifiedStatement<Statement.CopyIntoSnowflake>(sql);

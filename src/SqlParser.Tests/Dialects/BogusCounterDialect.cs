@@ -5,34 +5,34 @@ using SqlParser.Tokens;
 namespace SqlParser.Tests.Dialects;
 
 public class BogusCounterDialect : GenericDialect
+{
+    public override Statement ParseStatement(Parser parser)
     {
-        public override Statement ParseStatement(Parser parser)
+        var token = parser.NextToken();
+
+        if (token is Word { Value: "custom" } word)
         {
-            var token = parser.NextToken();
+            var value = word.Value;
 
-            if (token is Word {Value: "custom" } word)
+            while ((token = parser.NextToken()) is not EOF)
             {
-                var value = word.Value;
-
-                while ((token = parser.NextToken()) is not EOF)
+                value += token switch
                 {
-                    value += token switch
-                    {
-                        Word t => $" {t.Value}",
-                        _ => token.ToString()
-                    };
-                }
-
-                return new SchemaName.Simple(value);
+                    Word t => $" {t.Value}",
+                    _ => token.ToString()
+                };
             }
-            else
+
+            return new SchemaName.Simple(value);
+        }
+        else
+        {
+            while ((parser.NextToken()) is not EOF)
             {
-                while ((parser.NextToken()) is not EOF)
-                {
-                    // Advance to the end of the stream
-                }
-
-                return new SchemaName.Simple("Totally Custom SQL");
+                // Advance to the end of the stream
             }
+
+            return new SchemaName.Simple("Totally Custom SQL");
         }
     }
+}

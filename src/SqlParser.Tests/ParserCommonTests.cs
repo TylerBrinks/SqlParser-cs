@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using JetBrains.dotMemoryUnit.Properties;
 using SqlParser.Ast;
 using SqlParser.Dialects;
 using static SqlParser.Ast.DataType;
@@ -1948,7 +1947,7 @@ public class ParserCommonTests : ParserTestBase
         {
             OnCluster = new Ident("{cluster}", Symbols.SingleQuote)
         });
-            
+
         Assert.Equal(expected, create);
 
         create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE t ON CLUSTER my_cluster (a INT, b INT)");
@@ -2395,7 +2394,7 @@ public class ParserCommonTests : ParserTestBase
         var select = VerifiedOnlySelect("SELECT FUN(a => '1', b => '2') FROM foo");
         var expected = new Function("FUN")
         {
-            Args = new FunctionArguments.List(new FunctionArgumentList( [
+            Args = new FunctionArguments.List(new FunctionArgumentList([
                 new FunctionArg.Named(
                     "a",
                     new FunctionArgExpression.FunctionExpression(new LiteralValue(new Value.SingleQuotedString("1"))),
@@ -2470,7 +2469,7 @@ public class ParserCommonTests : ParserTestBase
                             FROM foo
                            """;
 
-        var select = VerifiedOnlySelect(sql);
+        var select = VerifiedOnlySelect(sql, AllDialects.Where(d => !d.RequireIntervalQualifier));
 
         var expected = new Function("row_number")
         {
@@ -2714,7 +2713,7 @@ public class ParserCommonTests : ParserTestBase
         Assert.Equal(new TypedString("1999-01-01 01:23:34Z", new Timestamp(TimezoneInfo.Tz)), select.Projection[0].AsExpr());
     }
     [Fact]
-    public void Parse_Interval()
+    public void Parse_Interval_All()
     {
         var select = VerifiedOnlySelect("SELECT INTERVAL '1-1' YEAR TO MONTH");
         var interval = new Expression.Interval(
@@ -2747,16 +2746,6 @@ public class ParserCommonTests : ParserTestBase
             new DateTimeField.Day());
         Assert.Equal(interval, select.Projection[0].AsExpr());
 
-
-        select = VerifiedOnlySelect("SELECT INTERVAL 1 + 1 DAY");
-        interval = new Expression.Interval(
-            new BinaryOp(
-                new LiteralValue(Number("1")),
-                BinaryOperator.Plus,
-                new LiteralValue(Number("1"))),
-            new DateTimeField.Day());
-        Assert.Equal(interval, select.Projection[0].AsExpr());
-
         select = VerifiedOnlySelect("SELECT INTERVAL '10' HOUR (1)");
         interval = new Expression.Interval(
             new LiteralValue(new Value.SingleQuotedString("10")),
@@ -2764,11 +2753,6 @@ public class ParserCommonTests : ParserTestBase
         {
             LeadingPrecision = 1
         };
-        Assert.Equal(interval, select.Projection[0].AsExpr());
-
-        select = VerifiedOnlySelect("SELECT INTERVAL '1 DAY'");
-        interval = new Expression.Interval(
-            new LiteralValue(new Value.SingleQuotedString("1 DAY")));
         Assert.Equal(interval, select.Projection[0].AsExpr());
 
         var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT INTERVAL '1' SECOND TO SECOND"));
@@ -2791,22 +2775,18 @@ public class ParserCommonTests : ParserTestBase
         VerifiedOnlySelect("SELECT INTERVAL '1' HOUR TO MINUTE");
         VerifiedOnlySelect("SELECT INTERVAL '1' HOUR TO SECOND");
         VerifiedOnlySelect("SELECT INTERVAL '1' MINUTE TO SECOND");
-        VerifiedOnlySelect("SELECT INTERVAL '1 YEAR'");
-        VerifiedOnlySelect("SELECT INTERVAL '1 YEAR' AS one_year");
-        OneStatementParsesTo(
-            "SELECT INTERVAL '1 YEAR' one_year",
-            "SELECT INTERVAL '1 YEAR' AS one_year");
     }
 
     [Fact]
     public void Parse_Interval_And_Or_Xor()
     {
+        var dialects = AllDialects.Where(d => !d.RequireIntervalQualifier).ToList();
         const string sql = """
                            SELECT col FROM test
                            WHERE d3_date > d1_date + INTERVAL '5 days'
                            AND d2_date > d1_date + INTERVAL '3 days'
                            """;
-        var statements = ParseSqlStatements(sql, new[] { new GenericDialect() });
+        var statements = ParseSqlStatements(sql, dialects);
 
         var body = new SetExpression.SelectExpression(new Select(new[]
         {
@@ -2846,9 +2826,9 @@ public class ParserCommonTests : ParserTestBase
 
         Assert.Equal(expected, statements);
 
-        VerifiedStatement("SELECT col FROM test WHERE d3_date > d1_date + INTERVAL '5 days' AND d2_date > d1_date + INTERVAL '3 days'");
-        VerifiedStatement("SELECT col FROM test WHERE d3_date > d1_date + INTERVAL '5 days' OR d2_date > d1_date + INTERVAL '3 days'");
-        VerifiedStatement("SELECT col FROM test WHERE d3_date > d1_date + INTERVAL '5 days' XOR d2_date > d1_date + INTERVAL '3 days'");
+        VerifiedStatement("SELECT col FROM test WHERE d3_date > d1_date + INTERVAL '5 days' AND d2_date > d1_date + INTERVAL '3 days'", dialects);
+        VerifiedStatement("SELECT col FROM test WHERE d3_date > d1_date + INTERVAL '5 days' OR d2_date > d1_date + INTERVAL '3 days'", dialects);
+        VerifiedStatement("SELECT col FROM test WHERE d3_date > d1_date + INTERVAL '5 days' XOR d2_date > d1_date + INTERVAL '3 days'", dialects);
     }
 
     [Fact]
@@ -3200,7 +3180,7 @@ public class ParserCommonTests : ParserTestBase
     }
 
     [Fact]
-    public void  Parse_Joins_On()
+    public void Parse_Joins_On()
     {
         //var select = VerifiedOnlySelect("SELECT * FROM t1 LEFT JOIN t2 ON c1 = c2");
         //var expected = Test("t2", null, jc => new JoinOperator.LeftOuter(jc));
@@ -4742,7 +4722,7 @@ public class ParserCommonTests : ParserTestBase
     public void Parse_Position()
     {
         Expression expected = new Position(new LiteralValue(new Value.SingleQuotedString("@")), new Identifier("field"));
-        var position = VerifiedExpr("POSITION('@' IN field)", new []{new PostgreSqlDialect()});
+        var position = VerifiedExpr("POSITION('@' IN field)", new[] { new PostgreSqlDialect() });
         Assert.Equal(expected, position);
 
         expected = new Function("position")
@@ -5002,7 +4982,7 @@ public class ParserCommonTests : ParserTestBase
     public void Parse_With_Recursion_Limit()
     {
         var dialect = new GenericDialect();
-        var whereClause = new StringBuilder(new string(Symbols.ParenOpen, 20));
+        var whereClause = new StringBuilder(new string(Symbols.ParenOpen, 19));
 
         for (var i = 0; i < 20; i++)
         {
@@ -5011,14 +4991,19 @@ public class ParserCommonTests : ParserTestBase
                 whereClause.Append(" OR ");
             }
 
-            whereClause.Append($"user_id = {i})");
+            whereClause.Append($"user_id = {i}");
+
+            if (i < 19)
+            {
+                whereClause.Append(Symbols.ParenClose);
+            }
         }
 
         var sql = $"SELECT id, user_id FROM test WHERE {whereClause}";
         var parser = new Parser().TryWithSql(sql, dialect);
 
         // Expect the statement to parse with default limit
-        parser.ParseSql(sql, dialect);
+        parser.ParseStatements();
 
         var options = new ParserOptions { RecursionLimit = 20 };
         var ex = Assert.Throws<ParserException>(() => parser.ParseSql(sql, dialect, options));
@@ -6145,7 +6130,7 @@ public class ParserCommonTests : ParserTestBase
         // At the moment, DuckDB is the only dialect that allows
         // trailing commas anywhere in the query
         DefaultDialects = new[] { new DuckDbDialect() };
-            
+
         OneStatementParsesTo("SELECT album_id, name, FROM track", "SELECT album_id, name FROM track", DefaultDialects);
         OneStatementParsesTo("SELECT * FROM track ORDER BY milliseconds,", "SELECT * FROM track ORDER BY milliseconds", DefaultDialects);
         OneStatementParsesTo("SELECT DISTINCT ON (album_id,) name FROM track", "SELECT DISTINCT ON (album_id) name FROM track", DefaultDialects);
@@ -6156,7 +6141,7 @@ public class ParserCommonTests : ParserTestBase
         VerifiedStatement("SELECT DISTINCT ON (album_id) name FROM track", DefaultDialects);
         OneStatementParsesTo("SELECT \"from\", FROM \"from\"", "SELECT \"from\" FROM \"from\"", DefaultDialects);
 
-        Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT name, age, from employees;", new List<Dialect>{new GenericDialect()}));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT name, age, from employees;", new List<Dialect> { new GenericDialect() }));
     }
 
     [Fact]
@@ -6192,7 +6177,7 @@ public class ParserCommonTests : ParserTestBase
                 new(new LiteralValue(new Value.SingleQuotedString("b")), new LiteralValue(new Value.Number("20")))
             ])),
             new Subscript.Index(new LiteralValue(new Value.SingleQuotedString("a")))));
-            
+
         return;
 
         void Check(string sql, Expression expected)
@@ -6244,7 +6229,7 @@ public class ParserCommonTests : ParserTestBase
 
         var expected = new Extract(
             new Cast(
-                new LiteralValue(new Value.SingleQuotedString("2 seconds")), 
+                new LiteralValue(new Value.SingleQuotedString("2 seconds")),
                 new DataType.Interval(), CastKind.DoubleColon),
             new DateTimeField.Custom("seconds"),
             ExtractSyntax.From);
@@ -6255,7 +6240,7 @@ public class ParserCommonTests : ParserTestBase
     [Fact]
     public void Test_Extract_Seconds_Err()
     {
-        Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT EXTRACT(seconds FROM '2 seconds'::INTERVAL)", 
+        Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT EXTRACT(seconds FROM '2 seconds'::INTERVAL)",
             AllDialects.Where(d => !d.AllowExtractCustom)));
     }
 
@@ -6291,12 +6276,20 @@ public class ParserCommonTests : ParserTestBase
         var statement = VerifiedStatement<Statement.CreateIndex>(sql, dialects).Element;
 
         Assert.Equal("title_idx", statement.Name!);
-        Assert.Equal("films", statement.TableName!);
+        Assert.Equal("films", statement.TableName);
         Assert.Equal(indexedColumns, statement.Columns!);
         Assert.Equal(withParameters, statement.With!);
         Assert.True(statement.Unique);
         Assert.False(statement.Concurrently);
         Assert.False(statement.IfNotExists);
         Assert.Null(statement.Include);
+    }
+
+    [Fact]
+    public void Parse_Deeply_Nested_Unary_Op_Hits_Recursion_Limits()
+    {
+        var plus = new string(Symbols.Plus, 1000);
+        var sql = $"SELECT {plus}";
+        Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
     }
 }

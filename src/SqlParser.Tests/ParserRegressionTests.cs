@@ -50,8 +50,6 @@ public class ParserRegressionTests : ParserTestBase
         Assert.NotNull(ast);
         _output.WriteLine(ast.ToSql());
         _output.WriteLine(new string('-', 50));
-        _output.WriteLine(ast.ToString());
-        _output.WriteLine(new string('-', 50));
         _output.WriteLine(JsonConvert.SerializeObject(ast));
     }
 }

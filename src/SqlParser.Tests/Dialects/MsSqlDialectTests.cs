@@ -262,7 +262,7 @@ public class MsSqlDialectTests : ParserTestBase
     [Fact]
     public void Parse_Use()
     {
-        List<string> validObjectNames = [  "mydb", "SCHEMA", "DATABASE", "CATALOG", "WAREHOUSE", "DEFAULT"];
+        List<string> validObjectNames = ["mydb", "SCHEMA", "DATABASE", "CATALOG", "WAREHOUSE", "DEFAULT"];
 
         List<char> quoteStyles = [Symbols.SingleQuote, Symbols.DoubleQuote];
 

@@ -54,4 +54,5 @@ public class MySqlDialect : Dialect
 
     public override bool SupportsStringLiteralBackslashEscape => true;
     public override bool SupportsNumericPrefix => true;
+    public override bool RequireIntervalQualifier => true;
 }
