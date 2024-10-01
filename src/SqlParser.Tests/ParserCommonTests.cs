@@ -6292,4 +6292,20 @@ public class ParserCommonTests : ParserTestBase
         var sql = $"SELECT {plus}";
         Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
     }
+
+    [Fact]
+    public void Parse_Literal_Integer()
+    {
+        var sql = "SELECT 1, -10, +20";
+        var select = VerifiedOnlySelect(sql);
+        Assert.Equal(3, select.Projection.Count);
+        Assert.Equal(new LiteralValue(new Value.Number("1")), select.Projection[0].AsExpr());
+
+
+        // negative literal is parsed as a - and expr
+        Assert.Equal(new UnaryOp(new LiteralValue(new Value.Number("10")), UnaryOperator.Minus), select.Projection[1].AsExpr());
+
+        // positive literal is parsed as a + and expr
+        Assert.Equal(new UnaryOp(new LiteralValue(new Value.Number("20")), UnaryOperator.Plus), select.Projection[2].AsExpr());
+    }
 }
