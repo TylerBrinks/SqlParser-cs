@@ -919,4 +919,45 @@ public class ClickhouseDialectTests : ParserTestBase
             }
         }
     }
+
+    [Fact]
+    public void Parse_Alter_Table_Drop_Projection()
+    {
+        var alter = VerifiedStatement<Statement.AlterTable>("ALTER TABLE t0 DROP PROJECTION IF EXISTS my_name");
+
+        Assert.Equal("t0", alter.Name);
+        Assert.Single(alter.Operations);
+        Assert.Equal(new AlterTableOperation.DropProjection(true, "my_name"), alter.Operations[0]);
+     
+        VerifiedStatement<Statement.AlterTable>("ALTER TABLE t0 DROP PROJECTION my_name");
+
+        Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER TABLE t0 DROP PROJECTION"));
+    }
+
+    [Fact]
+    public void Parse_Alter_Table_Clear_And_Materialize_Projection()
+    {
+        foreach (var keyword in new []{"CLEAR", "MATERIALIZE"})
+        {
+            var alter = VerifiedStatement<Statement.AlterTable>($"ALTER TABLE t0 {keyword} PROJECTION IF EXISTS my_name IN PARTITION p0");
+
+            Assert.Equal("t0", alter.Name);
+            Assert.Single(alter.Operations);
+            if (keyword == "CLEAR")
+            {
+                Assert.Equal(new AlterTableOperation.ClearProjection(true, "my_name", "p0"), alter.Operations[0]);
+            }
+            else
+            {
+                Assert.Equal(new AlterTableOperation.MaterializeProjection(true, "my_name", "p0"), alter.Operations[0]);
+            }
+
+            VerifiedStatement<Statement.AlterTable>($"ALTER TABLE t0 {keyword} PROJECTION my_name IN PARTITION p0");
+
+            Assert.Throws<ParserException>(() => ParseSqlStatements($"ALTER TABLE t0 {keyword} PROJECTION"));
+            Assert.Throws<ParserException>(() => ParseSqlStatements($"ALTER TABLE t0 {keyword} PROJECTION"));
+            Assert.Throws<ParserException>(() => ParseSqlStatements($"ALTER TABLE t0 {keyword} PROJECTION my_name IN PARTITION"));
+            Assert.Throws<ParserException>(() => ParseSqlStatements($"ALTER TABLE t0 {{keyword}} PROJECTION my_name IN"));
+        }
+    }
 }

@@ -5870,6 +5870,22 @@ public partial class Parser
                 throw Expected("ALWAYS, REPLICA, ROW LEVEL SECURITY, RULE, or TRIGGER after ENABLE", PeekToken());
             }
         }
+        else if (ParseKeywordSequence(Keyword.CLEAR, Keyword.PROJECTION) &&
+                 _dialect is ClickHouseDialect or GenericDialect)
+        {
+            var ifExists = ParseIfExists();
+            var name = ParseIdentifier();
+            var partition = ParseKeywordSequence(Keyword.IN, Keyword.PARTITION) ? ParseIdentifier() : null;
+            return new ClearProjection(ifExists, name, partition);
+        }
+        else if (ParseKeywordSequence(Keyword.MATERIALIZE, Keyword.PROJECTION) &&
+                 _dialect is ClickHouseDialect or GenericDialect)
+        {
+            var ifExists = ParseIfExists();
+            var name = ParseIdentifier();
+            var partition = ParseKeywordSequence(Keyword.IN, Keyword.PARTITION) ? ParseIdentifier() : null;
+            return new MaterializeProjection(ifExists, name, partition);
+        }
         else if (ParseKeyword(Keyword.DROP))
         {
             if (ParseKeywordSequence(Keyword.IF, Keyword.EXISTS, Keyword.PARTITION))
@@ -5892,6 +5908,12 @@ public partial class Parser
             else if (_dialect is MySqlDialect or GenericDialect && ParseKeywordSequence(Keyword.PRIMARY, Keyword.KEY))
             {
                 operation = new DropPrimaryKey();
+            }
+            else if (ParseKeyword(Keyword.PROJECTION))
+            {
+                var ifExists = ParseIfExists();
+                var name = ParseIdentifier();
+                return new DropProjection(ifExists, name);
             }
             else
             {

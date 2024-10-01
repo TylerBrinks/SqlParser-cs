@@ -33,9 +33,9 @@ public abstract record AlterTableOperation : IWriteSql
     /// <param name="IfNotExists">Contains If Not Exists</param>
     /// <param name="ColumnDef">Column Definition</param>
     public record AddColumn(
-        bool ColumnKeyword, 
-        bool IfNotExists, 
-        ColumnDef ColumnDef, 
+        bool ColumnKeyword,
+        bool IfNotExists,
+        ColumnDef ColumnDef,
         MySqlColumnPosition? ColumnPosition = null)
         : AlterTableOperation, IIfNotExists
     {
@@ -80,8 +80,13 @@ public abstract record AlterTableOperation : IWriteSql
             writer.WriteSql($"ADD{ifNot} {NewPartitions.ToSqlDelimited(Symbols.Space)}");
         }
     }
-
-    public record AddProjection(bool IfNotExists,  Ident Name, ProjectionSelect Select) : AlterTableOperation, IIfNotExists
+    /// <summary>
+    /// ADD PROJECTION [IF NOT EXISTS] name ( SELECT [COLUMN LIST EXPR] [GROUP BY] [ORDER BY])
+    /// </summary>
+    /// <param name="IfNotExists">If not exists</param>
+    /// <param name="Name">Projection name</param>
+    /// <param name="Select">Projection select</param>
+    public record AddProjection(bool IfNotExists, Ident Name, ProjectionSelect Select) : AlterTableOperation, IIfNotExists
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -121,6 +126,31 @@ public abstract record AlterTableOperation : IWriteSql
         public override void ToSql(SqlTextWriter writer)
         {
             writer.WriteSql($"ATTACH {Partition}");
+        }
+    }
+    /// <summary>
+    /// CLEAR PROJECTION [IF EXISTS] name [IN PARTITION partition_name]
+    /// </summary>
+    /// <param name="IfExists">Materialize if exists</param>
+    /// <param name="Name">Name</param>
+    /// <param name="Partition">Partition</param>
+    public record ClearProjection(bool IfExists, Ident Name, Ident? Partition) : AlterTableOperation
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("CLEAR PROJECTION");
+
+            if (IfExists)
+            {
+                writer.Write(" IF EXISTS");
+            }
+
+            writer.Write($" {Name}");
+
+            if (Partition != null)
+            {
+                writer.Write($" IN PARTITION {Partition}");
+            }
         }
     }
     /// <summary>
@@ -176,7 +206,7 @@ public abstract record AlterTableOperation : IWriteSql
     /// </example>
     /// </summary>
     /// <param name="Name">Name identifier</param>
-    /// <param name="IfExists">Contains If Exists</param>
+    /// <param name="IfExists">Drop If Exists</param>
     /// <param name="Cascade">Cascade</param>
     public record DropConstraint(Ident Name, bool IfExists, bool Cascade) : AlterTableOperation
     {
@@ -239,11 +269,32 @@ public abstract record AlterTableOperation : IWriteSql
             writer.WriteSql($"DROP{ie} PARTITION ({Partitions})");
         }
     }
+
     public record DropPrimaryKey : AlterTableOperation
     {
         public override void ToSql(SqlTextWriter writer)
         {
             writer.Write("DROP PRIMARY KEY");
+        }
+    }
+    /// <summary>
+    /// DROP PROJECTION [IF EXISTS] name
+    /// </summary>
+    /// <param name="IfExists">Drop If Exists</param>
+    /// <param name="Name">Name identifier</param>
+    public record DropProjection(bool IfExists, Ident Name) : AlterTableOperation
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("DROP PROJECTION");
+
+            if (IfExists)
+            {
+                writer.Write(" IF EXISTS");
+
+            }
+
+            writer.Write($" {Name}");
         }
     }
     /// ENABLE ALWAYS RULE rewrite_rule_name
@@ -419,11 +470,11 @@ public abstract record AlterTableOperation : IWriteSql
     /// <param name="DataType">Data type</param>
     /// <param name="Options">Rename options</param>
     public record ChangeColumn(
-        Ident OldName, 
-        Ident NewName, 
-        DataType DataType, 
+        Ident OldName,
+        Ident NewName,
+        DataType DataType,
         Sequence<ColumnOption> Options,
-        MySqlColumnPosition? ColumnPosition = null) 
+        MySqlColumnPosition? ColumnPosition = null)
         : AlterTableOperation
     {
         public override void ToSql(SqlTextWriter writer)
@@ -437,6 +488,31 @@ public abstract record AlterTableOperation : IWriteSql
             if (ColumnPosition != null)
             {
                 writer.WriteSql($" {ColumnPosition}");
+            }
+        }
+    }
+    /// <summary>
+    /// MATERIALIZE PROJECTION [IF EXISTS] name [IN PARTITION partition_name]
+    /// </summary>
+    /// <param name="IfExists">Materialize if exists</param>
+    /// <param name="Name">Name</param>
+    /// <param name="Partition">Partition</param>
+    public record MaterializeProjection(bool IfExists, Ident Name, Ident? Partition) : AlterTableOperation
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("MATERIALIZE PROJECTION");
+
+            if (IfExists)
+            {
+                writer.Write(" IF EXISTS");
+            }
+
+            writer.Write($" {Name}");
+
+            if (Partition != null)
+            {
+                writer.Write($" IN PARTITION {Partition}");
             }
         }
     }
