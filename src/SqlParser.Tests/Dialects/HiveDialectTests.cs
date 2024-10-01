@@ -381,4 +381,31 @@ public class HiveDialectTests : ParserTestBase
         Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE TABLE db.table_name (a INT, b STRING) PARTITIONED BY (a INT, b STRING) CLUSTERED BY (a, b) SORTED BY INTO 4 BUCKETS"));
         Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE TABLE db.table_name (a INT, b STRING) PARTITIONED BY (a INT, b STRING) CLUSTERED BY (a, b) SORTED BY (a ASC, b DESC) INTO"));
     }
+
+    [Fact]
+    public void Create_Table_With_Comment()
+    {
+        var sql = """
+                  CREATE TABLE db.table_name (a INT, b STRING)
+                   COMMENT 'table comment'
+                   PARTITIONED BY (a INT, b STRING)
+                   CLUSTERED BY (a, b) SORTED BY (a ASC, b DESC)
+                   INTO 4 BUCKETS
+                  """;
+        var create = VerifiedStatement<Statement.CreateTable>(sql);
+
+        var expected = new  CommentDef.AfterColumnDefsWithoutEq("table comment");
+
+        Assert.Equal(expected, create.Element.Comment);
+
+
+        // negative test case
+        sql = """
+              CREATE TABLE db.table_name (a INT, b STRING)
+               PARTITIONED BY (a INT, b STRING)
+               COMMENT 'table comment'
+              """;
+          
+        Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
+    }
 }

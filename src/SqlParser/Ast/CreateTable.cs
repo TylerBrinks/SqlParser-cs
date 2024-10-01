@@ -87,6 +87,13 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
             writer.Write(" ()");
         }
 
+        // Hive table comment should be after column definitions, please refer to:
+        // https://cwiki.apache.org/confluence/display/Hive/LanguageManual+DDL#LanguageManualDDL-CreateTable
+        if(Comment is not null)
+        {
+            writer.WriteSql($" COMMENT '{Comment}'");
+        }
+
         // Only for SQLite
         if (WithoutRowId)
         {

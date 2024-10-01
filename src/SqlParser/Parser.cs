@@ -4740,6 +4740,20 @@ public partial class Parser
         var clone = ParseInit<ObjectName?>(ParseKeyword(Keyword.CLONE), () => ParseObjectName(allowUnquotedHyphen));
 
         var (columns, constraints) = ParseColumns();
+        CommentDef? comment = null;
+
+        if (_dialect is HiveDialect && ParseKeyword(Keyword.COMMENT))
+        {
+            var next = NextToken();
+            if(next is SingleQuotedString s)
+            {
+                comment = new CommentDef.AfterColumnDefsWithoutEq(s.Value);
+            }
+            else
+            {
+                throw Expected("comment", next);
+            }
+        }
 
         // SQLite supports `WITHOUT ROWID` at the end of `CREATE TABLE`
         var withoutRowId = ParseKeywordSequence(Keyword.WITHOUT, Keyword.ROWID);
@@ -4865,17 +4879,20 @@ public partial class Parser
 
         var strict = ParseKeyword(Keyword.STRICT);
 
-        var comment = ParseInit(ParseKeyword(Keyword.COMMENT), () =>
+        if (_dialect is not HiveDialect)
         {
-            ConsumeToken<Equal>();
-            var next = NextToken();
-            if (next is SingleQuotedString str)
+            comment = ParseInit(ParseKeyword(Keyword.COMMENT), () =>
             {
-                return new CommentDef.WithoutEq(str.Value);
-            }
+                ConsumeToken<Equal>();
+                var next = NextToken();
+                if (next is SingleQuotedString str)
+                {
+                    return new CommentDef.WithoutEq(str.Value);
+                }
 
-            throw Expected("Comment", PeekToken());
-        });
+                throw Expected("Comment", next);
+            });
+        }
 
         // Parse optional `AS ( query )`
         var query = ParseInit<Query>(ParseKeyword(Keyword.AS), () => ParseQuery());
