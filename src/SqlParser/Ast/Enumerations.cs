@@ -474,6 +474,12 @@ public enum OnCommit
     Drop
 }
 
+public enum PartitionRangeDirection
+{
+    Left,
+    Right
+}
+
 public enum ReferentialAction
 {
     None,

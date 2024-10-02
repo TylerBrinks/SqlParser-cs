@@ -579,13 +579,13 @@ public class BigQueryDialectTests : ParserTestBase
             [
                 new (new ColumnOption.NotNull()),
                 new (new ColumnOption.Options([
-                    new SqlOption("description", new LiteralValue(new Value.DoubleQuotedString("field x")))
+                    new SqlOption.KeyValue("description", new LiteralValue(new Value.DoubleQuotedString("field x")))
                 ])),
             ]),
             new ("y", new DataType.Bool(), Options:
             [
                 new (new ColumnOption.Options([
-                    new SqlOption("description", new LiteralValue(new Value.DoubleQuotedString("field y")))
+                    new SqlOption.KeyValue("description", new LiteralValue(new Value.DoubleQuotedString("field y")))
                 ])),
             ]),
         };
@@ -596,8 +596,8 @@ public class BigQueryDialectTests : ParserTestBase
         Assert.Equal(new WrappedCollection<Ident>.NoWrapping(["userid", "age"]), create.ClusterBy);
         Assert.Equal(new Sequence<SqlOption>
         {
-            new ("partition_expiration_days", new LiteralValue(new Value.Number("1"))),
-            new ("description", new LiteralValue(new Value.DoubleQuotedString("table option description")))
+            new SqlOption.KeyValue ("partition_expiration_days", new LiteralValue(new Value.Number("1"))),
+            new SqlOption.KeyValue("description", new LiteralValue(new Value.DoubleQuotedString("table option description")))
         }, create.Options);
 
         sql = """

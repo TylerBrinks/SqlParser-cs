@@ -2411,8 +2411,8 @@ public class PostgresDialectTests : ParserTestBase
 
         Assert.Equal(new Sequence<SqlOption>
             {
-                new("foo", new LiteralValue(new Value.SingleQuotedString("bar"))),
-                new("a", new LiteralValue(new Value.Number("123"))),
+                new SqlOption.KeyValue("foo", new LiteralValue(new Value.SingleQuotedString("bar"))),
+                new SqlOption.KeyValue("a", new LiteralValue(new Value.Number("123"))),
             }, create.Element.WithOptions);
     }
 

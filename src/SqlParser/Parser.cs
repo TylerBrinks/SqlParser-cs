@@ -2282,7 +2282,7 @@ public partial class Parser
         // it is not clear if any implementations support that syntax, so we
         // don't currently try to parse it. (The sign can instead be included
         // inside the value string.)
-        
+
         // to match the different flavours of INTERVAL syntax, we only allow expressions
         // if the dialect requires an interval qualifier,
         var value = _dialect.RequireIntervalQualifier ? ParseExpr() : ParsePrefix();
@@ -4745,7 +4745,7 @@ public partial class Parser
         if (_dialect is HiveDialect && ParseKeyword(Keyword.COMMENT))
         {
             var next = NextToken();
-            if(next is SingleQuotedString s)
+            if (next is SingleQuotedString s)
             {
                 comment = new CommentDef.AfterColumnDefsWithoutEq(s.Value);
             }
@@ -5631,10 +5631,81 @@ public partial class Parser
 
     public SqlOption ParseSqlOption()
     {
-        var name = ParseIdentifier();
-        ExpectToken<Equal>();
-        var value = ParseExpr();
-        return new SqlOption(name, value);
+        var isMsSql = _dialect is MsSqlDialect;
+
+        return PeekToken() switch
+        {
+            Word w when isMsSql && w.Keyword == Keyword.HEAP => new SqlOption.Identifier(ParseIdentifier()),
+            Word p when isMsSql && p.Keyword is Keyword.PARTITION => ParseOptionPartition(),
+            Word p when isMsSql && p.Keyword is Keyword.CLUSTERED => ParseOptionClustered(),
+            _ => ParseOption()
+        };
+
+        SqlOption ParseOption()
+        {
+            var name = ParseIdentifier();
+            ExpectToken<Equal>();
+            var value = ParseExpr();
+            return new SqlOption.KeyValue(name, value);
+        }
+
+        SqlOption ParseOptionPartition()
+        {
+            ExpectKeyword(Keyword.PARTITION);
+            ExpectLeftParen();
+            var columnName = ParseIdentifier();
+
+            ExpectKeyword(Keyword.RANGE);
+            PartitionRangeDirection? rangeDirection = null;
+            
+            if(ParseKeyword(Keyword.LEFT))
+            {
+                rangeDirection = PartitionRangeDirection.Left;
+            }
+            else if(ParseKeyword(Keyword.RIGHT))
+            {
+                rangeDirection = PartitionRangeDirection.Right;
+            }
+
+            ExpectKeywords(Keyword.FOR, Keyword.VALUES);
+            ExpectLeftParen();
+
+            var forValues = ParseCommaSeparated(ParseExpr);
+
+            ExpectRightParen(); 
+            ExpectRightParen();
+
+            return new SqlOption.Partition(columnName, forValues, rangeDirection);
+        }
+
+        SqlOption ParseOptionClustered()
+        {
+            if (ParseKeywordSequence(Keyword.CLUSTERED, Keyword.COLUMNSTORE, Keyword.INDEX, Keyword.ORDER))
+            {
+                return new SqlOption.Clustered(new TableOptionsClustered.ColumnstoreIndexOrder(
+                        ParseParenthesizedColumnList(IsOptional.Mandatory, false)));
+            }
+            else if (ParseKeywordSequence(Keyword.CLUSTERED, Keyword.COLUMNSTORE, Keyword.INDEX))
+            {
+                return new SqlOption.Clustered(new TableOptionsClustered.ColumnstoreIndex());
+            }
+            else if (ParseKeywordSequence(Keyword.CLUSTERED, Keyword.INDEX))
+            {
+                var columns = ExpectParens(() =>
+                {
+                    return ParseCommaSeparated(() =>
+                    {
+                        var name = ParseIdentifier();
+                        var asc = ParseAscDesc();
+                        return new ClusteredIndex(name, asc);
+                    });
+                });
+
+                return new SqlOption.Clustered(new TableOptionsClustered.Index(columns));
+            }
+
+            throw new ParserException("invalid CLUSTERED sequence");
+        }
     }
 
     public Statement ParseAlter()
@@ -10027,6 +10098,21 @@ public partial class Parser
 
         return new ReplaceSelectElement(expr, ident, asKeyword);
     }
+
+    public bool? ParseAscDesc()
+    {
+        if (ParseKeyword(Keyword.ASC))
+        {
+            return true;
+        }
+
+        if (ParseKeyword(Keyword.DESC))
+        {
+            return false;
+        }
+
+        return null;
+    }
     /// <summary>
     /// Parse an expression, optionally followed by ASC or DESC (used in ORDER BY)
     /// </summary>
@@ -10035,16 +10121,7 @@ public partial class Parser
     {
         var expr = ParseExpr();
 
-        bool? asc = null;
-
-        if (ParseKeyword(Keyword.ASC))
-        {
-            asc = true;
-        }
-        else if (ParseKeyword(Keyword.DESC))
-        {
-            asc = false;
-        }
+        var asc = ParseAscDesc();
 
         bool? nullsFirst = null;
         if (ParseKeywordSequence(Keyword.NULLS, Keyword.FIRST))

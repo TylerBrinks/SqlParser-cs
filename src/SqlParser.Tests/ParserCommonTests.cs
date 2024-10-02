@@ -3794,8 +3794,8 @@ public class ParserCommonTests : ParserTestBase
     {
         var create = VerifiedStatement<Statement.CreateView>("CREATE VIEW v WITH (foo = 'bar', a = 123) AS SELECT 1");
         var expected = new CreateTableOptions.With([
-            new SqlOption("foo", new LiteralValue(new Value.SingleQuotedString("bar"))),
-            new SqlOption("a", new LiteralValue(Number("123")))
+            new SqlOption.KeyValue("foo", new LiteralValue(new Value.SingleQuotedString("bar"))),
+            new SqlOption.KeyValue("a", new LiteralValue(Number("123")))
         ]);
         Assert.Equal(expected, create.Options);
     }
@@ -4821,8 +4821,8 @@ public class ParserCommonTests : ParserTestBase
             TableFlag = new ObjectName(tableFlag),
             Options = new SqlOption[]
             {
-                new(new Ident("K1", Symbols.SingleQuote), new LiteralValue(new Value.SingleQuotedString("V1"))),
-                new(new Ident("K2", Symbols.SingleQuote), new LiteralValue(Number("0.88")))
+                new SqlOption.KeyValue(new Ident("K1", Symbols.SingleQuote), new LiteralValue(new Value.SingleQuotedString("V1"))),
+                new SqlOption.KeyValue(new Ident("K2", Symbols.SingleQuote), new LiteralValue(Number("0.88")))
             }
         };
         Assert.Equal(cache, VerifiedStatement<Statement.Cache>($"CACHE {tableFlag} TABLE '{cacheTableName}' OPTIONS('K1' = 'V1', 'K2' = 0.88)"));
@@ -4833,8 +4833,8 @@ public class ParserCommonTests : ParserTestBase
             TableFlag = new ObjectName(tableFlag),
             Options = new SqlOption[]
             {
-                new(new Ident("K1", Symbols.SingleQuote), new LiteralValue(new Value.SingleQuotedString("V1"))),
-                new(new Ident("K2", Symbols.SingleQuote), new LiteralValue(Number("0.88")))
+                new SqlOption.KeyValue(new Ident("K1", Symbols.SingleQuote), new LiteralValue(new Value.SingleQuotedString("V1"))),
+                new SqlOption.KeyValue(new Ident("K2", Symbols.SingleQuote), new LiteralValue(Number("0.88")))
             },
             Query = query
         };
@@ -4847,8 +4847,8 @@ public class ParserCommonTests : ParserTestBase
             TableFlag = new ObjectName(tableFlag),
             Options = new SqlOption[]
             {
-                new(new Ident("K1", Symbols.SingleQuote), new LiteralValue(new Value.SingleQuotedString("V1"))),
-                new(new Ident("K2", Symbols.SingleQuote), new LiteralValue(Number("0.88")))
+                new SqlOption.KeyValue(new Ident("K1", Symbols.SingleQuote), new LiteralValue(new Value.SingleQuotedString("V1"))),
+                new SqlOption.KeyValue(new Ident("K2", Symbols.SingleQuote), new LiteralValue(Number("0.88")))
             },
             Query = query
         };
@@ -5478,7 +5478,7 @@ public class ParserCommonTests : ParserTestBase
 
         var with = new Sequence<SqlOption>
         {
-            new ("format", new LiteralValue(new Value.SingleQuotedString("AVRO")))
+            new SqlOption.KeyValue("format", new LiteralValue(new Value.SingleQuotedString("AVRO")))
         };
 
         var expected = new Statement.Unload(query, to, with);
