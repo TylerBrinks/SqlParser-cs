@@ -450,7 +450,9 @@ public partial class Parser
             }
         }
 
-        return new Truncate(tableNames, table, only, partitions, identity, cascade);
+        var onCluster = ParseOptionalOnCluster();
+
+        return new Truncate(tableNames, table, only, partitions, identity, cascade, onCluster);
     }
 
     public Statement ParseAttachDatabase()

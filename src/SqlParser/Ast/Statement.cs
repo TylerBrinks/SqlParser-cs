@@ -2164,9 +2164,9 @@ public abstract record Statement : IWriteSql, IElement
         bool Only,
         Sequence<Expression>? Partitions = null,
         TruncateIdentityOption? Identity = null,
-        TruncateCascadeOption? Cascade = null) : Statement
+        TruncateCascadeOption? Cascade = null,
+        Ident? OnCluster = null) : Statement
     {
-
         public override void ToSql(SqlTextWriter writer)
         {
             var table = Table ? "TABLE " : string.Empty;
@@ -2205,6 +2205,11 @@ public abstract record Statement : IWriteSql, IElement
             if (Partitions.SafeAny())
             {
                 writer.WriteSql($" PARTITION ({Partitions})");
+            }
+
+            if (OnCluster != null)
+            {
+                writer.WriteSql($" ON CLUSTER {OnCluster}");
             }
         }
     }

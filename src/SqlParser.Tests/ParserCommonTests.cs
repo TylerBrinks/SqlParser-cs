@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Runtime.CompilerServices;
+using System.Text;
 using SqlParser.Ast;
 using SqlParser.Dialects;
 using static SqlParser.Ast.DataType;
@@ -6317,5 +6318,17 @@ public class ParserCommonTests : ParserTestBase
         OneStatementParsesTo(
             "CREATE SEQUENCE name INCREMENT -10 MINVALUE -1000 MAXVALUE 15 START -100;",
             "CREATE SEQUENCE name INCREMENT -10 MINVALUE -1000 MAXVALUE 15 START -100");
+    }
+
+    [Fact]
+    public void TestTruncateTableWithOnCluster()
+    {
+        const string sql = "TRUNCATE TABLE t ON CLUSTER cluster_name";
+        var statement = VerifiedStatement<Statement.Truncate>(sql);
+
+       Assert.Equal(new Ident("cluster_name"), statement.OnCluster);
+
+        VerifiedStatement("TRUNCATE TABLE t");
+        Assert.Throws<ParserException>(() => ParseSqlStatements("TRUNCATE TABLE t ON CLUSTER"));
     }
 }
