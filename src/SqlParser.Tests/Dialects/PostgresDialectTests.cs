@@ -352,6 +352,24 @@ public class PostgresDialectTests : ParserTestBase
             """;
         OneStatementParsesTo(sql, "CREATE TEMPORARY SEQUENCE IF NOT EXISTS name3 INCREMENT 1 NO MINVALUE MAXVALUE 20 OWNED BY NONE");
 
+        sql = """
+              CREATE SEQUENCE name4
+              AS BIGINT
+              INCREMENT - 15
+              MINVALUE - 2000  MAXVALUE - 50
+              START WITH -60
+              """;
+        OneStatementParsesTo(sql, "CREATE SEQUENCE name4 AS BIGINT INCREMENT -15 MINVALUE -2000 MAXVALUE -50 START WITH -60");
+
+        sql = """
+              CREATE SEQUENCE name5
+              AS BIGINT
+              INCREMENT + 10
+              MINVALUE + 30  MAXVALUE + 5000
+              START WITH +45
+              """;
+        OneStatementParsesTo(sql, "CREATE SEQUENCE name5 AS BIGINT INCREMENT +10 MINVALUE +30 MAXVALUE +5000 START WITH +45");
+
         Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE SEQUENCE foo INCREMENT 1 NO MINVALUE NO"));
     }
 

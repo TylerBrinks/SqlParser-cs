@@ -6308,4 +6308,14 @@ public class ParserCommonTests : ParserTestBase
         // positive literal is parsed as a + and expr
         Assert.Equal(new UnaryOp(new LiteralValue(new Value.Number("20")), UnaryOperator.Plus), select.Projection[2].AsExpr());
     }
+
+    [Fact]
+    public void ParseNegativeValue()
+    {
+        OneStatementParsesTo("SELECT -1", "SELECT -1");
+
+        OneStatementParsesTo(
+            "CREATE SEQUENCE name INCREMENT -10 MINVALUE -1000 MAXVALUE 15 START -100;",
+            "CREATE SEQUENCE name INCREMENT -10 MINVALUE -1000 MAXVALUE 15 START -100");
+    }
 }

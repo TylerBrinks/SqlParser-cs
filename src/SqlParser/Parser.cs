@@ -6649,7 +6649,22 @@ public partial class Parser
 
         throw new ParserException($"Could not parse '{value}'");
     }
+    public Expression ParseNumber()
+    {
+        var next = NextToken();
+        return next switch
+        {
+            Plus => new UnaryOp(new LiteralValue(ParseNumberValue()), UnaryOperator.Plus),
+            Minus => new UnaryOp(new LiteralValue(ParseNumberValue()), UnaryOperator.Minus),
+            _ => ParseNumberVal()
+        };
 
+        Expression ParseNumberVal()
+        {
+            PrevToken();
+            return new LiteralValue(ParseNumberValue());
+        }
+    }
     public Value ParseIntroducedStringValue()
     {
         var token = NextToken();
@@ -10599,14 +10614,13 @@ public partial class Parser
         if (ParseKeyword(Keyword.INCREMENT))
         {
             var by = ParseKeyword(Keyword.BY);
-            sequenceOptions.Add(new SequenceOptions.IncrementBy(new LiteralValue(ParseNumberValue()), by));
+            sequenceOptions.Add(new SequenceOptions.IncrementBy(ParseNumber(), by));
         }
 
         //[ MINVALUE minvalue | NO MINVALUE ]
         if (ParseKeyword(Keyword.MINVALUE))
         {
-            var expr = new LiteralValue(ParseNumberValue());
-            sequenceOptions.Add(new SequenceOptions.MinValue(expr));
+            sequenceOptions.Add(new SequenceOptions.MinValue(ParseNumber()));
         }
         else if (ParseKeywordSequence(Keyword.NO, Keyword.MINVALUE))
         {
@@ -10616,8 +10630,7 @@ public partial class Parser
         //[ MAXVALUE maxvalue | NO MAXVALUE ]
         if (ParseKeywordSequence(Keyword.MAXVALUE))
         {
-            var expr = new LiteralValue(ParseNumberValue());
-            sequenceOptions.Add(new SequenceOptions.MaxValue(expr));
+            sequenceOptions.Add(new SequenceOptions.MaxValue(ParseNumber()));
         }
         else if (ParseKeywordSequence(Keyword.NO, Keyword.MAXVALUE))
         {
@@ -10628,8 +10641,7 @@ public partial class Parser
         if (ParseKeywordSequence(Keyword.START))
         {
             var with = ParseKeyword(Keyword.WITH);
-            var expr = new LiteralValue(ParseNumberValue());
-            sequenceOptions.Add(new SequenceOptions.StartWith(expr, with));
+            sequenceOptions.Add(new SequenceOptions.StartWith(ParseNumber(), with));
         }
 
         //[ CACHE cache ]
