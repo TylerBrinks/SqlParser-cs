@@ -37,4 +37,5 @@ public class GenericDialect : Dialect
     public override bool AllowExtractCustom => true;
     public override bool AllowExtractSingleQuotes => true;
     public override bool SupportsCreateIndexWithClause => true;
+    public override bool SupportsExplainWithUtilityOptions => true;
 }

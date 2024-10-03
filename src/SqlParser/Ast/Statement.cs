@@ -1393,6 +1393,8 @@ public abstract record Statement : IWriteSql, IElement
         /// Optional output format of explain
         public AnalyzeFormat Format { get; init; }
 
+        public Sequence<UtilityOption>? Options { get; init; }
+
         public override void ToSql(SqlTextWriter writer)
         {
             writer.WriteSql($"{DescribeAlias} ");
@@ -1410,6 +1412,11 @@ public abstract record Statement : IWriteSql, IElement
             if (Format != AnalyzeFormat.None)
             {
                 writer.WriteSql($"FORMAT {Format} ");
+            }
+
+            if (Options != null)
+            {
+                writer.WriteSql($"({Options.ToSqlDelimited()}) ");
             }
 
             Statement.ToSql(writer);

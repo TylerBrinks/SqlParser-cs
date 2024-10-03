@@ -71,4 +71,5 @@ public partial class Dialect
     public virtual bool AllowExtractSingleQuotes => false;
     public virtual bool SupportsCreateIndexWithClause => false;
     public virtual bool RequireIntervalQualifier => false;
+    public virtual bool SupportsExplainWithUtilityOptions => false;
 }

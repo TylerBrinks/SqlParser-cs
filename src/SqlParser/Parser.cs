@@ -5659,12 +5659,12 @@ public partial class Parser
 
             ExpectKeyword(Keyword.RANGE);
             PartitionRangeDirection? rangeDirection = null;
-            
-            if(ParseKeyword(Keyword.LEFT))
+
+            if (ParseKeyword(Keyword.LEFT))
             {
                 rangeDirection = PartitionRangeDirection.Left;
             }
-            else if(ParseKeyword(Keyword.RIGHT))
+            else if (ParseKeyword(Keyword.RIGHT))
             {
                 rangeDirection = PartitionRangeDirection.Right;
             }
@@ -5674,7 +5674,7 @@ public partial class Parser
 
             var forValues = ParseCommaSeparated(ParseExpr);
 
-            ExpectRightParen(); 
+            ExpectRightParen();
             ExpectRightParen();
 
             return new SqlOption.Partition(columnName, forValues, rangeDirection);
@@ -7694,13 +7694,26 @@ public partial class Parser
     /// <exception cref="ParserException"></exception>
     public Statement ParseExplain(DescribeAlias describeAlias)
     {
-        var analyze = ParseKeyword(Keyword.ANALYZE);
+        var analyze = false;
+        var verbose = false;
+        AnalyzeFormat format = AnalyzeFormat.None;
+        Statement? parsed = null;
+        Sequence<UtilityOption>? options = null;
 
-        var verbose = ParseKeyword(Keyword.VERBOSE);
+        // Note: DuckDB is compatible with PostgreSQL syntax for this statement,
+        // although not all features may be implemented.
+        if (_dialect.SupportsExplainWithUtilityOptions && describeAlias == DescribeAlias.Explain && PeekToken() is LeftParen)
+        {
+            options = ParseUtilityOptions();
+        }
+        else
+        {
+            analyze = ParseKeyword(Keyword.ANALYZE);
+            verbose = ParseKeyword(Keyword.VERBOSE);
+            format = ParseInit(ParseKeyword(Keyword.FORMAT), ParseAnalyzeFormat);
+        }
 
-        var format = ParseInit(ParseKeyword(Keyword.FORMAT), ParseAnalyzeFormat);
-
-        var parsed = MaybeParse(ParseStatement);
+        parsed = MaybeParse(ParseStatement);
 
         return parsed switch
         {
@@ -7710,7 +7723,8 @@ public partial class Parser
                 DescribeAlias = describeAlias,
                 Analyze = analyze,
                 Verbose = verbose,
-                Format = format
+                Format = format,
+                Options = options
             },
             _ => ParseDescribeFormat()
         };
@@ -10532,7 +10546,29 @@ public partial class Parser
         var clauses = ParseMergeClauses();
         return new Merge(into, table, source, on, clauses);
     }
+    public Sequence<UtilityOption> ParseUtilityOptions()
+    {
+        return ExpectParens(() =>
+        {
+            return ParseCommaSeparated(ParseUtilityOption);
+        });
+    }
 
+    public UtilityOption ParseUtilityOption()
+    {
+        var name = ParseIdentifier();
+
+        var next = PeekToken();
+
+        if (next is Comma or RightParen)
+        {
+            return new UtilityOption(name);
+        }
+
+        var arg = ParseExpr();
+
+        return new UtilityOption(name, arg);
+    }
     public Statement ParsePragma()
     {
         var name = ParseObjectName();
