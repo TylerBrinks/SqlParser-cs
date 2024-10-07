@@ -303,5 +303,18 @@ public abstract record ColumnOption : IWriteSql, IElement
         }
     }
 
+    public record Identity(IdentityProperty? Parameters = null) : ColumnOption
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("IDENTITY");
+
+            if (Parameters != null)
+            {
+                writer.WriteSql($"({Parameters})");
+            }
+        }
+    }
+
     public abstract void ToSql(SqlTextWriter writer);
 }

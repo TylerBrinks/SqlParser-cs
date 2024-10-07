@@ -1,6 +1,8 @@
-﻿using SqlParser.Ast;
+﻿using System.ComponentModel.DataAnnotations;
+using SqlParser.Ast;
 using SqlParser.Dialects;
 using static SqlParser.Ast.Expression;
+using DataType = SqlParser.Ast.DataType;
 
 // ReSharper disable StringLiteralTypo
 
@@ -366,6 +368,39 @@ public class MsSqlDialectTests : ParserTestBase
 
             Assert.Equal(columns, create.Element.Columns);
             Assert.Equal(withOptions, create.Element.WithOptions);
+        }
+    }
+
+    [Fact]
+    public void Parse_Create_Table_With_Identity_Column()
+    {
+        var withColumnOptions = new List<(string, Sequence<ColumnOptionDef>)>
+        {
+            ("CREATE TABLE mytable (columnA INT IDENTITY NOT NULL)", 
+                [
+                    new ColumnOptionDef(new ColumnOption.Identity()),
+                    new ColumnOptionDef(new ColumnOption.NotNull())
+                ]),
+
+            ("CREATE TABLE mytable (columnA INT IDENTITY(1, 1) NOT NULL)", [
+                new ColumnOptionDef(
+                    new ColumnOption.Identity(new IdentityProperty(
+                    new LiteralValue(new Value.Number("1")), new LiteralValue(new Value.Number("1"))))),
+                new ColumnOptionDef(new ColumnOption.NotNull())
+            ])
+        };
+
+        foreach (var (sql, columnOptions) in withColumnOptions)
+        {
+            var create = VerifiedStatement<Statement.CreateTable>(sql);
+
+            Sequence<ColumnDef> columns =
+            [
+                new ("columnA", new DataType.Int(), Options: columnOptions)
+            ];
+            var expected = new Statement.CreateTable(new CreateTable("mytable", columns));
+            Assert.Equal(expected, create);
+
         }
     }
 }

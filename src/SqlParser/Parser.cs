@@ -5243,6 +5243,23 @@ public partial class Parser
             return ParseOptionalColumnOptionAs();
         }
 
+        if (_dialect is MsSqlDialect or GenericDialect && ParseKeyword(Keyword.IDENTITY))
+        {
+            IdentityProperty? property = null;
+
+            if (ConsumeToken<LeftParen>())
+            {
+                var seed = ParseNumber();
+                ExpectToken<Comma>();
+                var increment = ParseNumber();
+                ExpectToken<RightParen>();
+
+                property = new IdentityProperty(seed, increment);
+            }
+
+            return new ColumnOption.Identity(property);
+        }
+
         return null;
     }
 
