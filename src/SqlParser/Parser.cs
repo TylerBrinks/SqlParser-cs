@@ -3879,6 +3879,10 @@ public partial class Parser
         {
             return ParseDropFunction();
         }
+        else if (ParseKeyword(Keyword.POLICY))
+        {
+            return ParseDropPolicy();
+        }
         else if (ParseKeyword(Keyword.PROCEDURE))
         {
             return ParseDropProcedure();
@@ -4103,14 +4107,7 @@ public partial class Parser
     {
         var ifExists = ParseIfExists();
         var procDesc = ParseCommaSeparated(ParseFunctionDescription);
-        var keyword = ParseOneOfKeywords(Keyword.CASCADE, Keyword.RESTRICT);
-
-        ReferentialAction? option = keyword switch
-        {
-            Keyword.CASCADE => ReferentialAction.Cascade,
-            Keyword.RESTRICT => ReferentialAction.Restrict,
-            _ => null
-        };
+        var option = ParseOptionalReferentialAction();
 
         return new DropProcedure(ifExists, procDesc, option);
     }
@@ -4153,6 +4150,17 @@ public partial class Parser
         return new DropSecret(ifExists, temp, name, storageSpecifier);
     }
 
+    public ReferentialAction? ParseOptionalReferentialAction()
+    {
+        var keyword = ParseOneOfKeywords(Keyword.CASCADE, Keyword.RESTRICT);
+
+        return keyword switch
+        {
+            Keyword.CASCADE => ReferentialAction.Cascade,
+            Keyword.RESTRICT => ReferentialAction.Restrict,
+            _ => ReferentialAction.None
+        };
+    }
     /// <summary>
     ///  DROP FUNCTION [ IF EXISTS ] name [ ( [ [ argmode ] [ argname ] argtype [, ...] ] ) ] [, ...]
     /// [ CASCADE | RESTRICT ]
@@ -4161,15 +4169,9 @@ public partial class Parser
     {
         var ifExists = ParseIfExists();
         var funcDesc = ParseCommaSeparated(ParseFunctionDesc);
-        var keyword = ParseOneOfKeywords(Keyword.CASCADE, Keyword.RESTRICT);
-        var option = keyword switch
-        {
-            Keyword.CASCADE => ReferentialAction.Cascade,
-            Keyword.RESTRICT => ReferentialAction.Restrict,
-            _ => ReferentialAction.None
-        };
+        var option = ParseOptionalReferentialAction();
 
-        return new DropFunction(ifExists, funcDesc, option);
+        return new DropFunction(ifExists, funcDesc, option.Value);
 
         FunctionDesc ParseFunctionDesc()
         {
@@ -4192,6 +4194,16 @@ public partial class Parser
         }
     }
 
+    public DropPolicy ParseDropPolicy()
+    {
+        var ifExists = ParseIfExists();
+        var name = ParseIdentifier();
+        ExpectKeyword(Keyword.ON);
+        var tableName = ParseObjectName();
+        var option = ParseOptionalReferentialAction();
+
+        return new DropPolicy(ifExists, name, tableName, option);
+    }
     /// <summary>
     /// DECLARE name [ BINARY ] [ ASENSITIVE | INSENSITIVE ] [ [ NO ] SCROLL ]
     ///     CURSOR [ { WITH | WITHOUT } HOLD ] FOR query

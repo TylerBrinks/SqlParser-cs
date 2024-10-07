@@ -1247,6 +1247,27 @@ public abstract record Statement : IWriteSql, IElement
             writer.WriteSql($"DETACH{keyword}{ifNot} {DatabaseAlias}");
         }
     }
+
+    public record DropPolicy(bool IfExists, Ident Name, ObjectName TableName, ReferentialAction? Option = null) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("DROP POLICY");
+
+            if (IfExists)
+            {
+                writer.Write(" IF EXISTS");
+            }
+
+            writer.WriteSql($" {Name} ON {TableName}");
+
+            if (Option != null && Option != ReferentialAction.None)
+            {
+                writer.WriteSql($" {Option}");
+            }
+        }
+    }
+
     public record DropSecret(
         bool IfExists,
         bool? Temporary,
@@ -1428,7 +1449,7 @@ public abstract record Statement : IWriteSql, IElement
             var ifEx = IfExists ? " IF EXISTS" : null;
             writer.WriteSql($"DROP PROCEDURE{ifEx} {ProcDescription.ToSqlDelimited()}");
 
-            if (Option != null)
+            if (Option != null && Option != ReferentialAction.None)
             {
                 writer.Write($" {Option}");
             }

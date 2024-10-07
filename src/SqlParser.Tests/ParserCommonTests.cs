@@ -6530,6 +6530,22 @@ public class ParserCommonTests : ParserTestBase
     }
 
     [Fact]
+    public void Parse_Drop_Policy()
+    {
+        var drop = VerifiedStatement<Statement.DropPolicy>("DROP POLICY IF EXISTS my_policy ON my_table RESTRICT");
+
+        Assert.True(drop.IfExists);
+        Assert.Equal("my_policy", drop.Name);
+        Assert.Equal("my_table", drop.TableName);
+        Assert.Equal(ReferentialAction.Restrict, drop.Option);
+
+        VerifiedStatement("DROP POLICY my_policy ON my_table CASCADE");
+        VerifiedStatement("DROP POLICY my_policy ON my_table");
+        Assert.Throws<ParserException>(() => ParseSqlStatements("DROP POLICY my_policy"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("DROP POLICY my_policy ON my_table WRONG"));
+    }
+
+    [Fact]
     public void Parse_Explain_With_Option_List()
     {
         var dialects = AllDialects.Where(d => d.SupportsExplainWithUtilityOptions).ToList();
