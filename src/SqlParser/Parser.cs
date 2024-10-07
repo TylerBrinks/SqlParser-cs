@@ -2713,6 +2713,11 @@ public partial class Parser
             return ParseCreateView(orReplace, temporary);
         }
 
+        if (ParseKeyword(Keyword.POLICY))
+        {
+            return ParseCreatePolicy();
+        }
+
         if (ParseKeyword(Keyword.EXTERNAL))
         {
             return new Statement.CreateTable(ParseCreateExternalTable(orReplace));
@@ -2799,6 +2804,87 @@ public partial class Parser
         }
 
         throw Expected("Expected an object type after CREATE", PeekToken());
+    }
+
+    public Statement ParseCreatePolicy()
+    {
+        var name = ParseIdentifier();
+        ExpectKeyword(Keyword.ON);
+        var tableName = ParseObjectName();
+
+        CreatePolicyType? policyType = null;
+        Expression? @using = null;
+        Expression? withCheck = null;
+        CreatePolicyCommand? command = null;
+        Sequence<Owner>? to = null;
+
+        if (ParseKeyword(Keyword.AS))
+        {
+            var keyword = ExpectOneOfKeywords(Keyword.PERMISSIVE, Keyword.RESTRICTIVE);
+
+            policyType = keyword switch
+            {
+                Keyword.PERMISSIVE => CreatePolicyType.Permissive,
+                Keyword.RESTRICTIVE => CreatePolicyType.Restrictive,
+            };
+        }
+
+        if (ParseKeyword(Keyword.FOR))
+        {
+            var keyword = ExpectOneOfKeywords(Keyword.ALL, Keyword.SELECT, Keyword.INSERT, Keyword.UPDATE, Keyword.DELETE);
+
+            command = keyword switch
+            {
+                Keyword.ALL => CreatePolicyCommand.All,
+                Keyword.SELECT => CreatePolicyCommand.Select,
+                Keyword.INSERT => CreatePolicyCommand.Insert,
+                Keyword.UPDATE => CreatePolicyCommand.Update,
+                Keyword.DELETE => CreatePolicyCommand.Delete
+            };
+        }
+
+        if (ParseKeyword(Keyword.TO))
+        {
+            to = ParseCommaSeparated(ParseOwner);
+        }
+
+        if (ParseKeyword(Keyword.USING))
+        {
+            @using = ExpectParens(ParseExpr);
+        }
+
+        if (ParseKeywordSequence(Keyword.WITH, Keyword.CHECK))
+        {
+            withCheck = ExpectParens(ParseExpr);
+        }
+
+        return new CreatePolicy(name, tableName)
+        {
+            Command = command,
+            PolicyType = policyType,
+            To = to,
+            Using = @using,
+            WithCheck = withCheck
+        };
+    }
+
+    public Owner ParseOwner()
+    {
+        var owner = ParseOneOfKeywords(Keyword.CURRENT_USER, Keyword.CURRENT_ROLE, Keyword.SESSION_USER);
+
+        return owner switch
+        {
+            Keyword.CURRENT_USER => new Owner.CurrentUser(),
+            Keyword.CURRENT_ROLE => new Owner.CurrentRole(),
+            Keyword.SESSION_USER => new Owner.SessionUser(), 
+            _ when owner is Keyword.undefined => ParseOwnerName()
+        };
+
+        Owner ParseOwnerName()
+        {
+            var ident = ParseIdentifier();
+            return new Owner.Identity(ident);
+        }
     }
 
     public Statement ParseCreateSecret(bool orReplace, bool temporary, bool persistent)

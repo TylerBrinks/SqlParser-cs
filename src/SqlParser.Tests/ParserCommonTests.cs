@@ -6495,6 +6495,41 @@ public class ParserCommonTests : ParserTestBase
     }
 
     [Fact]
+    public void Test_Create_Policy()
+    {
+        var sql = """
+                  CREATE POLICY my_policy ON my_table
+                   AS PERMISSIVE FOR SELECT
+                   TO my_role, CURRENT_USER
+                   USING (c0 = 1)
+                   WITH CHECK (true)
+                  """;
+
+        var create = VerifiedStatement<Statement.CreatePolicy>(sql);
+
+        Assert.Equal("my_policy", create.Name);
+        Assert.Equal("my_table", create.TableName);
+        Assert.Equal([new Owner.Identity("my_role"), new Owner.CurrentUser()], create.To);
+        Assert.Equal(new BinaryOp(new Identifier("c0"), BinaryOperator.Eq, new LiteralValue(new Value.Number("1"))), create.Using);
+
+        sql = """
+              CREATE POLICY my_policy ON my_table
+               AS PERMISSIVE FOR SELECT
+               TO my_role, CURRENT_USER
+               USING (c0 IN (SELECT column FROM t0))
+               WITH CHECK (true)
+              """;
+        VerifiedStatement(sql);
+        VerifiedStatement("CREATE POLICY my_policy ON my_table");
+
+        Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE POLICY my_policy ON my_table AS"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE POLICY my_policy ON my_table FOR"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE POLICY my_policy ON my_table TO"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE POLICY my_policy ON my_table USING"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE POLICY my_policy ON my_table WITH CHECK"));
+    }
+
+    [Fact]
     public void Parse_Explain_With_Option_List()
     {
         var dialects = AllDialects.Where(d => d.SupportsExplainWithUtilityOptions).ToList();

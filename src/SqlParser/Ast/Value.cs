@@ -15,7 +15,7 @@ public abstract record Value : IWriteSql, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.Write(Value);
+            writer.Write(Value ? "true" : "false");
         }
     }
     /// <summary>

@@ -205,6 +205,20 @@ public enum ContextModifier
     Session
 }
 
+public enum CreatePolicyType
+{
+    Permissive,
+    Restrictive,
+}
+
+public enum CreatePolicyCommand
+{
+    All,
+    Select,
+    Insert,
+    Update,
+    Delete,
+}
 public enum DataLoadingOptionType
 {
     String,
