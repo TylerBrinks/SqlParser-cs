@@ -32,7 +32,10 @@
 	<ItemGroup>
 		<InternalsVisibleTo Include="SqlParser.Tests, PublicKey=002400000480000094000000060200000024000052534131000400000100010099467834d460ca875e5d2c8f2320f197aa5cc1e4f11186ec69ed29f0eb866afd16bf403d82854a4590d2b36af8f46b974acc55a5a409c0b1c83182125d840527fd930979046a9f6646d86ceceb0e886136c37463ae195b78622b387ee0ddc2fc51b0c081d03b270fcc81aad3d4979d2bc47d0fb20f8698291e034e352c9758a9" />
 	</ItemGroup>
-
+	<ItemGroup>
+		<ProjectCapability Include="ConfigurableFileNesting" />
+		<ProjectCapability Include="ConfigurableFileNestingFeatureEnabled" />
+	</ItemGroup>
 	<ItemGroup>
 		<Compile Remove="Docs\**" />
 		<EmbeddedResource Remove="Docs\**" />

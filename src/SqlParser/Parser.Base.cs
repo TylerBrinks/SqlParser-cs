@@ -8,6 +8,13 @@ namespace SqlParser;
 
 public partial class Parser
 {
+    private int _index;
+    private Sequence<Token> _tokens = null!;
+    private DepthGuard _depthGuard = null!;
+    private Dialect _dialect = null!;
+    private ParserOptions _options = null!;
+    private ParserState _parserState = ParserState.Normal;
+
     public T ExpectParens<T>(Func<T> action)
     {
         ExpectLeftParen();
