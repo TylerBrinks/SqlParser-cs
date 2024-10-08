@@ -57,4 +57,5 @@ public class SQLiteDialect : Dialect
     public override bool SupportsInEmptyList => true;
 
     public override bool SupportsStartTransactionModifier => true;
+    public override bool SupportsLimitComma => true;
 }

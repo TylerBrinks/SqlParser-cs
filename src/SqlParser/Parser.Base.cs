@@ -1058,7 +1058,7 @@ public partial class Parser
                     offset = ParseOffset();
                 }
 
-                if (_dialect is GenericDialect or MySqlDialect or ClickHouseDialect && limit != null && offset == null && ConsumeToken<Comma>())
+                if (_dialect.SupportsLimitComma && limit != null && offset == null && ConsumeToken<Comma>())
                 {
                     // MySQL style LIMIT x,y => LIMIT y OFFSET x.
                     // Check <https://dev.mysql.com/doc/refman/8.0/en/select.html> for more details.

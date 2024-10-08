@@ -3867,7 +3867,9 @@ public class ParserCommonTests : ParserTestBase
     [Fact]
     public void Parse_Create_View_With_Columns()
     {
-        var create = VerifiedStatement<Statement.CreateView>("CREATE VIEW v (has, cols) AS SELECT 1, 2");
+        var dialects = AllDialects.Where(d => d is not ClickHouseDialect).ToList();
+
+        var create = VerifiedStatement<Statement.CreateView>("CREATE VIEW v (has, cols) AS SELECT 1, 2", dialects);
 
         Assert.Equal("v", create.Name);
         Assert.Equal([new("has"), new("cols")], create.Columns);
@@ -4764,17 +4766,19 @@ public class ParserCommonTests : ParserTestBase
     [Fact]
     public void Parse_Offset_And_Limit()
     {
-        var limit = new LiteralValue(Number("2"));
-        var expected = new Offset(limit, OffsetRows.None);
-        var query = VerifiedQuery("SELECT foo FROM bar LIMIT 2 OFFSET 2");
+        var expected = new Offset(new LiteralValue(new Value.Number("2")), OffsetRows.None);
+        var query = VerifiedQuery("SELECT foo FROM bar LIMIT 1 OFFSET 2");
 
         Assert.Equal(expected, query.Offset);
-        Assert.Equal(limit, query.Limit);
+        Assert.Equal(new LiteralValue(Number("1")), query.Limit);
 
         // different order is OK
         OneStatementParsesTo(
-            "SELECT foo FROM bar OFFSET 2 LIMIT 2",
-            "SELECT foo FROM bar LIMIT 2 OFFSET 2");
+            "SELECT foo FROM bar OFFSET 2 LIMIT 1",
+            "SELECT foo FROM bar LIMIT 1 OFFSET 2");
+
+        OneStatementParsesTo("SELECT foo FROM bar LIMIT 2, 1", "SELECT foo FROM bar LIMIT 1 OFFSET 2",
+            [new GenericDialect(), new MySqlDialect(), new SQLiteDialect(), new ClickHouseDialect()]);
 
         query = VerifiedQuery("SELECT foo FROM bar LIMIT 1 + 2 OFFSET 3 * 4");
 
