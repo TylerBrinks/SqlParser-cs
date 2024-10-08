@@ -15,6 +15,27 @@ namespace SqlParser.Tests;
 
 public class ParserCommonTests : ParserTestBase
 {
+    void TestExplain(
+        string sql,
+        bool expectedVerbose,
+        bool expectedAnalyze,
+        AnalyzeFormat expectedFormat,
+        IEnumerable<Dialect>? dialects = null,
+        Sequence<UtilityOption>? expectedOptions = null)
+    {
+        var explain = VerifiedStatement<Statement.Explain>(sql, dialects ?? AllDialects);
+        Assert.Equal(expectedVerbose, explain.Verbose);
+        Assert.Equal(expectedAnalyze, explain.Analyze);
+        Assert.Equal(expectedFormat, explain.Format);
+
+        Assert.Equal("SELECT sqrt(id) FROM foo", explain.Statement.ToSql());
+
+        if (expectedOptions != null)
+        {
+            Assert.Equal(expectedOptions, explain.Options);
+        }
+    }
+
     [Fact]
     public void Parse_Insert_Values()
     {
@@ -6588,24 +6609,22 @@ public class ParserCommonTests : ParserTestBase
 
     }
 
-    void TestExplain(
-        string sql, 
-        bool expectedVerbose, 
-        bool expectedAnalyze, 
-        AnalyzeFormat expectedFormat, 
-        IEnumerable<Dialect>? dialects = null,
-        Sequence<UtilityOption>? expectedOptions = null)
+    [Fact]
+    public void Parse_Drop_Database()
     {
-        var explain = VerifiedStatement<Statement.Explain>(sql, dialects ?? AllDialects);
-        Assert.Equal(expectedVerbose, explain.Verbose);
-        Assert.Equal(expectedAnalyze, explain.Analyze);
-        Assert.Equal(expectedFormat, explain.Format);
+        var drop = VerifiedStatement<Statement.Drop>("DROP DATABASE mycatalog.mydb");
 
-        Assert.Equal("SELECT sqrt(id) FROM foo", explain.Statement.ToSql());
+        Assert.Equal([new([new Ident("mycatalog"), new Ident("mydb")])], drop.Names);
+        Assert.Equal(ObjectType.Database, drop.ObjectType);
+        Assert.False(drop.IfExists);
+    }
 
-        if (expectedOptions != null)
-        {
-            Assert.Equal(expectedOptions, explain.Options);
-        }
+    [Fact]
+    public void Parse_Drop_Database_If_Exists()
+    {
+        var drop = VerifiedStatement<Statement.Drop>("DROP DATABASE IF EXISTS mydb");
+
+        Assert.Equal(ObjectType.Database, drop.ObjectType);
+        Assert.True(drop.IfExists);
     }
 }

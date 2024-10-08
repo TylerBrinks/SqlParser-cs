@@ -470,7 +470,8 @@ public enum ObjectType
     Schema,
     Role,
     Sequence,
-    Stage
+    Stage,
+    Database
 }
 
 public enum OffsetRows

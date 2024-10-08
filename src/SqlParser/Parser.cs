@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Diagnostics;
+using System.Text.RegularExpressions;
 using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
@@ -24,7 +25,6 @@ public record MaybeParsed<T>(bool Parsed, T Result);
 
 public partial class Parser
 {
-  
     /// <summary>
     /// Builds a parser with a SQL fragment that is tokenized but not yet parsed.  This
     /// allows the parser to be used for with subsets of SQL calling any of the parser's
@@ -821,7 +821,7 @@ public partial class Parser
             Keyword.CURRENT_USER => new Owner.CurrentUser(),
             Keyword.CURRENT_ROLE => new Owner.CurrentRole(),
             Keyword.SESSION_USER => new Owner.SessionUser(), 
-            _ when owner is Keyword.undefined => ParseOwnerName()
+            _ => ParseOwnerName()
         };
 
         Owner ParseOwnerName()
@@ -3341,15 +3341,12 @@ public partial class Parser
 
     public OrderBy? ParseOptionalOrderBy()
     {
-        if (ParseKeywordSequence(Keyword.ORDER, Keyword.BY))
-        {
-            var orderByExprs = ParseCommaSeparated(ParseOrderByExpr);
-            var interpolate = _dialect is ClickHouseDialect or GenericDialect ? ParseInterpolations() : null;
+        if (!ParseKeywordSequence(Keyword.ORDER, Keyword.BY)){ return null; }
 
-            return new OrderBy(orderByExprs, interpolate);
-        }
+        var orderByExpressions = ParseCommaSeparated(ParseOrderByExpr);
+        var interpolate = _dialect is ClickHouseDialect or GenericDialect ? ParseInterpolations() : null;
 
-        return null;
+        return new OrderBy(orderByExpressions, interpolate);
     }
 
     private Partition ParsePartOrPartition()
