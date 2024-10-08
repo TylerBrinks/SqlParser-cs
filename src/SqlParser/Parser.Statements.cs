@@ -1390,7 +1390,7 @@ public partial class Parser
 
     public Statement ParseAlter()
     {
-        var objectType = ExpectOneOfKeywords(Keyword.VIEW, Keyword.TABLE, Keyword.INDEX, Keyword.ROLE);
+        var objectType = ExpectOneOfKeywords(Keyword.VIEW, Keyword.TABLE, Keyword.INDEX, Keyword.ROLE, Keyword.POLICY);
 
         switch (objectType)
         {
@@ -1456,9 +1456,32 @@ public partial class Parser
             case Keyword.ROLE:
                 return ParseAlterRole();
 
+            case Keyword.POLICY:
+                return ParseAlterPolicy();
+
             default:
                 throw new ParserException("ParseAlter");
         }
+    }
+
+    public Statement ParseAlterPolicy()
+    {
+        var name = ParseIdentifier();
+        ExpectKeyword(Keyword.ON);
+        var tableName = ParseObjectName();
+
+        if (ParseKeyword(Keyword.RENAME))
+        {
+            ExpectKeyword(Keyword.TO);
+            var newName = ParseIdentifier();
+            return new AlterPolicy(name, tableName, new AlterPolicyOperation.Rename(newName));
+        }
+
+        var to = ParseInit(ParseKeyword(Keyword.TO), () => ParseCommaSeparated(ParseOwner));
+        var @using = ParseInit(ParseKeyword(Keyword.USING), () => ExpectParens(ParseExpr));
+        var withCheck = ParseInit(ParseKeywordSequence(Keyword.WITH, Keyword.CHECK), () => ExpectParens(ParseExpr));
+
+        return new AlterPolicy(name, tableName, new AlterPolicyOperation.Apply(to, @using, withCheck));
     }
 
     public Statement ParseCall()

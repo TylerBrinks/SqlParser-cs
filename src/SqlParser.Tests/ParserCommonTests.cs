@@ -6627,4 +6627,27 @@ public class ParserCommonTests : ParserTestBase
         Assert.Equal(ObjectType.Database, drop.ObjectType);
         Assert.True(drop.IfExists);
     }
+
+    [Fact]
+    public void Test_Alter_Policy()
+    {
+        var alter = VerifiedStatement<Statement.AlterPolicy>("ALTER POLICY old_policy ON my_table RENAME TO new_policy");
+
+        Assert.Equal("old_policy", alter.Name);
+        Assert.Equal("my_table", alter.TableName);
+        Assert.Equal(new AlterPolicyOperation.Rename("new_policy"), alter.Operation);
+
+        alter = VerifiedStatement<Statement.AlterPolicy>("ALTER POLICY my_policy ON my_table TO CURRENT_USER USING ((SELECT c0)) WITH CHECK (c0 > 0)");
+        Assert.Equal("my_policy", alter.Name);
+        Assert.Equal("my_table", alter.TableName);
+       
+        VerifiedStatement<Statement.AlterPolicy>("ALTER POLICY my_policy ON my_table");
+
+        Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER POLICY old_policy ON my_table TO public RENAME TO new_policy"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER POLICY old_policy ON my_table RENAME TO new_policy TO public"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER POLICY old_policy ON my_table RENAME"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER POLICY old_policy ON my_table RENAME TO"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER POLICY my_policy ON my_table USING"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER POLICY my_policy ON my_table WITH CHECK"));
+    }
 }

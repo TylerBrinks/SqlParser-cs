@@ -19,6 +19,26 @@ public abstract record Statement : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// ALTER POLICY [NAME] ON [TABLE NAME] [OPERATION]
+    /// </summary>
+    public record AlterPolicy(Ident Name, ObjectName TableName, AlterPolicyOperation Operation) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"ALTER POLICY {Name} ON {TableName}{Operation}");
+        }
+    }
+    /// <summary>
+    /// Alter role statement
+    /// </summary>
+    public record AlterRole(Ident Name, AlterRoleOperation Operation) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"ALTER ROLE {Name} {Operation}");
+        }
+    }
+    /// <summary>
     /// Alter table statement
     /// </summary>
     public record AlterTable(
@@ -83,16 +103,7 @@ public abstract record Statement : IWriteSql, IElement
             writer.WriteSql($" AS {Query}");
         }
     }
-    /// <summary>
-    /// Alter role statement
-    /// </summary>
-    public record AlterRole(Ident Name, AlterRoleOperation Operation) : Statement
-    {
-        public override void ToSql(SqlTextWriter writer)
-        {
-            writer.WriteSql($"ALTER ROLE {Name} {Operation}");
-        }
-    }
+    
     /// <summary>
     /// Analyze statement
     /// </summary>
