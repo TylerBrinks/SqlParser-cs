@@ -4362,9 +4362,7 @@ public class ParserCommonTests : ParserTestBase
             new(new Identifier("age"), false)
         };
 
-        var createIndex =
-            VerifiedStatement<Statement.CreateIndex>(
-                "CREATE UNIQUE INDEX IF NOT EXISTS idx_name ON test(name,age DESC)");
+        var createIndex = VerifiedStatement<Statement.CreateIndex>("CREATE UNIQUE INDEX IF NOT EXISTS idx_name ON test(name,age DESC)");
 
         Assert.Equal("idx_name", createIndex.Element.Name!);
         Assert.Equal("test", createIndex.Element.TableName);
@@ -6653,5 +6651,22 @@ public class ParserCommonTests : ParserTestBase
         Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER POLICY old_policy ON my_table RENAME TO"));
         Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER POLICY my_policy ON my_table USING"));
         Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER POLICY my_policy ON my_table WITH CHECK"));
+    }
+
+    [Fact]
+    public void Test_Parse_Inline_Comment()
+    {
+        var dialects = AllDialects.Where(d=> d is not HiveDialect).ToList();
+
+        var create = VerifiedStatement<Statement.CreateTable>(
+            "CREATE TABLE t0 (id INT COMMENT 'comment without equal') COMMENT = 'comment with equal'", dialects);
+
+        var expected = new Sequence<ColumnDef>
+        {
+            new ("id", new Int(), Options:[new ColumnOptionDef(new ColumnOption.Comment("comment without equal"))])
+        };
+
+        Assert.Equal(expected, create.Element.Columns);
+        Assert.Equal(new CommentDef.WithEq("comment with equal"), create.Element.Comment);
     }
 }

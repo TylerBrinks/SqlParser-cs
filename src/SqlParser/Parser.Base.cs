@@ -1194,19 +1194,19 @@ public partial class Parser
 
     private Sequence<Setting>? ParseSettings()
     {
-        Sequence<Setting>? settings = null;
-
-        if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.SETTINGS))
-        {
-            settings = ParseCommaSeparated(() =>
+        var settings = ParseInit(
+            _dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.SETTINGS),
+            () =>
             {
-                var key = ParseIdentifier();
-                ExpectToken<Equal>();
-                var value = ParseValue();
+                return ParseCommaSeparated(() =>
+                {
+                    var key = ParseIdentifier();
+                    ExpectToken<Equal>();
+                    var value = ParseValue();
 
-                return new Setting(key, value);
+                    return new Setting(key, value);
+                });
             });
-        }
 
         return settings;
     }

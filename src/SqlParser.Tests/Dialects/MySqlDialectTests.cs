@@ -897,12 +897,12 @@ public class MySqlDialectTests : ParserTestBase
     [Fact]
     public void Parse_Create_Table_Comment()
     {
-        const string canonical = "CREATE TABLE foo (bar INT) COMMENT 'baz'";
+        const string withoutEqual = "CREATE TABLE foo (bar INT) COMMENT 'baz'";
         const string withEqual = "CREATE TABLE foo (bar INT) COMMENT = 'baz'";
 
-        foreach (var sql in new[] { canonical, withEqual })
+        foreach (var sql in new[] { withoutEqual, withEqual })
         {
-            var create = (Statement.CreateTable)OneStatementParsesTo(sql, canonical);
+            var create = VerifiedStatement<Statement.CreateTable>(sql, [new MySqlDialect()]);
             Assert.Equal("foo", create.Element.Name);
             Assert.Equal("baz", create.Element.Comment!.Comment);
         }

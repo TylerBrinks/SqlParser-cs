@@ -413,12 +413,7 @@ public partial class Parser
                 ExpectKeyword(Keyword.FROM);
                 var fromExpr = ParseExpr();
 
-                Expression? forExpr = null;
-
-                if (ParseKeyword(Keyword.FOR))
-                {
-                    forExpr = ParseExpr();
-                }
+                var forExpr = ParseInit(ParseKeyword(Keyword.FOR), ParseExpr);
 
                 return new Overlay(expr, whatExpr, fromExpr, forExpr);
             });
@@ -428,12 +423,10 @@ public partial class Parser
         {
             return ExpectParens(() =>
             {
-                var trimWhere = TrimWhereField.None;
                 Sequence<Expression>? trimCharacters = null;
-                if (PeekToken() is Word { Keyword: Keyword.BOTH or Keyword.LEADING or Keyword.TRAILING })
-                {
-                    trimWhere = ParseTrimWhere();
-                }
+                var trimWhere = ParseInit(
+                    PeekToken() is Word { Keyword: Keyword.BOTH or Keyword.LEADING or Keyword.TRAILING },
+                    ParseTrimWhere);
 
                 var expr = ParseExpr();
                 Expression? trimWhat = null;
@@ -910,35 +903,31 @@ public partial class Parser
             args = ParseFunctionArgumentList();
         }
 
-        Sequence<OrderByExpression>? withinGroup = null;
-
-        if (ParseKeywordSequence(Keyword.WITHIN, Keyword.GROUP))
-        {
-            withinGroup = ExpectParens(() =>
+        var withinGroup = ParseInit(ParseKeywordSequence(Keyword.WITHIN, Keyword.GROUP), () =>
             {
-                ExpectKeywords(Keyword.ORDER, Keyword.BY);
-                return ParseCommaSeparated(ParseOrderByExpr);
+                return ExpectParens(() =>
+                {
+                    ExpectKeywords(Keyword.ORDER, Keyword.BY);
+                    return ParseCommaSeparated(ParseOrderByExpr);
+                });
             });
-        }
 
-        Expression? filter = null;
-        if (_dialect.SupportsFilterDuringAggregation &&
+        var filter = ParseInit(
+            _dialect.SupportsFilterDuringAggregation &&
             ParseKeyword(Keyword.FILTER) &&
             ConsumeToken<LeftParen>() &&
-            ParseKeyword(Keyword.WHERE))
-        {
-            var filterExpression = ParseExpr();
-            ExpectToken<RightParen>();
-            filter = filterExpression;
-        }
+            ParseKeyword(Keyword.WHERE),
+            () =>
+            {
+                var filterExpression = ParseExpr();
+                ExpectToken<RightParen>();
+                return filterExpression;
+            });
 
-        NullTreatment? nullTreatment = null;
-
-        if (args.Clauses == null || args.Clauses!.Count == 0 ||
-            args.Clauses.All(c => c is not FunctionArgumentClause.IgnoreOrRespectNulls))
-        {
-            nullTreatment = ParseNullTreatment();
-        }
+        var nullTreatment = ParseInit(
+            args.Clauses == null || args.Clauses!.Count == 0 ||
+            args.Clauses.All(c => c is not FunctionArgumentClause.IgnoreOrRespectNulls),
+            ParseNullTreatment);
 
         WindowType? over = null;
 
@@ -1015,7 +1004,7 @@ public partial class Parser
             });
         }
     }
-   
+
     public Expression ParseInterval()
     {
         // The SQL standard allows an optional sign before the value string, but
@@ -1032,8 +1021,6 @@ public partial class Parser
         //
         // Note that PostgreSQL allows omitting the qualifier, so we provide
         // this more general implementation.
-
-        var token = PeekToken();
 
         DateTimeField? leadingField = null;
 
@@ -1165,7 +1152,7 @@ public partial class Parser
 
         return new Between(expr, negated, low, high);
     }
-   
+
     public Expression ParseCreateFunctionBodyString()
     {
         var next = PeekToken();
@@ -1194,7 +1181,7 @@ public partial class Parser
             return new LiteralValue(ParseNumberValue());
         }
     }
-  
+
     // ReSharper disable once GrammarMistakeInComment
     /// <summary>
     /// Parse a "query body", which is an expression with roughly the
@@ -1304,7 +1291,7 @@ public partial class Parser
             };
         }
     }
-   
+
     public ExpressionWithAlias ParseAliasedFunctionCall()
     {
         var next = NextToken();

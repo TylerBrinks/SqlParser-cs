@@ -129,17 +129,8 @@ public class SnowflakeDialect : Dialect
                                 break;
 
                             case Keyword.COMMENT:
-                                parser.ExpectToken<Equal>();
-                                next = parser.NextToken();
-
-                                if (next is SingleQuotedString s)
-                                {
-                                    comment = new CommentDef.WithEq(s.Value);
-                                }
-                                else
-                                {
-                                    throw Parser.Expected("comment", next);
-                                }
+                                parser.PrevToken();
+                                comment = parser.ParseOptionalInlineComment();
                                 break;
 
                             case Keyword.AS:

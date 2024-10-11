@@ -44,7 +44,7 @@ public partial class Parser
         _index = 0;
         return this;
     }
-   
+
     public OptimizeTable ParseOptimizeTable()
     {
         ExpectKeyword(Keyword.TABLE);
@@ -152,12 +152,7 @@ public partial class Parser
         var database = ParseKeyword(Keyword.DATABASE);
         var ifNotExists = ParseIfNotExists();
         var path = ParseIdentifier();
-        Ident? alias = null;
-
-        if (ParseKeyword(Keyword.AS))
-        {
-            alias = ParseIdentifier();
-        }
+        var alias = ParseInit(ParseKeyword(Keyword.AS), ParseIdentifier);
 
         var attachOptions = ParseAttachDuckDbDatabaseOptions();
         return new AttachDuckDbDatabase(ifNotExists, database, path, alias, attachOptions);
@@ -333,7 +328,7 @@ public partial class Parser
 
             if (token is Word w)
             {
-                if (w.Keyword == Keyword.WITH || w.Keyword == Keyword.WITHOUT)
+                if (w.Keyword is Keyword.WITH or Keyword.WITHOUT)
                 {
                     filter = null;
                 }
@@ -501,16 +496,9 @@ public partial class Parser
     /// </summary>
     public WindowSpec ParseWindowSpec()
     {
-        Ident? windowName = null;
-        if (PeekToken() is Word { Keyword: Keyword.undefined })
-        {
-            windowName = MaybeParse(ParseIdentifier);
-        }
-
-        var partitionBy = ParseInit(ParseKeywordSequence(Keyword.PARTITION, Keyword.BY),
-            () => ParseCommaSeparated(ParseExpr));
-        var orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY),
-            () => ParseCommaSeparated(ParseOrderByExpr));
+        var windowName = ParseInit(PeekToken() is Word { Keyword: Keyword.undefined }, () => MaybeParse(ParseIdentifier));
+        var partitionBy = ParseInit(ParseKeywordSequence(Keyword.PARTITION, Keyword.BY), () => ParseCommaSeparated(ParseExpr));
+        var orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY), () => ParseCommaSeparated(ParseOrderByExpr));
         var windowFrame = ParseInit(!ConsumeToken<RightParen>(), () =>
         {
             var windowFrame = ParseWindowFrame();
@@ -527,7 +515,7 @@ public partial class Parser
         var dataType = ParseDataType();
         return new ProcedureParam(name, dataType);
     }
-    
+
     public DateTimeField ParseDateTimeField()
     {
         var token = NextToken();
@@ -614,12 +602,7 @@ public partial class Parser
 
     public Subscript ParseSubscriptInner()
     {
-        Expression? lowerBound = null;
-
-        if (!ConsumeToken<Colon>())
-        {
-            lowerBound = ParseExpr();
-        }
+        var lowerBound = ParseInit(!ConsumeToken<Colon>(), ParseExpr);
 
         if (ConsumeToken<RightBracket>())
         {
@@ -650,12 +633,7 @@ public partial class Parser
 
         ExpectToken<Colon>();
 
-        Expression? stride = null;
-
-        if (!ConsumeToken<RightBracket>())
-        {
-            stride = ParseExpr();
-        }
+        var stride = ParseInit(!ConsumeToken<RightBracket>(), ParseExpr);
 
         if (stride != null)
         {
@@ -811,7 +789,7 @@ public partial class Parser
         ExpectRightParen();
         return new DistinctFilter.On(columnNames);
     }
-   
+
     public Owner ParseOwner()
     {
         var owner = ParseOneOfKeywords(Keyword.CURRENT_USER, Keyword.CURRENT_ROLE, Keyword.SESSION_USER);
@@ -820,7 +798,7 @@ public partial class Parser
         {
             Keyword.CURRENT_USER => new Owner.CurrentUser(),
             Keyword.CURRENT_ROLE => new Owner.CurrentRole(),
-            Keyword.SESSION_USER => new Owner.SessionUser(), 
+            Keyword.SESSION_USER => new Owner.SessionUser(),
             _ => ParseOwnerName()
         };
 
@@ -1076,12 +1054,7 @@ public partial class Parser
     public MacroArg ParseMacroArg()
     {
         var name = ParseIdentifier();
-        Expression? defaultExpression = null;
-
-        if (ConsumeToken<Tokens.Assignment>() || ConsumeToken<RightArrow>())
-        {
-            defaultExpression = ParseExpr();
-        }
+        var defaultExpression = ParseInit(ConsumeToken<Tokens.Assignment>() || ConsumeToken<RightArrow>(), ParseExpr);
 
         return new MacroArg(name, defaultExpression);
     }
@@ -1429,12 +1402,7 @@ public partial class Parser
         ExpectKeyword(Keyword.ON);
         var tableName = ParseObjectName();
 
-        ObjectName? referencedTableName = null;
-
-        if (ParseKeyword(Keyword.FROM))
-        {
-            referencedTableName = ParseObjectName(true);
-        }
+        var referencedTableName = ParseInit(ParseKeyword(Keyword.FROM), () => ParseObjectName(true));
 
         var characteristics = ParseConstraintCharacteristics();
 
@@ -1460,18 +1428,14 @@ public partial class Parser
         ExpectKeyword(Keyword.FOR);
 
         var includeEach = ParseKeyword(Keyword.EACH);
-        TriggerObject triggerObject = ParseOneOfKeywords(Keyword.ROW, Keyword.STATEMENT) switch
+        var triggerObject = ParseOneOfKeywords(Keyword.ROW, Keyword.STATEMENT) switch
         {
             Keyword.ROW => TriggerObject.Row,
             Keyword.STATEMENT => TriggerObject.Statement,
             _ => throw Expected("ROW or STATEMENT")
         };
 
-        Expression? condition = null;
-        if (ParseKeyword(Keyword.WHEN))
-        {
-            condition = ParseExpr();
-        }
+        var condition = ParseInit(ParseKeyword(Keyword.WHEN), ParseExpr);
 
         ExpectKeyword(Keyword.EXECUTE);
 
@@ -1618,11 +1582,7 @@ public partial class Parser
     {
         var ifExists = ParseIfExists();
         var name = ParseIdentifier();
-        Ident? storageSpecifier = null;
-        if (ParseKeyword(Keyword.FROM))
-        {
-            storageSpecifier = ParseIdentifier();
-        }
+        var storageSpecifier = ParseInit(ParseKeyword(Keyword.FROM), ParseIdentifier);
 
         bool? temp = (temporary, persistent) switch
         {
@@ -1722,7 +1682,7 @@ public partial class Parser
             return new DeclareAssignment.Assignment(ParseExpr());
         }
     }
-   
+
 
     public Discard ParseDiscard()
     {
@@ -1752,31 +1712,25 @@ public partial class Parser
         var @using = ParseInit(ParseKeyword(Keyword.USING), ParseIdentifier);
         var columns = ExpectParens(() => ParseCommaSeparated(ParseOrderByExpr));
 
-        Sequence<Ident>? include = null;
-        if (ParseKeyword(Keyword.INCLUDE))
-        {
-            include = ExpectParens(() => ParseCommaSeparated(ParseIdentifier));
-        }
+        var include = ParseInit(ParseKeyword(Keyword.INCLUDE), () =>
+            {
+                return ExpectParens(() => ParseCommaSeparated(ParseIdentifier));
+            });
 
-        bool? nullsDistinct = null;
-        if (ParseKeyword(Keyword.NULLS))
-        {
-            var not = ParseKeyword(Keyword.NOT);
-            ExpectKeyword(Keyword.DISTINCT);
-            nullsDistinct = !not;
-        }
+        var nullsDistinct = ParseInit<bool?>(ParseKeyword(Keyword.NULLS), () =>
+            {
+                var not = ParseKeyword(Keyword.NOT);
+                ExpectKeyword(Keyword.DISTINCT);
+                return !not;
+            });
 
-        Sequence<Expression>? withExpressions = null;
-        if (_dialect.SupportsCreateIndexWithClause && ParseKeyword(Keyword.WITH))
-        {
-            withExpressions = ExpectParens(() => ParseCommaSeparated(ParseExpr));
-        }
+        var withExpressions = ParseInit(
+            _dialect.SupportsCreateIndexWithClause && ParseKeyword(Keyword.WITH), () =>
+            {
+                return ExpectParens(() => ParseCommaSeparated(ParseExpr));
+            });
 
-        Expression? predicate = null;
-        if (ParseKeyword(Keyword.WHERE))
-        {
-            predicate = ParseExpr();
-        }
+        var predicate = ParseInit(ParseKeyword(Keyword.WHERE), ParseExpr);
 
         return new Ast.CreateIndex(indexName, tableName)
         {
@@ -1806,25 +1760,23 @@ public partial class Parser
 
     public ClusteredBy? ParseOptionalClusteredBy()
     {
-        ClusteredBy? clusteredBy = null;
-
-        if (_dialect is HiveDialect or GenericDialect && ParseKeywordSequence(Keyword.CLUSTERED, Keyword.BY))
-        {
-            var columns = ParseParenthesizedColumnList(IsOptional.Mandatory, false);
-            Sequence<OrderByExpression>? sortedBy = null;
-            if (ParseKeywordSequence(Keyword.SORTED, Keyword.BY))
+        return ParseInit(
+            _dialect is HiveDialect or GenericDialect && ParseKeywordSequence(Keyword.CLUSTERED, Keyword.BY),
+            () =>
             {
-                sortedBy = ExpectParens(() => ParseCommaSeparated(ParseOrderByExpr));
-            }
+                var columns = ParseParenthesizedColumnList(IsOptional.Mandatory, false);
+                var sortedBy = ParseInit(ParseKeywordSequence(Keyword.SORTED, Keyword.BY),
+                    () =>
+                    {
+                        return ExpectParens(() => ParseCommaSeparated(ParseOrderByExpr));
+                    });
 
-            ExpectKeyword(Keyword.INTO);
-            var numBuckets = ParseNumberValue();
-            ExpectKeyword(Keyword.BUCKETS);
+                ExpectKeyword(Keyword.INTO);
+                var numBuckets = ParseNumberValue();
+                ExpectKeyword(Keyword.BUCKETS);
 
-            clusteredBy = new ClusteredBy(columns, sortedBy, numBuckets);
-        }
-
-        return clusteredBy;
+                return new ClusteredBy(columns, sortedBy, numBuckets);
+            });
     }
 
     public HiveFormat? ParseHiveFormats()
@@ -2032,12 +1984,13 @@ public partial class Parser
             {
                 var name = w.Value;
 
-                Sequence<Ident>? parameters = null;
+
                 var peeked = PeekToken();
-                if (peeked is LeftParen)
-                {
-                    parameters = ExpectParens(() => ParseCommaSeparated(ParseIdentifier));
-                }
+                var parameters = ParseInit(peeked is LeftParen,
+                    () =>
+                    {
+                        return ExpectParens(() => ParseCommaSeparated(ParseIdentifier));
+                    });
                 return new TableEngine(name, parameters);
             }
 
@@ -2059,12 +2012,9 @@ public partial class Parser
             }
         }
 
-        Expression? primaryKey = null;
-
-        if (_dialect is ClickHouseDialect or GenericDialect && ParseKeywordSequence(Keyword.PRIMARY, Keyword.KEY))
-        {
-            primaryKey = ParseExpr();
-        }
+        var primaryKey = ParseInit(
+            _dialect is ClickHouseDialect or GenericDialect && ParseKeywordSequence(Keyword.PRIMARY, Keyword.KEY),
+             ParseExpr);
 
         var orderBy = ParseInit(ParseKeywordSequence(Keyword.ORDER, Keyword.BY), () =>
         {
@@ -2072,12 +2022,7 @@ public partial class Parser
 
             if (ConsumeToken<LeftParen>())
             {
-                Sequence<Expression>? cols = null;
-
-                if (PeekToken() is not RightParen)
-                {
-                    cols = ParseCommaSeparated(ParseExpr);
-                }
+                var cols = ParseInit(PeekToken() is not RightParen, () => ParseCommaSeparated(ParseExpr));
 
                 ExpectRightParen();
                 orderExpression = new OneOrManyWithParens<Expression>.Many(cols);
@@ -2136,19 +2081,10 @@ public partial class Parser
 
         var strict = ParseKeyword(Keyword.STRICT);
 
-        if (_dialect is not HiveDialect)
+        if (_dialect is not HiveDialect && ParseKeyword(Keyword.COMMENT))
         {
-            comment = ParseInit(ParseKeyword(Keyword.COMMENT), () =>
-            {
-                ConsumeToken<Equal>();
-                var next = NextToken();
-                if (next is SingleQuotedString str)
-                {
-                    return new CommentDef.WithoutEq(str.Value);
-                }
-
-                throw Expected("Comment", next);
-            });
+            PrevToken();
+            comment = ParseOptionalInlineComment();
         }
 
         // Parse optional `AS ( query )`
@@ -2199,14 +2135,13 @@ public partial class Parser
 
     public CreateTableConfiguration ParseOptionalCreateTableConfig()
     {
-        Expression? partitionBy = null;
+
         WrappedCollection<Ident>? clusterBy = null;
         Sequence<SqlOption>? options = null;
 
-        if (_dialect is BigQueryDialect or PostgreSqlDialect && ParseKeywordSequence(Keyword.PARTITION, Keyword.BY))
-        {
-            partitionBy = ParseExpr();
-        }
+        var partitionBy = ParseInit(
+            _dialect is BigQueryDialect or PostgreSqlDialect && ParseKeywordSequence(Keyword.PARTITION, Keyword.BY),
+            ParseExpr);
 
         if (_dialect is BigQueryDialect or PostgreSqlDialect)
         {
@@ -2455,17 +2390,16 @@ public partial class Parser
 
         if (_dialect is MsSqlDialect or GenericDialect && ParseKeyword(Keyword.IDENTITY))
         {
-            IdentityProperty? property = null;
+            var property = ParseInit(ConsumeToken<LeftParen>(),
+                () =>
+                {
+                    var seed = ParseNumber();
+                    ExpectToken<Comma>();
+                    var increment = ParseNumber();
+                    ExpectToken<RightParen>();
 
-            if (ConsumeToken<LeftParen>())
-            {
-                var seed = ParseNumber();
-                ExpectToken<Comma>();
-                var increment = ParseNumber();
-                ExpectToken<RightParen>();
-
-                property = new IdentityProperty(seed, increment);
-            }
+                    return new IdentityProperty(seed, increment);
+                });
 
             return new ColumnOption.Identity(property);
         }
@@ -2920,19 +2854,15 @@ public partial class Parser
     public ViewColumnDef ParseViewColumn()
     {
         var name = ParseIdentifier();
-        Sequence<SqlOption>? options = null;
+        var options = ParseInit(
+             _dialect is BigQueryDialect or GenericDialect && ParseKeyword(Keyword.OPTIONS),
+             () =>
+             {
+                 PrevToken();
+                 return ParseOptions(Keyword.OPTIONS);
+             });
 
-        if (_dialect is BigQueryDialect or GenericDialect && ParseKeyword(Keyword.OPTIONS))
-        {
-            PrevToken();
-            options = ParseOptions(Keyword.OPTIONS);
-        }
-
-        DataType? dataType = null;
-        if (_dialect is ClickHouseDialect)
-        {
-            dataType = ParseDataType();
-        }
+        var dataType = ParseInit(_dialect is ClickHouseDialect, ParseDataType);
 
         return new ViewColumnDef(name, dataType, options);
     }
@@ -3197,11 +3127,7 @@ public partial class Parser
                 (isPostgres && ParseKeyword(Keyword.TYPE)))
             {
                 var dataType = ParseDataType();
-                Expression? @using = null;
-                if (isPostgres && ParseKeyword(Keyword.USING))
-                {
-                    @using = ParseExpr();
-                }
+                var @using = ParseInit(isPostgres && ParseKeyword(Keyword.USING), ParseExpr);
 
                 op = new AlterColumnOperation.SetDataType(dataType, @using);
             }
@@ -3213,12 +3139,7 @@ public partial class Parser
 
                 ExpectKeywords(Keyword.AS, Keyword.IDENTITY);
 
-                Sequence<SequenceOptions>? options = null;
-
-                if (PeekToken() is LeftParen)
-                {
-                    options = ExpectParens(ParseCreateSequenceOptions);
-                }
+                Sequence<SequenceOptions>? options = ParseInit(PeekToken() is LeftParen, () => ExpectParens(ParseCreateSequenceOptions));
 
                 op = new AlterColumnOperation.AddGenerated(genAs, options);
             }
@@ -3252,23 +3173,23 @@ public partial class Parser
         else if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.FREEZE))
         {
             var partition = ParsePartOrPartition();
-            Ident? withName = null;
-            if (ParseKeyword(Keyword.WITH))
-            {
-                ExpectKeyword(Keyword.NAME);
-                withName = ParseIdentifier();
-            }
+            var withName = ParseInit(ParseKeyword(Keyword.WITH),
+                () =>
+                {
+                    ExpectKeyword(Keyword.NAME);
+                    return ParseIdentifier();
+                });
             return new FreezePartition(partition, withName);
         }
         else if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.UNFREEZE))
         {
             var partition = ParsePartOrPartition();
-            Ident? withName = null;
-            if (ParseKeyword(Keyword.WITH))
-            {
-                ExpectKeyword(Keyword.NAME);
-                withName = ParseIdentifier();
-            }
+            var withName = ParseInit(ParseKeyword(Keyword.WITH),
+                () =>
+                {
+                    ExpectKeyword(Keyword.NAME);
+                    return ParseIdentifier();
+                });
             return new UnfreezePartition(partition, withName);
         }
         else if (_dialect is PostgreSqlDialect or GenericDialect && ParseKeywordSequence(Keyword.OWNER, Keyword.TO))
@@ -3341,7 +3262,7 @@ public partial class Parser
 
     public OrderBy? ParseOptionalOrderBy()
     {
-        if (!ParseKeywordSequence(Keyword.ORDER, Keyword.BY)){ return null; }
+        if (!ParseKeywordSequence(Keyword.ORDER, Keyword.BY)) { return null; }
 
         var orderByExpressions = ParseCommaSeparated(ParseOrderByExpr);
         var interpolate = _dialect is ClickHouseDialect or GenericDialect ? ParseInterpolations() : null;
@@ -3428,12 +3349,13 @@ public partial class Parser
             legacyOptions.Add(opt);
         }
 
-        Sequence<string?>? values = null;
-        if (target is CopyTarget.Stdin)
-        {
-            ExpectToken<SemiColon>();
-            values = ParseTabValue();
-        }
+        var values = ParseInit(target is CopyTarget.Stdin,
+            () =>
+            {
+                ExpectToken<SemiColon>();
+                return ParseTabValue();
+            });
+
 
         return new Copy(source, to, target)
         {
@@ -3704,7 +3626,7 @@ public partial class Parser
 
         throw new ParserException($"Could not parse '{value}'");
     }
-    
+
     public Value ParseIntroducedStringValue()
     {
         var token = NextToken();
@@ -3823,12 +3745,8 @@ public partial class Parser
         // Keyword.ARRAY syntax from above
         while (ConsumeToken<LeftBracket>())
         {
-            long? size = null;
-
-            if (_dialect is GenericDialect or DuckDbDialect or PostgreSqlDialect)
-            {
-                size = (long?)MaybeParseNullable(ParseLiteralUnit);
-            }
+            var size = ParseInit(_dialect is GenericDialect or DuckDbDialect or PostgreSqlDialect,
+                () => (long?)MaybeParseNullable(ParseLiteralUnit));
 
             ExpectToken<RightBracket>();
             data = new DataType.Array(new ArrayElementTypeDef.SquareBracket(data, size));
@@ -4054,12 +3972,7 @@ public partial class Parser
         return ExpectParens(() =>
         {
             var precision = ParseLiteralUnit();
-            string? timeZone = null;
-
-            if (ConsumeToken<Comma>())
-            {
-                timeZone = ParseLiteralString();
-            }
+            var timeZone = ParseInit(ConsumeToken<Comma>(), ParseLiteralString);
 
             return (precision, timeZone);
         });
@@ -4177,7 +4090,7 @@ public partial class Parser
 
         return new ObjectName(idents);
     }
-   
+
     public Ident ParseIdentifierWithClause(bool inTableClause)
     {
         var token = NextToken();
@@ -4255,7 +4168,7 @@ public partial class Parser
             return parsed;
         }
     }
-    
+
     private RoleOption ParsePgRoleOption()
     {
         var keywords = new[]
@@ -4392,12 +4305,7 @@ public partial class Parser
         if (ConsumeToken<LeftParen>())
         {
             var precision = ParseLiteralUnit();
-            ulong? scale = null;
-
-            if (ConsumeToken<Comma>())
-            {
-                scale = ParseLiteralUnit();
-            }
+            var scale = ParseInit(ConsumeToken<Comma>(), () => (ulong?)ParseLiteralUnit());
 
             ExpectRightParen();
 
@@ -4415,7 +4323,7 @@ public partial class Parser
     public Delete ParseDelete()
     {
         Sequence<ObjectName>? tables = null;
-        bool withFromKeyword = true;
+        var withFromKeyword = true;
 
         if (!ParseKeyword(Keyword.FROM))
         {
@@ -4474,7 +4382,7 @@ public partial class Parser
 
         return new Kill(modifierKeyword, id);
     }
-    
+
     public CommonTableExpression ParseCommonTableExpression()
     {
         var name = ParseIdentifier();
@@ -4483,19 +4391,20 @@ public partial class Parser
 
         if (ParseKeyword(Keyword.AS))
         {
-            CteAsMaterialized? isMaterialized = null;
-            if (_dialect is PostgreSqlDialect)
+            var isMaterialized = ParseInit<CteAsMaterialized?>(_dialect is PostgreSqlDialect, () =>
             {
                 if (ParseKeyword(Keyword.MATERIALIZED))
                 {
-                    isMaterialized = CteAsMaterialized.Materialized;
+                    return CteAsMaterialized.Materialized;
                 }
-                else if (ParseKeywordSequence(Keyword.NOT, Keyword.MATERIALIZED))
-                {
-                    isMaterialized = CteAsMaterialized.NotMaterialized;
 
+                if (ParseKeywordSequence(Keyword.NOT, Keyword.MATERIALIZED))
+                {
+                    return CteAsMaterialized.NotMaterialized;
                 }
-            }
+
+                return null;
+            });
 
             var query = ExpectParens(() => ParseQuery());
             var alias = new TableAlias(name);
@@ -4510,19 +4419,19 @@ public partial class Parser
             }
 
             ExpectKeyword(Keyword.AS);
-            CteAsMaterialized? isMaterialized = null;
-            if (_dialect is PostgreSqlDialect)
+            CteAsMaterialized? isMaterialized = ParseInit<CteAsMaterialized?>(_dialect is PostgreSqlDialect, () =>
             {
                 if (ParseKeyword(Keyword.MATERIALIZED))
                 {
-                    isMaterialized = CteAsMaterialized.Materialized;
+                    return CteAsMaterialized.Materialized;
                 }
-                else if (ParseKeywordSequence(Keyword.NOT, Keyword.MATERIALIZED))
+                if (ParseKeywordSequence(Keyword.NOT, Keyword.MATERIALIZED))
                 {
-                    isMaterialized = CteAsMaterialized.NotMaterialized;
-
+                    return CteAsMaterialized.NotMaterialized;
                 }
-            }
+
+                return null;
+            });
             var query = ExpectParens(() => ParseQuery());
 
             var alias = new TableAlias(name, columns);
@@ -4588,11 +4497,8 @@ public partial class Parser
 
         if (ParseKeyword(Keyword.RAW))
         {
-            string? elementName = null;
-            if (PeekToken() is LeftParen)
-            {
-                elementName = ExpectParens(ParseLiteralString);
-            }
+            var elementName = ParseInit(PeekToken() is LeftParen,
+                () => ExpectParens(ParseLiteralString));
 
             forXml = new ForXml.Raw(elementName);
         }
@@ -4643,7 +4549,7 @@ public partial class Parser
 
         return new ForClause.Xml(forXml, elements, binaryBase64, root, type);
     }
-    
+
     public ProjectionSelect ParseProjectionSelect()
     {
         return ExpectParens(() =>
@@ -4736,11 +4642,7 @@ public partial class Parser
             }
         }
 
-        Expression? preWhere = null;
-        if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.PREWHERE))
-        {
-            preWhere = ParseExpr();
-        }
+        var preWhere = ParseInit(_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.PREWHERE), ParseExpr);
 
         var selection = ParseInit(ParseKeyword(Keyword.WHERE), ParseExpr);
 
@@ -4813,10 +4715,8 @@ public partial class Parser
 
                 return (null, qualifyExpr, false);
             }
-            else
-            {
-                return (null, null, false);
-            }
+
+            return (null, null, false);
         }
     }
 
@@ -4827,6 +4727,25 @@ public partial class Parser
         var result = action();
         _parserState = currentState;
         return result;
+    }
+
+    public CommentDef? ParseOptionalInlineComment()
+    {
+        return ParseInit<CommentDef>(ParseKeyword(Keyword.COMMENT), () =>
+        {
+            var hasEq = ConsumeToken<Equal>();
+            var next = NextToken();
+            if (next is SingleQuotedString str)
+            {
+                if (hasEq)
+                {
+                    return new CommentDef.WithEq(str.Value);
+                }
+                return new CommentDef.WithoutEq(str.Value);
+            }
+
+            throw Expected("Comment", next);
+        });
     }
 
     public ConnectBy ParseConnectBy()
@@ -5328,11 +5247,8 @@ public partial class Parser
 
         var name = ParseObjectNameWithClause(true);
 
-        Sequence<Ident>? partitions = null;
-        if (_dialect is MySqlDialect or GenericDialect && ParseKeyword(Keyword.PARTITION))
-        {
-            partitions = ParseIdentifiers();
-        }
+        var partitions = ParseInit(
+            _dialect is MySqlDialect or GenericDialect && ParseKeyword(Keyword.PARTITION), ParseIdentifiers);
 
         // Parse potential version qualifier
         var version = ParseTableVersion();
@@ -5394,7 +5310,7 @@ public partial class Parser
         }
 
         var args = new Sequence<FunctionArg>();
-        Sequence<Setting>? settings = null;
+        Sequence<Setting>? settings;
 
         while (true)
         {
@@ -5425,7 +5341,7 @@ public partial class Parser
         RowsPerMatch? rowsPerMatch = null;
         AfterMatchSkip? afterMatchSkip = null;
 
-        Sequence<SymbolDefinition> symbols = ExpectParens(() =>
+        var symbols = ExpectParens(() =>
         {
             partitionBy = ParseKeywordSequence(Keyword.PARTITION, Keyword.BY)
                 ? ParseCommaSeparated(ParseExpr)
@@ -6054,39 +5970,18 @@ public partial class Parser
     /// <returns></returns>
     public WildcardAdditionalOptions ParseWildcardAdditionalOptions()
     {
-        IlikeSelectItem? ilikeSelectItem = null;
-        if (_dialect is SnowflakeDialect or GenericDialect)
-        {
-            ilikeSelectItem = ParseOptionalSelectItemIlike();
-        }
+        var ilikeSelectItem = ParseInit(_dialect is SnowflakeDialect or GenericDialect, ParseOptionalSelectItemIlike);
+        var optExclude = ParseInit(_dialect is GenericDialect or DuckDbDialect or SnowflakeDialect, ParseOptionalSelectItemExclude);
+        var optExcept = ParseInit(_dialect.SupportsSelectWildcardExcept, ParseOptionalSelectItemExcept);
 
-        ExcludeSelectItem? optExclude = null;
-        if (_dialect is GenericDialect or DuckDbDialect or SnowflakeDialect)
-        {
-            optExclude = ParseOptionalSelectItemExclude();
-        }
-
-        ExceptSelectItem? optExcept = null;
-        if (_dialect.SupportsSelectWildcardExcept)
-        {
-            optExcept = ParseOptionalSelectItemExcept();
-        }
-
-        ReplaceSelectItem? optReplace = null;
-        if (_dialect is GenericDialect
+        var optReplace = ParseInit(_dialect is GenericDialect
             or BigQueryDialect
             or ClickHouseDialect
             or DuckDbDialect
-            or SnowflakeDialect)
-        {
-            optReplace = ParseOptionalSelectItemReplace();
-        }
+            or SnowflakeDialect,
+          ParseOptionalSelectItemReplace);
 
-        RenameSelectItem? optRename = null;
-        if (_dialect is GenericDialect or SnowflakeDialect)
-        {
-            optRename = ParseOptionalSelectItemRename();
-        }
+        var optRename = ParseInit(_dialect is GenericDialect or SnowflakeDialect, ParseOptionalSelectItemRename);
 
         return new WildcardAdditionalOptions
         {
@@ -6105,9 +6000,8 @@ public partial class Parser
     /// <returns></returns>
     public IlikeSelectItem? ParseOptionalSelectItemIlike()
     {
-        IlikeSelectItem? iLIke = null;
 
-        if (!ParseKeyword(Keyword.ILIKE)) { return iLIke; }
+        if (!ParseKeyword(Keyword.ILIKE)) { return null; }
 
         var next = NextToken();
         var pattern = next switch
@@ -6116,9 +6010,7 @@ public partial class Parser
             _ => throw Expected("ilike pattern", next)
         };
 
-        iLIke = new IlikeSelectItem(pattern);
-
-        return iLIke;
+        return new IlikeSelectItem(pattern);
     }
     /// <summary>
     /// Parse an [`Exclude`](ExcludeSelectItem) information for wildcard select items.
@@ -6184,12 +6076,12 @@ public partial class Parser
 
     public RenameSelectItem? ParseOptionalSelectItemRename()
     {
-        RenameSelectItem? optRename = null;
-
         if (!ParseKeyword(Keyword.RENAME))
         {
-            return optRename;
+            return null;
         }
+
+        RenameSelectItem? optRename;
 
         if (ConsumeToken<LeftParen>())
         {
@@ -6265,12 +6157,9 @@ public partial class Parser
             nullsFirst = false;
         }
 
-        WithFill? withFill = null;
-
-        if (_dialect is ClickHouseDialect or GenericDialect && ParseKeywordSequence(Keyword.WITH, Keyword.FILL))
-        {
-            withFill = ParseWithFill();
-        }
+        var withFill = ParseInit(
+            _dialect is ClickHouseDialect or GenericDialect && ParseKeywordSequence(Keyword.WITH, Keyword.FILL),
+            ParseWithFill);
 
         return new OrderByExpression(expr, asc, nullsFirst, withFill);
     }
@@ -6463,7 +6352,7 @@ public partial class Parser
         var clauses = ParseMergeClauses();
         return new Merge(into, table, source, on, clauses);
     }
-  
+
     public UtilityOption ParseUtilityOption()
     {
         var name = ParseIdentifier();
