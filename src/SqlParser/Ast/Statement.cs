@@ -946,9 +946,9 @@ public abstract record Statement : IWriteSql, IElement
 
             writer.WriteSql($"CREATE {orReplace}{materialized}{temporary}VIEW {ifNotExists}{Name}{to}");
 
-            if (Comment != null)
+            if (Columns.SafeAny())
             {
-                writer.WriteSql($" COMMENT = '{Comment.EscapeSingleQuoteString()}'");
+                writer.WriteSql($" ({Columns!.ToSqlDelimited()})");
             }
 
             if (Options is CreateTableOptions.With)
@@ -956,9 +956,9 @@ public abstract record Statement : IWriteSql, IElement
                 writer.WriteSql($" {Options}");
             }
 
-            if (Columns.SafeAny())
+            if (Comment != null)
             {
-                writer.WriteSql($" ({Columns!.ToSqlDelimited()})");
+                writer.WriteSql($" COMMENT = '{Comment.EscapeSingleQuoteString()}'");
             }
 
             if (ClusterBy.SafeAny())
@@ -968,7 +968,7 @@ public abstract record Statement : IWriteSql, IElement
 
             if (Options is CreateTableOptions.Options)
             {
-                writer.WriteSql($"{Options}");
+                writer.WriteSql($" {Options}");
             }
 
             writer.Write(" AS ");

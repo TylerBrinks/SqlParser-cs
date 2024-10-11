@@ -1,4 +1,5 @@
-﻿using SqlParser.Ast;
+﻿using System.Runtime.CompilerServices;
+using SqlParser.Ast;
 using SqlParser.Dialects;
 using static SqlParser.Ast.Expression;
 // ReSharper disable StringLiteralTypo
@@ -753,5 +754,26 @@ public class BigQueryDialectTests : ParserTestBase
         ], [
             new StructField(new DataType.BigNumeric(new ExactNumberInfo.None()))
         ]), select.Projection[1].AsExpr());
+    }
+
+    [Fact]
+    public void Parse_Create_View_With_Options()
+    {
+        const string sql = """
+                           CREATE VIEW myproject.mydataset.newview
+                            (name, age OPTIONS(description = "field age"))
+                            OPTIONS(expiration_timestamp = TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL 48 HOUR),
+                            friendly_name = "newview", description = "a view that expires in 2 days", labels = [("org_unit", "development")])
+                            AS SELECT column_1, column_2, column_3 FROM myproject.mydataset.mytable
+                           """;
+
+        var create = VerifiedStatement<Statement.CreateView>(sql);
+        var columns = new Sequence<ViewColumnDef>
+        {
+            new("name"), 
+            new("age", Options: [new ColumnOption.Options([new SqlOption.KeyValue("description", new LiteralValue(new Value.DoubleQuotedString("field age")))])])
+        };
+        Assert.Equal(new ObjectName(["myproject", "mydataset", "newview"]), create.Name);
+        Assert.Equal(columns, create.Columns);
     }
 }

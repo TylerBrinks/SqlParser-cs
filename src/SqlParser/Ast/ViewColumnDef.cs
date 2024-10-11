@@ -1,6 +1,6 @@
 ﻿namespace SqlParser.Ast;
 
-public  record ViewColumnDef(Ident Name, DataType? DataType = null, Sequence<SqlOption>? Options = null) : IWriteSql, IElement
+public  record ViewColumnDef(Ident Name, DataType? DataType = null, Sequence<ColumnOption>? Options = null) : IWriteSql, IElement
 {
     public void ToSql(SqlTextWriter writer)
     {
@@ -13,7 +13,7 @@ public  record ViewColumnDef(Ident Name, DataType? DataType = null, Sequence<Sql
 
         if (Options.SafeAny())
         {
-            writer.Write($" OPTIONS({Options.ToSqlDelimited()})");
+            writer.Write($" {Options.ToSqlDelimited()}");
         }
     }
 }

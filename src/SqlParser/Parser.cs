@@ -2854,12 +2854,15 @@ public partial class Parser
     public ViewColumnDef ParseViewColumn()
     {
         var name = ParseIdentifier();
-        var options = ParseInit(
-             _dialect is BigQueryDialect or GenericDialect && ParseKeyword(Keyword.OPTIONS),
+        var parseComment = (_dialect is BigQueryDialect or GenericDialect && ParseKeyword(Keyword.OPTIONS)) ||
+                           (_dialect is SnowflakeDialect or GenericDialect && ParseKeyword(Keyword.COMMENT));
+
+        var options = ParseInit(parseComment,
              () =>
              {
                  PrevToken();
-                 return ParseOptions(Keyword.OPTIONS);
+                 var option = ParseOptionalColumnOption();
+                 return new Sequence<ColumnOption>{ option! };
              });
 
         var dataType = ParseInit(_dialect is ClickHouseDialect, ParseDataType);

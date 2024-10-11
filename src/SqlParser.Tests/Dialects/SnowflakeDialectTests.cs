@@ -1347,4 +1347,26 @@ public class SnowflakeDialectTests : ParserTestBase
                 VerifiedStatement($"USE SCHEMA {quote}CATALOG{quote}.{quote}my_schema{quote}"));
         }
     }
+
+    [Fact]
+    public void View_Comment_Option_Should_Be_After_Column_List()
+    {
+        VerifiedStatement("CREATE OR REPLACE VIEW v (a) COMMENT = 'Comment' AS SELECT a FROM t");
+        VerifiedStatement("CREATE OR REPLACE VIEW v (a COMMENT 'a comment', b, c COMMENT 'c comment') COMMENT = 'Comment' AS SELECT a FROM t");
+        VerifiedStatement("CREATE OR REPLACE VIEW v (a COMMENT 'a comment', b, c COMMENT 'c comment') WITH (foo = bar) COMMENT = 'Comment' AS SELECT a FROM t");
+    }
+
+    [Fact]
+    public void Parse_View_Column_Descriptions()
+    {
+        var create = VerifiedStatement<Statement.CreateView>("CREATE OR REPLACE VIEW v (a COMMENT 'Comment', b) AS SELECT a, b FROM table1");
+        var columns = new Sequence<ViewColumnDef>
+        {
+            new("a", Options: [new ColumnOption.Comment("Comment")]),
+            new("b")
+        };
+
+        Assert.Equal("v", create.Name);
+        Assert.Equal(columns, create.Columns);
+    }
 }

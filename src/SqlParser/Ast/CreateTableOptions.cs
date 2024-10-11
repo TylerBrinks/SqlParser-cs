@@ -15,7 +15,7 @@ public abstract record CreateTableOptions : IWriteSql, IElement
                 break;
 
             case Options o:
-                writer.Write($"OPTIONS ({o.OptionsList.ToSqlDelimited()})");
+                writer.Write($"OPTIONS({o.OptionsList.ToSqlDelimited()})");
                 break;
         }
     }
