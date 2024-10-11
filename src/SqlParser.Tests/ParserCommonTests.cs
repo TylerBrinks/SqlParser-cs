@@ -6677,7 +6677,7 @@ public class ParserCommonTests : ParserTestBase
 
         Assert.Equal(expected, create.Element.Columns);
         Assert.Equal(new CommentDef.WithEq("comment with equal"), create.Element.Comment);
-    }
+    } 
 
     [Fact]
     public void Test_Select_Where_With_Like_Or_ILike_Any()

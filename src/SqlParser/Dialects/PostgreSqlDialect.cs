@@ -91,6 +91,11 @@ public class PostgreSqlDialect : Dialect
                 name = parser.ParseObjectName();
                 break;
 
+            case Word { Keyword: Keyword.EXTENSION }:
+                objectType = CommentObject.Extension;
+                name = parser.ParseObjectName();
+                break;
+
             default:
                 throw Parser.Expected("comment object_type", token);
         }

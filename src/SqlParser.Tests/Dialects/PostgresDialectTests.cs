@@ -1546,6 +1546,12 @@ public class PostgresDialectTests : ParserTestBase
         comment = VerifiedStatement<Statement.Comment>("COMMENT IF EXISTS ON TABLE public.tab IS NULL");
         expected = new Statement.Comment(new ObjectName(["public", "tab"]), CommentObject.Table, IfExists: true);
         Assert.Equal(expected, comment);
+
+        comment = VerifiedStatement<Statement.Comment>("COMMENT ON EXTENSION plpgsql IS 'comment'");
+        Assert.Equal("comment", comment.Value);
+        Assert.Equal("plpgsql", comment.Name);
+        Assert.Equal(CommentObject.Extension, comment.ObjectType);
+        Assert.False(comment.IfExists);
     }
 
     [Fact]

@@ -192,7 +192,8 @@ public enum CharLengthUnit
 public enum CommentObject
 {
     Column,
-    Table
+    Table,
+    Extension
 }
 
 public enum ContextModifier
