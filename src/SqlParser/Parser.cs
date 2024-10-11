@@ -2404,6 +2404,11 @@ public partial class Parser
             return new ColumnOption.Identity(property);
         }
 
+        if(_dialect is SQLiteDialect or GenericDialect && ParseKeywordSequence(Keyword.ON, Keyword.CONFLICT))
+        {
+            return new ColumnOption.OnConflict(ExpectOneOfKeywords(Keyword.ROLLBACK, Keyword.ABORT, Keyword.FAIL, Keyword.IGNORE, Keyword.REPLACE));
+        }
+
         return null;
     }
 

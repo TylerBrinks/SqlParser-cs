@@ -237,6 +237,14 @@ public abstract record ColumnOption : IWriteSql, IElement
             writer.WriteSql($"ON UPDATE {Expression}");
         }
     }
+
+    public record OnConflict(Keyword Keyword) : ColumnOption
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"ON CONFLICT {Keyword.ToString().ToUpperInvariant()}");
+        }
+    }
     /// <summary>
     /// Generated are modifiers that follow a column definition in a CREATE TABLE statement.
     /// </summary>

@@ -285,4 +285,23 @@ public class SqliteDialectTests : ParserTestBase
         Assert.Equal(new Identifier("id"), expression.Left);
         Assert.Equal(new LiteralValue(new Value.Placeholder("$id")), expression.Right);
     }
+
+    [Fact]
+    public void Parse_Create_Table_On_Conflict_Col()
+    {
+        foreach (var keyword in new[]{Keyword.ROLLBACK, Keyword.ABORT, Keyword.FAIL, Keyword.IGNORE, Keyword.REPLACE})
+        {
+            var sql = $"CREATE TABLE t1 (a INT, b INT ON CONFLICT {keyword})";
+
+            var create = VerifiedStatement<Statement.CreateTable>(sql);
+
+            Assert.Equal([new ColumnOptionDef(new ColumnOption.OnConflict(keyword))], create.Element.Columns[1].Options);
+        }
+    }
+
+    [Fact]
+    public void Test_Parse_Create_Table_On_Conflict_Col_Err()
+    {
+        Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE TABLE t1 (a INT, b INT ON CONFLICT BOH)"));
+    }
 }
