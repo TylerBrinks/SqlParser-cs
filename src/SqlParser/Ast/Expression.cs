@@ -559,24 +559,26 @@ public abstract record Expression : IWriteSql, IElement
     /// ILIKE (case-insensitive LIKE)
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    public record ILike(Expression Expression, bool Negated, Expression Pattern, string? EscapeChar = null) : Expression, INegated
+    public record ILike(Expression Expression, bool Negated, Expression Pattern, string? EscapeChar = null, bool Any = false) : Expression, INegated
     {
-        public ILike(Expression expression, bool negated, Expression pattern, char? escapeChar = null)
-            : this(expression, negated, pattern, escapeChar?.ToString()) { }
+        public ILike(Expression expression, bool negated, Expression pattern, char? escapeChar = null, bool Any = false)
+            : this(expression, negated, pattern, escapeChar?.ToString(), Any) { }
 
-        public ILike(Expression? expression, bool negated, Expression pattern)
-            : this(expression, negated, pattern, (string?)null) { }
+        public ILike(Expression? expression, bool negated, Expression pattern, bool Any = false)
+            : this(expression, negated, pattern, (string?)null, Any) { }
         
         public override void ToSql(SqlTextWriter writer)
         {
+            var any = Any ? "ANY " : string.Empty;
+            
             // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
             if (EscapeChar != null)
             {
-                writer.WriteSql($"{Expression} {AsNegated.NegatedText}ILIKE {Pattern} ESCAPE '{EscapeChar}'");
+                writer.WriteSql($"{Expression} {AsNegated.NegatedText}ILIKE {any}{Pattern} ESCAPE '{EscapeChar}'");
             }
             else
             {
-                writer.WriteSql($"{Expression} {AsNegated.NegatedText}ILIKE {Pattern}");
+                writer.WriteSql($"{Expression} {AsNegated.NegatedText}ILIKE {any}{Pattern}");
             }
         }
     }
@@ -849,24 +851,26 @@ public abstract record Expression : IWriteSql, IElement
     /// <param name="Negated">Negated</param>
     /// <param name="Pattern">pattern expression</param>
     /// <param name="EscapeChar">Escape character</param>
-    public record Like(Expression? Expression, bool Negated, Expression Pattern, string? EscapeChar = null) : Expression, INegated
+    public record Like(Expression? Expression, bool Negated, Expression Pattern, string? EscapeChar = null, bool Any = false) : Expression, INegated
     {
-        public Like(Expression? expression, bool negated, Expression pattern, char? escapeChar = null)
-            : this(expression, negated, pattern, escapeChar?.ToString()) { }
+        public Like(Expression? expression, bool negated, Expression pattern, char? escapeChar = null, bool Any = false)
+            : this(expression, negated, pattern, escapeChar?.ToString(), Any) { }
 
-        public Like(Expression? expression, bool negated, Expression pattern)
-            : this(expression, negated, pattern, (string?)null) { }
+        public Like(Expression? expression, bool negated, Expression pattern, bool Any = false)
+            : this(expression, negated, pattern, (string?)null, Any) { }
 
         public override void ToSql(SqlTextWriter writer)
         {
+            var any = Any ? "ANY " : string.Empty;
+
             // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
             if (EscapeChar != null)
             {
-                writer.WriteSql($"{Expression} {AsNegated.NegatedText}LIKE {Pattern} ESCAPE '{EscapeChar}'");
+                writer.WriteSql($"{Expression} {AsNegated.NegatedText}LIKE {any}{Pattern} ESCAPE '{EscapeChar}'");
             }
             else
             {
-                writer.WriteSql($"{Expression} {AsNegated.NegatedText}LIKE {Pattern}");
+                writer.WriteSql($"{Expression} {AsNegated.NegatedText}LIKE {any}{Pattern}");
             }
         }
     }

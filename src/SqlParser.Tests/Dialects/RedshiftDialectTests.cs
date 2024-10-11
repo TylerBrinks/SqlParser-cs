@@ -94,18 +94,20 @@ public class RedshiftDialectTests : ParserTestBase
 
             var select = VerifiedOnlySelect($"SELECT * FROM customers WHERE name {negation}LIKE '%a'");
             var expected = new Like(new Identifier("name"), negated,
-                new LiteralValue(new Value.SingleQuotedString("%a")));
+                new LiteralValue(new Value.SingleQuotedString("%a")),
+                false);
             Assert.Equal(expected, select.Selection);
 
             select = VerifiedOnlySelect($"SELECT * FROM customers WHERE name {negation}LIKE '%a' ESCAPE '\\'");
             expected = new Like(new Identifier("name"), negated,
-                new LiteralValue(new Value.SingleQuotedString("%a")), Symbols.Backslash);
+                new LiteralValue(new Value.SingleQuotedString("%a")),
+                Symbols.Backslash);
             Assert.Equal(expected, select.Selection);
 
             // This statement tests that LIKE and NOT LIKE have the same precedence.
             select = VerifiedOnlySelect($"SELECT * FROM customers WHERE name {negation}LIKE '%a' IS NULL");
             var isNull = new IsNull(new Like(new Identifier("name"), negated,
-                new LiteralValue(new Value.SingleQuotedString("%a"))));
+                new LiteralValue(new Value.SingleQuotedString("%a")), false));
             Assert.Equal(isNull, select.Selection);
         }
     }

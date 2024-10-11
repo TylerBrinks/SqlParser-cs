@@ -737,18 +737,18 @@ public partial class Parser
 
                         if (ParseKeyword(Keyword.LIKE))
                         {
-                            return new Like(expr, negated, 
-                                ParseSubExpression(_dialect.GetPrecedence(Precedence.Like)), 
-                                ParseEscapeChar());
+                            var any = ParseKeyword(Keyword.ANY);
+                            var sub = ParseSubExpression(_dialect.GetPrecedence(Precedence.Like));
+                            var escape = ParseEscapeChar();
+                            return new Like(expr, negated, sub, escape, any);
                         }
 
                         if (ParseKeyword(Keyword.ILIKE))
                         {
-                            return new ILike(
-                                expr, 
-                                negated, 
-                                ParseSubExpression(_dialect.GetPrecedence(Precedence.Like)), 
-                                ParseEscapeChar());
+                            var any = ParseKeyword(Keyword.ANY);
+                            var sub = ParseSubExpression(_dialect.GetPrecedence(Precedence.Like));
+                            var escape = ParseEscapeChar();
+                            return new ILike(expr, negated, sub, escape, any);
                         }
 
                         if (ParseKeywordSequence(Keyword.SIMILAR, Keyword.TO))
