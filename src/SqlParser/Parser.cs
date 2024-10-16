@@ -15,6 +15,7 @@ using DataType = SqlParser.Ast.DataType;
 using Select = SqlParser.Ast.Select;
 using HiveRowDelimiter = SqlParser.Ast.HiveRowDelimiter;
 using Subscript = SqlParser.Ast.Subscript;
+// ReSharper disable InconsistentNaming
 
 namespace SqlParser;
 
@@ -2184,7 +2185,7 @@ public partial class Parser
             }
             else if ((opt = ParseOptionalColumnOption()) is not null)
             {
-                options ??= new Sequence<ColumnOptionDef>();
+                options ??= [];
                 options.Add(new ColumnOptionDef(opt));
             }
             else if (_dialect is MySqlDialect or GenericDialect && ParseKeyword(Keyword.COLLATE))
@@ -2225,7 +2226,7 @@ public partial class Parser
         }
     }
 
-    public Keyword? ParseSQLiteConflictClause()
+    public Keyword? ParseSqLiteConflictClause()
     {
         if (!ParseKeywordSequence(Keyword.ON, Keyword.CONFLICT)) return null;
         return ParseOneOfKeywords(Keyword.ROLLBACK, Keyword.ABORT, Keyword.FAIL, Keyword.IGNORE, Keyword.REPLACE);
@@ -2289,22 +2290,16 @@ public partial class Parser
 
         if (ParseKeywordSequence(Keyword.PRIMARY, Keyword.KEY))
         {
-            var order = _dialect is SQLiteDialect ? ParseOneOfKeywords([Keyword.ASC, Keyword.DESC]) : Keyword.undefined;
-            var conflict = _dialect is SQLiteDialect ? ParseSQLiteConflictClause() : Keyword.undefined;
-            var autoincrement = _dialect is SQLiteDialect && ParseKeyword(Keyword.AUTOINCREMENT);
             var characteristics = ParseConstraintCharacteristics();
             return new ColumnOption.Unique(true)
             {
                 Characteristics = characteristics,
-                Order = order != Keyword.undefined ? order : null,
-                Conflict = conflict != Keyword.undefined ? conflict : null,
-                Autoincrement = autoincrement
             };
         }
 
         if (ParseKeyword(Keyword.UNIQUE))
         {
-            var conflict = _dialect is SQLiteDialect ? ParseSQLiteConflictClause() : null;
+            var conflict = _dialect is SQLiteDialect ? ParseSqLiteConflictClause() : null;
             var characteristics = ParseConstraintCharacteristics();
             return new ColumnOption.Unique(false)
             {
@@ -2358,13 +2353,23 @@ public partial class Parser
         if (_dialect is MySqlDialect or GenericDialect && ParseKeyword(Keyword.AUTO_INCREMENT))
         {
             // Support AUTO_INCREMENT for MySQL
-            return new ColumnOption.DialectSpecific(new[] { new Word("AUTO_INCREMENT") });
+            return new ColumnOption.DialectSpecific([new Word("AUTO_INCREMENT") ]);
         }
 
         if (_dialect is SQLiteDialect or GenericDialect && ParseKeyword(Keyword.AUTOINCREMENT))
         {
             // Support AUTOINCREMENT for SQLite
-            return new ColumnOption.DialectSpecific(new[] { new Word("AUTOINCREMENT") });
+            return new ColumnOption.DialectSpecific([new Word("AUTOINCREMENT") ]);
+        }
+
+        if (_dialect.SupportsAscDescInColumnDefinition && ParseKeyword(Keyword.ASC))
+        {
+            return new ColumnOption.DialectSpecific([new Word("ASC")]);
+        }
+
+        if (_dialect.SupportsAscDescInColumnDefinition && ParseKeyword(Keyword.DESC))
+        {
+            return new ColumnOption.DialectSpecific([new Word("DESC")]);
         }
 
         if (_dialect is MySqlDialect or GenericDialect && ParseKeywordSequence(Keyword.ON, Keyword.UPDATE))
@@ -2647,7 +2652,7 @@ public partial class Parser
                 // Optional constraint name
                 var identName = MaybeParse(ParseIdentifier) ?? name;
                 var columns = ParseParenthesizedColumnList(IsOptional.Mandatory, false);
-                var conflict = _dialect is SQLiteDialect ? ParseSQLiteConflictClause() : null;
+                var conflict = _dialect is SQLiteDialect ? ParseSqLiteConflictClause() : null;
                 var characteristics = ParseConstraintCharacteristics();
                 return new TableConstraint.Unique(columns)
                 {

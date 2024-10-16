@@ -304,4 +304,24 @@ public class SqliteDialectTests : ParserTestBase
     {
         Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE TABLE t1 (a INT, b INT ON CONFLICT BOH)"));
     }
+
+    [Fact]
+    public void Parse_Create_Table_Primary_Key_Asc_Desc()
+    {
+        var sql = "CREATE TABLE foo (bar INT PRIMARY KEY ASC)";
+        var create = VerifiedStatement<Statement.CreateTable>(sql);
+        
+        Assert.Equal([new ColumnDef("bar", new DataType.Int(), Options: [
+            new ColumnOptionDef(new ColumnOption.Unique(true)),
+            new ColumnOptionDef(new ColumnOption.DialectSpecific([new Word("ASC")])),
+        ])], create.Element.Columns);
+
+        sql = "CREATE TABLE foo (bar INT PRIMARY KEY DESC)";
+        create = VerifiedStatement<Statement.CreateTable>(sql);
+
+        Assert.Equal([new ColumnDef("bar", new DataType.Int(), Options: [
+            new ColumnOptionDef(new ColumnOption.Unique(true)),
+            new ColumnOptionDef(new ColumnOption.DialectSpecific([new Word("DESC")])),
+        ])], create.Element.Columns);
+    }
 }

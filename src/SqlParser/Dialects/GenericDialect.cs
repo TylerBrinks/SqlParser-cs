@@ -39,4 +39,8 @@ public class GenericDialect : Dialect
     public override bool SupportsCreateIndexWithClause => true;
     public override bool SupportsExplainWithUtilityOptions => true;
     public override bool SupportsLimitComma => true;
+    public override short GetPrecedence(Precedence precedence)
+    {
+        return base.GetPrecedence(precedence);
+    }
 }
