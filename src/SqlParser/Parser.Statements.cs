@@ -1011,6 +1011,7 @@ public partial class Parser
     {
         var analyze = false;
         var verbose = false;
+        var queryPlan = false;
         var format = AnalyzeFormat.None;
         Sequence<UtilityOption>? options = null;
 
@@ -1019,6 +1020,10 @@ public partial class Parser
         if (_dialect.SupportsExplainWithUtilityOptions && describeAlias == DescribeAlias.Explain && PeekToken() is LeftParen)
         {
             options = ParseUtilityOptions();
+        }
+        else if (ParseKeywordSequence(Keyword.QUERY, Keyword.PLAN))
+        {
+            queryPlan = true;
         }
         else
         {
@@ -1038,7 +1043,8 @@ public partial class Parser
                 Analyze = analyze,
                 Verbose = verbose,
                 Format = format,
-                Options = options
+                Options = options,
+                QueryPlan = queryPlan
             },
             _ => ParseDescribeFormat()
         };

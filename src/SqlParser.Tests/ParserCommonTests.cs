@@ -6687,4 +6687,17 @@ public class ParserCommonTests : ParserTestBase
         VerifiedStatement("SELECT * FROM x WHERE a ILIKE ANY ('%Jo%oe%', 'T%e')");
         VerifiedStatement("SELECT * FROM x WHERE a LIKE ANY ('%Jo%oe%', 'T%e')");
     }
+
+    [Fact]
+    public void Parse_Explain_Query_Plan()
+    {
+        var explain = VerifiedStatement<Statement.Explain>("EXPLAIN QUERY PLAN SELECT sqrt(id) FROM foo");
+
+        Assert.True(explain.QueryPlan);
+        Assert.False(explain.Analyze);
+        Assert.False(explain.Verbose);
+
+        VerifiedStatement<Statement.Explain>("EXPLAIN SELECT sqrt(id) FROM foo");
+        Assert.Throws<ParserException>(() => ParseSqlStatements("EXPLAIN QUERY SELECT sqrt(id) FROM foo"));
+    }
 }

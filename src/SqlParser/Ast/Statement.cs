@@ -1480,6 +1480,8 @@ public abstract record Statement : IWriteSql, IElement
         // Display additional information regarding the plan.
         public bool Verbose { get; init; }
 
+        public bool QueryPlan { get; init; }
+
         /// Optional output format of explain
         public AnalyzeFormat Format { get; init; }
 
@@ -1488,6 +1490,11 @@ public abstract record Statement : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             writer.WriteSql($"{DescribeAlias} ");
+
+            if (QueryPlan)
+            {
+                writer.Write("QUERY PLAN ");
+            }
 
             if (Analyze)
             {

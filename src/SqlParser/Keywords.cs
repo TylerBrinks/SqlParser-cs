@@ -620,6 +620,7 @@ public enum Keyword
     PERSISTENT,
     PIVOT,
     PLACING,
+    PLAN,
     PLANS,
     POLICY,
     PORTION,
