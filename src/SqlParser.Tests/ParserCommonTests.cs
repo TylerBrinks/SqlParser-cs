@@ -332,7 +332,7 @@ public class ParserCommonTests : ParserTestBase
         foreach (var dialect in AllDialects)
         {
             var ex = Assert.Throws<ParserException>(() =>
-                ParseSqlStatements("SELECT DISTINCT (name, id FROM customer", new[] { dialect }));
+                ParseSqlStatements("SELECT DISTINCT (name, id FROM customer", [dialect]));
             Assert.Equal("Expected ), found FROM, Line: 1, Col: 27", ex.Message);
         }
     }
@@ -349,7 +349,7 @@ public class ParserCommonTests : ParserTestBase
         foreach (var dialect in AllDialects)
         {
             var ex = Assert.Throws<ParserException>(() =>
-                ParseSqlStatements("SELECT ALL DISTINCT name FROM customer", new[] { dialect }));
+                ParseSqlStatements("SELECT ALL DISTINCT name FROM customer", [dialect]));
             Assert.Equal("Cannot specify both ALL and DISTINCT", ex.Message);
         }
     }
@@ -381,7 +381,7 @@ public class ParserCommonTests : ParserTestBase
 
         select = VerifiedOnlySelect("SELECT myschema.mytable.* FROM myschema.mytable");
         Assert.Equal(
-            new SelectItem.QualifiedWildcard(new ObjectName(new Ident[] { "myschema", "mytable" }),
+            new SelectItem.QualifiedWildcard(new ObjectName(["myschema", "mytable"]),
                 new WildcardAdditionalOptions()), select.Projection.Single());
 
         var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT * + * FROM foo;"));
@@ -558,7 +558,7 @@ public class ParserCommonTests : ParserTestBase
     public void Parse_Escaped_Single_Quote_String_Predicate_With_No_Escape()
     {
         var select = VerifiedOnlySelect("SELECT id, fname, lname FROM customer WHERE salary <> 'Jim''s salary'",
-            new[] { new MySqlDialect() }, unescape: false);
+            [new MySqlDialect()], unescape: false);
 
         var expected = new BinaryOp(
             new Identifier("salary"),
@@ -691,7 +691,7 @@ public class ParserCommonTests : ParserTestBase
         var like = new Like(
             new LiteralValue(new Value.SingleQuotedString("a")),
             true,
-            new LiteralValue(new Value.SingleQuotedString("b")), 
+            new LiteralValue(new Value.SingleQuotedString("b")),
             false
         );
         unary = new UnaryOp(like, UnaryOperator.Not);
@@ -1818,13 +1818,13 @@ public class ParserCommonTests : ParserTestBase
 
             var columnDef = new Sequence<ColumnDef>
             {
-                new("a", new Int(), Options: new Sequence<ColumnOptionDef>
-                {
+                new("a", new Int(), Options:
+                [
                     new(new ColumnOption.Unique(false)
                     {
                         Characteristics = expectedValue
                     })
-                })
+                ])
             };
 
             Assert.Equal(columnDef, ast.Element.Columns);
@@ -2136,10 +2136,8 @@ public class ParserCommonTests : ParserTestBase
 
         var columns = new ColumnDef[]
         {
-            new("name", new Varchar(new CharacterLength.IntegerLength(100)), Options: new Sequence<ColumnOptionDef>
-            {
-                new(Option: new ColumnOption.NotNull())
-            }),
+            new("name", new Varchar(new CharacterLength.IntegerLength(100)), Options:
+                [new(Option: new ColumnOption.NotNull())]),
         };
 
         Assert.Equal("uk_cities", create.Element.Name);
@@ -2665,19 +2663,20 @@ public class ParserCommonTests : ParserTestBase
             {
                 new(new TableFactor.Table("aggregate_test_100"))
             },
-            NamedWindow = new Sequence<NamedWindowDefinition>
-            {
+            NamedWindow =
+            [
                 new("window1", new NamedWindowExpression.NamedWindowSpec(new WindowSpec(
                     OrderBy: new Sequence<OrderByExpression>
                     {
                         new(new Identifier("C12"))
                     }))),
 
+
                 new("window2", new NamedWindowExpression.NamedWindowSpec(new WindowSpec(new Sequence<Expression>
                 {
                     new Identifier("C11")
                 })))
-            },
+            ],
             WindowBeforeQualify = true
         };
 
@@ -4355,7 +4354,7 @@ public class ParserCommonTests : ParserTestBase
         // At the time of writing, `@foo` is accepted as a valid identifier
         // by the Generic and the MSSQL dialect, but not by Postgres and ANSI.
 
-        ParseSqlStatements("SELECT @foo", new[] { new GenericDialect() }); //, new GenericDialect()
+        ParseSqlStatements("SELECT @foo", [new GenericDialect()]); //, new GenericDialect()
     }
 
     [Fact]
@@ -4531,7 +4530,7 @@ public class ParserCommonTests : ParserTestBase
         Assert.False(mergeNoInto.Into);
 
         Assert.Equal(
-            new TableFactor.Table(new ObjectName(new Ident[] { "s", "bar" })) { Alias = new TableAlias("dest") },
+            new TableFactor.Table(new ObjectName(["s", "bar"])) { Alias = new TableAlias("dest") },
             mergeInto.Table);
         Assert.Equal(mergeInto.Table, mergeNoInto.Table);
         var body = new SetExpression.SelectExpression(new Select(new[]
@@ -4846,7 +4845,7 @@ public class ParserCommonTests : ParserTestBase
     {
         Expression expected =
             new Position(new LiteralValue(new Value.SingleQuotedString("@")), new Identifier("field"));
-        var position = VerifiedExpr("POSITION('@' IN field)", new[] { new PostgreSqlDialect() });
+        var position = VerifiedExpr("POSITION('@' IN field)", [new PostgreSqlDialect()]);
         Assert.Equal(expected, position);
 
         expected = new Function("position")
@@ -5861,20 +5860,20 @@ public class ParserCommonTests : ParserTestBase
             null
         );
 
-        var options = string.Join(" ", [
-            "PARTITION BY company",
-            "ORDER BY price_date",
-            "MEASURES",
-            "MATCH_NUMBER() AS match_number,",
-            "FIRST(price_date) AS start_date,",
-            "LAST(price_date) AS end_date",
-            "ONE ROW PER MATCH",
-            "AFTER MATCH SKIP TO LAST row_with_price_increase",
-            "PATTERN (row_before_decrease row_with_price_decrease+ row_with_price_increase+)",
-            "DEFINE",
-            "row_with_price_decrease AS price < LAG(price),",
-            "row_with_price_increase AS price > LAG(price)"
-        ]);
+        var options = """
+            PARTITION BY company
+             ORDER BY price_date
+             MEASURES
+             MATCH_NUMBER() AS match_number,
+             FIRST(price_date) AS start_date,
+             LAST(price_date) AS end_date
+             ONE ROW PER MATCH
+             AFTER MATCH SKIP TO LAST row_with_price_increase
+             PATTERN (row_before_decrease row_with_price_decrease+ row_with_price_increase+)
+             DEFINE
+             row_with_price_decrease AS price < LAG(price),
+             row_with_price_increase AS price > LAG(price)
+            """;
 
         var select = VerifiedOnlySelect($"SELECT * FROM my_table MATCH_RECOGNIZE({options})", dialects);
 
@@ -6313,7 +6312,7 @@ public class ParserCommonTests : ParserTestBase
     {
         // At the moment, DuckDB is the only dialect that allows
         // trailing commas anywhere in the query
-        DefaultDialects = new[] { new DuckDbDialect() };
+        DefaultDialects = [new DuckDbDialect()];
 
         OneStatementParsesTo("SELECT album_id, name, FROM track", "SELECT album_id, name FROM track", DefaultDialects);
         OneStatementParsesTo("SELECT * FROM track ORDER BY milliseconds,", "SELECT * FROM track ORDER BY milliseconds",
@@ -6592,7 +6591,7 @@ public class ParserCommonTests : ParserTestBase
             new("ANALYZE", new Identifier("ON")),
             new("VERBOSE", new Identifier("OFF"))
         ];
-        TestExplain( "EXPLAIN (ANALYZE ON, VERBOSE OFF) SELECT sqrt(id) FROM foo", false, false, AnalyzeFormat.None, dialects, options);
+        TestExplain("EXPLAIN (ANALYZE ON, VERBOSE OFF) SELECT sqrt(id) FROM foo", false, false, AnalyzeFormat.None, dialects, options);
 
         options = [
             new("FORMAT1", new Identifier("TEXT")),
@@ -6608,7 +6607,7 @@ public class ParserCommonTests : ParserTestBase
             new("NUM3", new UnaryOp(new LiteralValue(new Value.Number("10.2")), UnaryOperator.Minus))
         ];
         TestExplain("EXPLAIN (NUM1 10, NUM2 +10.1, NUM3 -10.2) SELECT sqrt(id) FROM foo", false, false, AnalyzeFormat.None, dialects, options);
-       
+
         options = [
             new("ANALYZE"),
             new("VERBOSE", new LiteralValue(new Value.Boolean(true))),
@@ -6651,7 +6650,7 @@ public class ParserCommonTests : ParserTestBase
         alter = VerifiedStatement<Statement.AlterPolicy>("ALTER POLICY my_policy ON my_table TO CURRENT_USER USING ((SELECT c0)) WITH CHECK (c0 > 0)");
         Assert.Equal("my_policy", alter.Name);
         Assert.Equal("my_table", alter.TableName);
-       
+
         VerifiedStatement<Statement.AlterPolicy>("ALTER POLICY my_policy ON my_table");
 
         Assert.Throws<ParserException>(() => ParseSqlStatements("ALTER POLICY old_policy ON my_table TO public RENAME TO new_policy"));
@@ -6665,7 +6664,7 @@ public class ParserCommonTests : ParserTestBase
     [Fact]
     public void Test_Parse_Inline_Comment()
     {
-        var dialects = AllDialects.Where(d=> d is not HiveDialect).ToList();
+        var dialects = AllDialects.Where(d => d is not HiveDialect).ToList();
 
         var create = VerifiedStatement<Statement.CreateTable>(
             "CREATE TABLE t0 (id INT COMMENT 'comment without equal') COMMENT = 'comment with equal'", dialects);
@@ -6677,7 +6676,7 @@ public class ParserCommonTests : ParserTestBase
 
         Assert.Equal(expected, create.Element.Columns);
         Assert.Equal(new CommentDef.WithEq("comment with equal"), create.Element.Comment);
-    } 
+    }
 
     [Fact]
     public void Test_Select_Where_With_Like_Or_ILike_Any()
@@ -6699,5 +6698,21 @@ public class ParserCommonTests : ParserTestBase
 
         VerifiedStatement<Statement.Explain>("EXPLAIN SELECT sqrt(id) FROM foo");
         Assert.Throws<ParserException>(() => ParseSqlStatements("EXPLAIN QUERY SELECT sqrt(id) FROM foo"));
+    }
+
+    [Fact]
+    public void Parse_Drop_Type()
+    {
+        var drop = VerifiedStatement<Statement.Drop>("DROP TYPE abc");
+        Assert.Equal(["abc"], drop.Names);
+        Assert.Equal(ObjectType.Type , drop.ObjectType);
+
+        drop = VerifiedStatement<Statement.Drop>("DROP TYPE IF EXISTS def, magician, quaternion");
+        Assert.Equal(["def", "magician", "quaternion"], drop.Names);
+        Assert.Equal(ObjectType.Type, drop.ObjectType);
+
+        drop = VerifiedStatement<Statement.Drop>("DROP TYPE IF EXISTS my_type CASCADE");
+        Assert.Equal(["my_type"], drop.Names);
+        Assert.Equal(ObjectType.Type, drop.ObjectType);
     }
 }

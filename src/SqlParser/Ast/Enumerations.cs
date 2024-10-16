@@ -472,7 +472,8 @@ public enum ObjectType
     Role,
     Sequence,
     Stage,
-    Database
+    Database,
+    Type
 }
 
 public enum OffsetRows

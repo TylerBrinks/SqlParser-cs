@@ -798,6 +798,10 @@ public partial class Parser
         {
             objectType = ObjectType.Stage;
         }
+        else if (ParseKeyword(Keyword.TYPE))
+        {
+            objectType = ObjectType.Type;
+        }
         else if (ParseKeyword(Keyword.FUNCTION))
         {
             return ParseDropFunction();
@@ -821,7 +825,7 @@ public partial class Parser
 
         if (objectType == null)
         {
-            throw Expected("TABLE, VIEW, INDEX, ROLE, SCHEMA, DATABASE, FUNCTION, PROCEDURE, STAGE, TRIGGER, SECRET or SEQUENCE after DROP", PeekToken());
+            throw Expected("TABLE, VIEW, INDEX, ROLE, SCHEMA, DATABASE, FUNCTION, PROCEDURE, STAGE, TRIGGER, SECRET,SEQUENCE, or TYPE after DROP", PeekToken());
         }
 
         // Many dialects support the non-standard `IF EXISTS` clause and allow
