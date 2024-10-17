@@ -13,7 +13,7 @@ public abstract record WrappedCollection<T>(Sequence<T> Items) : IWriteSql where
                 writer.WriteSql($"{Items.ToSqlDelimited()}");
                 break;
 
-            case Parentheses p:
+            case Parentheses:
                 writer.WriteSql($"({Items.ToSqlDelimited()})");
                 break;
         }

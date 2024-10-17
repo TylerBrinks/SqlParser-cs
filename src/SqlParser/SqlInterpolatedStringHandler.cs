@@ -10,15 +10,15 @@ public readonly ref struct SqlInterpolatedStringHandler
     /// <summary>
     /// Custom SQL string interpolation handler.  All formatted string segments will handle
     /// the ToSql invocation of any types implementing IWriteSql.  By default, all enumerable
-    /// objects are written using a comma delimited format.
+    /// objects are written using a comma-delimited format.
     /// </summary>
     public SqlInterpolatedStringHandler(int literalLength, int formattedCount, SqlTextWriter writer)
     {
         _writer = writer;
     }
     /// <summary>
-    /// Typically an interpolation handler would build a string out of formatted
-    /// segments.  However in the context of building a SQL string, there is already
+    /// Typically, an interpolation handler would build a string out of formatted
+    /// segments.  However, in the context of building a SQL string, there is already
     /// a string builder being used by a wrapper SqlTextWriter.  The writer is
     /// injected any time the WriteSql method is called, so the formatting and
     /// appending can be applied directly to the SqlTextWriter instance instead of

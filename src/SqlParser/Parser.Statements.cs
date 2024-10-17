@@ -6,6 +6,7 @@ using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
 using Declare = SqlParser.Ast.Declare;
 using Use = SqlParser.Ast.Use;
+// ReSharper disable InconsistentNaming
 
 namespace SqlParser;
 

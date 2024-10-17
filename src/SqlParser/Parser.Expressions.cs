@@ -3,6 +3,7 @@ using SqlParser.Dialects;
 using SqlParser.Tokens;
 using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
+// ReSharper disable InconsistentNaming
 
 namespace SqlParser;
 
@@ -342,12 +343,12 @@ public partial class Parser
 
         Expression ParsePositionExpr(Ident ident)
         {
-            var betweenPrec = _dialect.GetPrecedence(Precedence.Between);
+            var betweenPrecedence = _dialect.GetPrecedence(Precedence.Between);
             var positionExpression = MaybeParse(() =>
             {
                 ExpectLeftParen();
 
-                var expr = ParseSubExpression(betweenPrec);
+                var expr = ParseSubExpression(betweenPrecedence);
 
                 ExpectKeyword(Keyword.IN);
 
@@ -833,19 +834,7 @@ public partial class Parser
 
     public Expression? TryParseExpressionSubQuery()
     {
-        if (!PeekSubQuery())
-        {
-            return null;
-        }
-
-        //var keyword = ParseOneOfKeywords(Keyword.SELECT, Keyword.WITH);
-        //if (keyword == Keyword.undefined)
-        //{
-        //    return null;
-        //}
-
-        //PrevToken();
-        return new Subquery(ParseQuery());
+        return !PeekSubQuery() ? null : new Subquery(ParseQuery());
     }
 
     public Expression? TryParseLambda()
@@ -887,7 +876,7 @@ public partial class Parser
     {
         ExpectLeftParen();
 
-        if (_dialect is SnowflakeDialect && PeekSubQuery())//ParseOneOfKeywords(Keyword.WITH, Keyword.SELECT) != Keyword.undefined)
+        if (_dialect is SnowflakeDialect && PeekSubQuery())
         {
             var subquery = ParseQuery();
             ExpectRightParen();

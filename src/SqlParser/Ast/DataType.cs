@@ -940,7 +940,7 @@ public abstract record DataType : IWriteSql, IElement
     ///
     /// DuckDb https://duckdb.org/docs/sql/data_types/union.html
     /// </summary>
-    /// <param name="Values"></param>
+    /// <param name="Fields">Union field sequence</param>
     public record Union(Sequence<UnionField> Fields) : DataType
     {
         public override void ToSql(SqlTextWriter writer)

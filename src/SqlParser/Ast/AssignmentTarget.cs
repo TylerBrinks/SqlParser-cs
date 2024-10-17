@@ -1,6 +1,6 @@
 ﻿namespace SqlParser.Ast;
 
-public abstract record class AssignmentTarget : IWriteSql
+public abstract record AssignmentTarget : IWriteSql
 {
     public record ColumnName(ObjectName Name) : AssignmentTarget;
     public record Tuple(Sequence<ObjectName> Names) : AssignmentTarget;

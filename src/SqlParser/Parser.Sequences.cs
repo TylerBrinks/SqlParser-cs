@@ -2,6 +2,7 @@
 using SqlParser.Dialects;
 using SqlParser.Tokens;
 using static SqlParser.Ast.Expression;
+// ReSharper disable InconsistentNaming
 
 namespace SqlParser;
 

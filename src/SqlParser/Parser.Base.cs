@@ -3,6 +3,7 @@ using SqlParser.Dialects;
 using SqlParser.Tokens;
 using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
+// ReSharper disable InconsistentNaming
 
 namespace SqlParser;
 
@@ -625,7 +626,6 @@ public partial class Parser
 
             if (keyword != Keyword.undefined)
             {
-                //var right = ExpectParens(() => ParseSubExpression(precedence));
                 Expression right;
                 ExpectLeftParen();
 

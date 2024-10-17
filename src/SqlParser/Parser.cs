@@ -5708,13 +5708,7 @@ public partial class Parser
                     return new PivotValueSource.Subquery(ParseQuery());
                 }
 
-                //if (ParseOneOfKeywords(Keyword.SELECT, Keyword.WITH) == Keyword.undefined)
-                //{
-                    return new PivotValueSource.List(ParseCommaSeparated(ParseExpressionWithAlias));
-                //}
-
-                //PrevToken();
-                //return new PivotValueSource.Subquery(ParseQuery());
+                return new PivotValueSource.List(ParseCommaSeparated(ParseExpressionWithAlias));
             });
 
             if (ParseKeywordSequence(Keyword.DEFAULT, Keyword.ON, Keyword.NULL))

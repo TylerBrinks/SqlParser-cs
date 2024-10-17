@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using SqlParser.Ast;
 using SqlParser.Tokens;
+// ReSharper disable InconsistentNaming
 
 namespace SqlParser.Dialects;
 

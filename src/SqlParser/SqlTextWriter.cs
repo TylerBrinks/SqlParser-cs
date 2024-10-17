@@ -64,7 +64,7 @@ public class SqlTextWriter : StringWriter
     /// <param name="delimiter">Character delimiter between each object</param>
     public void WriteDelimited<T>(IEnumerable<T>? enumerable, char delimiter) where T : IWriteSql
     {
-        WriteDelimited<T>(enumerable, delimiter.ToString());
+        WriteDelimited(enumerable, delimiter.ToString());
     }
     /// <summary>
     /// Writes a given IEnumerable IWriteSql list with no
