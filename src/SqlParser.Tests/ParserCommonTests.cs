@@ -5634,7 +5634,7 @@ public class ParserCommonTests : ParserTestBase
     [Fact]
     public void Test_Comment_Hash_Syntax()
     {
-        List<Dialect> dialects = [new BigQueryDialect(), new SnowflakeDialect()];
+        List<Dialect> dialects = [new BigQueryDialect(), new SnowflakeDialect(), new MySqlDialect()];
 
         const string sql = """
                            # comment
