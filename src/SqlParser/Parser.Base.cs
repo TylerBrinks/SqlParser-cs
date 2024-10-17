@@ -621,11 +621,24 @@ public partial class Parser
 
         if (regularBinaryOperator is not BinaryOperator.None)
         {
-            var keyword = ParseOneOfKeywords(Keyword.ANY, Keyword.ALL);
+            var keyword = ParseOneOfKeywords(Keyword.ANY, Keyword.ALL, Keyword.SOME);
 
             if (keyword != Keyword.undefined)
             {
-                var right = ExpectParens(() => ParseSubExpression(precedence));
+                //var right = ExpectParens(() => ParseSubExpression(precedence));
+                Expression right;
+                ExpectLeftParen();
+
+                if (PeekSubQuery())
+                {
+                    PrevToken();
+                    right = ParseSubExpression(precedence);
+                }
+                else
+                {
+                    right = ParseSubExpression(precedence);
+                    ExpectRightParen();
+                }
 
                 if (regularBinaryOperator != BinaryOperator.Gt &&
                     regularBinaryOperator != BinaryOperator.Lt &&
@@ -641,7 +654,7 @@ public partial class Parser
                 return keyword switch
                 {
                     Keyword.ALL => new AllOp(expr, regularBinaryOperator, right),
-                    Keyword.ANY => new AnyOp(expr, regularBinaryOperator, right),
+                    Keyword.ANY or Keyword.SOME => new AnyOp(expr, regularBinaryOperator, right, keyword is Keyword.SOME),
                     _ => right
                 };
             }

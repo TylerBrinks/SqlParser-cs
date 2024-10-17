@@ -20,7 +20,10 @@ public abstract record Expression : IWriteSql, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"{Left} {CompareOp} ALL({Right})");
+            var leftParen = Right is not Subquery ? "(" : string.Empty;
+            var rightParen = Right is not Subquery ? ")" : string.Empty;
+
+            writer.WriteSql($"{Left} {CompareOp} ALL{leftParen}{Right}{rightParen}");
         }
     }
     /// <summary>
@@ -29,11 +32,15 @@ public abstract record Expression : IWriteSql, IElement
     /// <param name="Left">Expression</param>
     /// <param name="CompareOp">Operator</param>
     /// <param name="Right">Expression</param>
-    public record AnyOp(Expression Left, BinaryOperator CompareOp, Expression Right) : Expression
+    public record AnyOp(Expression Left, BinaryOperator CompareOp, Expression Right, bool IsSome = false) : Expression
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"{Left} {CompareOp} ANY({Right})");
+            var kind = IsSome ? "SOME" : "ANY";
+            var leftParen = Right is not Subquery ? "(" : string.Empty;
+            var rightParen = Right is not Subquery ? ")" : string.Empty;
+
+            writer.WriteSql($"{Left} {CompareOp} {kind}{leftParen}{Right}{rightParen}");
         }
     }
     /// <summary>

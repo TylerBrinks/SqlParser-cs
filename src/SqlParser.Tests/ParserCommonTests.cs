@@ -2666,16 +2666,10 @@ public class ParserCommonTests : ParserTestBase
             NamedWindow =
             [
                 new("window1", new NamedWindowExpression.NamedWindowSpec(new WindowSpec(
-                    OrderBy: new Sequence<OrderByExpression>
-                    {
-                        new(new Identifier("C12"))
-                    }))),
+                    OrderBy: [new(new Identifier("C12"))]))),
 
 
-                new("window2", new NamedWindowExpression.NamedWindowSpec(new WindowSpec(new Sequence<Expression>
-                {
-                    new Identifier("C11")
-                })))
+                new("window2", new NamedWindowExpression.NamedWindowSpec(new WindowSpec([new Identifier("C11")])))
             ],
             WindowBeforeQualify = true
         };
@@ -6714,5 +6708,14 @@ public class ParserCommonTests : ParserTestBase
         drop = VerifiedStatement<Statement.Drop>("DROP TYPE IF EXISTS my_type CASCADE");
         Assert.Equal(["my_type"], drop.Names);
         Assert.Equal(ObjectType.Type, drop.ObjectType);
+    }
+
+    [Fact]
+    public void Test_Any_Some_All_Comparison()
+    {
+        VerifiedStatement("SELECT c1 FROM tbl WHERE c1 = ANY(SELECT c2 FROM tbl)");
+        VerifiedStatement("SELECT c1 FROM tbl WHERE c1 >= ALL(SELECT c2 FROM tbl)");
+        VerifiedStatement("SELECT c1 FROM tbl WHERE c1 <> SOME(SELECT c2 FROM tbl)");
+        VerifiedStatement("SELECT 1 = ANY(WITH x AS (SELECT 1) SELECT * FROM x)");
     }
 }

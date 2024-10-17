@@ -5703,13 +5703,18 @@ public partial class Parser
                     return new PivotValueSource.Any(orderBy);
                 }
 
-                if (ParseOneOfKeywords(Keyword.SELECT, Keyword.WITH) == Keyword.undefined)
+                if (PeekSubQuery())
                 {
-                    return new PivotValueSource.List(ParseCommaSeparated(ParseExpressionWithAlias));
+                    return new PivotValueSource.Subquery(ParseQuery());
                 }
 
-                PrevToken();
-                return new PivotValueSource.Subquery(ParseQuery());
+                //if (ParseOneOfKeywords(Keyword.SELECT, Keyword.WITH) == Keyword.undefined)
+                //{
+                    return new PivotValueSource.List(ParseCommaSeparated(ParseExpressionWithAlias));
+                //}
+
+                //PrevToken();
+                //return new PivotValueSource.Subquery(ParseQuery());
             });
 
             if (ParseKeywordSequence(Keyword.DEFAULT, Keyword.ON, Keyword.NULL))
@@ -5724,6 +5729,17 @@ public partial class Parser
         var alias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
 
         return new TableFactor.Pivot(table, aggregateFunctions, valueColumn, valueSource, defaultOnNull, alias);
+    }
+
+    private bool PeekSubQuery()
+    {
+        if (ParseOneOfKeywords(Keyword.SELECT, Keyword.WITH) == Keyword.undefined)
+        {
+            return false;
+        }
+
+        PrevToken();
+        return true;
     }
 
     private TableFactor ParseUnpivotTableFactor(TableFactor table)

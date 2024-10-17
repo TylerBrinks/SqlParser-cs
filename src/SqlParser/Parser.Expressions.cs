@@ -833,13 +833,18 @@ public partial class Parser
 
     public Expression? TryParseExpressionSubQuery()
     {
-        var keyword = ParseOneOfKeywords(Keyword.SELECT, Keyword.WITH);
-        if (keyword == Keyword.undefined)
+        if (!PeekSubQuery())
         {
             return null;
         }
 
-        PrevToken();
+        //var keyword = ParseOneOfKeywords(Keyword.SELECT, Keyword.WITH);
+        //if (keyword == Keyword.undefined)
+        //{
+        //    return null;
+        //}
+
+        //PrevToken();
         return new Subquery(ParseQuery());
     }
 
@@ -882,9 +887,9 @@ public partial class Parser
     {
         ExpectLeftParen();
 
-        if (_dialect is SnowflakeDialect && ParseOneOfKeywords(Keyword.WITH, Keyword.SELECT) != Keyword.undefined)
+        if (_dialect is SnowflakeDialect && PeekSubQuery())//ParseOneOfKeywords(Keyword.WITH, Keyword.SELECT) != Keyword.undefined)
         {
-            var subquery = ParseQuery(true);
+            var subquery = ParseQuery();
             ExpectRightParen();
             return new Function(name)
             {

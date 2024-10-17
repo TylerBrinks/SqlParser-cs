@@ -705,10 +705,7 @@ public class SnowflakeDialectTests : ParserTestBase
         var select = VerifiedOnlySelect(sql, new[] { new SnowflakeDialect() });
         var expected = new Trim(new LiteralValue(new Value.SingleQuotedString("xyz")),
             TrimWhereField.None,
-            TrimCharacters: new Sequence<Expression>
-            {
-                new LiteralValue(new Value.SingleQuotedString("a"))
-            });
+            TrimCharacters: [new LiteralValue(new Value.SingleQuotedString("a"))]);
 
         Assert.Equal(expected, select.Projection.First().AsExpr());
 

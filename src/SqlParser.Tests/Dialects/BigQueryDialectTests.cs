@@ -348,7 +348,7 @@ public class BigQueryDialectTests : ParserTestBase
 
         sql = "SELECT TRIM('xyz', 'a')";
 
-        var select = VerifiedOnlySelect(sql, new[] { new BigQueryDialect() });
+        var select = VerifiedOnlySelect(sql, [new BigQueryDialect()]);
         var expected = new Trim(new LiteralValue(new Value.SingleQuotedString("xyz")),
             TrimWhereField.None,
             TrimCharacters:
@@ -358,7 +358,7 @@ public class BigQueryDialectTests : ParserTestBase
 
         Assert.Equal(expected, select.Projection.First().AsExpr());
 
-        Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT TRIM('xyz' 'a')", new[] { new BigQueryDialect() }));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT TRIM('xyz' 'a')", [new BigQueryDialect()]));
     }
 
     [Fact]
@@ -366,7 +366,7 @@ public class BigQueryDialectTests : ParserTestBase
     {
         const string sql = "CREATE TABLE table (x STRUCT<a ARRAY<INT64>, b BYTES(42)>, y ARRAY<STRUCT<INT64>>)";
 
-        var create = (Statement.CreateTable)OneStatementParsesTo(sql, sql, new[] { new BigQueryDialect() });
+        var create = (Statement.CreateTable)OneStatementParsesTo(sql, sql, [new BigQueryDialect()]);
 
         var columns = new Sequence<ColumnDef>
         {
@@ -595,11 +595,11 @@ public class BigQueryDialectTests : ParserTestBase
         Assert.Equal(columns, create.Columns);
         Assert.Equal(new Identifier("_PARTITIONDATE"), create.PartitionBy);
         Assert.Equal(new WrappedCollection<Ident>.NoWrapping(["userid", "age"]), create.ClusterBy);
-        Assert.Equal(new Sequence<SqlOption>
-        {
-            new SqlOption.KeyValue ("partition_expiration_days", new LiteralValue(new Value.Number("1"))),
-            new SqlOption.KeyValue("description", new LiteralValue(new Value.DoubleQuotedString("table option description")))
-        }, create.Options);
+        Assert.Equal([
+            new SqlOption.KeyValue("partition_expiration_days", new LiteralValue(new Value.Number("1"))),
+            new SqlOption.KeyValue("description",
+                new LiteralValue(new Value.DoubleQuotedString("table option description")))
+        ], create.Options);
 
         sql = """
               CREATE TABLE mydataset.newtable
