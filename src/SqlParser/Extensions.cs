@@ -1,8 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿namespace SqlParser;
 
-namespace SqlParser;
-
-internal static class Extensions
+public static class Extensions
 {
     /// <summary>
     /// Converts an enumerable object into a sequence of type T
@@ -10,7 +8,7 @@ internal static class Extensions
     /// <typeparam name="T">Type of items in the sequence</typeparam>
     /// <param name="source">Initial sequence list items</param>
     /// <returns>Sequence of type T</returns>
-    public static Sequence<T> ToSequence<T>(this IEnumerable<T> source)
+    internal static Sequence<T> ToSequence<T>(this IEnumerable<T> source)
     {
         return new Sequence<T>(source);
     }
@@ -21,7 +19,7 @@ internal static class Extensions
     /// <typeparam name="T">Type of item in the enumerable list</typeparam>
     /// <param name="enumerable">Enumerable instance to check</param>
     /// <returns>True if not null and items exist; otherwise false</returns>
-    public static bool SafeAny<T>(this IEnumerable<T>? enumerable)
+    internal static bool SafeAny<T>(this IEnumerable<T>? enumerable)
     {
         return enumerable != null && enumerable.Any();
     }
@@ -29,7 +27,7 @@ internal static class Extensions
     /// <summary>
     /// Fields reserved for data/time operations
     /// </summary>
-    public static readonly Keyword[] DateTimeFields = [
+    internal static readonly Keyword[] DateTimeFields = [
         Keyword.YEAR,
         Keyword.MONTH,
         Keyword.WEEK,
@@ -133,7 +131,7 @@ internal static class Extensions
     /// <param name="value">Value to escape</param>
     /// <param name="quote">Quote character to escape</param>
     /// <returns>Escapee string</returns>
-    public static string? EscapeQuotedString(this string? value, char quote)
+    internal static string? EscapeQuotedString(this string? value, char quote)
     {
         // EscapeQuotedString doesn't know which mode of escape was
         // chosen by the user. So this code must to correctly display
@@ -204,15 +202,15 @@ internal static class Extensions
     /// </summary>
     /// <param name="value">Value to escape</param>
     /// <returns>Escaped string</returns>
-    public static string? EscapeSingleQuoteString(this string? value) => EscapeQuotedString(value, Symbols.SingleQuote);
+    internal static string? EscapeSingleQuoteString(this string? value) => EscapeQuotedString(value, Symbols.SingleQuote);
     /// <summary>
     /// Escapes a string with double quotes
     /// </summary>
     /// <param name="value">Value to escape</param>
     /// <returns>Escaped string</returns>
-    public static string? EscapeDoubleQuoteString(this string? value) => EscapeQuotedString(value, Symbols.DoubleQuote);
+    internal static string? EscapeDoubleQuoteString(this string? value) => EscapeQuotedString(value, Symbols.DoubleQuote);
 
-    public static string? EscapeUnicodeString(this string? value)
+    internal static string? EscapeUnicodeString(this string? value)
     {
         if (value == null)
         {
@@ -275,7 +273,7 @@ internal static class Extensions
     /// </summary>
     /// <param name="value"></param>
     /// <returns></returns>
-    public static string? EscapeEscapedString(this string? value)
+    internal static string? EscapeEscapedString(this string? value)
     {
         if (value == null)
         {
