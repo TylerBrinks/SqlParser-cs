@@ -6,6 +6,11 @@ namespace SqlParser.Tokens;
 /// </summary>
 public class EOF() : StringToken("EOF")
 {
+    public EOF(Location location) : this()
+    {
+        SetLocation(location);
+    }
+
     public override bool Equals(object? obj)
     {
         return obj is EOF;

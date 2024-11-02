@@ -85,7 +85,9 @@ public partial class Parser
 
             if (position >= _tokens.Count)
             {
-                return new EOF();
+                var eof = new EOF();
+                eof.SetLocation(_tokens[^1].Location);
+                return eof;
             }
 
             var token = _tokens[position];
@@ -109,7 +111,9 @@ public partial class Parser
     {
         if (_index + nth >= _tokens.Count)
         {
-            return new EOF();
+            var eof = new EOF();
+            eof.SetLocation(_tokens[^1].Location);
+            return eof;
         }
 
         return _tokens[_index + nth];
@@ -152,7 +156,9 @@ public partial class Parser
         {
             if (index >= _tokens.Count)
             {
-                yield return new EOF();
+                var eof = new EOF();
+                eof.SetLocation(_tokens[^1].Location);
+                yield return eof;
                 break;
             }
 
@@ -186,7 +192,13 @@ public partial class Parser
             var position = _index - 1;
             if (position >= _tokens.Count)
             {
-                return new EOF();
+                var eof = new EOF();
+                if (_tokens.Count > 0)
+                {
+                    eof.SetLocation(_tokens[^1].Location);
+                }
+
+                return eof;
             }
 
             var token = _tokens[_index - 1];

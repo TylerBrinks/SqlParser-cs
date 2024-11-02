@@ -5,6 +5,7 @@ using static SqlParser.Ast.DataType;
 using static SqlParser.Ast.Expression;
 using Action = SqlParser.Ast.Action;
 using DataType = SqlParser.Ast.DataType;
+using Double = System.Double;
 using Map = SqlParser.Ast.Map;
 using Subscript = SqlParser.Ast.Subscript;
 
@@ -34,6 +35,18 @@ public class ParserCommonTests : ParserTestBase
         {
             Assert.Equal(expectedOptions, explain.Options);
         }
+    }
+
+    [Fact]
+    public void Parser_EOF_Exception_Preserves_Line_And_Column()
+    {
+        var exception = Assert.Throws<ParserException>(
+            () => ParseSqlStatements("""
+                                     select *
+                                      from table
+                                     """, [new PostgreSqlDialect()]));
+        Assert.Equal(2, exception.Line);
+        Assert.Equal(7, exception.Column);
     }
 
     [Fact]
