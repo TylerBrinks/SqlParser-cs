@@ -33,7 +33,7 @@ public class MsSqlDialect : Dialect
     }
 
     public override bool SupportsSubstringFromForExpression => false;
-
     public override bool ConvertTypeBeforeValue => true;
-    public virtual bool SupportsConnectBy => true;
+    public override bool SupportsConnectBy => true;
+    public override bool SupportsEqualAliasAssignment => true;
 }

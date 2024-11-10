@@ -5976,6 +5976,11 @@ public partial class Parser
             throw Expected($"Expected an expression, found: {v}");
         }
 
+        if (wildcardExpr is BinaryOp b && _dialect.SupportsEqualAliasAssignment && b.Left is Identifier leftIdent)
+        {
+            return new SelectItem.ExpressionWithAlias(b.Right, leftIdent.Ident.Value);
+        }
+
         var alias = ParseOptionalAlias(Keywords.ReservedForColumnAlias);
 
         if (alias != null)

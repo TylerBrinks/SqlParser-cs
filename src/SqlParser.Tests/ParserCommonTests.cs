@@ -6731,4 +6731,23 @@ public class ParserCommonTests : ParserTestBase
         VerifiedStatement("SELECT c1 FROM tbl WHERE c1 <> SOME(SELECT c2 FROM tbl)");
         VerifiedStatement("SELECT 1 = ANY(WITH x AS (SELECT 1) SELECT * FROM x)");
     }
+
+    [Fact]
+    public void Test_Alias_Equal_Expr()
+    {
+        var dialects = AllDialects.Where(d => d.SupportsEqualAliasAssignment).ToList();
+
+        var sql = "SELECT some_alias = some_column FROM some_table";
+        var expected = "SELECT some_column AS some_alias FROM some_table";
+        OneStatementParsesTo(sql, expected, dialects);
+
+        sql = "SELECT some_alias = (a*b) FROM some_table";
+        expected = "SELECT (a * b) AS some_alias FROM some_table";
+        OneStatementParsesTo(sql, expected, dialects);
+
+        dialects = AllDialects.Where(d => !d.SupportsEqualAliasAssignment).ToList();
+        sql = "SELECT x = (a * b) FROM some_table";
+        expected = "SELECT x = (a * b) FROM some_table";
+        OneStatementParsesTo(sql, expected, dialects);
+    }
 }
