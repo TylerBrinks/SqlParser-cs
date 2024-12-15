@@ -2188,7 +2188,7 @@ public partial class Parser
                 options ??= [];
                 options.Add(new ColumnOptionDef(opt));
             }
-            else if (_dialect is MySqlDialect or GenericDialect && ParseKeyword(Keyword.COLLATE))
+            else if (_dialect is MySqlDialect or SnowflakeDialect or GenericDialect && ParseKeyword(Keyword.COLLATE))
             {
                 collation = ParseObjectName();
             }
@@ -2234,6 +2234,12 @@ public partial class Parser
 
     public ColumnOption? ParseOptionalColumnOption()
     {
+        var option = _dialect.ParseColumnOption(this);
+        if (option!=null)
+        {
+            return option;
+        }
+
         if (ParseKeywordSequence(Keyword.CHARACTER, Keyword.SET))
         {
             return new ColumnOption.CharacterSet(ParseObjectName());
@@ -2395,7 +2401,7 @@ public partial class Parser
 
         if (_dialect is MsSqlDialect or GenericDialect && ParseKeyword(Keyword.IDENTITY))
         {
-            var property = ParseInit(ConsumeToken<LeftParen>(),
+            var parameters = ParseInit(ConsumeToken<LeftParen>(),
                 () =>
                 {
                     var seed = ParseNumber();
@@ -2403,18 +2409,27 @@ public partial class Parser
                     var increment = ParseNumber();
                     ExpectToken<RightParen>();
 
-                    return new IdentityProperty(seed, increment);
+                    return new IdentityPropertyFormatKind.FunctionCall(new IdentityParameters(seed, increment));
                 });
 
-            return new ColumnOption.Identity(property);
+            return new ColumnOption.Identity(new IdentityPropertyKind.Identity(new IdentityProperty(parameters, null)));
         }
 
-        if(_dialect is SQLiteDialect or GenericDialect && ParseKeywordSequence(Keyword.ON, Keyword.CONFLICT))
+        if (_dialect is SQLiteDialect or GenericDialect && ParseKeywordSequence(Keyword.ON, Keyword.CONFLICT))
         {
             return new ColumnOption.OnConflict(ExpectOneOfKeywords(Keyword.ROLLBACK, Keyword.ABORT, Keyword.FAIL, Keyword.IGNORE, Keyword.REPLACE));
         }
 
         return null;
+    }
+
+    public Tag ParseTag()
+    {
+        var name = ParseIdentifier();
+        ExpectToken<Equal>();
+        var value = ParseLiteralString();
+
+        return new Tag(name, value);
     }
 
     public ColumnOption? ParseOptionalColumnOptionGenerated()

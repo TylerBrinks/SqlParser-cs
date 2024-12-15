@@ -114,6 +114,9 @@ public static class EnumWriter
             HiveDelimiter.LinesTerminatedBy => "LINES TERMINATED BY",
             HiveDelimiter.NullDefinedAs => "NULL DEFINED AS",
 
+            IdentityPropertyOrder.NoOrder => " NOORDER",
+            IdentityPropertyOrder.Order => " ORDER",
+
             JsonOperator.Arrow => "->",
             JsonOperator.LongArrow => "->>",
             JsonOperator.HashArrow => "#>",

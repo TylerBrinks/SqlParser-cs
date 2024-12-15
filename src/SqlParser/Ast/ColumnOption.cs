@@ -297,7 +297,6 @@ public abstract record ColumnOption : IWriteSql, IElement
             }
         }
     }
-
     /// <summary>
     /// BigQuery specific: Explicit column options in a view or table
     /// <c>OPTIONS(description="field desc")</c>
@@ -310,17 +309,35 @@ public abstract record ColumnOption : IWriteSql, IElement
             writer.Write($"OPTIONS({OptionList.ToSqlDelimited()})");
         }
     }
-
-    public record Identity(IdentityProperty? Parameters = null) : ColumnOption
+    /// <summary>
+    /// Creates an identity or an autoincrement column in a table.
+    /// </summary>
+    public record Identity(IdentityPropertyKind PropertyKind) : ColumnOption
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.Write("IDENTITY");
-
-            if (Parameters != null)
-            {
-                writer.WriteSql($"({Parameters})");
-            }
+                writer.WriteSql($"{PropertyKind}");
+        }
+    }
+    /// <summary>
+    /// Snowflake specific: an option of specifying security masking or projection policy to set on a column.
+    /// </summary>
+    /// <param name="ColumnPolicy"></param>
+    public record Policy(ColumnPolicy ColumnPolicy) : ColumnOption
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{ColumnPolicy}");
+        }
+    }
+    /// <summary>
+    /// Snowflake specific: Specifies the tag name and the tag string value.
+    /// </summary>
+    public record Tags(TagsColumnOption TagOptions) : ColumnOption
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{TagOptions}");
         }
     }
 

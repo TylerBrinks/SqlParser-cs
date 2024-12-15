@@ -959,7 +959,6 @@ public partial class Parser
     {
         return condition ? initialization() : default;
     }
-
     /// <summary>
     /// Parse a comma-separated list of 0+ items accepted by `F`
     /// `end_token` - expected end token for the closure (e.g. [Token::RParen], [Token::RBrace] ...)

@@ -7,6 +7,7 @@ using DataType = SqlParser.Ast.DataType;
 // ReSharper disable StringLiteralTypo
 
 namespace SqlParser.Tests.Dialects;
+
 public class SnowflakeDialectTests : ParserTestBase
 {
     public SnowflakeDialectTests()
@@ -1047,13 +1048,15 @@ public class SnowflakeDialectTests : ParserTestBase
     public void Parse_Of_Create_Or_Replace_View_With_Comment_Missing_Equal()
     {
         Assert.Single(ParseSqlStatements("CREATE OR REPLACE VIEW v COMMENT = 'hello, world' AS SELECT 1"));
-        Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE OR REPLACE VIEW v COMMENT 'hello, world' AS SELECT 1"));
+        Assert.Throws<ParserException>(() =>
+            ParseSqlStatements("CREATE OR REPLACE VIEW v COMMENT 'hello, world' AS SELECT 1"));
     }
 
     [Fact]
     public void Parse_Create_Or_Replace_With_Comment_For_Snowflake()
     {
-        var view = VerifiedStatement<Statement.CreateView>("CREATE OR REPLACE VIEW v COMMENT = 'hello, world' AS SELECT 1");
+        var view = VerifiedStatement<Statement.CreateView>(
+            "CREATE OR REPLACE VIEW v COMMENT = 'hello, world' AS SELECT 1");
 
         Assert.Equal("v", view.Name);
         Assert.Null(view.Columns);
@@ -1083,16 +1086,17 @@ public class SnowflakeDialectTests : ParserTestBase
             Alias = new TableAlias("tu")
         })
         {
-            Joins = [
+            Joins =
+            [
                 new Join(new TableFactor.Table("quotes_unixtime")
                     {
                         Alias = new TableAlias("qu")
                     },
                     new JoinOperator.AsOf(new BinaryOp(
-                            new CompoundIdentifier(["tu", "trade_time"]),
-                            BinaryOperator.GtEq,
-                            new CompoundIdentifier(["qu", "quote_time"])
-                        ), new JoinConstraint.None()))
+                        new CompoundIdentifier(["tu", "trade_time"]),
+                        BinaryOperator.GtEq,
+                        new CompoundIdentifier(["qu", "quote_time"])
+                    ), new JoinConstraint.None()))
             ]
         };
 
@@ -1193,7 +1197,8 @@ public class SnowflakeDialectTests : ParserTestBase
         Assert.Equal("my_table", create.Element.Name);
         Assert.Equal("policy_name", create.Element.WithAggregationPolicy!);
 
-        create = (Statement.CreateTable)ParseSqlStatements("CREATE TABLE my_table (a number) AGGREGATION POLICY policy_name")[0]!;
+        create = (Statement.CreateTable)ParseSqlStatements(
+            "CREATE TABLE my_table (a number) AGGREGATION POLICY policy_name")[0]!;
 
         Assert.Equal("my_table", create.Element.Name);
         Assert.Equal("policy_name", create.Element.WithAggregationPolicy!);
@@ -1209,7 +1214,8 @@ public class SnowflakeDialectTests : ParserTestBase
         Assert.Equal("my_table", create.Element.Name);
         Assert.Equal("WITH ROW ACCESS POLICY policy_name ON (a)", create.Element.WithRowAccessPolicy!.ToSql());
 
-        create = (Statement.CreateTable)ParseSqlStatements("CREATE TABLE my_table (a number, b number) ROW ACCESS POLICY policy_name ON (a)")[0]!;
+        create = (Statement.CreateTable)ParseSqlStatements(
+            "CREATE TABLE my_table (a number, b number) ROW ACCESS POLICY policy_name ON (a)")[0]!;
 
         Assert.Equal("my_table", create.Element.Name);
         Assert.Equal("WITH ROW ACCESS POLICY policy_name ON (a)", create.Element.WithRowAccessPolicy!.ToSql());
@@ -1225,16 +1231,17 @@ public class SnowflakeDialectTests : ParserTestBase
         Assert.Equal("my_table", create.Element.Name);
         Assert.Equal(
         [
-            new ("A", "TAG A"),
-            new ("B", "TAG B")
+            new("A", "TAG A"),
+            new("B", "TAG B")
         ], create.Element.WithTags);
 
-        create = (Statement.CreateTable)ParseSqlStatements("CREATE TABLE my_table (a number) TAG (A='TAG A', B='TAG B')")[0]!;
+        create = (Statement.CreateTable)ParseSqlStatements(
+            "CREATE TABLE my_table (a number) TAG (A='TAG A', B='TAG B')")[0]!;
         Assert.Equal("my_table", create.Element.Name);
         Assert.Equal(
         [
-            new ("A", "TAG A"),
-            new ("B", "TAG B")
+            new("A", "TAG A"),
+            new("B", "TAG B")
         ], create.Element.WithTags);
     }
 
@@ -1251,16 +1258,17 @@ public class SnowflakeDialectTests : ParserTestBase
     [Fact]
     public void Test_Select_Wildcard_With_Replace_And_Rename()
     {
-        var select = VerifiedOnlySelect("SELECT * REPLACE (col_z || col_z AS col_z) RENAME (col_z AS col_zz) FROM data");
+        var select =
+            VerifiedOnlySelect("SELECT * REPLACE (col_z || col_z AS col_z) RENAME (col_z AS col_zz) FROM data");
 
         var expected = new SelectItem.Wildcard(new WildcardAdditionalOptions
         {
             ReplaceOption = new ReplaceSelectItem([
-                new (new BinaryOp(
-                        new Identifier("col_z"),
-                        BinaryOperator.StringConcat,
-                        new Identifier("col_z")
-                    ), "col_z", true)
+                new(new BinaryOp(
+                    new Identifier("col_z"),
+                    BinaryOperator.StringConcat,
+                    new Identifier("col_z")
+                ), "col_z", true)
             ]),
             RenameOption = new RenameSelectItem.Multiple([
                 new IdentWithAlias("col_z", "col_zz")
@@ -1326,7 +1334,8 @@ public class SnowflakeDialectTests : ParserTestBase
             Assert.Equal(expected, useStatement.Name);
         }
 
-        Assert.Equal(new Statement.Use(new Use.Object(new ObjectName(["mydb", "my_schema"]))), VerifiedStatement("USE mydb.my_schema"));
+        Assert.Equal(new Statement.Use(new Use.Object(new ObjectName(["mydb", "my_schema"]))),
+            VerifiedStatement("USE mydb.my_schema"));
 
         foreach (var quote in quoteStyles)
         {
@@ -1337,10 +1346,10 @@ public class SnowflakeDialectTests : ParserTestBase
                 VerifiedStatement($"USE SCHEMA {quote}my_schema{quote}"));
 
             Assert.Equal(new Statement.Use(new Use.Schema(new ObjectName(
-                    [
-                        new Ident("CATALOG", quote),
-                        new Ident("my_schema", quote)
-                    ]))),
+                [
+                    new Ident("CATALOG", quote),
+                    new Ident("my_schema", quote)
+                ]))),
                 VerifiedStatement($"USE SCHEMA {quote}CATALOG{quote}.{quote}my_schema{quote}"));
         }
     }
@@ -1349,14 +1358,18 @@ public class SnowflakeDialectTests : ParserTestBase
     public void View_Comment_Option_Should_Be_After_Column_List()
     {
         VerifiedStatement("CREATE OR REPLACE VIEW v (a) COMMENT = 'Comment' AS SELECT a FROM t");
-        VerifiedStatement("CREATE OR REPLACE VIEW v (a COMMENT 'a comment', b, c COMMENT 'c comment') COMMENT = 'Comment' AS SELECT a FROM t");
-        VerifiedStatement("CREATE OR REPLACE VIEW v (a COMMENT 'a comment', b, c COMMENT 'c comment') WITH (foo = bar) COMMENT = 'Comment' AS SELECT a FROM t");
+        VerifiedStatement(
+            "CREATE OR REPLACE VIEW v (a COMMENT 'a comment', b, c COMMENT 'c comment') COMMENT = 'Comment' AS SELECT a FROM t");
+        VerifiedStatement(
+            "CREATE OR REPLACE VIEW v (a COMMENT 'a comment', b, c COMMENT 'c comment') WITH (foo = bar) COMMENT = 'Comment' AS SELECT a FROM t");
     }
 
     [Fact]
     public void Parse_View_Column_Descriptions()
     {
-        var create = VerifiedStatement<Statement.CreateView>("CREATE OR REPLACE VIEW v (a COMMENT 'Comment', b) AS SELECT a, b FROM table1");
+        var create =
+            VerifiedStatement<Statement.CreateView>(
+                "CREATE OR REPLACE VIEW v (a COMMENT 'Comment', b) AS SELECT a, b FROM table1");
         var columns = new Sequence<ViewColumnDef>
         {
             new("a", Options: [new ColumnOption.Comment("Comment")]),
@@ -1365,5 +1378,169 @@ public class SnowflakeDialectTests : ParserTestBase
 
         Assert.Equal("v", create.Name);
         Assert.Equal(columns, create.Columns);
+    }
+
+    [Fact]
+    public void Test_Snowflake_Create_Table_With_Autoincrement_Columns()
+    {
+        const string sql = """
+                  CREATE TABLE my_table (
+                  a INT AUTOINCREMENT ORDER,
+                   b INT AUTOINCREMENT(100, 1) NOORDER,
+                   c INT IDENTITY,
+                   d INT IDENTITY START 100 INCREMENT 1 ORDER
+                  )
+                  """;
+
+        var create = VerifiedStatement<Statement.CreateTable>(sql, [new SnowflakeDialect()]);
+
+        var columns = new Sequence<ColumnDef>
+        {
+            new("a", new DataType.Int(), Options:
+            [
+                new(new ColumnOption.Identity(new IdentityPropertyKind.Autoincrement(
+                    new IdentityProperty(null, IdentityPropertyOrder.Order))))
+            ]),
+
+            new("b", new DataType.Int(), Options:
+            [
+                new(new ColumnOption.Identity(new IdentityPropertyKind.Autoincrement(
+                    new IdentityProperty(new IdentityPropertyFormatKind.FunctionCall(
+                        new IdentityParameters(
+                            new LiteralValue(new Value.Number("100")),
+                            new LiteralValue(new Value.Number("1")))), IdentityPropertyOrder.NoOrder))))
+            ]),
+
+            new("c", new DataType.Int(), Options:
+            [
+                new(new ColumnOption.Identity(new IdentityPropertyKind.Identity(
+                    new IdentityProperty(null, null))))
+            ]),
+
+            new("d", new DataType.Int(), Options:
+            [
+                new(new ColumnOption.Identity(new IdentityPropertyKind.Identity(
+                    new IdentityProperty(new IdentityPropertyFormatKind.StartAndIncrement(
+                            new IdentityParameters(
+                                new LiteralValue(new Value.Number("100")),
+                                new LiteralValue(new Value.Number("1")))), IdentityPropertyOrder.Order
+                    ))))
+            ])
+        };
+
+        Assert.Equal(columns, create.Element.Columns);
+    }
+
+    [Fact]
+    public void Test_Snowflake_Create_Table_With_Collated_Column()
+    {
+        var create = VerifiedStatement<Statement.CreateTable>("CREATE TABLE my_table (a TEXT COLLATE 'de_DE')");
+
+        var expected = new Sequence<ColumnDef>
+        {
+            new ("a", new DataType.Text(), new ObjectName([new Ident("de_DE", '\'')]))
+        };
+
+        Assert.Equal(expected, create.Element.Columns);
+    }
+
+    [Fact]
+    public void Test_Snowflake_Create_Table_With_Columns_Masking_Policy()
+    {
+        List<(string, bool, Sequence<Ident>?)> statements = [
+            ("CREATE TABLE my_table (a INT WITH MASKING POLICY p)", true, null),
+            ("CREATE TABLE my_table (a INT MASKING POLICY p)", false, null),
+            ("CREATE TABLE my_table (a INT WITH MASKING POLICY p USING (a, b))", true, ["a", "b"]),
+            ("CREATE TABLE my_table (a INT MASKING POLICY p USING (a, b))", false, ["a", "b"]),
+        ];
+        foreach (var (sql, with, usingColumns) in statements)
+        {
+            var create = VerifiedStatement<Statement.CreateTable>(sql);
+
+            var expected = new Sequence<ColumnDef>
+            {
+                new("a", new DataType.Int(), Options:[
+                   new(new ColumnOption.Policy(new ColumnPolicy.MaskingPolicy(new ColumnPolicyProperty(with, "p", usingColumns))))
+                ])
+            };
+
+            Assert.Equal(expected, create.Element.Columns);
+        }
+    }
+
+    [Fact]
+    public void Test_Snowflake_Create_Table_With_Columns_Projection_Policy()
+    {
+        List<(string, bool)> statements = [
+            ("CREATE TABLE my_table (a INT WITH PROJECTION POLICY p)", true),
+            ("CREATE TABLE my_table (a INT PROJECTION POLICY p)", false),
+        ];
+        foreach (var (sql, with) in statements)
+        {
+            var create = VerifiedStatement<Statement.CreateTable>(sql);
+
+            var expected = new Sequence<ColumnDef>
+            {
+                new("a", new DataType.Int(), Options:[
+                    new(new ColumnOption.Policy(new ColumnPolicy.ProjectionPolicy(new ColumnPolicyProperty(with, "p", null))))
+                ])
+            };
+
+            Assert.Equal(expected, create.Element.Columns);
+        }
+    }
+
+    [Fact]
+    public void Test_Snowflake_Create_Table_With_Columns_Tags()
+    {
+        List<(string, bool)> statements = [
+            ("CREATE TABLE my_table (a INT WITH TAG (A='TAG A', B='TAG B'))", true),
+            ("CREATE TABLE my_table (a INT TAG (A='TAG A', B='TAG B'))", false),
+        ];
+        foreach (var (sql, with) in statements)
+        {
+            var create = VerifiedStatement<Statement.CreateTable>(sql);
+
+            var expected = new Sequence<ColumnDef>
+            {
+                new("a", new DataType.Int(), Options:[
+                    new(new ColumnOption.Tags(new TagsColumnOption(with, [
+                        new("A", "TAG A"),
+                        new("B", "TAG B")
+                    ])))
+                ])
+            };
+
+            Assert.Equal(expected, create.Element.Columns);
+        }
+    }
+
+    [Fact]
+    public void Test_Snowflake_Create_Table_With_Several_Column_Options()
+    {
+        const string sql = """
+                           CREATE TABLE my_table (
+                           a INT IDENTITY WITH MASKING POLICY p1 USING (a, b) WITH TAG (A='TAG A', B='TAG B'),
+                            b TEXT COLLATE 'de_DE' PROJECTION POLICY p2 TAG (C='TAG C', D='TAG D')
+                           )
+                           """;
+
+        var create = VerifiedStatement<Statement.CreateTable>(sql);
+
+        var expected = new Sequence<ColumnDef>
+        {
+            new("a", new DataType.Int(), Options:[
+                new(new ColumnOption.Identity(new IdentityPropertyKind.Identity(new IdentityProperty(null, null)))),
+                new(new ColumnOption.Policy(new ColumnPolicy.MaskingPolicy(new ColumnPolicyProperty(true, "p1",["a", "b"])))),
+                new (new ColumnOption.Tags(new TagsColumnOption(true, [new Tag("A", "TAG A"), new Tag("B", "TAG B")])))
+            ]),
+
+            new("b", new DataType.Text(), new ObjectName([new Ident("de_DE", '\'')]), Options:[
+                new(new ColumnOption.Policy(new ColumnPolicy.ProjectionPolicy(new ColumnPolicyProperty(false, "p2", null)))),
+                new (new ColumnOption.Tags(new TagsColumnOption(false, [new Tag("C", "TAG C"), new Tag("D", "TAG D")])))
+            ])
+        };
+
+        Assert.Equal(expected, create.Element.Columns);
     }
 }

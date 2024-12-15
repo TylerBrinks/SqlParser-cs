@@ -17,7 +17,7 @@ public class SnowflakeDialect : Dialect
 
     public override bool IsIdentifierPart(char character)
         => character.IsAlphaNumeric() || character is Symbols.Dollar or Symbols.Underscore;
-    
+
     public override Statement? ParseStatement(Parser parser)
     {
         if (parser.ParseKeyword(Keyword.CREATE))
@@ -32,7 +32,7 @@ public class SnowflakeDialect : Dialect
                 Keyword.GLOBAL => true,
                 _ => null
             };
-            
+
             var temp = false;
             var @volatile = false;
             var transient = false;
@@ -90,6 +90,101 @@ public class SnowflakeDialect : Dialect
         return null;
     }
 
+    public override short? GetNextPrecedence(Parser parser)
+    {
+        var token = parser.PeekToken();
+
+        if (token is Colon)
+        {
+            return GetPrecedence(Precedence.DoubleColon);
+        }
+
+        return null;
+    }
+
+    public override ColumnOption? ParseColumnOption(Parser parser)
+    {
+        return parser.MaybeParse<ColumnOption?>(() =>
+        {
+            var with = parser.ParseKeyword(Keyword.WITH);
+
+            if (parser.ParseKeyword(Keyword.IDENTITY))
+            {
+                return new ColumnOption.Identity(new IdentityPropertyKind.Identity(ParseIdentityProperty(parser)));
+            }
+            
+            if (parser.ParseKeyword(Keyword.AUTOINCREMENT))
+            {
+                return new ColumnOption.Identity(new IdentityPropertyKind.Autoincrement(ParseIdentityProperty(parser)));
+            }
+            
+            if (parser.ParseKeywordSequence(Keyword.MASKING, Keyword.POLICY))
+            {
+                return new ColumnOption.Policy(new ColumnPolicy.MaskingPolicy(ParseColumnPolicyProperty(parser, with)));
+            }
+            
+            if (parser.ParseKeywordSequence(Keyword.PROJECTION, Keyword.POLICY))
+            {
+                return new ColumnOption.Policy(new ColumnPolicy.ProjectionPolicy(ParseColumnPolicyProperty(parser, with)));
+            }
+            
+            if (parser.ParseKeyword(Keyword.TAG))
+            {
+                return new ColumnOption.Tags(ParseColumnTags(parser, with));
+            }
+            
+            throw new ParserException("match not found");
+        });
+    }
+
+    private static IdentityProperty ParseIdentityProperty(Parser parser)
+    {
+        IdentityPropertyFormatKind? parameters =null;
+
+        if (parser.ConsumeToken<LeftParen>())
+        {
+            var seed = parser.ParseNumber();
+            parser.ExpectToken<Comma>();
+            var increment = parser.ParseNumber();
+            parser.ExpectRightParen();
+            parameters = new IdentityPropertyFormatKind.FunctionCall(new IdentityParameters(seed, increment));
+        }
+        else if (parser.ParseKeyword(Keyword.START))
+        {
+            var seed = parser.ParseNumber();
+            parser.ExpectKeyword(Keyword.INCREMENT);
+            var increment = parser.ParseNumber();
+            parameters = new IdentityPropertyFormatKind.StartAndIncrement(new IdentityParameters(seed, increment));
+        }
+
+        IdentityPropertyOrder? order = parser.ParseOneOfKeywords(Keyword.ORDER, Keyword.NOORDER) switch
+        {
+            Keyword.ORDER => IdentityPropertyOrder.Order,
+            Keyword.NOORDER => IdentityPropertyOrder.NoOrder,
+            _ => null
+        };
+
+        return new IdentityProperty(parameters, order);
+    }
+
+    private static ColumnPolicyProperty ParseColumnPolicyProperty(Parser parser, bool with)
+    {
+        var policyName = parser.ParseIdentifier();
+        var usingColumns = Parser.ParseInit(parser.ParseKeyword(Keyword.USING), () =>
+        {
+            return parser.ExpectParens(() => parser.ParseCommaSeparated(parser.ParseIdentifier));
+        });
+
+        return new ColumnPolicyProperty(with, policyName, usingColumns);
+    }
+
+    private TagsColumnOption ParseColumnTags(Parser parser, bool with)
+    {
+        var tags = parser.ExpectParens(() => parser.ParseCommaSeparated(parser.ParseTag));
+
+        return new TagsColumnOption(with, tags);
+    }
+
     private static Statement.CreateTable ParseCreateTable(bool orReplace, bool? global, bool temp, bool @volatile, bool transient, Parser parser)
     {
         var ifNotExists = parser.ParseIfNotExists();
@@ -111,7 +206,7 @@ public class SnowflakeDialect : Dialect
         ObjectName? aggregationPolicy = null;
         Sequence<Tag>? tags = null;
         Sequence<TableConstraint>? constraints = null;
-        
+
         var loop = true;
 
         while (loop)
@@ -245,15 +340,15 @@ public class SnowflakeDialect : Dialect
                     }
 
                 case EOF:
-                {
-                    if (!columns.SafeAny())
                     {
-                        throw new ParserException("unexpected end of input");
-                    }
+                        if (!columns.SafeAny())
+                        {
+                            throw new ParserException("unexpected end of input");
+                        }
 
-                    loop = false;
-                    break;
-                }
+                        loop = false;
+                        break;
+                    }
 
                 case SemiColon:
                     {
@@ -873,18 +968,6 @@ public class SnowflakeDialect : Dialect
         }
 
         return new Ident(ident.ToString());
-    }
-
-    public override short? GetNextPrecedence(Parser parser)
-    {
-        var token = parser.PeekToken();
-
-        if (token is Colon)
-        {
-            return GetPrecedence(Precedence.DoubleColon);
-        }
-
-        return null;
     }
 
     public override bool SupportsFilterDuringAggregation => true;

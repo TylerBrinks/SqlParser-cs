@@ -378,14 +378,18 @@ public class MsSqlDialectTests : ParserTestBase
         {
             ("CREATE TABLE mytable (columnA INT IDENTITY NOT NULL)", 
                 [
-                    new ColumnOptionDef(new ColumnOption.Identity()),
+                    new ColumnOptionDef(new ColumnOption.Identity(new IdentityPropertyKind.Identity(new IdentityProperty(null, null)))),
                     new ColumnOptionDef(new ColumnOption.NotNull())
                 ]),
 
             ("CREATE TABLE mytable (columnA INT IDENTITY(1, 1) NOT NULL)", [
                 new ColumnOptionDef(
-                    new ColumnOption.Identity(new IdentityProperty(
-                    new LiteralValue(new Value.Number("1")), new LiteralValue(new Value.Number("1"))))),
+                    new ColumnOption.Identity(
+                        new IdentityPropertyKind.Identity(
+                            new IdentityProperty(new IdentityPropertyFormatKind.FunctionCall(
+                                new IdentityParameters(
+                                    new LiteralValue(new Value.Number("1")), new LiteralValue(new Value.Number("1")))), null)))),
+
                 new ColumnOptionDef(new ColumnOption.NotNull())
             ])
         };

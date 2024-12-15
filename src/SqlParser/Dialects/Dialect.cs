@@ -245,6 +245,8 @@ public abstract partial class Dialect
     {
         return false;
     }
+
+    public virtual ColumnOption? ParseColumnOption(Parser parser) => null;
     /// <summary>
     /// Returns the precedence when the precedence is otherwise unknown
     /// </summary>
