@@ -75,4 +75,5 @@ public partial class Dialect
     public virtual bool SupportsLimitComma => false;
     public virtual bool SupportsAscDescInColumnDefinition => false;
     public virtual bool SupportsEqualAliasAssignment => false;
+    public virtual bool SupportsTryConvert => false;
 }

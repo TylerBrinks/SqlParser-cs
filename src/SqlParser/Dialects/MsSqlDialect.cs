@@ -36,4 +36,5 @@ public class MsSqlDialect : Dialect
     public override bool ConvertTypeBeforeValue => true;
     public override bool SupportsConnectBy => true;
     public override bool SupportsEqualAliasAssignment => true;
+    public override bool SupportsTryConvert => true;
 }

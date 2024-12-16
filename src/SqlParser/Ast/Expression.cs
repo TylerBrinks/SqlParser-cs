@@ -312,11 +312,13 @@ public abstract record Expression : IWriteSql, IElement
         DataType? DataType, 
         ObjectName? CharacterSet, 
         bool TargetBeforeValue,
-        Sequence<Expression> Styles) : Expression
+        Sequence<Expression> Styles,
+        bool IsTry = false) : Expression
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.Write("CONVERT(");
+            var isTry = IsTry ? "TRY_" : string.Empty;
+            writer.Write($"CONVERT({isTry}");
 
             if (DataType != null)
             {

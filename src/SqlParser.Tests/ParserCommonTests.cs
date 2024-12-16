@@ -6750,4 +6750,16 @@ public class ParserCommonTests : ParserTestBase
         expected = "SELECT x = (a * b) FROM some_table";
         OneStatementParsesTo(sql, expected, dialects);
     }
+
+    [Fact]
+    public void Test_Try_Convert()
+    {
+        var dialects = AllDialects.Where(d => d is {SupportsTryConvert: true, ConvertTypeBeforeValue: true });
+
+        VerifiedExpr("TRY_CONVERT(VARCHAR(MAX), 'foo')");
+
+        dialects = AllDialects.Where(d => d is { SupportsTryConvert: true, ConvertTypeBeforeValue: false });
+
+        VerifiedExpr("TRY_CONVERT('foo', VARCHAR(MAX))");
+    }
 }

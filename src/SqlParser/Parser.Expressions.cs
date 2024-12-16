@@ -168,11 +168,11 @@ public partial class Parser
             };
         }
 
-        Expression ParseConvertExpr()
+        Expression ParseConvertExpr(bool tryConvert)
         {
             if (_dialect is MsSqlDialect)
             {
-                return ParseMsSqlConvert();
+                return ParseMsSqlConvert(tryConvert);
             }
 
             Expression expr;
@@ -186,7 +186,7 @@ public partial class Parser
                     dataType = ParseDataType();
                     ExpectToken<Comma>();
                     expr = ParseExpr();
-                    return new Expression.Convert(expr, null, charset, false, new Sequence<Expression>());
+                    return new Expression.Convert(expr, null, charset, false, new Sequence<Expression>(), tryConvert);
 
                 });
             }
@@ -215,7 +215,7 @@ public partial class Parser
             return new Expression.Convert(expr, dataType, charset, false, new Sequence<Expression>());
         }
 
-        Expression ParseMsSqlConvert()
+        Expression ParseMsSqlConvert(bool tryConvert)
         {
             return ExpectParens(() =>
             {
@@ -229,7 +229,7 @@ public partial class Parser
                     styles = ParseCommaSeparated(ParseExpr);
                 }
 
-                return new Expression.Convert(expr, dataType, null, true, styles);
+                return new Expression.Convert(expr, dataType, null, true, styles, tryConvert);
             });
         }
 
@@ -744,7 +744,8 @@ public partial class Parser
                 => ParseTimeFunctions(new ObjectName(word.ToIdent())),
 
             Word { Keyword: Keyword.CASE } => ParseCaseExpr(),
-            Word { Keyword: Keyword.CONVERT } => ParseConvertExpr(),
+            Word { Keyword: Keyword.CONVERT } => ParseConvertExpr(false),
+            Word { Keyword: Keyword.TRY_CONVERT } when _dialect.SupportsTryConvert => ParseConvertExpr(true),
             Word { Keyword: Keyword.CAST } => ParseCastExpression(CastKind.Cast),
             Word { Keyword: Keyword.TRY_CAST } => ParseCastExpression(CastKind.TryCast),
             Word { Keyword: Keyword.SAFE_CAST } => ParseCastExpression(CastKind.SafeCast),

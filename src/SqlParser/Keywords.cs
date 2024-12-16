@@ -816,6 +816,7 @@ public enum Keyword
     TRUE,
     TRUNCATE,
     TRY_CAST,
+    TRY_CONVERT, 
     TUPLE,
     TYPE,
     UESCAPE,
