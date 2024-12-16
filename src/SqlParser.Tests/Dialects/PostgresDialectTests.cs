@@ -2638,6 +2638,30 @@ public class PostgresDialectTests : ParserTestBase
 
         Assert.Equal(expected, VerifiedStatement(sql, new[] { new PostgreSqlDialect() }));
     }
+
+    [Fact]
+    public void Parse_Create_Type_As_Enum()
+    {
+        var statement = OneStatementParsesTo<Statement.CreateType>("""
+                                             CREATE TYPE public.my_type AS ENUM (
+                                                 'label1',
+                                                 'label2',
+                                                 'label3',
+                                                 'label4'
+                                             );
+                                             """,
+            "CREATE TYPE public.my_type AS ENUM ('label1', 'label2', 'label3', 'label4')");
+
+        Assert.Equal(new ObjectName(["public", "my_type"]), statement.Name);
+
+        var representation = new UserDefinedTypeRepresentation.Enum([
+            new Ident("label1", '\''),
+            new Ident("label2", '\''),
+            new Ident("label3", '\''),
+            new Ident("label4", '\''),
+        ]);
+        Assert.Equal(representation, statement.Representation);
+    }
 }
 
 public record TestCase(string Sql, Owner ExpectedOwner);

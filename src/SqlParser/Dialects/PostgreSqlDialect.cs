@@ -67,7 +67,18 @@ public class PostgreSqlDialect : Dialect
 
     public override Statement? ParseStatement(Parser parser)
     {
-        return parser.ParseKeyword(Keyword.COMMENT) ? ParseComment(parser) : null;
+        if (parser.ParseKeyword(Keyword.COMMENT))
+        {
+            return ParseComment(parser);
+        }
+        
+        if (parser.ParseKeyword(Keyword.CREATE))
+        {
+            parser.PrevToken();
+            return ParseCreate(parser);
+        }
+
+        return null;
     }
 
     public static Statement.Comment ParseComment(Parser parser)
@@ -105,6 +116,22 @@ public class PostgreSqlDialect : Dialect
         var comment = parser.ParseKeyword(Keyword.NULL) ? null : parser.ParseLiteralString();
 
         return new Statement.Comment(name, objectType, comment, ifExists);
+    }
+
+    public static Statement? ParseCreate(Parser parser)
+    {
+        var name = parser.MaybeParse(() =>
+        {
+            parser.ExpectKeyword(Keyword.CREATE);
+            parser.ExpectKeyword(Keyword.TYPE);
+            var name = parser.ParseObjectName(false);
+            parser.ExpectKeyword(Keyword.AS);
+            parser.ExpectKeyword(Keyword.ENUM);
+
+            return name;
+        });
+
+        return name != null ? ParseCreateTypeAsEnum(parser, name) : null;
     }
 
     public override short GetPrecedence(Precedence precedence)
@@ -232,6 +259,19 @@ public class PostgreSqlDialect : Dialect
             };
         }
     }
+
+    private static Statement ParseCreateTypeAsEnum(Parser parser, ObjectName? name)
+    {
+        if (!parser.ConsumeToken<LeftParen>())
+        {
+            Parser.ThrowExpected("'(' after CREATE TYPE AS ENUM", parser.PeekToken());
+        }
+
+        var labels = parser.ParseCommaSeparated0(parser.ParseIdentifier, typeof(RightParen));
+        parser.ExpectRightParen();
+        return new Statement.CreateType(name, new UserDefinedTypeRepresentation.Enum(labels));
+    }
+
     public override bool SupportsGroupByExpression => true;
     public override bool SupportsUnicodeStringLiteral => true;
     public override bool AllowExtractCustom => true;
