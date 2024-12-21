@@ -103,7 +103,7 @@ public abstract record Statement : IWriteSql, IElement
             writer.WriteSql($" AS {Query}");
         }
     }
-    
+
     /// <summary>
     /// Analyze statement
     /// </summary>
@@ -2116,6 +2116,22 @@ public abstract record Statement : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// SHOW DATABASES [LIKE 'pattern']
+    /// </summary>
+    /// <param name="Filter"></param>
+    public record ShowDatabases(ShowStatementFilter? Filter) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("SHOW DATABASES");
+
+            if (Filter != null)
+            {
+                writer.WriteSql($" {Filter}");
+            }
+        }
+    }
+    /// <summary>
     /// SHOW FUNCTIONS
     /// </summary>
     /// <param name="Filter">Show statement filter</param>
@@ -2124,6 +2140,22 @@ public abstract record Statement : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             writer.Write("SHOW FUNCTIONS");
+
+            if (Filter != null)
+            {
+                writer.WriteSql($" {Filter}");
+            }
+        }
+    }
+    /// <summary>
+    /// SHOW SCHEMAS [LIKE 'pattern']
+    /// </summary>
+    /// <param name="Filter"></param>
+    public record ShowSchemas(ShowStatementFilter? Filter) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("SHOW SCHEMAS");
 
             if (Filter != null)
             {
@@ -2150,6 +2182,37 @@ public abstract record Statement : IWriteSql, IElement
                 writer.Write(" SESSION");
             }
             writer.Write(" STATUS");
+
+            if (Filter != null)
+            {
+                writer.WriteSql($" {Filter}");
+            }
+        }
+    }
+    /// <summary>
+    /// SHOW TABLES
+    /// </summary>
+    /// <param name="Extended">True if extended</param>
+    /// <param name="Full">True if full</param>
+    /// <param name="Name">Optional database name</param>
+    /// <param name="Filter">Optional filter</param>
+    public record ShowTables(bool Extended, bool Full, ShowClause? ShowClause = null, Ident? Name = null, ShowStatementFilter? Filter = null) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            var extended = Extended ? "EXTENDED " : null;
+            var full = Full ? "FULL " : null;
+            writer.Write($"SHOW {extended}{full}TABLES");
+
+            if (ShowClause != null)
+            {
+                writer.WriteSql($" {ShowClause}");
+            }
+
+            if (Name != null)
+            {
+                writer.WriteSql($" {Name}");
+            }
 
             if (Filter != null)
             {
@@ -2200,26 +2263,22 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
-    /// <summary>
-    /// SHOW TABLES
-    /// </summary>
-    /// <param name="Extended">True if extended</param>
-    /// <param name="Full">True if full</param>
-    /// <param name="Name">Optional database name</param>
-    /// <param name="Filter">Optional filter</param>
-    public record ShowTables(bool Extended, bool Full, Ident? Name = null, ShowStatementFilter? Filter = null) : Statement
+    
+    public record ShowViews(bool Materialized, ShowClause? ShowClause = null, Ident? Name = null, ShowStatementFilter? Filter = null) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            var extended = Extended ? "EXTENDED " : null;
-            var full = Full ? "FULL " : null;
-            writer.Write($"SHOW {extended}{full}TABLES");
+            var materialized = Materialized ? "MATERIALIZED " : null;
+            writer.Write($"SHOW {materialized}VIEWS");
 
+            if (ShowClause != null)
+            {
+                writer.WriteSql($" {ShowClause}");
+            }
             if (Name != null)
             {
-                writer.WriteSql($" FROM {Name}");
+                writer.WriteSql($" {Name}");
             }
-
             if (Filter != null)
             {
                 writer.WriteSql($" {Filter}");

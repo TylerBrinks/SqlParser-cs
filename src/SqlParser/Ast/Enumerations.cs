@@ -507,6 +507,12 @@ public enum ReferentialAction
     SetDefault
 }
 
+public enum ShowClause
+{
+    In,
+    From
+}
+
 public enum StructBracketKind
 {
     Parentheses,

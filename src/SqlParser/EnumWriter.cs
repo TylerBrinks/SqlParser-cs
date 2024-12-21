@@ -151,6 +151,9 @@ public static class EnumWriter
             SearchModifier.InNaturalLanguageMode => "IN NATURAL LANGUAGE MODE",
             SearchModifier.InNaturalLanguageModeWithQueryExpansion => "IN NATURAL LANGUAGE MODE WITH QUERY EXPANSION",
             SearchModifier.WithQueryExpansion => "WITH QUERY EXPANSION",
+            
+            ShowClause.In => "IN",
+            ShowClause.From => "FROM",
 
             TimezoneInfo.WithTimeZone => "WITH TIME ZONE",
             TimezoneInfo.WithoutTimeZone => "WITHOUT TIME ZONE",

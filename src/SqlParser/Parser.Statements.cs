@@ -1770,6 +1770,17 @@ public partial class Parser
         {
             return ParseShowTables(extended, full);
         }
+
+        if (ParseKeywordSequence(Keyword.MATERIALIZED, Keyword.VIEWS))
+        {
+            return ParseShowViews(true);
+        }
+
+        if (ParseKeyword(Keyword.VIEWS))
+        {
+            return ParseShowViews(false);
+        }
+
         if (ParseKeyword(Keyword.FUNCTIONS))
         {
             return new ShowFunctions(ParseShowStatementFilter());
@@ -1799,7 +1810,41 @@ public partial class Parser
             return new ShowStatus(ParseShowStatementFilter(), session, global);
         }
 
+        if (ParseKeyword(Keyword.DATABASES))
+        {
+            return ParseShowDatabases();
+        }
+
+        if (ParseKeyword(Keyword.SCHEMAS))
+        {
+            return ParseShowSchemas();
+        }
+
         return new ShowVariable(ParseIdentifiers());
+    }
+
+    public Statement ParseShowViews(bool materialized)
+    {
+        var (clause, dbName) = ParseOneOfKeywords(Keyword.FROM, Keyword.IN) switch
+        {
+            Keyword.FROM => ((ShowClause?)ShowClause.From, ParseIdentifier()),
+            Keyword.IN => (ShowClause.In, ParseIdentifier()),
+            _ => (null, null)
+        };
+
+        var filter = ParseShowStatementFilter();
+        return new ShowViews(materialized, clause, dbName, filter);
+    }
+
+    public Statement ParseShowDatabases()
+    {
+        return new ShowDatabases(ParseShowStatementFilter());
+    }
+
+    public Statement ParseShowSchemas()
+    {
+        return new ShowSchemas(ParseShowStatementFilter());
+
     }
 
     public Statement ParseUse()

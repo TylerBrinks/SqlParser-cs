@@ -4875,9 +4875,15 @@ public partial class Parser
 
     public ShowTables ParseShowTables(bool extended, bool full)
     {
-        var dbName = ParseInit(ParseOneOfKeywords(Keyword.FROM, Keyword.IN) != Keyword.undefined, ParseIdentifier);
+        var (clause, dbName) = ParseOneOfKeywords(Keyword.FROM, Keyword.IN) switch
+        {
+            Keyword.FROM => ((ShowClause?)ShowClause.From, ParseIdentifier()),
+            Keyword.IN => (ShowClause.In, ParseIdentifier()),
+            _ => (null, null)
+        };
+
         var filter = ParseShowStatementFilter();
-        return new ShowTables(extended, full, dbName, filter);
+        return new ShowTables(extended, full, clause, dbName, filter);
     }
 
     public ShowColumns ParseShowColumns(bool extended, bool full)
@@ -4913,6 +4919,13 @@ public partial class Parser
         if (ParseKeyword(Keyword.WHERE))
         {
             return new ShowStatementFilter.Where(ParseExpr());
+        }
+
+        var filter = MaybeParse(ParseLiteralString);
+
+        if (filter != null)
+        {
+            return new ShowStatementFilter.NoKeyword(filter);
         }
 
         return null;

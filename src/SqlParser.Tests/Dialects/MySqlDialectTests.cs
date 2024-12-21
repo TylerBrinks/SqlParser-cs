@@ -71,7 +71,7 @@ public class MySqlDialectTests : ParserTestBase
         Assert.Equal(new Statement.ShowTables(false, false), show);
 
         show = VerifiedStatement<Statement.ShowTables>("SHOW TABLES FROM mydb");
-        Assert.Equal(new Statement.ShowTables(false, false, "mydb"), show);
+        Assert.Equal(new Statement.ShowTables(false, false, ShowClause.From, "mydb"), show);
 
         show = VerifiedStatement<Statement.ShowTables>("SHOW EXTENDED TABLES");
         Assert.Equal(new Statement.ShowTables(true, false), show);
@@ -80,9 +80,10 @@ public class MySqlDialectTests : ParserTestBase
         Assert.Equal(new Statement.ShowTables(false, true), show);
 
         show = VerifiedStatement<Statement.ShowTables>("SHOW TABLES LIKE 'pattern'");
-        Assert.Equal(new Statement.ShowTables(false, false, null, new ShowStatementFilter.Like("pattern")), show);
+        Assert.Equal(new Statement.ShowTables(false, false, null, null, new ShowStatementFilter.Like("pattern")), show);
 
-        OneStatementParsesTo("SHOW TABLES IN mydb", "SHOW TABLES FROM mydb");
+        VerifiedStatement("SHOW TABLES IN mydb");
+        VerifiedStatement("SHOW TABLES FROM mydb");
     }
 
     [Fact]

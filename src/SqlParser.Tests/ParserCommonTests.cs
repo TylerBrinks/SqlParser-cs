@@ -6762,4 +6762,26 @@ public class ParserCommonTests : ParserTestBase
 
         VerifiedExpr("TRY_CONVERT('foo', VARCHAR(MAX))");
     }
+
+    [Fact]
+    public void Test_Show_Dbs_Schemas_Tables_Views()
+    {
+        VerifiedStatement("SHOW DATABASES");
+        VerifiedStatement("SHOW DATABASES LIKE '%abc'");
+        VerifiedStatement("SHOW SCHEMAS");
+        VerifiedStatement("SHOW SCHEMAS LIKE '%abc'");
+        VerifiedStatement("SHOW TABLES");
+        VerifiedStatement("SHOW TABLES IN db1");
+        VerifiedStatement("SHOW TABLES IN db1 'abc'");
+        VerifiedStatement("SHOW VIEWS");
+        VerifiedStatement("SHOW VIEWS IN db1");
+        VerifiedStatement("SHOW VIEWS IN db1 'abc'");
+        VerifiedStatement("SHOW VIEWS FROM db1");
+        VerifiedStatement("SHOW VIEWS FROM db1 'abc'");
+        VerifiedStatement("SHOW MATERIALIZED VIEWS");
+        VerifiedStatement("SHOW MATERIALIZED VIEWS IN db1");
+        VerifiedStatement("SHOW MATERIALIZED VIEWS IN db1 'abc'");
+        VerifiedStatement("SHOW MATERIALIZED VIEWS FROM db1");
+        VerifiedStatement("SHOW MATERIALIZED VIEWS FROM db1 'abc'");
+    }
 }

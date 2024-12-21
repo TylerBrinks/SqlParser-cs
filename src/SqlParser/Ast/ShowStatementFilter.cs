@@ -40,5 +40,13 @@ public abstract record ShowStatementFilter : IWriteSql, IElement
         }
     }
 
+    public record NoKeyword(string Pattern) : ShowStatementFilter
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"'{Pattern.EscapeSingleQuoteString()}'");
+        }
+    }
+
     public abstract void ToSql(SqlTextWriter writer);
 }
