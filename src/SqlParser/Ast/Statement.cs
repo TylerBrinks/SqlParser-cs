@@ -1731,6 +1731,17 @@ public abstract record Statement : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// Listen for a notification channel
+    /// </summary>
+    /// <param name="Channel"></param>
+    public record Listen(Ident Channel) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"LISTEN {Channel}");
+        }
+    }
+    /// <summary>
     /// MySql `LOCK TABLES table_name  [READ [LOCAL] | [LOW_PRIORITY] WRITE]`
     /// </summary>
     /// <param name="Tables"></param>
@@ -1774,6 +1785,21 @@ public abstract record Statement : IWriteSql, IElement
             if (PartitionAction != AddDropSync.None)
             {
                 writer.WriteSql($" {PartitionAction}");
+            }
+        }
+    }
+    /// <summary>
+    /// NOTIFY a notification event together with an optional “payload” string to channel
+    /// </summary>
+    /// <param name="Channel"></param>
+    public record Notify(Ident Channel, string? Payload) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"NOTIFY {Channel}");
+            if (Payload != null)
+            {
+                writer.WriteSql($", '{Payload}'");
             }
         }
     }

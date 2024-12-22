@@ -94,6 +94,10 @@ public partial class Parser
             Keyword.EXECUTE => ParseExecute(),
             Keyword.PREPARE => ParsePrepare(),
             Keyword.MERGE => ParseMerge(),
+            // `LISTEN` and `NOTIFY` are Postgres-specific
+            // syntaxes. They are used for Postgres statement.
+            Keyword.LISTEN when _dialect.SupportsListen => ParseListen(),
+            Keyword.NOTIFY when _dialect.SupportsListen => ParseNotify(),
             Keyword.PRAGMA => ParsePragma(),
             Keyword.UNLOAD => ParseUnload(),
             // `INSTALL` is DuckDb specific https://duckdb.org/docs/extensions/overview
@@ -104,6 +108,18 @@ public partial class Parser
 
             _ => throw Expected("a SQL statement", PeekToken())
         };
+    }
+
+    public Statement ParseListen()
+    {
+        var channel = ParseIdentifier();
+        return new Listen(channel);
+    }
+    public Statement ParseNotify()
+    {
+        var channel = ParseIdentifier();
+        var payload = ConsumeToken<Comma>() ? ParseLiteralString() : null;
+        return new Notify(channel, payload);
     }
 
     public Statement ParseAnalyze()

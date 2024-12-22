@@ -6784,4 +6784,41 @@ public class ParserCommonTests : ParserTestBase
         VerifiedStatement("SHOW MATERIALIZED VIEWS FROM db1");
         VerifiedStatement("SHOW MATERIALIZED VIEWS FROM db1 'abc'");
     }
+
+    [Fact]
+    public void Parse_Listen_Channel()
+    {
+        var dialects = AllDialects.Where(d => d.SupportsListen).ToList();
+
+        var listen = VerifiedStatement<Statement.Listen>("LISTEN test1", dialects);
+
+        Assert.Equal(new Ident("test1"), listen.Channel);
+
+        Assert.Throws<ParserException>(() => ParseSqlStatements("LISTEN *"));
+
+        dialects = AllDialects.Where(d => !d.SupportsListen).ToList();
+        Assert.Throws<ParserException>(() => VerifiedStatement<Statement.Listen>("LISTEN test1", dialects));
+    }
+
+    [Fact]
+    public void Parse_Notify_Channel()
+    {
+        var dialects = AllDialects.Where(d => d.SupportsListen).ToList();
+
+        var listen = VerifiedStatement<Statement.Notify>("NOTIFY test1", dialects);
+
+        Assert.Equal(new Ident("test1"), listen.Channel);
+        Assert.Null(listen.Payload);
+
+        listen = VerifiedStatement<Statement.Notify>("NOTIFY test1, 'this is a test notification'", dialects);
+
+        Assert.Equal(new Ident("test1"), listen.Channel);
+        Assert.Equal("this is a test notification", listen.Payload);
+
+        Assert.Throws<ParserException>(() => ParseSqlStatements("NOTIFY *"));
+
+        dialects = AllDialects.Where(d => !d.SupportsListen).ToList();
+        Assert.Throws<ParserException>(() => VerifiedStatement<Statement.Listen>("NOTIFY test1", dialects));
+        Assert.Throws<ParserException>(() => VerifiedStatement<Statement.Listen>("NOTIFY test1, this is a test notification", dialects));
+    }
 }

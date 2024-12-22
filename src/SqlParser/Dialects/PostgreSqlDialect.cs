@@ -278,4 +278,6 @@ public class PostgreSqlDialect : Dialect
     public override bool AllowExtractSingleQuotes => true;
     public override bool SupportsCreateIndexWithClause => true;
     public override bool SupportsExplainWithUtilityOptions => true;
+    public override bool SupportsListen => true;
+    public override bool SupportsNotify => true;
 }

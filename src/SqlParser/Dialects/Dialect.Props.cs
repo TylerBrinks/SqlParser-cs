@@ -76,4 +76,6 @@ public partial class Dialect
     public virtual bool SupportsAscDescInColumnDefinition => false;
     public virtual bool SupportsEqualAliasAssignment => false;
     public virtual bool SupportsTryConvert => false;
+    public virtual bool SupportsListen => false;
+    public virtual bool SupportsNotify => false;
 }
