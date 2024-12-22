@@ -20,7 +20,7 @@ public class SqlQueryParser
     /// <exception cref="ParserException">Thrown when the sequence of tokens does not match the dialect's expected grammar</exception>
     /// <returns>Sequence of SQL Statement syntax tree instances</returns>
     public Sequence<Statement> Parse(ReadOnlySpan<char> sql, ParserOptions? options = null)
-        => ParseSql(sql, new GenericDialect(), options);
+        => Parse(sql, new GenericDialect(), options);
     /// <summary>
     /// Parses a given SQL string into an Abstract Syntax Tree using a given SQL dialect
     /// </summary>
@@ -28,6 +28,6 @@ public class SqlQueryParser
     /// <param name="dialect">SQL dialect instance</param>
     /// <param name="options">Parsing options</param>
     /// <returns>Sequence of SQL Statement syntax tree instances</returns>
-    public Sequence<Statement> ParseSql(ReadOnlySpan<char> sql, Dialect dialect, ParserOptions? options = null)
+    public Sequence<Statement> Parse(ReadOnlySpan<char> sql, Dialect dialect, ParserOptions? options = null)
         => _parser.ParseSql(sql, dialect, options);
 }
