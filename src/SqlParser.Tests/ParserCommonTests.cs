@@ -6821,4 +6821,119 @@ public class ParserCommonTests : ParserTestBase
         Assert.Throws<ParserException>(() => VerifiedStatement<Statement.Listen>("NOTIFY test1", dialects));
         Assert.Throws<ParserException>(() => VerifiedStatement<Statement.Listen>("NOTIFY test1, this is a test notification", dialects));
     }
+
+    [Fact(Timeout = 150)]
+    public void Parser_Avoids_DataType_Exceptions_For_Prefix_Parsing()
+    {
+        var query = """
+                    SELECT [e].[Id],
+                           [e].[Cnpj],
+                           [e].[CreatedAt],
+                           [e].[Email],
+                           [e].[Giin],
+                           [e].[IsDeleted],
+                           [e].[IsMultiSponsored],
+                           [e].[Name],
+                           [e].[UpdatedAt],
+                           [e].[Uuid],
+                           [t0].[Id],
+                           [t0].[Cnpb],
+                           [t0].[Cnpj],
+                           [t0].[CreatedAt],
+                           [t0].[EffectiveDate],
+                           [t0].[EntityId],
+                           [t0].[IsDeleted],
+                           [t0].[Name],
+                           [t0].[UpdatedAt],
+                           [t0].[Uuid],
+                           [t0].[Id0],
+                           [t0].[CreatedAt0],
+                           [t0].[EffectiveDate0],
+                           [t0].[ExternalCode],
+                           [t0].[IsDeleted0],
+                           [t0].[Name0],
+                           [t0].[PlanId],
+                           [t0].[UpdatedAt0],
+                           [t0].[Uuid0],
+                           [t0].[Id00],
+                           [t0].[CreatedAt00],
+                           [t0].[ExternalCode0],
+                           [t0].[IsDeleted00],
+                           [t0].[Name00],
+                           [t0].[SponsorId],
+                           [t0].[UpdatedAt00],
+                           [t0].[Uuid00]
+                    FROM [Entities] AS [e]
+                        LEFT JOIN
+                        (
+                            SELECT [p0].[Id],
+                                   [p0].[Cnpb],
+                                   [p0].[Cnpj],
+                                   [p0].[CreatedAt],
+                                   [p0].[EffectiveDate],
+                                   [p0].[EntityId],
+                                   [p0].[IsDeleted],
+                                   [p0].[Name],
+                                   [p0].[UpdatedAt],
+                                   [p0].[Uuid],
+                                   [t].[Id] AS [Id0],
+                                   [t].[CreatedAt] AS [CreatedAt0],
+                                   [t].[EffectiveDate] AS [EffectiveDate0],
+                                   [t].[ExternalCode],
+                                   [t].[IsDeleted] AS [IsDeleted0],
+                                   [t].[Name] AS [Name0],
+                                   [t].[PlanId],
+                                   [t].[UpdatedAt] AS [UpdatedAt0],
+                                   [t].[Uuid] AS [Uuid0],
+                                   [t].[Id0] AS [Id00],
+                                   [t].[CreatedAt0] AS [CreatedAt00],
+                                   [t].[ExternalCode0],
+                                   [t].[IsDeleted0] AS [IsDeleted00],
+                                   [t].[Name0] AS [Name00],
+                                   [t].[SponsorId],
+                                   [t].[UpdatedAt0] AS [UpdatedAt00],
+                                   [t].[Uuid0] AS [Uuid00]
+                            FROM [Plans] AS [p0]
+                                LEFT JOIN
+                                (
+                                    SELECT [s].[Id],
+                                           [s].[CreatedAt],
+                                           [s].[EffectiveDate],
+                                           [s].[ExternalCode],
+                                           [s].[IsDeleted],
+                                           [s].[Name],
+                                           [s].[PlanId],
+                                           [s].[UpdatedAt],
+                                           [s].[Uuid],
+                                           [a].[Id] AS [Id0],
+                                           [a].[CreatedAt] AS [CreatedAt0],
+                                           [a].[ExternalCode] AS [ExternalCode0],
+                                           [a].[IsDeleted] AS [IsDeleted0],
+                                           [a].[Name] AS [Name0],
+                                           [a].[SponsorId],
+                                           [a].[UpdatedAt] AS [UpdatedAt0],
+                                           [a].[Uuid] AS [Uuid0]
+                                    FROM [Sponsors] AS [s]
+                                        LEFT JOIN [Affiliates] AS [a]
+                                            ON [s].[Id] = [a].[SponsorId]
+                                ) AS [t]
+                                    ON [p0].[Id] = [t].[PlanId]
+                        ) AS [t0]
+                            ON [e].[Id] = [t0].[EntityId]
+                    WHERE [e].[Id] = @EntityId
+                          AND EXISTS
+                    (
+                        SELECT 1
+                        FROM [Plans] AS [p]
+                        WHERE [e].[Id] = [p].[EntityId]
+                              AND [p].[Id] = @PlanId
+                    )
+                    ORDER BY [e].[Id],
+                             [t0].[Id],
+                             [t0].[Id0]
+                    """;
+
+        var parsed = new Parser().ParseSql(query, new MsSqlDialect());
+        Assert.NotNull(parsed);
+    }
 }

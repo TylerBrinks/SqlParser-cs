@@ -89,17 +89,17 @@ public partial class Parser
         // name is not followed by a string literal, but in fact in PostgreSQL it is a valid
         // expression that should parse as the column name "date".
 
-        var (parsed, result) = MaybeParseChecked(() =>
+        var (parsed, result) = MaybeParseChecked<Expression?>(() =>
         {
             var dataType = ParseDataType();
 
             return dataType switch
             {
                 DataType.Interval => ParseInterval(),
-                DataType.Custom => throw new ParserException("dummy"),
+                DataType.Custom => null,
                 _ => new TypedString(ParseLiteralString(), dataType)
             };
-        });
+        }, true);
 
         if (parsed)
         {

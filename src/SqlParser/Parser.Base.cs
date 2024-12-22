@@ -439,14 +439,23 @@ public partial class Parser
     /// 
     /// </summary>
     /// <param name="action">Expression to parse</param>
+    /// <param name="nullReset">Reset the parser index if a null value is encountered</param>
     /// <returns>Instance of type T if successful; otherwise default T</returns>
-    public T? MaybeParse<T>(Func<T> action)
+    public T? MaybeParse<T>(Func<T> action, bool nullReset = false)
     {
         var index = _index;
 
         try
         {
-            return action();
+            var result = action();
+
+            if (result == null && nullReset)
+            {
+                _index = index;
+                return default;
+            }
+
+            return result;
         }
         catch (ParserException)
         {
@@ -479,7 +488,7 @@ public partial class Parser
     /// the return value is false.  This allows for control flow after the method
     /// call where Rust uses a macro to handle control flow.  C# cannot return from
     /// the surrounding method from within a helper.
-    ///
+    /// 
     /// Rust has other control flow features this project would benefit from.  In
     /// particular, Rust can break out of a nested context (loop, match, etc.) to a
     /// specified outer context by label name.  There are areas in this project that
@@ -489,10 +498,11 @@ public partial class Parser
     /// </summary>
     /// <typeparam name="T">Type of parser method return value. </typeparam>
     /// <param name="action">Parser action to return</param>
+    /// <param name="nullReset">Reset the parser index if null output is encountered</param>
     /// <returns>Parser Check with containing generic value.  True if T is not default; otherwise false</returns>
-    public MaybeParsed<T> MaybeParseChecked<T>(Func<T> action)
+    public MaybeParsed<T> MaybeParseChecked<T>(Func<T> action, bool nullReset = false)
     {
-        var result = MaybeParse(action);
+        var result = MaybeParse(action, nullReset);
         var isDefault = EqualityComparer<T>.Default.Equals(result, default);
         return new MaybeParsed<T>(!isDefault, result!);
     }
