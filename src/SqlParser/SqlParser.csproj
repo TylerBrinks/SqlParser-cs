@@ -11,7 +11,6 @@
 		<Description>Friendly SQL Parser for .NET</Description>
 		<Copyright>2023 Tyler Brinks</Copyright>
 		<PackageProjectUrl>https://github.com/TylerBrinks/SqlParser-cs</PackageProjectUrl>
-		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<RepositoryUrl>https://github.com/TylerBrinks/SqlParser-cs</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<PublishRepositoryUrl>true</PublishRepositoryUrl>
