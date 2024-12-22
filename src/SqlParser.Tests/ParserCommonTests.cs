@@ -5,7 +5,6 @@ using static SqlParser.Ast.DataType;
 using static SqlParser.Ast.Expression;
 using Action = SqlParser.Ast.Action;
 using DataType = SqlParser.Ast.DataType;
-using Double = System.Double;
 using Map = SqlParser.Ast.Map;
 using Subscript = SqlParser.Ast.Subscript;
 
@@ -6321,19 +6320,20 @@ public class ParserCommonTests : ParserTestBase
         // trailing commas anywhere in the query
         DefaultDialects = [new DuckDbDialect()];
 
-        OneStatementParsesTo("SELECT album_id, name, FROM track", "SELECT album_id, name FROM track", DefaultDialects);
+        var defaultDialects = DefaultDialects as Dialect[] ?? DefaultDialects.ToArray();
+        OneStatementParsesTo("SELECT album_id, name, FROM track", "SELECT album_id, name FROM track", defaultDialects);
         OneStatementParsesTo("SELECT * FROM track ORDER BY milliseconds,", "SELECT * FROM track ORDER BY milliseconds",
-            DefaultDialects);
+            defaultDialects);
         OneStatementParsesTo("SELECT DISTINCT ON (album_id,) name FROM track",
-            "SELECT DISTINCT ON (album_id) name FROM track", DefaultDialects);
+            "SELECT DISTINCT ON (album_id) name FROM track", defaultDialects);
         OneStatementParsesTo("CREATE TABLE employees (name text, age int,)",
-            "CREATE TABLE employees (name TEXT, age INT)", DefaultDialects);
+            "CREATE TABLE employees (name TEXT, age INT)", defaultDialects);
         OneStatementParsesTo("GRANT USAGE, SELECT, INSERT, ON p TO u", "GRANT USAGE, SELECT, INSERT ON p TO u",
-            DefaultDialects);
-        VerifiedStatement("SELECT album_id, name FROM track", DefaultDialects);
-        VerifiedStatement("SELECT * FROM track ORDER BY milliseconds", DefaultDialects);
-        VerifiedStatement("SELECT DISTINCT ON (album_id) name FROM track", DefaultDialects);
-        OneStatementParsesTo("SELECT \"from\", FROM \"from\"", "SELECT \"from\" FROM \"from\"", DefaultDialects);
+            defaultDialects);
+        VerifiedStatement("SELECT album_id, name FROM track", defaultDialects);
+        VerifiedStatement("SELECT * FROM track ORDER BY milliseconds", defaultDialects);
+        VerifiedStatement("SELECT DISTINCT ON (album_id) name FROM track", defaultDialects);
+        OneStatementParsesTo("SELECT \"from\", FROM \"from\"", "SELECT \"from\" FROM \"from\"", defaultDialects);
 
         Assert.Throws<ParserException>(() =>
             ParseSqlStatements("SELECT name, age, from employees;", new List<Dialect> { new GenericDialect() }));
@@ -6501,17 +6501,17 @@ public class ParserCommonTests : ParserTestBase
         Assert.Equal(new LiteralValue(new Value.Number("1")), select.Projection[0].AsExpr());
 
 
-        // negative literal is parsed as a - and expr
+        // negative literal is parsed as - and expr
         Assert.Equal(new UnaryOp(new LiteralValue(new Value.Number("10")), UnaryOperator.Minus),
             select.Projection[1].AsExpr());
 
-        // positive literal is parsed as a + and expr
+        // positive literal is parsed as + and expr
         Assert.Equal(new UnaryOp(new LiteralValue(new Value.Number("20")), UnaryOperator.Plus),
             select.Projection[2].AsExpr());
     }
 
     [Fact]
-    public void ParseNegativeValue()
+    public void Parse_Negative_Value()
     {
         OneStatementParsesTo("SELECT -1", "SELECT -1");
 
@@ -6754,11 +6754,7 @@ public class ParserCommonTests : ParserTestBase
     [Fact]
     public void Test_Try_Convert()
     {
-        var dialects = AllDialects.Where(d => d is {SupportsTryConvert: true, ConvertTypeBeforeValue: true });
-
         VerifiedExpr("TRY_CONVERT(VARCHAR(MAX), 'foo')");
-
-        dialects = AllDialects.Where(d => d is { SupportsTryConvert: true, ConvertTypeBeforeValue: false });
 
         VerifiedExpr("TRY_CONVERT('foo', VARCHAR(MAX))");
     }
@@ -6935,5 +6931,14 @@ public class ParserCommonTests : ParserTestBase
 
         var parsed = new Parser().ParseSql(query, new MsSqlDialect());
         Assert.NotNull(parsed);
+    }
+
+    [Fact]
+    public void QueryParser_Proxies_Arguments()
+    {
+        var parsed1 = new SqlQueryParser().Parse("select 1");
+        var parsed2 = new Parser().ParseSql("select 1");
+
+        Assert.Equal(parsed1, parsed2);
     }
 }

@@ -35,7 +35,7 @@ var sql = """
         order by xyz desc
 		""";
 
-var ast =  new Parser().ParseSql(sql);
+var ast =  new SqlQueryParser().Parse(sql);
 ```
 SqlParser reads the output into a token stream and parses it into a SQL syntax tree. 
 
@@ -80,7 +80,7 @@ This example calls `ToString()` and redners the AST's default format showing the
 
 ```cs
 var sql = "select top 10 * from mytable where abc > 99 order by xyz desc";
-var ast =  new Parser().ParseSql(sql);
+var ast =  new SqlQueryParser().Parse(sql);
 
 Console.Write!($"{ast}");
 // Elided and multi-lines for readability

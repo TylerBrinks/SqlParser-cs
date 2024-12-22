@@ -34,7 +34,6 @@ public partial class Parser
     /// <param name="sql">SQL fragment to tokenize</param>
     /// <param name="dialect">SQL dialect instance</param>
     /// <param name="options">Parsing options</param>
-    /// <returns></returns>
     public Parser TryWithSql(ReadOnlySpan<char> sql, Dialect dialect, ParserOptions? options = null)
     {
         _options = options ?? new ParserOptions();
