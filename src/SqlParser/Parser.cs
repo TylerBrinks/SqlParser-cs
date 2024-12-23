@@ -204,7 +204,7 @@ public partial class Parser
             ? null
             : ParseIdentifier();
 
-        var (fieldType, trailingBracket) = ParseDataTypeHelper();
+        var (fieldType, trailingBracket, _) = ParseDataTypeHelper();
 
         return (new StructField(fieldType, fieldName), trailingBracket);
     }
@@ -3671,10 +3671,11 @@ public partial class Parser
     /// Parse a SQL data type (in the context of a CREATE TABLE statement for example)
     /// </summary>
     /// <returns></returns>
-    public (DataType, bool) ParseDataTypeHelper()
+    public (DataType, bool, ParserException?) ParseDataTypeHelper()
     {
         var token = NextToken();
         var trailingBracket = false;
+        ParserException? parserException = null;
 
         var data = token switch
         {
@@ -3768,6 +3769,11 @@ public partial class Parser
             _ => ParseUnmatched()
         };
 
+        if(parserException != null || _currentException != null)
+        {
+            return (data, trailingBracket, parserException ?? _currentException);
+        }
+
         // Parse array data types. Note: this is postgresql-specific and different from
         // Keyword.ARRAY syntax from above
         while (ConsumeToken<LeftBracket>())
@@ -3779,7 +3785,7 @@ public partial class Parser
             data = new DataType.Array(new ArrayElementTypeDef.SquareBracket(data, size));
         }
 
-        return (data, trailingBracket);
+        return (data, trailingBracket, parserException);
 
         #region Data Type Parsers
 
@@ -3922,7 +3928,9 @@ public partial class Parser
             }
 
             ExpectToken<LessThan>();
-            var (insideType, trailing) = ParseDataTypeHelper();
+            var (insideType, trailing, ex) = ParseDataTypeHelper();
+            parserException = ex;
+
             trailingBracket = ExpectClosingAngleBracket(trailing);
             return new DataType.Array(new ArrayElementTypeDef.AngleBracket(insideType));
         }
@@ -3939,12 +3947,14 @@ public partial class Parser
             PrevToken();
             return new DataType.Union(ParseUnionTypeDef());
         }
-
+         
         DataType ParseUnmatched()
         {
             PrevToken();
             var typeName = ParseObjectName();
-            var modifiers = ParseOptionalTypeModifiers();
+            var (modifiers, ex) = ParseOptionalTypeModifiers();
+            parserException = ex;
+
             return modifiers != null
                 ? new DataType.Custom(typeName, modifiers)
                 : new DataType.Custom(typeName);
@@ -4101,7 +4111,15 @@ public partial class Parser
         var idents = new Sequence<Ident>();
         while (true)
         {
-            idents.Add(ParseIdentifierWithClause(inTableClause));
+            var (ident, ex) = ParseIdentifierWithClause(inTableClause);
+            _currentException ??= ex;
+
+            if (_currentException != null)
+            {
+                break;
+            }
+
+            idents.Add(ident!);
             if (!ConsumeToken<Period>())
             {
                 break;
@@ -4118,15 +4136,16 @@ public partial class Parser
         return new ObjectName(idents);
     }
 
-    public Ident ParseIdentifierWithClause(bool inTableClause)
+    public (Ident? Ident, ParserException? Exception) ParseIdentifierWithClause(bool inTableClause)
     {
         var token = NextToken();
         return token switch
         {
-            Word word => ParseIdent(word),
-            SingleQuotedString s => new Ident(s.Value, Symbols.SingleQuote),
-            DoubleQuotedString s => new Ident(s.Value, Symbols.DoubleQuote),
-            _ => throw Expected("identifier", token)
+            Word word => (ParseIdent(word), null),
+            SingleQuotedString s => (new Ident(s.Value, Symbols.SingleQuote), null),
+            DoubleQuotedString s => (new Ident(s.Value, Symbols.DoubleQuote), null),
+            _ when !_suppressExceptions => throw Expected("identifier", token),
+            _ => (null, Expected("identifier", token))
         };
 
         Ident ParseIdent(Word word)
@@ -4732,7 +4751,8 @@ public partial class Parser
 
                 return (windows, null, true);
             }
-            else if (ParseKeyword(Keyword.QUALIFY))
+            
+            if (ParseKeyword(Keyword.QUALIFY))
             {
                 var qualifyExpr = ParseExpr();
                 if (ParseKeyword(Keyword.WINDOW))

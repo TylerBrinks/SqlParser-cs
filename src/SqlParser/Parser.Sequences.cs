@@ -588,11 +588,11 @@ public partial class Parser
         throw Expected("a list of columns in parenthesis", PeekToken());
     }
 
-    public Sequence<string>? ParseOptionalTypeModifiers()
+    public (Sequence<string>?, ParserException?) ParseOptionalTypeModifiers()
     {
         if (!ConsumeToken<LeftParen>())
         {
-            return null;
+            return (null, null);
         }
 
         var modifiers = new Sequence<string>();
@@ -623,12 +623,16 @@ public partial class Parser
                     break;
 
                 default:
-                    throw Expected("type modifiers", PeekToken());
+                    if (!_suppressExceptions)
+                    {
+                        throw Expected("type modifiers", PeekToken());
+                    }
+                    return (null, Expected("type modifiers", PeekToken()));
             }
         }
 
 #pragma warning disable CS0162
-        return modifiers;
+        return (modifiers, null);
 #pragma warning restore CS0162
 
     }

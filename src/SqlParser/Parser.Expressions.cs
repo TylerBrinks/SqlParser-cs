@@ -89,7 +89,7 @@ public partial class Parser
         // name is not followed by a string literal, but in fact in PostgreSQL it is a valid
         // expression that should parse as the column name "date".
 
-        var (parsed, result) = MaybeParseChecked<Expression?>(() =>
+        var (parsed, result) = MaybeParseChecked(() =>
         {
             var dataType = ParseDataType();
 
@@ -103,7 +103,7 @@ public partial class Parser
 
         if (parsed)
         {
-            return result;
+            return result!;
         }
 
         var token = NextToken();

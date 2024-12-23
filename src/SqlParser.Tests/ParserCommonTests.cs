@@ -6818,7 +6818,7 @@ public class ParserCommonTests : ParserTestBase
         Assert.Throws<ParserException>(() => VerifiedStatement<Statement.Listen>("NOTIFY test1, this is a test notification", dialects));
     }
 
-    [Fact(Timeout = 150)]
+    [Fact(Timeout = 2)]
     public void Parser_Avoids_DataType_Exceptions_For_Prefix_Parsing()
     {
         var query = """
@@ -6931,6 +6931,59 @@ public class ParserCommonTests : ParserTestBase
 
         var parsed = new Parser().ParseSql(query, new MsSqlDialect());
         Assert.NotNull(parsed);
+    }
+
+    [Fact(Timeout = 2)]
+    public void Parser_C()
+    {
+        var query = """
+                    WITH DateCalculations AS (
+                        SELECT 
+                            CAST(DATEADD(MONTH, -2, GETDATE()) AS DATE) AS TwoMonthsAgo,
+                            CAST(DATEADD(MONTH, -1, GETDATE()) AS DATE) AS LastMonth,
+                            FORMAT(GETDATE(), 'yyyy-MM-dd') AS CurrentDateFormatted,
+                            FORMAT(DATEADD(MONTH, -1, GETDATE()), 'yyyy-MM-dd') AS LastMonthFormatted,
+                            CAST(GETDATE() AS INT) AS CurrentDateInt,
+                            CONVERT(VARCHAR(7), GETDATE(), 120) AS CurrentYearMonth
+                    ),
+                    ParticipantStats AS (
+                        SELECT 
+                            p.Id AS ParticipantId,
+                            p.Name AS ParticipantName,
+                            COUNT(pm.Id) AS TotalMonthlyBalances,
+                            SUM(pm.GrossQuotaQuantity) AS TotalGrossQuotaQuantity,
+                            MAX(pm.ReferenceYearMonth) AS LastBalanceMonth
+                        FROM Participants p
+                        LEFT JOIN ParticipantMonthlyBalances pm
+                            ON p.Id = pm.ParticipantId
+                        GROUP BY p.Id, p.Name
+                    )
+                    SELECT 
+                        ps.ParticipantId,
+                        ps.ParticipantName,
+                        ps.TotalMonthlyBalances,
+                        ps.TotalGrossQuotaQuantity,
+                        ps.LastBalanceMonth,
+                        dc.TwoMonthsAgo,
+                        dc.LastMonth,
+                        dc.CurrentDateFormatted,
+                        dc.LastMonthFormatted,
+                        dc.CurrentDateInt,
+                        dc.CurrentYearMonth,
+                        CASE 
+                            WHEN ps.TotalGrossQuotaQuantity > 100 THEN 'High'
+                            WHEN ps.TotalGrossQuotaQuantity BETWEEN 50 AND 100 THEN 'Medium'
+                            ELSE 'Low'
+                        END AS QuotaCategory,
+                        FORMAT(GETDATE(), 'yyyy-MM-dd') AS TodayFormatted,
+                        CONVERT(VARCHAR(20), GETDATE(), 120) AS CurrentDateISO
+                    FROM ParticipantStats ps
+                    CROSS JOIN DateCalculations dc
+                    WHERE ps.LastBalanceMonth BETWEEN dc.LastMonthFormatted AND dc.CurrentDateFormatted
+                    ORDER BY ps.ParticipantName;
+                    """;
+        var parsed = new SqlQueryParser().Parse(query, new MsSqlDialect());
+        var x = parsed.ToSql();
     }
 
     [Fact]
