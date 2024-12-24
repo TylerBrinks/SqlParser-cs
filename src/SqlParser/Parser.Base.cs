@@ -15,6 +15,8 @@ public partial class Parser
     private Dialect _dialect = null!;
     private ParserOptions _options = null!;
     private ParserState _parserState = ParserState.Normal;
+    private ParserException? _currentException;
+    private bool _suppressExceptions;
 
     public T ExpectParens<T>(Func<T> action)
     {
@@ -447,19 +449,27 @@ public partial class Parser
 
         try
         {
+            _currentException = null;
+            _suppressExceptions = true;
             var result = action();
 
-            if (result == null && nullReset)
+            if (_currentException == null && (result != null || !nullReset))
             {
-                _index = index;
-                return default;
+                return result;
             }
 
-            return result;
+            _index = index;
+            return default;
+
         }
         catch (ParserException)
         {
             // failed; reset the parser index.
+        }
+        finally
+        {
+            _currentException = null;
+            _suppressExceptions = false;
         }
 
         _index = index;
@@ -934,7 +944,8 @@ public partial class Parser
 
     public DataType ParseDataType()
     {
-        var (dataType, trailingBracket) = ParseDataTypeHelper();
+        var (dataType, trailingBracket, ex) = ParseDataTypeHelper();
+        _currentException ??= ex;
 
         if (trailingBracket)
         {
@@ -955,7 +966,9 @@ public partial class Parser
     /// <exception cref="ParserException"></exception>
     public Ident ParseIdentifier()
     {
-        return ParseIdentifierWithClause(false);
+        var (ident, ex) = ParseIdentifierWithClause(false);
+        _currentException ??= ex;
+        return ident!;
     }
 
     /// <summary>
