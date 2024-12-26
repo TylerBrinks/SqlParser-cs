@@ -1,8 +1,10 @@
 ﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
+using System.Linq.Expressions;
 using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
+using Expression = SqlParser.Ast.Expression;
 
 // ReSharper disable CommentTypo
 

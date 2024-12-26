@@ -868,6 +868,9 @@ public abstract record Expression : IWriteSql, IElement
         public Like(Expression? expression, bool negated, Expression pattern, bool Any = false)
             : this(expression, negated, pattern, (string?)null, Any) { }
 
+        public Like(Expression? expression, bool negated, Expression pattern)
+            : this(expression, negated, pattern, (string?)null, false) { }
+
         public override void ToSql(SqlTextWriter writer)
         {
             var any = Any ? "ANY " : string.Empty;
