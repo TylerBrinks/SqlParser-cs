@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
@@ -4636,9 +4635,20 @@ public partial class Parser
             }
         }
 
+        var topBeforeDistinct = false;
+        Top? top = null;
+        if (_dialect.SupportsTopBeforeDistinct && ParseKeyword(Keyword.TOP))
+        {
+            top = ParseTop();
+            topBeforeDistinct = true;
+        }
+
         var distinct = ParseAllOrDistinct();
 
-        var top = ParseInit(ParseKeyword(Keyword.TOP), ParseTop);
+        if (!_dialect.SupportsTopBeforeDistinct && ParseKeyword(Keyword.TOP))
+        {
+            top = ParseTop();
+        }
 
         var projection = ParseProjection();
 
@@ -4724,7 +4734,8 @@ public partial class Parser
             ValueTableMode = valueTableMode,
             ConnectBy = connectBy,
             WindowBeforeQualify = windowBeforeQualify,
-            PreWhere = preWhere
+            PreWhere = preWhere,
+            TopBeforeDistinct = topBeforeDistinct
         };
 
         ConnectBy? ParseConnect()

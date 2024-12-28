@@ -78,4 +78,5 @@ public partial class Dialect
     public virtual bool SupportsTryConvert => false;
     public virtual bool SupportsListen => false;
     public virtual bool SupportsNotify => false;
+    public virtual bool SupportsTopBeforeDistinct => false;
 }

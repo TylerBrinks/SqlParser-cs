@@ -25,6 +25,7 @@ public record Select([Visit(1)] Sequence<SelectItem> Projection) : IWriteSql, IE
     [Visit(14)] public bool WindowBeforeQualify { get; init; }
     [Visit(15)] public ValueTableMode? ValueTableMode { get; init; }
     [Visit(16)] public ConnectBy? ConnectBy { get; init; }
+    public bool TopBeforeDistinct { get; init; }
 
     public void ToSql(SqlTextWriter writer)
     {
@@ -35,12 +36,17 @@ public record Select([Visit(1)] Sequence<SelectItem> Projection) : IWriteSql, IE
             writer.WriteSql($" {ValueTableMode}");
         }
 
+        if (Top != null && TopBeforeDistinct)
+        {
+            writer.WriteSql($" {Top}");
+        }
+
         if (Distinct != null)
         {
             writer.WriteSql($" {Distinct}");
         }
 
-        if (Top != null)
+        if (Top != null && !TopBeforeDistinct)
         {
             writer.WriteSql($" {Top}");
         }

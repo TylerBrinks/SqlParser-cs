@@ -6826,4 +6826,17 @@ public class ParserCommonTests : ParserTestBase
 
         Assert.Equal(parsed1, parsed2);
     }
+
+    [Fact]
+    public void Test_Select_Top()
+    {
+        var dialects = AllDialects.Where(d => d.SupportsTopBeforeDistinct).ToList();
+
+        OneStatementParsesTo("SELECT ALL * FROM tbl", "SELECT * FROM tbl", dialects);
+
+        VerifiedStatement("SELECT TOP 3 * FROM tbl", dialects);
+        OneStatementParsesTo("SELECT TOP 3 ALL * FROM tbl", "SELECT TOP 3 * FROM tbl", dialects);
+        VerifiedStatement("SELECT TOP 3 DISTINCT * FROM tbl", dialects);
+        VerifiedStatement("SELECT TOP 3 DISTINCT a, b, c FROM tbl", dialects);
+    }
 }
