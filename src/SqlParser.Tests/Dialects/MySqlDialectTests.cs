@@ -11,7 +11,7 @@ public class MySqlDialectTests : ParserTestBase
 {
     public MySqlDialectTests()
     {
-        DefaultDialects = new[] { new MySqlDialect() };
+        DefaultDialects = [new MySqlDialect()];
     }
 
     [Fact]
@@ -157,7 +157,7 @@ public class MySqlDialectTests : ParserTestBase
     [Fact]
     public void Parse_Set_Variables()
     {
-        DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+        DefaultDialects = [new MySqlDialect(), new GenericDialect()];
         VerifiedStatement("SET sql_mode = CONCAT(@@sql_mode, ',STRICT_TRANS_TABLES')");
 
         var expected = new Statement.SetVariable(true, false, new OneOrManyWithParens<ObjectName>.One("autocommit"), new[]
@@ -294,7 +294,7 @@ public class MySqlDialectTests : ParserTestBase
     {
         const string sql = "SELECT ```quoted identifier```";
 
-        var statement = VerifiedStatement(sql, new[] { new MySqlDialect() });
+        var statement = VerifiedStatement(sql, [new MySqlDialect()]);
 
         var body = new SetExpression.SelectExpression(new Select([
             new SelectItem.UnnamedExpression(new Identifier(new Ident("``quoted identifier``", '`')))
@@ -413,8 +413,8 @@ public class MySqlDialectTests : ParserTestBase
         Assert.Equal(new Statement.Select(
                 new Query(new SetExpression.ValuesExpression(new Values(new Sequence<Expression>[]
                 {
-                    new(),
-                    new()
+                    [],
+                    []
                 }))))
             , insert.InsertOperation.Source);
     }
@@ -636,7 +636,7 @@ public class MySqlDialectTests : ParserTestBase
     [Fact]
     public void Parse_Show_Variables()
     {
-        DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+        DefaultDialects = [new MySqlDialect(), new GenericDialect()];
 
         VerifiedStatement("SHOW VARIABLES");
         VerifiedStatement("SHOW VARIABLES LIKE 'admin%'");
@@ -652,7 +652,7 @@ public class MySqlDialectTests : ParserTestBase
     [Fact]
     public void Parse_Kill()
     {
-        DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+        DefaultDialects = [new MySqlDialect(), new GenericDialect()];
 
         var kill = VerifiedStatement<Statement.Kill>("KILL CONNECTION 5");
         Assert.Equal(new Statement.Kill(KillType.Connection, 5), kill);
@@ -688,7 +688,7 @@ public class MySqlDialectTests : ParserTestBase
     [Fact]
     public void Parse_Set_Names()
     {
-        DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+        DefaultDialects = [new MySqlDialect(), new GenericDialect()];
 
         var set = VerifiedStatement<Statement.SetNames>("SET NAMES utf8mb4");
         Assert.Equal("utf8mb4", set.CharsetName);
@@ -707,7 +707,7 @@ public class MySqlDialectTests : ParserTestBase
     [Fact]
     public void Parse_Limit_MySql_Syntax()
     {
-        DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+        DefaultDialects = [new MySqlDialect(), new GenericDialect()];
 
         OneStatementParsesTo(
             "SELECT id, fname, lname FROM customer LIMIT 5, 10",
@@ -717,7 +717,7 @@ public class MySqlDialectTests : ParserTestBase
     [Fact]
     public void Parse_Create_Table_With_Index_Definition()
     {
-        DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+        DefaultDialects = [new MySqlDialect(), new GenericDialect()];
 
         OneStatementParsesTo(
             "CREATE TABLE tb (id INT, INDEX (id))",
@@ -755,7 +755,7 @@ public class MySqlDialectTests : ParserTestBase
     [Fact]
     public void Parse_Create_Table_With_Fulltext_Definition()
     {
-        DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+        DefaultDialects = [new MySqlDialect(), new GenericDialect()];
 
         VerifiedStatement("CREATE TABLE tb (id INT, FULLTEXT (id))");
         VerifiedStatement("CREATE TABLE tb (id INT, FULLTEXT INDEX (id))");
@@ -769,7 +769,7 @@ public class MySqlDialectTests : ParserTestBase
     [Fact]
     public void Parse_Create_Table_With_Special_Definition()
     {
-        DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+        DefaultDialects = [new MySqlDialect(), new GenericDialect()];
 
         VerifiedStatement("CREATE TABLE tb (id INT, SPATIAL (id))");
         VerifiedStatement("CREATE TABLE tb (id INT, SPATIAL INDEX (id))");
@@ -783,7 +783,7 @@ public class MySqlDialectTests : ParserTestBase
     [Fact]
     public void Parse_Fulltext_Expression()
     {
-        DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+        DefaultDialects = [new MySqlDialect(), new GenericDialect()];
 
         VerifiedStatement("SELECT * FROM tb WHERE MATCH (c1) AGAINST ('string')");
         VerifiedStatement("SELECT * FROM tb WHERE MATCH (c1) AGAINST ('string' IN NATURAL LANGUAGE MODE)");
@@ -801,7 +801,7 @@ public class MySqlDialectTests : ParserTestBase
     [Fact]
     public void Parse_Create_Table_With_Fulltext_Definition_Should_Not_Accept_Constraint_Name()
     {
-        DefaultDialects = new Dialect[] { new MySqlDialect(), new GenericDialect() };
+        DefaultDialects = [new MySqlDialect(), new GenericDialect()];
 
         Assert.Throws<ParserException>(() =>
             VerifiedStatement("CREATE TABLE tb (c1 INT, CONSTRAINT cons FULLTEXT (c1))"));
@@ -870,7 +870,7 @@ public class MySqlDialectTests : ParserTestBase
         const string canonical =
             "CREATE TABLE foo (id INT PRIMARY KEY AUTO_INCREMENT, bar INT NOT NULL, CONSTRAINT bar_key UNIQUE (bar))";
 
-        var create = (Statement.CreateTable)OneStatementParsesTo(sql, canonical, new[] { new MySqlDialect() });
+        var create = (Statement.CreateTable)OneStatementParsesTo(sql, canonical, [new MySqlDialect()]);
 
         var constraints = new Sequence<TableConstraint>
         {
@@ -882,15 +882,12 @@ public class MySqlDialectTests : ParserTestBase
 
         var columns = new Sequence<ColumnDef>
         {
-            new("id", new DataType.Int(), Options: new Sequence<ColumnOptionDef>
-            {
+            new("id", new DataType.Int(), Options:
+            [
                 new(new ColumnOption.Unique(true)),
                 new(new ColumnOption.DialectSpecific([new Word("AUTO_INCREMENT")]))
-            }),
-            new("bar", new DataType.Int(), Options: new Sequence<ColumnOptionDef>
-            {
-                new(new ColumnOption.NotNull())
-            })
+            ]),
+            new("bar", new DataType.Int(), Options: [new(new ColumnOption.NotNull())])
         };
         Assert.Equal(columns, create.Element.Columns);
     }
@@ -963,10 +960,7 @@ public class MySqlDialectTests : ParserTestBase
 
         var from = new FromTable.WithFromKeyword([new(new TableFactor.Table("customers"))]);
         var expected = new Statement.Delete(new DeleteOperation(null, from,
-            OrderBy: new Sequence<OrderByExpression>
-            {
-                new (new Identifier("id"), Asc:false)
-            }));
+            OrderBy: [new(new Identifier("id"), Asc: false)]));
 
         Assert.Equal(expected, delete);
     }
@@ -1020,11 +1014,11 @@ public class MySqlDialectTests : ParserTestBase
         {
             Ignore = true,
             Into = true,
-            Columns = new Sequence<Ident>
-            {
+            Columns =
+            [
                 "title",
                 "priority"
-            }
+            ]
         });
 
         Assert.Equal(expected, insert);
@@ -1080,15 +1074,20 @@ public class MySqlDialectTests : ParserTestBase
         VerifiedOnlySelect("SELECT * FROM JSON_TABLE('[1,2]', '$[*]' COLUMNS(x INT PATH '$' ERROR ON EMPTY)) AS t");
         VerifiedOnlySelect("SELECT * FROM JSON_TABLE('[1,2]', '$[*]' COLUMNS(x INT PATH '$' ERROR ON EMPTY DEFAULT '0' ON ERROR)) AS t");
 
+        VerifiedOnlySelect("SELECT jt.* FROM JSON_TABLE('[\"Alice\", \"Bob\", \"Charlie\"]', '$[*]' COLUMNS(row_num FOR ORDINALITY, name VARCHAR(50) PATH '$')) AS jt");
+        VerifiedOnlySelect("SELECT * FROM JSON_TABLE('[ {\"a\": 1, \"b\": [11,111]}, {\"a\": 2, \"b\": [22,222]}, {\"a\":3}]', '$[*]' COLUMNS(a INT PATH '$.a', NESTED PATH '$.b[*]' COLUMNS (b INT PATH '$'))) AS jt");
+
+
         var joinTable = VerifiedOnlySelect("SELECT * FROM JSON_TABLE('[1,2]', '$[*]' COLUMNS(x INT PATH '$' DEFAULT '0' ON EMPTY NULL ON ERROR)) AS t");
 
         var expected = new TableFactor.JsonTable(
             new LiteralValue(new Value.SingleQuotedString("[1,2]")),
             new Value.SingleQuotedString("$[*]"),
             [
-                new("x", new DataType.Int(), new Value.SingleQuotedString("$"),
+                new JsonTableColumn.Named(new JsonTableNamedColumn(
+                "x", new DataType.Int(), new Value.SingleQuotedString("$"),
                     false, new JsonTableColumnErrorHandling.Default(new Value.SingleQuotedString("0")),
-                    new JsonTableColumnErrorHandling.Null())
+                    new JsonTableColumnErrorHandling.Null()))
             ])
         {
             Alias = new TableAlias("t")
@@ -1106,10 +1105,7 @@ public class MySqlDialectTests : ParserTestBase
         var create = OneStatementParsesTo(sql, canonical);
 
         var expected = new Statement.CreateTable(new CreateTable("tb", [
-            new("id", new DataType.Text(), "utf8mb4_0900_ai_ci", new Sequence<ColumnOptionDef>
-            {
-                new(new ColumnOption.CharacterSet("utf8mb4"))
-            })
+            new("id", new DataType.Text(), "utf8mb4_0900_ai_ci", [new(new ColumnOption.CharacterSet("utf8mb4"))])
         ]));
 
         Assert.Equal(expected, create);
@@ -1144,7 +1140,7 @@ public class MySqlDialectTests : ParserTestBase
         var expected = new Statement.Insert(new InsertOperation("tasks", select)
         {
             Into = true,
-            Columns = new Sequence<Ident> { "title", "priority" },
+            Columns = ["title", "priority"],
             Priority = MySqlInsertPriority.HighPriority
         });
 
@@ -1180,15 +1176,14 @@ public class MySqlDialectTests : ParserTestBase
 
         flush = (Statement.Flush)VerifiedStatement("FLUSH TABLES `mek`.`table1`, table2");
         expected = new Statement.Flush(FlushType.Tables, null, null, false, false,
-            new Sequence<ObjectName>
-            {
-                new (new Ident[]
-                {
-                    new ("mek", Symbols.Backtick),
-                    new ("table1", Symbols.Backtick),
-                }),
-                new ("table2")
-            });
+        [
+            new([
+                new("mek", Symbols.Backtick),
+                new("table1", Symbols.Backtick)
+            ]),
+
+            new("table2")
+        ]);
         Assert.Equal(expected, flush);
 
         flush = (Statement.Flush)VerifiedStatement("FLUSH TABLES WITH READ LOCK");
@@ -1197,28 +1192,26 @@ public class MySqlDialectTests : ParserTestBase
 
         flush = (Statement.Flush)VerifiedStatement("FLUSH TABLES `mek`.`table1`, table2 WITH READ LOCK");
         expected = new Statement.Flush(FlushType.Tables, null, null, true, false,
-            new Sequence<ObjectName>
-            {
-                new (new Ident[]
-                {
-                    new ("mek", Symbols.Backtick),
-                    new ("table1", Symbols.Backtick),
-                }),
-                new ("table2")
-            });
+        [
+            new([
+                new("mek", Symbols.Backtick),
+                new("table1", Symbols.Backtick)
+            ]),
+
+            new("table2")
+        ]);
         Assert.Equal(expected, flush);
 
         flush = (Statement.Flush)VerifiedStatement("FLUSH TABLES `mek`.`table1`, table2 FOR EXPORT");
         expected = new Statement.Flush(FlushType.Tables, null, null, false, true,
-            new Sequence<ObjectName>
-            {
-                new (new Ident[]
-                {
-                    new ("mek", Symbols.Backtick),
-                    new ("table1", Symbols.Backtick),
-                }),
-                new ("table2")
-            });
+        [
+            new([
+                new("mek", Symbols.Backtick),
+                new("table1", Symbols.Backtick)
+            ]),
+
+            new("table2")
+        ]);
         Assert.Equal(expected, flush);
     }
 
@@ -1249,11 +1242,8 @@ public class MySqlDialectTests : ParserTestBase
             new ObjectName(new Ident("table", Symbols.Backtick)), source)
         {
             Into = true,
-            Columns = new Sequence<Ident>
-            {
-                new ("date", Symbols.Backtick)
-            },
-            InsertAlias = new InsertAliases(new ObjectName(new Ident("alias", Symbols.Backtick)), new Sequence<Ident>())
+            Columns = [new("date", Symbols.Backtick)],
+            InsertAlias = new InsertAliases(new ObjectName(new Ident("alias", Symbols.Backtick)), [])
         });
 
         Assert.Equal(expected, statement);
@@ -1271,17 +1261,16 @@ public class MySqlDialectTests : ParserTestBase
             new InsertOperation(new ObjectName(new Ident("table", Symbols.Backtick)), source)
             {
                 Into = true,
-                Columns = new Sequence<Ident>
-            {
-                new ("id", Symbols.Backtick),
-                new ("date", Symbols.Backtick)
-            },
+                Columns =
+                [
+                    new("id", Symbols.Backtick),
+                    new("date", Symbols.Backtick)
+                ],
                 InsertAlias = new InsertAliases(new ObjectName(new Ident("alias", Symbols.Backtick)),
-                new Sequence<Ident>
-                {
-                    new ("mek_id", Symbols.Backtick),
-                    new ("mek_date", Symbols.Backtick)
-                })
+                [
+                    new("mek_id", Symbols.Backtick),
+                    new("mek_date", Symbols.Backtick)
+                ])
             });
 
         Assert.Equal(expected, statement);

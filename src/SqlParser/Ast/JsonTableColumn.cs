@@ -1,6 +1,47 @@
-﻿namespace SqlParser.Ast;
+﻿using SqlParser;
+using SqlParser.Ast;
 
-public record JsonTableColumn(Ident Name, DataType Type, Value Path, bool Exists,
+namespace SqlParser.Ast;
+
+public abstract record JsonTableColumn : IWriteSql, IElement
+{
+
+    public record Named(JsonTableNamedColumn Column) : JsonTableColumn
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{Column}");
+        }
+    }
+
+    public record ForOrdinality(Ident Name) : JsonTableColumn
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{Name} FOR ORDINALITY");
+        }
+    }
+
+    public record Nested(JsonTableNestedColumn Column) : JsonTableColumn
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{Column}");
+        }
+    }
+
+    public abstract void ToSql(SqlTextWriter writer);
+}
+
+public record JsonTableNestedColumn(Value Path, Sequence<JsonTableColumn> Columns) : IWriteSql
+{
+    public void ToSql(SqlTextWriter writer)
+    {
+        writer.WriteSql($"NESTED PATH {Path} COLUMNS ({Columns.ToSqlDelimited()})");
+    }
+}
+
+public record JsonTableNamedColumn(Ident Name, DataType Type, Value Path, bool Exists,
     JsonTableColumnErrorHandling? OnEmpty, JsonTableColumnErrorHandling? OnError) : IWriteSql, IElement
 {
     public void ToSql(SqlTextWriter writer)

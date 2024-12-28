@@ -5663,7 +5663,25 @@ public partial class Parser
 
     public JsonTableColumn ParseJsonTableColumnDef()
     {
+        if (ParseKeyword(Keyword.NESTED))
+        {
+            _ = ParseKeyword(Keyword.PATH);
+            var nestedPath = ParseValue();
+            ExpectKeyword(Keyword.COLUMNS);
+
+            var columns = ExpectParens(() => ParseCommaSeparated(ParseJsonTableColumnDef));
+
+            return new JsonTableColumn.Nested(new JsonTableNestedColumn(nestedPath, columns));
+        }
+
         var name = ParseIdentifier();
+
+        if (ParseKeyword(Keyword.FOR))
+        {
+            ExpectKeyword(Keyword.ORDINALITY);
+            return new JsonTableColumn.ForOrdinality(name);
+        }
+
         var type = ParseDataType();
         var exists = ParseKeyword(Keyword.EXISTS);
         ExpectKeyword(Keyword.PATH);
@@ -5685,7 +5703,7 @@ public partial class Parser
             }
         }
 
-        return new JsonTableColumn(name, type, path, exists, onEmpty, onError);
+        return new JsonTableColumn.Named(new JsonTableNamedColumn(name, type, path, exists, onEmpty, onError));
     }
 
     public JsonTableColumnErrorHandling? ParseJsonTableColumnErrorHandling()
