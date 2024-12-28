@@ -10,7 +10,7 @@ public class RedshiftDialectTests : ParserTestBase
 {
     public RedshiftDialectTests()
     {
-        DefaultDialects = new[] { new RedshiftDialect() };
+        DefaultDialects = [new RedshiftDialect()];
     }
 
     [Fact]

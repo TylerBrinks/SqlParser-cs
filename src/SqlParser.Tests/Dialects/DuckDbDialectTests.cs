@@ -8,7 +8,7 @@ public class DuckDbDialectTests : ParserTestBase
 {
     public DuckDbDialectTests()
     {
-        DefaultDialects = new[] { new DuckDbDialect() };
+        DefaultDialects = [new DuckDbDialect()];
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public class DuckDbDialectTests : ParserTestBase
     {
         var macro = VerifiedStatement("CREATE MACRO schema.add(a, b) AS a + b");
         var expected = new Statement.CreateMacro(false, false, new ObjectName(["schema", "add"]),
-            new Sequence<MacroArg> { new("a"), new("b") },
+            [new("a"), new("b")],
             new MacroDefinition.MacroExpression(new Expression.BinaryOp(
                 new Expression.Identifier("a"),
                 BinaryOperator.Plus,
@@ -105,7 +105,7 @@ public class DuckDbDialectTests : ParserTestBase
 
         foreach (var sql in queries)
         {
-            var select = VerifiedQuery(sql.Value, new[] { new DuckDbDialect() });
+            var select = VerifiedQuery(sql.Value, [new DuckDbDialect()]);
 
             var left = new SelectExpression(new Select(
             [

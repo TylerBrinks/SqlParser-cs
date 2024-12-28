@@ -12,7 +12,7 @@ public class SnowflakeDialectTests : ParserTestBase
 {
     public SnowflakeDialectTests()
     {
-        DefaultDialects = new[] { new SnowflakeDialect() };
+        DefaultDialects = [new SnowflakeDialect()];
     }
 
     [Fact]
@@ -703,7 +703,7 @@ public class SnowflakeDialectTests : ParserTestBase
 
         sql = "SELECT TRIM('xyz', 'a')";
 
-        var select = VerifiedOnlySelect(sql, new[] { new SnowflakeDialect() });
+        var select = VerifiedOnlySelect(sql, [new SnowflakeDialect()]);
         var expected = new Trim(new LiteralValue(new Value.SingleQuotedString("xyz")),
             TrimWhereField.None,
             TrimCharacters: [new LiteralValue(new Value.SingleQuotedString("a"))]);
@@ -711,7 +711,7 @@ public class SnowflakeDialectTests : ParserTestBase
         Assert.Equal(expected, select.Projection.First().AsExpr());
 
         Assert.Throws<ParserException>(() =>
-            ParseSqlStatements("SELECT TRIM('xyz' 'a')", new[] { new BigQueryDialect() }));
+            ParseSqlStatements("SELECT TRIM('xyz' 'a')", [new BigQueryDialect()]));
     }
 
     [Fact]

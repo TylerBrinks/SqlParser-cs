@@ -12,7 +12,7 @@ public class MsSqlDialectTests : ParserTestBase
 {
     public MsSqlDialectTests()
     {
-        DefaultDialects = new[] { new MsSqlDialect() };
+        DefaultDialects = [new MsSqlDialect()];
     }
 
     [Fact]

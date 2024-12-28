@@ -1321,16 +1321,31 @@ public abstract record Statement : IWriteSql, IElement
     /// <summary>
     /// EXECUTE name [ ( parameter [, ...] ) ] [USING <expr>]
     /// </summary>
-    public record Execute(Ident Name, Sequence<Expression>? Parameters, Sequence<Expression>? Using) : Statement
+    public record Execute(ObjectName Name, Sequence<Expression>? Parameters, bool HasParentheses, Sequence<Expression>? Using) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"EXECUTE {Name}");
+            var open = string.Empty;
+            var close = string.Empty;
+
+            if (HasParentheses)
+            {
+                open = "(";
+                close = ")";
+            }
+            else if (Parameters.SafeAny())
+            {
+                open = " ";
+            }
+
+            writer.WriteSql($"EXECUTE {Name}{open}");
 
             if (Parameters.SafeAny())
             {
-                writer.Write($"({Parameters.ToSqlDelimited()})");
+                writer.Write($"{Parameters.ToSqlDelimited()}");
             }
+
+            writer.Write(close);
 
             if (Using.SafeAny())
             {
@@ -2289,7 +2304,7 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
-    
+
     public record ShowViews(bool Materialized, ShowClause? ShowClause = null, Ident? Name = null, ShowStatementFilter? Filter = null) : Statement
     {
         public override void ToSql(SqlTextWriter writer)

@@ -7,7 +7,7 @@ public class ClickhouseDialectTests : ParserTestBase
 {
     public ClickhouseDialectTests()
     {
-        DefaultDialects = new[] { new ClickHouseDialect() };
+        DefaultDialects = [new ClickHouseDialect()];
     }
 
     [Fact]
@@ -539,7 +539,7 @@ public class ClickhouseDialectTests : ParserTestBase
                    LIMIT 2
                   """;
 
-        var select = VerifiedQuery(sql, dialects: new[] { new ClickHouseDialect() });
+        var select = VerifiedQuery(sql, dialects: [new ClickHouseDialect()]);
 
         var orderBy = new Sequence<OrderByExpression>
         {

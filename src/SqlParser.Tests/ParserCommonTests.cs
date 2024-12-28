@@ -6839,4 +6839,28 @@ public class ParserCommonTests : ParserTestBase
         VerifiedStatement("SELECT TOP 3 DISTINCT * FROM tbl", dialects);
         VerifiedStatement("SELECT TOP 3 DISTINCT a, b, c FROM tbl", dialects);
     }
+
+    [Fact]
+    public void Parse_Execute_Stored_Procedure()
+    {
+        var dialects = new Dialect[] { new MsSqlDialect(), new GenericDialect() };
+
+        var expected = new Statement.Execute(new ObjectName([
+            "my_schema",
+            "my_stored_procedure"
+        ]), [
+        
+            new LiteralValue(new Value.NationalStringLiteral("param1")),
+            new LiteralValue(new Value.NationalStringLiteral("param2"))
+        ], false, null);
+
+        var execute = VerifiedStatement<Statement.Execute>("EXECUTE my_schema.my_stored_procedure N'param1', N'param2'", dialects);
+        Assert.Equal(expected, execute);
+
+        execute = (Statement.Execute)OneStatementParsesTo(
+            "EXEC my_schema.my_stored_procedure N'param1', N'param2';",
+            "EXECUTE my_schema.my_stored_procedure N'param1', N'param2'");
+        
+        Assert.Equal(expected, execute);
+    }
 }

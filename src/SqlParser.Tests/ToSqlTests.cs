@@ -10,7 +10,7 @@ public class ToSqlTests : ParserTestBase
     [Fact]
     public void Kill_ToSql()
     {
-        DefaultDialects = new[] { new ClickHouseDialect() };
+        DefaultDialects = [new ClickHouseDialect()];
         Assert.Equal("KILL MUTATION 5", VerifiedStatement("kill mutation 5").ToSql());
     }
 
@@ -71,7 +71,7 @@ public class ToSqlTests : ParserTestBase
     {
         Assert.Equal(
             "SELECT ARRAY[]", VerifiedStatement(
-                "select array[]", new Dialect[] { new PostgreSqlDialect() }).ToSql());
+                "select array[]", [new PostgreSqlDialect()]).ToSql());
     }
 
     [Fact]

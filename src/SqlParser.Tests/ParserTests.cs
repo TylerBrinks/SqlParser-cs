@@ -125,8 +125,8 @@ public class ParserTests : ParserTestBase
         DefaultDialects = [new GenericDialect(), new AnsiDialect()];
 
         TestDataType("GEOMETRY", new DataType.Custom("GEOMETRY"));
-        TestDataType("GEOMETRY(POINT)", new DataType.Custom("GEOMETRY", new Sequence<string> { "POINT" }));
-        TestDataType("GEOMETRY(POINT, 4326)", new DataType.Custom("GEOMETRY", new Sequence<string> { "POINT", "4326" }));
+        TestDataType("GEOMETRY(POINT)", new DataType.Custom("GEOMETRY", ["POINT"]));
+        TestDataType("GEOMETRY(POINT, 4326)", new DataType.Custom("GEOMETRY", ["POINT", "4326"]));
     }
 
     [Fact]
@@ -300,7 +300,7 @@ public class ParserTests : ParserTestBase
     [Fact]
     public void Parse_Double_Equality_Operator()
     {
-        OneStatementParsesTo("SELECT a==b FROM t", "SELECT a = b FROM t", new Dialect[]{new SQLiteDialect(), new GenericDialect()});
+        OneStatementParsesTo("SELECT a==b FROM t", "SELECT a = b FROM t", [new SQLiteDialect(), new GenericDialect()]);
     }
 
     [Fact]
@@ -332,7 +332,7 @@ public class ParserTests : ParserTestBase
         var postgresDialect = new PostgreSqlDialect();
         var parser = new Parser();
         _ = parser.ParseSql(sql, postgresDialect);
-        var addConstraint = (AlterTableOperation.AddConstraint)AlterTableOp(VerifiedStatement(sql, new Dialect[] { postgresDialect }));
+        var addConstraint = (AlterTableOperation.AddConstraint)AlterTableOp(VerifiedStatement(sql, [postgresDialect]));
         var addedConstraint = (TableConstraint.PostgresAlterTableIndex) addConstraint.TableConstraint;
         Assert.Equal(expectedConstraintName, addedConstraint.Name);
         Assert.Equal(expectedIndexName, addedConstraint.IndexName);
@@ -348,7 +348,7 @@ public class ParserTests : ParserTestBase
         var postgresDialect = new PostgreSqlDialect();
         var parser = new Parser();
         _ = parser.ParseSql(sql, postgresDialect);
-        var addConstraint = (AlterTableOperation.AddConstraint)AlterTableOp(VerifiedStatement(sql, new Dialect[] { postgresDialect }));
+        var addConstraint = (AlterTableOperation.AddConstraint)AlterTableOp(VerifiedStatement(sql, [postgresDialect]));
         var addedConstraint = (TableConstraint.PostgresAlterTableIndex) addConstraint.TableConstraint;
         Assert.Equal(expectedConstraintName, addedConstraint.Name);
         Assert.Equal(expectedIndexName, addedConstraint.IndexName);
@@ -362,7 +362,7 @@ public class ParserTests : ParserTestBase
         var postgresDialect = new PostgreSqlDialect();
         var parser = new Parser();
         _ = parser.ParseSql(sql, postgresDialect);
-        var addConstraint = (AlterTableOperation.AddConstraint)AlterTableOp(VerifiedStatement(sql, new Dialect[] { postgresDialect }));
+        var addConstraint = (AlterTableOperation.AddConstraint)AlterTableOp(VerifiedStatement(sql, [postgresDialect]));
         var addedConstraint = (TableConstraint.PostgresAlterTableIndex) addConstraint.TableConstraint;
         Assert.NotNull(addedConstraint.Characteristics);
         Assert.True(addedConstraint.Characteristics.Deferrable);

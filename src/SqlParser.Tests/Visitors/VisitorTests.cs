@@ -23,8 +23,8 @@ namespace SqlParser.Tests.Visitors
             IElement cache = new Statement.Cache("name")
             {
                 TableFlag = "flag",
-                Options = new Sequence<SqlOption>(),
-                Query = new Statement.Select(new Query(new SetExpression.SelectExpression(new Select(new Sequence<SelectItem>()))))
+                Options = [],
+                Query = new Statement.Select(new Query(new SetExpression.SelectExpression(new Select([]))))
             };
 
             var properties = IElement.GetVisitableChildProperties(cache);
@@ -139,8 +139,8 @@ namespace SqlParser.Tests.Visitors
 
     public class TestVisitor : Visitor
     {
-        public List<string> Visited = new();
-        public List<IElement> Elements = new();
+        public List<string> Visited = [];
+        public List<IElement> Elements = [];
 
         public override ControlFlow PreVisitStatement(Statement statement)
         {

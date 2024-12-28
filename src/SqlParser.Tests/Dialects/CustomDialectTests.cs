@@ -10,7 +10,7 @@ public class CustomDialectTests : ParserTestBase
 {
     public CustomDialectTests()
     {
-        DefaultDialects = new[] { new ClickHouseDialect() };
+        DefaultDialects = [new ClickHouseDialect()];
     }
 
     [Fact]

@@ -41,7 +41,7 @@ public class ParserRegressionTests : ParserTestBase
     public void Test_Query_Files(string sql)
     {
         var ast = new Parser().ParseSql(sql);
-        DefaultDialects = new[] { new GenericDialect() };
+        DefaultDialects = [new GenericDialect()];
         if (ast.Count == 1)
         {
             OneStatementParsesTo(sql, ast.ToSql());

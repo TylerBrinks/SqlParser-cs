@@ -91,7 +91,7 @@ public partial class Parser
             // `PREPARE`, `EXECUTE` and `DEALLOCATE` are Postgres-specific
             // syntax. They are used for Postgres prepared statement.
             Keyword.DEALLOCATE => ParseDeallocate(),
-            Keyword.EXECUTE => ParseExecute(),
+            Keyword.EXECUTE or Keyword.EXEC => ParseExecute(),
             Keyword.PREPARE => ParsePrepare(),
             Keyword.MERGE => ParseMerge(),
             // `LISTEN` and `NOTIFY` are Postgres-specific

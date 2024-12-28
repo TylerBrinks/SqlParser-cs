@@ -1,5 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using SqlParser.Ast;
+﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 using static SqlParser.Ast.Expression;
 // ReSharper disable StringLiteralTypo
@@ -10,7 +9,7 @@ public class BigQueryDialectTests : ParserTestBase
 {
     public BigQueryDialectTests()
     {
-        DefaultDialects = new[] { new BigQueryDialect() };
+        DefaultDialects = [new BigQueryDialect()];
     }
 
     [Fact]
@@ -428,7 +427,7 @@ public class BigQueryDialectTests : ParserTestBase
             new LiteralValue(new Value.Number("1")),
             new LiteralValue(new Value.Number("2")),
             new LiteralValue(new Value.Number("3"))
-        ], new Sequence<StructField>());
+        ], []);
         Assert.Equal(expected, select.Projection.First().AsExpr());
 
         expected = new Struct([
@@ -448,7 +447,7 @@ public class BigQueryDialectTests : ParserTestBase
         ], []);
         Assert.Equal(expected, select.Projection.Skip(3).First().AsExpr());
 
-        expected = new Struct([new Named(new Identifier("str_col"), "abc")], new Sequence<StructField>());
+        expected = new Struct([new Named(new Identifier("str_col"), "abc")], []);
         Assert.Equal(expected, select.Projection.Skip(4).First().AsExpr());
     }
 

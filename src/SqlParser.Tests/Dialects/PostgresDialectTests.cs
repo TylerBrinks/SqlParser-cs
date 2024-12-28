@@ -14,7 +14,7 @@ public class PostgresDialectTests : ParserTestBase
 {
     public PostgresDialectTests()
     {
-        DefaultDialects = new[] { new PostgreSqlDialect() };
+        DefaultDialects = [new PostgreSqlDialect()];
     }
 
     [Fact]
@@ -971,7 +971,7 @@ public class PostgresDialectTests : ParserTestBase
         DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
 
         var execute = VerifiedStatement<Statement.Execute>("EXECUTE a");
-        Assert.Equal(new Statement.Execute("a", null, null), execute);
+        Assert.Equal(new Statement.Execute("a", null, false, null), execute);
 
         execute = VerifiedStatement<Statement.Execute>("EXECUTE a(1, 't')");
         var parameters = new[]
@@ -979,14 +979,13 @@ public class PostgresDialectTests : ParserTestBase
                 new LiteralValue(Number("1")),
                 new LiteralValue(new Value.SingleQuotedString("t"))
             };
-        Assert.Equal(new Statement.Execute("a", parameters, null), execute);
+        Assert.Equal(new Statement.Execute("a", parameters, true, null), execute);
 
         execute = VerifiedStatement<Statement.Execute>("EXECUTE a USING CAST(1337 AS SMALLINT), CAST(7331 AS SMALLINT)");
-        Assert.Equal(new Statement.Execute("a", null, new Sequence<Expression>
-            {
-                new Cast(new LiteralValue(new Value.Number("1337")), new DataType.SmallInt(), CastKind.Cast),
-                new Cast(new LiteralValue(new Value.Number("7331")), new DataType.SmallInt(), CastKind.Cast),
-            }), execute);
+        Assert.Equal(new Statement.Execute("a", null, false, [
+            new Cast(new LiteralValue(new Value.Number("1337")), new DataType.SmallInt(), CastKind.Cast),
+            new Cast(new LiteralValue(new Value.Number("7331")), new DataType.SmallInt(), CastKind.Cast)
+        ]), execute);
     }
 
     [Fact]
@@ -1110,12 +1109,12 @@ public class PostgresDialectTests : ParserTestBase
         var ops = new (string Text, BinaryOperator Operator, IEnumerable<Dialect> Dialects)[]
         {
                 // Sharp char and Caret cannot be used with Generic Dialect, it conflicts with identifiers
-                ("#", BinaryOperator.PGBitwiseXor, new Dialect[] {new PostgreSqlDialect()}),
-                ("^", BinaryOperator.PGExp, new Dialect[] {new PostgreSqlDialect()}),
-                (">>", BinaryOperator.PGBitwiseShiftRight, new Dialect[] {new PostgreSqlDialect(), new GenericDialect()}),
-                ("<<", BinaryOperator.PGBitwiseShiftLeft, new Dialect[] {new PostgreSqlDialect(), new GenericDialect()}),
-                ("&&", BinaryOperator.PGOverlap, new Dialect[] {new PostgreSqlDialect()}),
-                ("^@", BinaryOperator.PGStartsWith, new Dialect[] {new PostgreSqlDialect()}),
+                ("#", BinaryOperator.PGBitwiseXor, [new PostgreSqlDialect()]),
+                ("^", BinaryOperator.PGExp, [new PostgreSqlDialect()]),
+                (">>", BinaryOperator.PGBitwiseShiftRight, [new PostgreSqlDialect(), new GenericDialect()]),
+                ("<<", BinaryOperator.PGBitwiseShiftLeft, [new PostgreSqlDialect(), new GenericDialect()]),
+                ("&&", BinaryOperator.PGOverlap, [new PostgreSqlDialect()]),
+                ("^@", BinaryOperator.PGStartsWith, [new PostgreSqlDialect()]),
         };
 
         foreach (var op in ops)
@@ -1251,7 +1250,7 @@ public class PostgresDialectTests : ParserTestBase
 
         sql = "SELECT ARRAY[]";
         select = VerifiedOnlySelect(sql);
-        var arr = new Expression.Array(new ArrayExpression(new Sequence<Expression>(), true));
+        var arr = new Expression.Array(new ArrayExpression([], true));
         Assert.Equal(arr, select.Projection.Single().AsExpr());
     }
 
@@ -1301,7 +1300,7 @@ public class PostgresDialectTests : ParserTestBase
     [Fact]
     public void Test_Json()
     {
-        DefaultDialects = new[] { new PostgreSqlDialect() };
+        DefaultDialects = [new PostgreSqlDialect()];
         var select = VerifiedOnlySelect("SELECT params ->> 'name' FROM events");
         var expected = new SelectItem.UnnamedExpression(new BinaryOp(
             new Identifier("params"),
@@ -2061,7 +2060,7 @@ public class PostgresDialectTests : ParserTestBase
     {
         const string sql = "CREATE INDEX IF NOT EXISTS my_index ON my_table(col1,col2)";
 
-        var createIndex = VerifiedStatement<Statement.CreateIndex>(sql, new[] { new PostgreSqlDialect() });
+        var createIndex = VerifiedStatement<Statement.CreateIndex>(sql, [new PostgreSqlDialect()]);
 
         Assert.Equal("my_index", createIndex.Element.Name!);
         Assert.Equal("my_table", createIndex.Element.TableName);
@@ -2433,11 +2432,10 @@ public class PostgresDialectTests : ParserTestBase
 
         var create = VerifiedStatement<Statement.CreateTable>(sql);
 
-        Assert.Equal(new Sequence<SqlOption>
-            {
-                new SqlOption.KeyValue("foo", new LiteralValue(new Value.SingleQuotedString("bar"))),
-                new SqlOption.KeyValue("a", new LiteralValue(new Value.Number("123"))),
-            }, create.Element.WithOptions);
+        Assert.Equal([
+            new SqlOption.KeyValue("foo", new LiteralValue(new Value.SingleQuotedString("bar"))),
+            new SqlOption.KeyValue("a", new LiteralValue(new Value.Number("123")))
+        ], create.Element.WithOptions);
     }
 
     private void TestOperator(string op, BinaryOperator binaryOp)
@@ -2636,7 +2634,7 @@ public class PostgresDialectTests : ParserTestBase
             IncludeEach = true
         };
 
-        Assert.Equal(expected, VerifiedStatement(sql, new[] { new PostgreSqlDialect() }));
+        Assert.Equal(expected, VerifiedStatement(sql, [new PostgreSqlDialect()]));
     }
 
     [Fact]

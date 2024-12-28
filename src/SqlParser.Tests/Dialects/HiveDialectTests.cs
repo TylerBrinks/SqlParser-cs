@@ -9,7 +9,7 @@ public class HiveDialectTests : ParserTestBase
 {
     public HiveDialectTests()
     {
-        DefaultDialects = new[] { new HiveDialect() };
+        DefaultDialects = [new HiveDialect()];
     }
 
     [Fact]
@@ -229,12 +229,12 @@ public class HiveDialectTests : ParserTestBase
         Assert.Equal(fnBody, create.FunctionBody);
         Assert.Equal(new CreateFunctionUsing.Jar("hdfs://somewhere.com:8020/very/far"), create.Using);
 
-        DefaultDialects = new[] { new MsSqlDialect() };
+        DefaultDialects = [new MsSqlDialect()];
 
         var ex = Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
         Assert.Equal("Expected an object type after CREATE, found FUNCTION, Line: 1, Col: 18", ex.Message);
 
-        DefaultDialects = new[] { new HiveDialect() };
+        DefaultDialects = [new HiveDialect()];
 
         sql = "CREATE TEMPORARY FUNCTION mydb.myfunc AS 'org.random.class.Name' USING JAR";
         ex = Assert.Throws<ParserException>(() => ParseSqlStatements(sql));

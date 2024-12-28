@@ -14,7 +14,7 @@ public class SqliteDialectTests : ParserTestBase
 {
     public SqliteDialectTests()
     {
-        DefaultDialects = new[] { new SQLiteDialect() };
+        DefaultDialects = [new SQLiteDialect()];
     }
 
     [Fact]
@@ -187,7 +187,7 @@ public class SqliteDialectTests : ParserTestBase
         OneStatementParsesTo(
             "SELECT * FROM t1 WHERE a IN (,)",
             "SELECT * FROM t1 WHERE a IN ()",
-            dialects: new[] { new SQLiteDialect() },
+            dialects: [new SQLiteDialect()],
             options: new ParserOptions { TrailingCommas = true }
         );
     }
@@ -196,7 +196,7 @@ public class SqliteDialectTests : ParserTestBase
     public void Invalid_Empty_List()
     {
         Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT * FROM t1 WHERE a IN (,,)",
-            new[] { new SQLiteDialect() }, options: new ParserOptions { TrailingCommas = true }));
+            [new SQLiteDialect()], options: new ParserOptions { TrailingCommas = true }));
     }
 
     [Fact]
@@ -281,7 +281,7 @@ public class SqliteDialectTests : ParserTestBase
     [Fact]
     public void Test_Dollar_Identifier_As_Placeholder()
     {
-        var expression = (BinaryOp)VerifiedExpr("id = $id", new[] { new SQLiteDialect() });
+        var expression = (BinaryOp)VerifiedExpr("id = $id", [new SQLiteDialect()]);
 
         Assert.Equal(BinaryOperator.Eq, expression.Op);
         Assert.Equal(new Identifier("id"), expression.Left);

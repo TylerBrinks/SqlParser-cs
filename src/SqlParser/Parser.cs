@@ -6406,12 +6406,26 @@ public partial class Parser
 
     public Execute ParseExecute()
     {
-        var name = ParseIdentifier();
-        Sequence<Expression>? parameters = null;
+        var name = ParseObjectName();
+        var hasParentheses = ConsumeToken<LeftParen>();
 
-        if (ConsumeToken<LeftParen>())
+        var endToken = (hasParentheses, PeekToken()) switch
         {
-            parameters = ParseCommaSeparated(ParseExpr);
+            (true, _) => typeof(RightParen),
+            (false, EOF) => typeof(EOF),
+            (false, Word { Keyword: Keyword.USING }) => typeof(Word),
+            (false, _ ) => typeof(SemiColon)
+        };
+
+        var parameters = ParseCommaSeparated0(ParseExpr, endToken);
+
+        if (!parameters.SafeAny())
+        {
+            parameters = null;
+        }
+
+        if (hasParentheses)
+        {
             ExpectRightParen();
         }
 
@@ -6427,7 +6441,7 @@ public partial class Parser
             }
         }
 
-        return new Execute(name, parameters, usingExpressions);
+        return new Execute(name, parameters, hasParentheses, usingExpressions);
     }
 
     public Prepare ParsePrepare()
