@@ -183,6 +183,7 @@ public static class EnumWriter
             UnaryOperator.PGPostfixFactorial => "!",
             UnaryOperator.PGPrefixFactorial => "!!",
             UnaryOperator.PGAbs => "@",
+            UnaryOperator.BangNot => "!",
 
             _ => e.ToString().ToUpperInvariant()
         };

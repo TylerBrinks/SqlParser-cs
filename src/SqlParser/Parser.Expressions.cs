@@ -777,6 +777,8 @@ public partial class Parser
 
             LeftBracket => ParseArrayExpr(false),
             Minus or Plus => ParseUnary(),
+            ExclamationMark when _dialect.SupportsBangNotOperator => 
+                new UnaryOp(ParseSubExpression((short)Precedence.UnaryNot), UnaryOperator.BangNot),
 
             DoubleExclamationMark
                 or PGSquareRoot

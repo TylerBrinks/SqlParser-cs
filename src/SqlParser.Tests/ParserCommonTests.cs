@@ -6863,4 +6863,82 @@ public class ParserCommonTests : ParserTestBase
         
         Assert.Equal(expected, execute);
     }
+
+    [Fact]
+    public void Parse_Bang_Not()
+    {
+        var dialects = AllDialects.Where(d => d.SupportsBangNotOperator).ToList();
+        var select = VerifiedOnlySelect("SELECT !a, !(b > 3)", dialects);
+
+        var ident = new Identifier("a");
+        var nested = new Expression.Nested(new BinaryOp(
+            new Identifier("b"),
+            BinaryOperator.Gt,
+            new LiteralValue(new Value.Number("3"))
+        ));
+
+        var expectedIdent = new SelectItem.UnnamedExpression(new UnaryOp(ident, UnaryOperator.BangNot));
+        var expectedNested = new SelectItem.UnnamedExpression(new UnaryOp(nested, UnaryOperator.BangNot));
+
+        Assert.Equal(expectedIdent, select.Projection[0]);
+        Assert.Equal(expectedNested, select.Projection[1]);
+
+        var statements = new []{"SELECT a!", "SELECT a ! b", "SELECT a ! as b"};
+
+        foreach (var statement in statements)
+        {
+            Assert.Throws<ParserException>(() => ParseSqlStatements(statement, dialects));
+        }
+
+        statements = new[] { "SELECT !a", "SELECT !a b", "SELECT !a as b" };
+        dialects = AllDialects.Where(d => !d.SupportsBangNotOperator).ToList();
+        foreach (var statement in statements)
+        {
+            Assert.Throws<ParserException>(() => ParseSqlStatements(statement, dialects));
+        }
+    }
+
+    [Fact]
+    public void Parse_Factorial_Operator()
+    {
+        var dialects = AllDialects.Where(d => d.SupportsFactorialOperator).ToList();
+        const string sql = "SELECT a!, (b + c)!";
+        var select = VerifiedOnlySelect(sql, dialects);
+
+        var ident = new Identifier("a");
+        var nested = new Expression.Nested(new BinaryOp(
+            new Identifier("b"),
+            BinaryOperator.Plus,
+            new Identifier("c")
+        ));
+
+        var expectedIdent = new SelectItem.UnnamedExpression(new UnaryOp(ident, UnaryOperator.PGPostfixFactorial));
+        var expectedNested = new SelectItem.UnnamedExpression(new UnaryOp(nested, UnaryOperator.PGPostfixFactorial));
+
+        Assert.Equal(expectedIdent, select.Projection[0]);
+        Assert.Equal(expectedNested, select.Projection[1]);
+
+        var statements = new[] { "SELECT !a", "SELECT !a b", "SELECT !a as b" };
+
+        foreach (var statement in statements)
+        {
+            Assert.Throws<ParserException>(() => ParseSqlStatements(statement, dialects));
+        }
+
+        statements = new[] { "SELECT a!", "SELECT a ! b", "SELECT a ! as b" };
+        dialects = AllDialects.Where(d => !d.SupportsBangNotOperator).ToList();
+        foreach (var statement in statements)
+        {
+            Assert.Throws<ParserException>(() => ParseSqlStatements(statement, dialects));
+        }
+
+        // Due to the exclamation mark, which is both part of the `bang not` operator
+        // and the `factorial` operator,  additional filtering supports
+        // `bang not` operator is required here.
+        dialects = AllDialects.Where(d => d is { SupportsFactorialOperator: false, SupportsBangNotOperator: true }).ToList();
+        foreach (var statement in statements){
+
+            Assert.Throws<ParserException>(() => ParseSqlStatements(statement, dialects));
+        }
+    }
 }

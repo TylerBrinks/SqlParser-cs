@@ -79,4 +79,6 @@ public partial class Dialect
     public virtual bool SupportsListen => false;
     public virtual bool SupportsNotify => false;
     public virtual bool SupportsTopBeforeDistinct => false;
+    public virtual bool SupportsFactorialOperator => false;
+    public virtual bool SupportsBangNotOperator => false;
 }

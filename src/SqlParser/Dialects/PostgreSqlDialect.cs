@@ -280,4 +280,5 @@ public class PostgreSqlDialect : Dialect
     public override bool SupportsExplainWithUtilityOptions => true;
     public override bool SupportsListen => true;
     public override bool SupportsNotify => true;
+    public override bool SupportsFactorialOperator => true;
 }

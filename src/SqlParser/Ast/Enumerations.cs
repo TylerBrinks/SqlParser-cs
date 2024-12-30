@@ -677,7 +677,9 @@ public enum UnaryOperator
     // Factorial, e.g. !!9 (PostgreSQL-specific)
     PGPrefixFactorial,
     // Absolute value, e.g. @ -9 (PostgreSQL-specific)
-    PGAbs
+    PGAbs,
+    // Unary logical not operator: e.g. `! false` (Hive-specific)
+    BangNot
 }
 // ReSharper restore InconsistentNaming
 

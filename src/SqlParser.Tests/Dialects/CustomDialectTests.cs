@@ -144,21 +144,3 @@ public class CustomDialect : Dialect
         return ParseStatementAction?.Invoke(parser);
     }
 }
-
-//public class MyDialect : Dialect
-//{
-//    public override bool IsIdentifierStart(char character)
-//    {
-//        return character.IsLetter() ||
-//               character.IsDigit() ||
-//               character is Symbols.Underscore;
-//    }
-
-//    public override bool IsIdentifierPart(char character)
-//    {
-//        return character.IsLetter() ||
-//               character.IsDigit() ||
-//               character is Symbols.Underscore
-//                   or Symbols.Dollar;
-//    }
-//}

@@ -818,7 +818,7 @@ public partial class Parser
             return new Cast(expr, ParseDataType(), CastKind.DoubleColon);
         }
 
-        if (token is ExclamationMark)
+        if (token is ExclamationMark && _dialect.SupportsFactorialOperator)
         {
             return new UnaryOp(expr, UnaryOperator.PGPostfixFactorial);
         }
