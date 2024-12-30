@@ -9,7 +9,7 @@
 		<Authors>Tyler Brinks</Authors>
 		<Company />
 		<Description>Friendly SQL Parser for .NET</Description>
-		<Copyright>2023 Tyler Brinks</Copyright>
+		<Copyright>2025 Tyler Brinks</Copyright>
 		<PackageProjectUrl>https://github.com/TylerBrinks/SqlParser-cs</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/TylerBrinks/SqlParser-cs</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
@@ -26,6 +26,7 @@
 		<EmbedUntrackedSources>true</EmbedUntrackedSources>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -47,6 +48,10 @@
 
 	<ItemGroup>
 	  <None Include="..\..\docs\images\icon.jpg">
+	    <Pack>True</Pack>
+	    <PackagePath>\</PackagePath>
+	  </None>
+	  <None Include="..\..\README.md">
 	    <Pack>True</Pack>
 	    <PackagePath>\</PackagePath>
 	  </None>
