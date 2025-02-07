@@ -390,7 +390,7 @@ public partial class Parser
             {
                 // work has been done already
             }
-            else if ((PeekToken() is Word) || (PeekToken() is SingleQuotedString))
+            else if (PeekToken() is Word || PeekToken() is SingleQuotedString)
             {
                 columns.Add(ParseColumnDef());
             }

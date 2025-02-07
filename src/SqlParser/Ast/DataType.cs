@@ -1069,11 +1069,16 @@ public abstract record DataType : IWriteSql, IElement
     /// <see href="https://jakewheat.github.io/sql-overview/sql-2016-foundation-grammar.html#binary-string-type"/>
     /// <see href="https://learn.microsoft.com/pt-br/sql/t-sql/data-types/binary-and-varbinary-transact-sql?view=sql-server-ver16"/>
     /// </summary>
-    public record Varbinary(ulong? Length = null) : LengthDataType(Length)
+    public record Varbinary(BinaryLength? Length = null) : DataType
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            FormatTypeWithOptionalLength(writer, "VARBINARY", Length);
+            writer.Write("VARBINARY");
+
+            if (Length != null)
+            {
+                writer.WriteSql($"({Length})");
+            }
         }
     }
     /// <summary>

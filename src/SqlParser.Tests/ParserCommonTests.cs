@@ -1317,7 +1317,11 @@ public class ParserCommonTests : ParserTestBase
         Assert.Equal(expected, select.Projection.Single().AsExpr());
 
         select = VerifiedOnlySelect("SELECT CAST(id AS VARBINARY(50)) FROM customer");
-        expected = new Cast(new Identifier("id"), new Varbinary(50), CastKind.Cast);
+        expected = new Cast(new Identifier("id"), new Varbinary(new BinaryLength.IntegerLength(50)), CastKind.Cast);
+        Assert.Equal(expected, select.Projection.Single().AsExpr());
+         
+        select = VerifiedOnlySelect("SELECT CAST(id AS VARBINARY(MAX)) FROM customer");
+        expected = new Cast(new Identifier("id"), new Varbinary(new BinaryLength.Max()), CastKind.Cast);
         Assert.Equal(expected, select.Projection.Single().AsExpr());
 
         select = VerifiedOnlySelect("SELECT CAST(id AS BLOB) FROM customer");

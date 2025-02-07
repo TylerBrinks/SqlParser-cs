@@ -3716,7 +3716,7 @@ public partial class Parser
             Word { Keyword: Keyword.CHAR } => ParseChar(),
             Word { Keyword: Keyword.CLOB } => new DataType.Clob(ParseOptionalPrecision()),
             Word { Keyword: Keyword.BINARY } => new DataType.Binary(ParseOptionalPrecision()),
-            Word { Keyword: Keyword.VARBINARY } => new DataType.Varbinary(ParseOptionalPrecision()),
+            Word { Keyword: Keyword.VARBINARY } => new DataType.Varbinary(ParseOptionalBinaryLength()),
             Word { Keyword: Keyword.BLOB } => new DataType.Blob(ParseOptionalPrecision()),
             Word { Keyword: Keyword.BYTES } => new DataType.Bytes(ParseOptionalPrecision()),
             Word { Keyword: Keyword.UUID } => new DataType.Uuid(),
@@ -4309,6 +4309,19 @@ public partial class Parser
         return length;
     }
 
+    public BinaryLength? ParseOptionalBinaryLength()
+    {
+        if (!ConsumeToken<LeftParen>())
+        {
+            return null;
+        }
+
+        var length = ParseBinaryLength();
+        ExpectRightParen();
+
+        return length;
+    }
+
     public CharacterLength ParseCharacterLength()
     {
         if (ParseKeyword(Keyword.MAX))
@@ -4329,6 +4342,18 @@ public partial class Parser
         }
 
         return new CharacterLength.IntegerLength(length, unit);
+    }
+
+    public BinaryLength ParseBinaryLength()
+    {
+        if (ParseKeyword(Keyword.MAX))
+        {
+            return new BinaryLength.Max();
+        }
+
+        var length = ParseLiteralUnit();
+
+        return new BinaryLength.IntegerLength(length);
     }
 
     public (ulong?, ulong?) ParseOptionalPrecisionScale()

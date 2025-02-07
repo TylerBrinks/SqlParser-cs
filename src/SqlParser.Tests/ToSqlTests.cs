@@ -178,4 +178,14 @@ public class ToSqlTests : ParserTestBase
         var invalid = new Password.NullPassword();
         Assert.Equal(" PASSWORD NULL", invalid.ToSql());
     }
+
+    [Fact]
+    public void Password_ToSqlms()
+    {
+        var sql = """
+                  CREATE TABLE T_SqlServerGenerateTest (VarBinaryMaxCol varbinary(max) not null);
+                  """;
+
+        var parser = new Parser().ParseSql(sql, new MsSqlDialect());
+    }
 }
