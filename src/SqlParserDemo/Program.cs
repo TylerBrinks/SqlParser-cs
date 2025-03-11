@@ -1,5 +1,6 @@
 ﻿using Spectre.Console;
 using SqlParserDemo;
+using Action = System.Action;
 
 AnsiConsole.Write(new Rule("SQL Parser") { Justification = Justify.Left });
 AnsiConsole.WriteLine("");

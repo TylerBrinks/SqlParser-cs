@@ -570,11 +570,8 @@ public abstract record Expression : IWriteSql, IElement
     // ReSharper disable once InconsistentNaming
     public record ILike(Expression Expression, bool Negated, Expression Pattern, string? EscapeChar = null, bool Any = false) : Expression, INegated
     {
-        public ILike(Expression expression, bool negated, Expression pattern, char? escapeChar = null, bool Any = false)
-            : this(expression, negated, pattern, escapeChar?.ToString(), Any) { }
-
-        public ILike(Expression? expression, bool negated, Expression pattern, bool Any = false)
-            : this(expression, negated, pattern, (string?)null, Any) { }
+        public ILike(Expression expression, bool negated, Expression pattern, bool Any)
+            : this(expression, negated, pattern, null, Any) { }
         
         public override void ToSql(SqlTextWriter writer)
         {

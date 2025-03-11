@@ -777,7 +777,7 @@ public class ParserCommonTests : ParserTestBase
                 new Identifier("name"),
                 negated,
                 new LiteralValue(new Value.SingleQuotedString("%a")),
-                Symbols.Caret
+                Symbols.Caret.ToString()
             );
             Assert.Equal(iLike, select.Selection);
 
