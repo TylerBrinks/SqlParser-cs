@@ -8,7 +8,7 @@ public abstract record TableFactor : IWriteSql, IElement
     /// <summary>
     /// Common table alias across all implementations
     /// </summary>
-    [Visit(1)] public TableAlias? Alias { get; internal set; }
+    [Visit(1)] public TableAlias? Alias { get; set; }
     /// <summary>
     /// Derived table factor
     /// </summary>

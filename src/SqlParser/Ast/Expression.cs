@@ -480,7 +480,7 @@ public abstract record Expression : IWriteSql, IElement
         /// <summary>
         /// Sequence function call
         /// </summary>
-        public FunctionArguments Args { get; internal set; }
+        public FunctionArguments Args { get; init; }
 
         public FunctionArguments Parameters { get; init; }
 
