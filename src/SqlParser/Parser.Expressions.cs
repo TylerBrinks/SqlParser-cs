@@ -777,7 +777,7 @@ public partial class Parser
 
             LeftBracket => ParseArrayExpr(false),
             Minus or Plus => ParseUnary(),
-            ExclamationMark when _dialect.SupportsBangNotOperator => 
+            ExclamationMark when _dialect.SupportsBangNotOperator =>
                 new UnaryOp(ParseSubExpression((short)Precedence.UnaryNot), UnaryOperator.BangNot),
 
             DoubleExclamationMark
@@ -869,7 +869,7 @@ public partial class Parser
             }
 
             var fieldName = ParseIdentifier();
-            return new Named(expression, fieldName);
+            return new Named(expression, fieldName, true);
         }
 
         return expression;
@@ -901,13 +901,13 @@ public partial class Parser
         }
 
         var withinGroup = ParseInit(ParseKeywordSequence(Keyword.WITHIN, Keyword.GROUP), () =>
+        {
+            return ExpectParens(() =>
             {
-                return ExpectParens(() =>
-                {
-                    ExpectKeywords(Keyword.ORDER, Keyword.BY);
-                    return ParseCommaSeparated(ParseOrderByExpr);
-                });
+                ExpectKeywords(Keyword.ORDER, Keyword.BY);
+                return ParseCommaSeparated(ParseOrderByExpr);
             });
+        });
 
         var filter = ParseInit(
             _dialect.SupportsFilterDuringAggregation &&

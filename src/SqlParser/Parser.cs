@@ -722,7 +722,7 @@ public partial class Parser
     public LockTable ParseLockTable()
     {
         var table = ParseIdentifier();
-        var alias = ParseOptionalAlias(new[] { Keyword.READ, Keyword.WRITE, Keyword.LOW_PRIORITY });
+        var alias = ParseOptionalAlias(new[] { Keyword.READ, Keyword.WRITE, Keyword.LOW_PRIORITY }, out var asKeyword);
         LockTableType lockType;
 
         if (ParseKeyword(Keyword.READ))
@@ -742,7 +742,7 @@ public partial class Parser
             throw Expected("an lock type in LOCK TABLES", PeekToken());
         }
 
-        return new LockTable(table, alias, lockType);
+        return new LockTable(table, alias, lockType, asKeyword);
     }
     /// <summary>
     /// Parse either `ALL` or `DISTINCT`. Returns `true` if `DISTINCT` is parsed and results in a
@@ -1712,16 +1712,16 @@ public partial class Parser
         var columns = ExpectParens(() => ParseCommaSeparated(ParseOrderByExpr));
 
         var include = ParseInit(ParseKeyword(Keyword.INCLUDE), () =>
-            {
-                return ExpectParens(() => ParseCommaSeparated(ParseIdentifier));
-            });
+        {
+            return ExpectParens(() => ParseCommaSeparated(ParseIdentifier));
+        });
 
         var nullsDistinct = ParseInit<bool?>(ParseKeyword(Keyword.NULLS), () =>
-            {
-                var not = ParseKeyword(Keyword.NOT);
-                ExpectKeyword(Keyword.DISTINCT);
-                return !not;
-            });
+        {
+            var not = ParseKeyword(Keyword.NOT);
+            ExpectKeyword(Keyword.DISTINCT);
+            return !not;
+        });
 
         var withExpressions = ParseInit(
             _dialect.SupportsCreateIndexWithClause && ParseKeyword(Keyword.WITH), () =>
@@ -2233,7 +2233,7 @@ public partial class Parser
     public ColumnOption? ParseOptionalColumnOption()
     {
         var option = _dialect.ParseColumnOption(this);
-        if (option!=null)
+        if (option != null)
         {
             return option;
         }
@@ -2357,13 +2357,13 @@ public partial class Parser
         if (_dialect is MySqlDialect or GenericDialect && ParseKeyword(Keyword.AUTO_INCREMENT))
         {
             // Support AUTO_INCREMENT for MySQL
-            return new ColumnOption.DialectSpecific([new Word("AUTO_INCREMENT") ]);
+            return new ColumnOption.DialectSpecific([new Word("AUTO_INCREMENT")]);
         }
 
         if (_dialect is SQLiteDialect or GenericDialect && ParseKeyword(Keyword.AUTOINCREMENT))
         {
             // Support AUTOINCREMENT for SQLite
-            return new ColumnOption.DialectSpecific([new Word("AUTOINCREMENT") ]);
+            return new ColumnOption.DialectSpecific([new Word("AUTOINCREMENT")]);
         }
 
         if (_dialect.SupportsAscDescInColumnDefinition && ParseKeyword(Keyword.ASC))
@@ -2885,7 +2885,7 @@ public partial class Parser
              {
                  PrevToken();
                  var option = ParseOptionalColumnOption();
-                 return new Sequence<ColumnOption>{ option! };
+                 return new Sequence<ColumnOption> { option! };
              });
 
         var dataType = ParseInit(_dialect is ClickHouseDialect, ParseDataType);
@@ -3768,7 +3768,7 @@ public partial class Parser
             _ => ParseUnmatched()
         };
 
-        if(parserException != null || _currentException != null)
+        if (parserException != null || _currentException != null)
         {
             return (data, trailingBracket, parserException ?? _currentException);
         }
@@ -3946,7 +3946,7 @@ public partial class Parser
             PrevToken();
             return new DataType.Union(ParseUnionTypeDef());
         }
-         
+
         DataType ParseUnmatched()
         {
             PrevToken();
@@ -4022,7 +4022,7 @@ public partial class Parser
         var ident = ParseIdentifier();
         ExpectKeyword(Keyword.AS);
         var alias = ParseIdentifier();
-        return new IdentWithAlias(ident, alias);
+        return new IdentWithAlias(ident, alias, true);
     }
     /// <summary>
     /// Parse `AS identifier` (or simply `identifier` if it's not a reserved keyword)
@@ -4030,9 +4030,9 @@ public partial class Parser
     /// <param name="reservedKeywords"></param>
     /// <returns></returns>
     /// <exception cref="ParserException"></exception>
-    public Ident? ParseOptionalAlias(IEnumerable<Keyword> reservedKeywords)
+    public Ident? ParseOptionalAlias(IEnumerable<Keyword> reservedKeywords, out bool asKeyword)
     {
-        var afterAs = ParseKeyword(Keyword.AS);
+        asKeyword = ParseKeyword(Keyword.AS);
         var token = NextToken();
 
         return token switch
@@ -4042,7 +4042,7 @@ public partial class Parser
             // which may start a construct allowed in this position, to be parsed as aliases.
             // (For example, in `FROM t1 JOIN` the `JOIN` will always be parsed as a keyword,
             // not an alias.)
-            Word word when afterAs || !reservedKeywords.Contains(word.Keyword) => word.ToIdent(),
+            Word word when asKeyword || !reservedKeywords.Contains(word.Keyword) => word.ToIdent(),
 
             // MSSQL supports single-quoted strings as aliases for columns
             // We accept them as table aliases too, although MSSQL does not.
@@ -4058,7 +4058,7 @@ public partial class Parser
             SingleQuotedString s => new Ident(s.Value, Symbols.SingleQuote),
             // Support for MySql dialect double-quoted string, `AS "HOUR"` for example
             DoubleQuotedString s => new Ident(s.Value, Symbols.DoubleQuote),
-            _ when afterAs => throw Expected("an identifier after AS", token),
+            _ when asKeyword => throw Expected("an identifier after AS", token),
 
             _ => None()
         };
@@ -4079,18 +4079,18 @@ public partial class Parser
     /// <returns></returns>
     public TableAlias? ParseOptionalTableAlias(IEnumerable<Keyword> keywords)
     {
-        var alias = ParseOptionalAlias(keywords);
+        var alias = ParseOptionalAlias(keywords, out var asKeyword);
 
         if (alias != null)
         {
-            var columns = ParseParenthesizedColumnList(IsOptional.Optional, false);
+            var columns = ParseParenthesizedColumnList(IsOptional.Optional, asKeyword);
 
             if (!columns.Any())
             {
                 columns = null;
             }
 
-            return new TableAlias(alias, columns);
+            return new TableAlias(alias, asKeyword, columns);
         }
 
         return null;
@@ -4477,7 +4477,7 @@ public partial class Parser
             });
 
             var query = ExpectParens(() => ParseQuery());
-            var alias = new TableAlias(name);
+            var alias = new TableAlias(name, false);
             cte = new CommonTableExpression(alias, query.Query, Materialized: isMaterialized);
         }
         else
@@ -4504,7 +4504,7 @@ public partial class Parser
             });
             var query = ExpectParens(() => ParseQuery());
 
-            var alias = new TableAlias(name, columns);
+            var alias = new TableAlias(name, true, columns);
             cte = new CommonTableExpression(alias, query.Query, Materialized: isMaterialized);
         }
 
@@ -4707,7 +4707,7 @@ public partial class Parser
                 var lateralView = ParseExpr();
                 var lateralViewName = ParseObjectName();
                 var lateralColAlias = ParseCommaSeparated(() =>
-                    ParseOptionalAlias(new[] { Keyword.WHERE, Keyword.GROUP, Keyword.CLUSTER, Keyword.HAVING, Keyword.LATERAL }));
+                    ParseOptionalAlias(new[] { Keyword.WHERE, Keyword.GROUP, Keyword.CLUSTER, Keyword.HAVING, Keyword.LATERAL }, out var asKeyword));
 
                 lateralViews ??= new Sequence<LateralView>();
                 lateralViews.Add(new LateralView(lateralView)
@@ -4787,7 +4787,7 @@ public partial class Parser
 
                 return (windows, null, true);
             }
-            
+
             if (ParseKeyword(Keyword.QUALIFY))
             {
                 var qualifyExpr = ParseExpr();
@@ -5297,7 +5297,7 @@ public partial class Parser
             var alias = ParseOptionalTableAlias(Keywords.ReservedForColumnAlias);
 
             var withOffset = ParseKeywordSequence(Keyword.WITH, Keyword.OFFSET);
-            var withOffsetAlias = withOffset ? ParseOptionalAlias(Keywords.ReservedForColumnAlias) : null;
+            var withOffsetAlias = withOffset ? ParseOptionalAlias(Keywords.ReservedForColumnAlias, out var asKeyword) : null;
             return new TableFactor.UnNest(expressions)
             {
                 Alias = alias,
@@ -6077,17 +6077,17 @@ public partial class Parser
             throw Expected($"Expected an expression, found: {v}");
         }
 
-        if (wildcardExpr is BinaryOp { Op: BinaryOperator.Eq } b && 
+        if (wildcardExpr is BinaryOp { Op: BinaryOperator.Eq } b &&
             _dialect.SupportsEqualAliasAssignment && b.Left is Identifier leftIdent)
         {
-            return new SelectItem.ExpressionWithAlias(b.Right, leftIdent.Ident.Value);
+            return new SelectItem.ExpressionWithAlias(b.Right, leftIdent.Ident.Value, false);
         }
 
-        var alias = ParseOptionalAlias(Keywords.ReservedForColumnAlias);
+        var alias = ParseOptionalAlias(Keywords.ReservedForColumnAlias, out var asKeyword);
 
         if (alias != null)
         {
-            return new SelectItem.ExpressionWithAlias(wildcardExpr, alias);
+            return new SelectItem.ExpressionWithAlias(wildcardExpr, alias, asKeyword);
         }
 
         return new SelectItem.UnnamedExpression(wildcardExpr);
@@ -6440,7 +6440,7 @@ public partial class Parser
             (true, _) => typeof(RightParen),
             (false, EOF) => typeof(EOF),
             (false, Word { Keyword: Keyword.USING }) => typeof(Word),
-            (false, _ ) => typeof(SemiColon)
+            (false, _) => typeof(SemiColon)
         };
 
         var parameters = ParseCommaSeparated0(ParseExpr, endToken);

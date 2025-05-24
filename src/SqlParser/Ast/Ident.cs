@@ -36,7 +36,8 @@ public record Ident(string Value, char? QuoteStyle = null) : IWriteSql
     /// <param name="writer">Sql writer instance</param>
     public void ToSql(SqlTextWriter writer)
     {
-        switch( QuoteStyle){
+        switch (QuoteStyle)
+        {
             case Symbols.DoubleQuote:
             case Symbols.SingleQuote:
             case Symbols.Backtick:
@@ -59,10 +60,14 @@ public record Ident(string Value, char? QuoteStyle = null) : IWriteSql
 /// </summary>
 /// <param name="Name">Name identifier</param>
 /// <param name="Alias">Alias identifier</param>
-public record IdentWithAlias(Ident Name, Ident Alias):IWriteSql, IElement
+/// <param name="AsKeyword"></param>
+public record IdentWithAlias(Ident Name, Ident Alias, bool AsKeyword = true) : IWriteSql, IElement
 {
     public void ToSql(SqlTextWriter writer)
     {
-        writer.WriteSql($"{Name} AS {Alias}");
+        if (AsKeyword)
+            writer.WriteSql($"{Name} AS {Alias}");
+        else
+            writer.WriteSql($"{Name} {Alias}");
     }
 }

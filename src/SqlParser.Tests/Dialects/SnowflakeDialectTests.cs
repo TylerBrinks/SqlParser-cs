@@ -259,7 +259,7 @@ public class SnowflakeDialectTests : ParserTestBase
 
         var table = new TableFactor.Table(new ObjectName(new Ident("a table", Symbols.DoubleQuote)))
         {
-            Alias = new TableAlias(new Ident("alias", Symbols.DoubleQuote))
+            Alias = new TableAlias(new Ident("alias", Symbols.DoubleQuote), true)
         };
 
         Assert.Equal(table, select.From!.Single().Relation);
@@ -1083,14 +1083,14 @@ public class SnowflakeDialectTests : ParserTestBase
 
         var expected = new TableWithJoins(new TableFactor.Table("trades_unixtime")
         {
-            Alias = new TableAlias("tu")
+            Alias = new TableAlias("tu", true)
         })
         {
             Joins =
             [
                 new Join(new TableFactor.Table("quotes_unixtime")
                     {
-                        Alias = new TableAlias("qu")
+                        Alias = new TableAlias("qu", true)
                     },
                     new JoinOperator.AsOf(new BinaryOp(
                         new CompoundIdentifier(["tu", "trade_time"]),

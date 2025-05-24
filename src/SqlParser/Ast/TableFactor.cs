@@ -8,7 +8,7 @@ public abstract record TableFactor : IWriteSql, IElement
     /// <summary>
     /// Common table alias across all implementations
     /// </summary>
-    [Visit(1)] public TableAlias? Alias { get; internal set; }
+    [Visit(1)] public TableAlias? Alias { get; set; }
     /// <summary>
     /// Derived table factor
     /// </summary>
@@ -27,7 +27,10 @@ public abstract record TableFactor : IWriteSql, IElement
 
             if (Alias != null)
             {
-                writer.WriteSql($" AS {Alias}");
+                if (Alias.AsKeyword)
+                    writer.WriteSql($" AS {Alias}");
+                else
+                    writer.WriteSql($" {Alias}");
             }
         }
     }
@@ -172,7 +175,10 @@ public abstract record TableFactor : IWriteSql, IElement
 
             if (Alias != null)
             {
-                writer.WriteSql($" AS {Alias}");
+                if (Alias.AsKeyword)
+                    writer.WriteSql($" AS {Alias}");
+                else
+                    writer.WriteSql($" {Alias}");
             }
 
             if (WithHints.SafeAny())
@@ -225,12 +231,13 @@ public abstract record TableFactor : IWriteSql, IElement
     {
         public bool WithOffset { get; init; }
         public Ident? WithOffsetAlias { get; init; }
+        public bool AsKeyword { get; init; }
         public bool WithOrdinality { get; set; }
 
         public override void ToSql(SqlTextWriter writer)
         {
             writer.Write($"UNNEST({ArrayExpressions.ToSqlDelimited()})");
-         
+
             if (WithOrdinality)
             {
                 writer.Write(" WITH ORDINALITY");
@@ -238,7 +245,10 @@ public abstract record TableFactor : IWriteSql, IElement
 
             if (Alias != null)
             {
-                writer.WriteSql($" AS {Alias}");
+                if (AsKeyword)
+                    writer.WriteSql($" AS {Alias}");
+                else
+                    writer.WriteSql($" {Alias}");
             }
 
             if (WithOffset)
