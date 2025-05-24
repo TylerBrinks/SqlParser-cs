@@ -195,7 +195,7 @@ public class BigQueryDialectTests : ParserTestBase
         {
             new (new TableFactor.UnNest([new CompoundIdentifier(new Ident[] { "t1", "a" })])
                 {
-                    Alias = new TableAlias("f"),
+                    Alias = new TableAlias("f", false),
                 },
                 new JoinOperator.Inner(new JoinConstraint.On(
                     new BinaryOp(
@@ -769,7 +769,7 @@ public class BigQueryDialectTests : ParserTestBase
         var create = VerifiedStatement<Statement.CreateView>(sql);
         var columns = new Sequence<ViewColumnDef>
         {
-            new("name"), 
+            new("name"),
             new("age", Options: [new ColumnOption.Options([new SqlOption.KeyValue("description", new LiteralValue(new Value.DoubleQuotedString("field age")))])])
         };
         Assert.Equal(new ObjectName(["myproject", "mydataset", "newview"]), create.Name);

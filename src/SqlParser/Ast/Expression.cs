@@ -144,13 +144,13 @@ public abstract record Expression : IWriteSql, IElement
 
         public virtual bool Equals(BinaryOp? other)
         {
-            if (ReferenceEquals(null, other)){ return false; }
-            if (ReferenceEquals(this, other)){ return true; }
+            if (ReferenceEquals(null, other)) { return false; }
+            if (ReferenceEquals(this, other)) { return true; }
 
             return base.Equals(other) &&
-                   Equals(PgOptions, other.PgOptions) && 
-                   Left.Equals(other.Left) && 
-                   Op == other.Op && 
+                   Equals(PgOptions, other.PgOptions) &&
+                   Left.Equals(other.Left) &&
+                   Op == other.Op &&
                    Right.Equals(other.Right);
         }
 
@@ -217,7 +217,7 @@ public abstract record Expression : IWriteSql, IElement
                 CastKind.TryCast => "TRY_CAST",
                 CastKind.SafeCast => "SAFE_CAST"
             };
-          
+
             if (Format != null)
             {
                 writer.WriteSql($"{kind}({Expression} as {DataType} FORMAT {Format})");
@@ -243,11 +243,11 @@ public abstract record Expression : IWriteSql, IElement
                 case CeilFloorKind.DateTimeFieldKind { Field: DateTimeField.NoDateTime }:
                     writer.WriteSql($"CEIL({Expression})");
                     break;
-             
+
                 case CeilFloorKind.DateTimeFieldKind dt:
                     writer.WriteSql($"CEIL({Expression} TO {dt.Field})");
                     break;
-               
+
                 case CeilFloorKind.Scale s:
                     writer.WriteSql($"CEIL({Expression}, {s.Field})");
                     break;
@@ -309,8 +309,8 @@ public abstract record Expression : IWriteSql, IElement
     /// </summary>
     public record Convert(
         Expression Expression,
-        DataType? DataType, 
-        ObjectName? CharacterSet, 
+        DataType? DataType,
+        ObjectName? CharacterSet,
         bool TargetBeforeValue,
         Sequence<Expression> Styles,
         bool IsTry = false) : Expression
@@ -572,11 +572,11 @@ public abstract record Expression : IWriteSql, IElement
     {
         public ILike(Expression expression, bool negated, Expression pattern, bool Any)
             : this(expression, negated, pattern, null, Any) { }
-        
+
         public override void ToSql(SqlTextWriter writer)
         {
             var any = Any ? "ANY " : string.Empty;
-            
+
             // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
             if (EscapeChar != null)
             {
@@ -644,7 +644,7 @@ public abstract record Expression : IWriteSql, IElement
             LeadingField = leadingField ?? new DateTimeField.None();
             LastField = lastField ?? new DateTimeField.None();
         }
-        
+
         public Expression Value { get; }
         public DateTimeField LeadingField { get; }
         public DateTimeField LastField { get; }
@@ -899,7 +899,7 @@ public abstract record Expression : IWriteSql, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-           writer.WriteSql($"{MapExpression}");
+            writer.WriteSql($"{MapExpression}");
         }
     }
     /// Access a map-like object by field
@@ -974,11 +974,14 @@ public abstract record Expression : IWriteSql, IElement
     /// <summary>
     /// BigQuery specific: A named expression in a typeless struct
     /// </summary>
-    public record Named(Expression Expression, Ident Name) : Expression
+    public record Named(Expression Expression, Ident Name, bool AsKeyword = true) : Expression
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"{Expression} AS {Name}");
+            if (AsKeyword)
+                writer.WriteSql($"{Expression} AS {Name}");
+            else
+                writer.WriteSql($"{Expression} {Name}");
         }
     }
     /// <summary>
@@ -1140,10 +1143,10 @@ public abstract record Expression : IWriteSql, IElement
     public record SimilarTo(Expression Expression, bool Negated, Expression Pattern, string? EscapeChar = null) : Expression, INegated
     {
         public SimilarTo(Expression expression, bool negated, Expression pattern, char? escapeChar = null)
-            : this(expression, negated, pattern, escapeChar?.ToString()){ }
+            : this(expression, negated, pattern, escapeChar?.ToString()) { }
 
         public SimilarTo(Expression expression, bool negated, Expression pattern)
-            : this(expression, negated, pattern, (string?) null) { }
+            : this(expression, negated, pattern, (string?)null) { }
 
         public override void ToSql(SqlTextWriter writer)
         {
@@ -1372,7 +1375,7 @@ public abstract record Expression : IWriteSql, IElement
 }
 // ReSharper restore CommentTypo
 
-public record ExpressionWithAlias(Expression Expression, Ident? Alias) : IWriteSql, IElement
+public record ExpressionWithAlias(Expression Expression, Ident? Alias, bool AsKeyword = true) : IWriteSql, IElement
 {
     public void ToSql(SqlTextWriter writer)
     {
@@ -1380,7 +1383,10 @@ public record ExpressionWithAlias(Expression Expression, Ident? Alias) : IWriteS
 
         if (Alias != null)
         {
-            writer.WriteSql($" AS {Alias}");
+            if (AsKeyword)
+                writer.WriteSql($" AS {Alias}");
+            else
+                writer.WriteSql($" {Alias}");
         }
     }
 }

@@ -496,14 +496,14 @@ public class MySqlDialectTests : ParserTestBase
 
         var table = new TableWithJoins(new TableFactor.Table("orders")
         {
-            Alias = new TableAlias("o")
+            Alias = new TableAlias("o", true)
         })
         {
             Joins = new Join[]
             {
                 new(new TableFactor.Table("customers")
                 {
-                    Alias = new TableAlias("c")
+                    Alias = new TableAlias("c", true)
                 })
                 {
                     JoinOperator = new JoinOperator.Inner(new JoinConstraint.On(new BinaryOp(
@@ -1090,7 +1090,7 @@ public class MySqlDialectTests : ParserTestBase
                     new JsonTableColumnErrorHandling.Null()))
             ])
         {
-            Alias = new TableAlias("t")
+            Alias = new TableAlias("t", true)
         };
 
         Assert.Equal(expected, joinTable.From![0].Relation);

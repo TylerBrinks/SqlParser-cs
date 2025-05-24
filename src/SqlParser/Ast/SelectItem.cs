@@ -33,11 +33,14 @@ public abstract record SelectItem : IWriteSql, IElement
     /// </summary>
     /// <param name="Expression">Select expression</param>
     /// <param name="Alias">Select alias</param>
-    public record ExpressionWithAlias(Expression Expression, Ident Alias) : SelectItem
+    public record ExpressionWithAlias(Expression Expression, Ident Alias, bool AsKeyword = true) : SelectItem
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"{Expression} AS {Alias}");
+            if (AsKeyword)
+                writer.WriteSql($"{Expression} AS {Alias}");
+            else
+                writer.WriteSql($"{Expression} {Alias}");
         }
     }
     /// <summary>
@@ -56,7 +59,7 @@ public abstract record SelectItem : IWriteSql, IElement
 
     public T As<T>() where T : SelectItem
     {
-        return (T) this;
+        return (T)this;
     }
 
     public UnnamedExpression AsUnnamed()

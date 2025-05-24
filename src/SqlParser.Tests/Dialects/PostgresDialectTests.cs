@@ -1086,8 +1086,8 @@ public class PostgresDialectTests : ParserTestBase
 
         var expected = new SelectItem[]
         {
-                new SelectItem.ExpressionWithAlias(new Identifier("temp_lo"), "lo"),
-                new SelectItem.ExpressionWithAlias(new Identifier("temp_hi"), "hi"),
+                new SelectItem.ExpressionWithAlias(new Identifier("temp_lo"), "lo", true),
+                new SelectItem.ExpressionWithAlias(new Identifier("temp_hi"), "hi", true),
                 new SelectItem.UnnamedExpression(new Identifier("prcp"))
         };
 
@@ -1792,7 +1792,7 @@ public class PostgresDialectTests : ParserTestBase
 
         var table = new TableFactor.Table(new ObjectName(new Ident("a table", Symbols.DoubleQuote)))
         {
-            Alias = new TableAlias(new Ident("alias", Symbols.DoubleQuote))
+            Alias = new TableAlias(new Ident("alias", Symbols.DoubleQuote), true)
         };
 
         Assert.Equal(table, select.From!.Single().Relation);
@@ -1809,7 +1809,7 @@ public class PostgresDialectTests : ParserTestBase
 
         Assert.Equal(new SelectItem.ExpressionWithAlias(new Identifier(
             new Ident("simple id", Symbols.DoubleQuote)),
-            new Ident("column alias", Symbols.DoubleQuote)),
+            new Ident("column alias", Symbols.DoubleQuote), true),
             select.Projection[2]);
 
         VerifiedStatement("CREATE TABLE \"foo\" (\"bar\" \"int\")");
@@ -2085,7 +2085,7 @@ public class PostgresDialectTests : ParserTestBase
         {
                 new (new TableFactor.UnNest([new CompoundIdentifier(new Ident[] { "t1", "a" })])
                     {
-                        Alias = new TableAlias("f"),
+                        Alias = new TableAlias("f", true),
                     },
                     new JoinOperator.Inner(new JoinConstraint.On(
                         new BinaryOp(

@@ -17,13 +17,19 @@ public record CommonTableExpression(TableAlias Alias, Query Query, Ident? From =
     {
         if (Materialized == null)
         {
-            writer.WriteSql($"{Alias} AS ({Query})");
+            if (Alias.AsKeyword)
+                writer.WriteSql($"{Alias} AS ({Query})");
+            else
+                writer.WriteSql($"{Alias} ({Query})");
         }
         else
         {
-            writer.WriteSql($"{Alias} AS {Materialized} ({Query})");
+            if (Alias.AsKeyword)
+                writer.WriteSql($"{Alias} AS {Materialized} ({Query})");
+            else
+                writer.WriteSql($"{Alias} {Materialized} ({Query})");
         }
-        
+
         if (From != null)
         {
             writer.WriteSql($" FROM {From}");
