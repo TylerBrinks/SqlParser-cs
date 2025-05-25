@@ -53,7 +53,7 @@ public record ReplaceSelectItem(Sequence<ReplaceSelectElement> Items) : IWriteSq
     }
 }
 
-public record ReplaceSelectElement(Expression Expr, Ident Name, bool AsKeyword) : IWriteSql, IElement
+public record ReplaceSelectElement(Expression Expr, Ident Name, bool AsKeyword = true) : IWriteSql, IElement
 {
     public void ToSql(SqlTextWriter writer)
     {

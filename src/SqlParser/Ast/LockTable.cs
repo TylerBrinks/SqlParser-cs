@@ -1,6 +1,6 @@
 ﻿namespace SqlParser.Ast;
 
-public record LockTable(Ident Table, Ident? Alias, LockTableType LockTableType, bool AsKeyword) : IWriteSql, IElement
+public record LockTable(Ident Table, Ident? Alias, LockTableType LockTableType, bool AsKeyword = true) : IWriteSql, IElement
 {
     public void ToSql(SqlTextWriter writer)
     {
