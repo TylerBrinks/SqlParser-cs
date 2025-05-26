@@ -171,7 +171,7 @@ public class ParserCommonTests : ParserTestBase
         var subQuery = new Query(body);
         var derived = new TableFactor.Derived(subQuery)
         {
-            Alias = new TableAlias("t2")
+            Alias = new TableAlias("t2", true)
         };
 
         var from = new TableWithJoins(derived);
@@ -192,7 +192,7 @@ public class ParserCommonTests : ParserTestBase
         var statement = VerifiedStatement(sql);
         var table = new TableWithJoins(new TableFactor.Table("users")
         {
-            Alias = new TableAlias("u")
+            Alias = new TableAlias("u", true)
         });
         var assignment = new Statement.Assignment(
             new AssignmentTarget.ColumnName(new ObjectName(["u", "username"])),
@@ -259,8 +259,8 @@ public class ParserCommonTests : ParserTestBase
     {
         var delete = VerifiedStatement<Statement.Delete>("DELETE FROM basket AS a USING basket AS b WHERE a.id < b.id");
 
-        var table = new TableFactor.Table("basket") { Alias = new TableAlias("a") };
-        var @using = new TableFactor.Table("basket") { Alias = new TableAlias("b") };
+        var table = new TableFactor.Table("basket") { Alias = new TableAlias("a", true) };
+        var @using = new TableFactor.Table("basket") { Alias = new TableAlias("b", true) };
         var binaryOp = new BinaryOp(
             new CompoundIdentifier(new Ident[] { "a", "id" }),
             BinaryOperator.Lt,
@@ -539,8 +539,8 @@ public class ParserCommonTests : ParserTestBase
         Assert.Equal(new SelectItem.UnnamedExpression(new LiteralValue(Number("10e-20"))), select.Projection[0]);
         Assert.Equal(new SelectItem.UnnamedExpression(new LiteralValue(Number("1e3"))), select.Projection[1]);
         Assert.Equal(new SelectItem.UnnamedExpression(new LiteralValue(Number("1e+3"))), select.Projection[2]);
-        Assert.Equal(new SelectItem.ExpressionWithAlias(new LiteralValue(Number("1e3")), "a"), select.Projection[3]);
-        Assert.Equal(new SelectItem.ExpressionWithAlias(new LiteralValue(Number("1")), "e"), select.Projection[4]);
+        Assert.Equal(new SelectItem.ExpressionWithAlias(new LiteralValue(Number("1e3")), "a", false), select.Projection[3]);
+        Assert.Equal(new SelectItem.ExpressionWithAlias(new LiteralValue(Number("1")), "e", false), select.Projection[4]);
         Assert.Equal(new SelectItem.UnnamedExpression(new LiteralValue(Number("0.5e2"))), select.Projection[5]);
     }
 
@@ -1319,7 +1319,7 @@ public class ParserCommonTests : ParserTestBase
         select = VerifiedOnlySelect("SELECT CAST(id AS VARBINARY(50)) FROM customer");
         expected = new Cast(new Identifier("id"), new Varbinary(new BinaryLength.IntegerLength(50)), CastKind.Cast);
         Assert.Equal(expected, select.Projection.Single().AsExpr());
-         
+
         select = VerifiedOnlySelect("SELECT CAST(id AS VARBINARY(MAX)) FROM customer");
         expected = new Cast(new Identifier("id"), new Varbinary(new BinaryLength.Max()), CastKind.Cast);
         Assert.Equal(expected, select.Projection.Single().AsExpr());
@@ -3084,7 +3084,7 @@ public class ParserCommonTests : ParserTestBase
         [
             new TableWithJoins(new TableFactor.UnNest([new Identifier("expr")])
             {
-                Alias = new TableAlias("numbers"),
+                Alias = new TableAlias("numbers", true),
                 WithOffset = true
             })
         ]);
@@ -3109,7 +3109,7 @@ public class ParserCommonTests : ParserTestBase
         [
             new TableWithJoins(new TableFactor.UnNest([new Identifier("expr")])
             {
-                Alias = new TableAlias("numbers"),
+                Alias = new TableAlias("numbers", true),
             })
         ]);
         return;
@@ -3346,13 +3346,13 @@ public class ParserCommonTests : ParserTestBase
     public void Parse_Joins_Using()
     {
         // Test parsing of aliases
-        var expected = Test("t2", new TableAlias("foo"), jc => new JoinOperator.Inner(jc));
+        var expected = Test("t2", new TableAlias("foo", true), jc => new JoinOperator.Inner(jc));
         var actual = VerifiedOnlySelect("SELECT * FROM t1 JOIN t2 AS foo USING(c1)").From!.Single().Joins;
         Assert.Equal(new[] { expected }, actual!);
 
         OneStatementParsesTo(
             "SELECT * FROM t1 JOIN t2 foo USING(c1)",
-            "SELECT * FROM t1 JOIN t2 AS foo USING(c1)"
+            "SELECT * FROM t1 JOIN t2 foo USING(c1)"
         );
 
         // Test parsing of different join operators
@@ -3422,7 +3422,7 @@ public class ParserCommonTests : ParserTestBase
 
 
         // natural join another table with alias
-        expected = Test(jc => new JoinOperator.Inner(jc), new TableAlias("t3"));
+        expected = Test(jc => new JoinOperator.Inner(jc), new TableAlias("t3", true));
         actual = VerifiedOnlySelect("SELECT * FROM t1 NATURAL JOIN t2 AS t3").From!.Single().Joins;
         Assert.Equal(new[] { expected }, actual!);
 
@@ -3613,7 +3613,7 @@ public class ParserCommonTests : ParserTestBase
         var cteQuery = VerifiedQuery(cteSql);
         var query = VerifiedQuery(sql);
 
-        var expected = new CommonTableExpression(new TableAlias("nums")
+        var expected = new CommonTableExpression(new TableAlias("nums", true)
         {
             Columns = new Ident[]
             {
@@ -3640,7 +3640,7 @@ public class ParserCommonTests : ParserTestBase
         {
             TableWithJoins = new TableWithJoins(new TableFactor.Derived(VerifiedQuery("(SELECT 1) UNION (SELECT 2)"))
             {
-                Alias = new TableAlias("t1")
+                Alias = new TableAlias("t1", true)
             })
             {
                 Joins = new Join[]
@@ -4540,7 +4540,7 @@ public class ParserCommonTests : ParserTestBase
         Assert.False(mergeNoInto.Into);
 
         Assert.Equal(
-            new TableFactor.Table(new ObjectName(["s", "bar"])) { Alias = new TableAlias("dest") },
+            new TableFactor.Table(new ObjectName(["s", "bar"])) { Alias = new TableAlias("dest", true) },
             mergeInto.Table);
         Assert.Equal(mergeInto.Table, mergeNoInto.Table);
         var body = new SetExpression.SelectExpression(new Select(new[]
@@ -4556,7 +4556,7 @@ public class ParserCommonTests : ParserTestBase
         Assert.Equal(
             new TableFactor.Derived(new Query(body))
             {
-                Alias = new TableAlias("stg")
+                Alias = new TableAlias("stg", true)
             },
             mergeInto.Source);
 
@@ -5216,16 +5216,16 @@ public class ParserCommonTests : ParserTestBase
         };
         var table = new TableFactor.Table("monthly_sales")
         {
-            Alias = new TableAlias("a")
+            Alias = new TableAlias("a", true)
         };
         var expected = new TableFactor.Pivot(table, functions, new Ident[] { "a", "MONTH" },
             new PivotValueSource.List([
-                new ExpressionWithAlias(new LiteralValue(new Value.Number("1")), "x"),
-                new ExpressionWithAlias(new LiteralValue(new Value.SingleQuotedString("two")), null),
-                new ExpressionWithAlias(new Identifier("three"), "y"),
+                new ExpressionWithAlias(new LiteralValue(new Value.Number("1")), "x", true),
+                new ExpressionWithAlias(new LiteralValue(new Value.SingleQuotedString("two")), null, true),
+                new ExpressionWithAlias(new Identifier("three"), "y", true),
             ]),
             null,
-            new TableAlias("p", new Ident[] { "c", "d" }));
+            new TableAlias("p", true, new Ident[] { "c", "d" }));
 
         Assert.Equal(expected, relation);
         Assert.Equal(sql.Replace("\r", "").Replace("\n", ""), VerifiedStatement(sql).ToSql());
@@ -5239,7 +5239,7 @@ public class ParserCommonTests : ParserTestBase
                         new CompoundIdentifier([new Ident(t), new Ident("amount")])))
                 ]))
             };
-            return new ExpressionWithAlias(expr, alias != null ? new Ident(alias) : null);
+            return new ExpressionWithAlias(expr, alias != null ? new Ident(alias) : null, true);
         }
     }
 
@@ -5257,11 +5257,11 @@ public class ParserCommonTests : ParserTestBase
 
         var table = new TableFactor.Table("sales")
         {
-            Alias = new TableAlias("s")
+            Alias = new TableAlias("s", true)
         };
         var expected = new TableFactor.Unpivot(table, "quantity", "quarter", ["Q1", "Q2", "Q3", "Q4"])
         {
-            PivotAlias = new TableAlias("u", ["product", "quarter", "quantity"])
+            PivotAlias = new TableAlias("u", true, ["product", "quarter", "quantity"])
         };
 
 
@@ -6716,7 +6716,7 @@ public class ParserCommonTests : ParserTestBase
     {
         var drop = VerifiedStatement<Statement.Drop>("DROP TYPE abc");
         Assert.Equal(["abc"], drop.Names);
-        Assert.Equal(ObjectType.Type , drop.ObjectType);
+        Assert.Equal(ObjectType.Type, drop.ObjectType);
 
         drop = VerifiedStatement<Statement.Drop>("DROP TYPE IF EXISTS def, magician, quaternion");
         Assert.Equal(["def", "magician", "quaternion"], drop.Names);
@@ -6853,7 +6853,7 @@ public class ParserCommonTests : ParserTestBase
             "my_schema",
             "my_stored_procedure"
         ]), [
-        
+
             new LiteralValue(new Value.NationalStringLiteral("param1")),
             new LiteralValue(new Value.NationalStringLiteral("param2"))
         ], false, null);
@@ -6864,7 +6864,7 @@ public class ParserCommonTests : ParserTestBase
         execute = (Statement.Execute)OneStatementParsesTo(
             "EXEC my_schema.my_stored_procedure N'param1', N'param2';",
             "EXECUTE my_schema.my_stored_procedure N'param1', N'param2'");
-        
+
         Assert.Equal(expected, execute);
     }
 
@@ -6887,7 +6887,7 @@ public class ParserCommonTests : ParserTestBase
         Assert.Equal(expectedIdent, select.Projection[0]);
         Assert.Equal(expectedNested, select.Projection[1]);
 
-        var statements = new []{"SELECT a!", "SELECT a ! b", "SELECT a ! as b"};
+        var statements = new[] { "SELECT a!", "SELECT a ! b", "SELECT a ! as b" };
 
         foreach (var statement in statements)
         {
@@ -6940,7 +6940,8 @@ public class ParserCommonTests : ParserTestBase
         // and the `factorial` operator,  additional filtering supports
         // `bang not` operator is required here.
         dialects = AllDialects.Where(d => d is { SupportsFactorialOperator: false, SupportsBangNotOperator: true }).ToList();
-        foreach (var statement in statements){
+        foreach (var statement in statements)
+        {
 
             Assert.Throws<ParserException>(() => ParseSqlStatements(statement, dialects));
         }

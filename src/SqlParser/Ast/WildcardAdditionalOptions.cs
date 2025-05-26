@@ -15,7 +15,7 @@ public record WildcardAdditionalOptions : IWriteSql, IElement
     // [REPLACE]
     // BigQuery syntax: <https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#select_replace>
     public ReplaceSelectItem? ReplaceOption { get; init; }
-    
+
     public void ToSql(SqlTextWriter writer)
     {
         if (ILikeOption != null)
@@ -53,18 +53,14 @@ public record ReplaceSelectItem(Sequence<ReplaceSelectElement> Items) : IWriteSq
     }
 }
 
-public record ReplaceSelectElement(Expression Expr, Ident Name, bool AsKeyword) : IWriteSql, IElement
+public record ReplaceSelectElement(Expression Expr, Ident Name, bool AsKeyword = true) : IWriteSql, IElement
 {
     public void ToSql(SqlTextWriter writer)
     {
         if (AsKeyword)
-        {
             writer.WriteSql($"{Expr} AS {Name}");
-        }
         else
-        {
             writer.WriteSql($"{Expr} {Name}");
-        }
     }
 }
 

@@ -27,7 +27,10 @@ public abstract record TableFactor : IWriteSql, IElement
 
             if (Alias != null)
             {
-                writer.WriteSql($" AS {Alias}");
+                if (Alias.AsKeyword)
+                    writer.WriteSql($" AS {Alias}");
+                else
+                    writer.WriteSql($" {Alias}");
             }
         }
     }
@@ -45,7 +48,10 @@ public abstract record TableFactor : IWriteSql, IElement
 
             if (Alias != null)
             {
-                writer.WriteSql($" AS {Alias}");
+                if (Alias.AsKeyword)
+                    writer.WriteSql($" AS {Alias}");
+                else
+                    writer.WriteSql($" {Alias}");
             }
         }
     }
@@ -67,7 +73,10 @@ public abstract record TableFactor : IWriteSql, IElement
 
             if (Alias != null)
             {
-                writer.WriteSql($" AS {Alias}");
+                if (Alias.AsKeyword)
+                    writer.WriteSql($" AS {Alias}");
+                else
+                    writer.WriteSql($" {Alias}");
             }
         }
     }
@@ -172,7 +181,10 @@ public abstract record TableFactor : IWriteSql, IElement
 
             if (Alias != null)
             {
-                writer.WriteSql($" AS {Alias}");
+                if (Alias.AsKeyword)
+                    writer.WriteSql($" AS {Alias}");
+                else
+                    writer.WriteSql($" {Alias}");
             }
 
             if (WithHints.SafeAny())
@@ -203,7 +215,10 @@ public abstract record TableFactor : IWriteSql, IElement
 
             if (Alias != null)
             {
-                writer.WriteSql($" AS {Alias}");
+                if (Alias.AsKeyword)
+                    writer.WriteSql($" AS {Alias}");
+                else
+                    writer.WriteSql($" {Alias}");
             }
         }
     }
@@ -230,7 +245,7 @@ public abstract record TableFactor : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             writer.Write($"UNNEST({ArrayExpressions.ToSqlDelimited()})");
-         
+
             if (WithOrdinality)
             {
                 writer.Write(" WITH ORDINALITY");
@@ -238,7 +253,10 @@ public abstract record TableFactor : IWriteSql, IElement
 
             if (Alias != null)
             {
-                writer.WriteSql($" AS {Alias}");
+                if (Alias.AsKeyword)
+                    writer.WriteSql($" AS {Alias}");
+                else
+                    writer.WriteSql($" {Alias}");
             }
 
             if (WithOffset)
@@ -275,7 +293,10 @@ public abstract record TableFactor : IWriteSql, IElement
 
             if (Alias != null)
             {
-                writer.WriteSql($" AS {Alias}");
+                if (Alias.AsKeyword)
+                    writer.WriteSql($" AS {Alias}");
+                else
+                    writer.WriteSql($" {Alias}");
             }
         }
     }
@@ -336,7 +357,10 @@ public abstract record TableFactor : IWriteSql, IElement
 
             if (Alias != null)
             {
-                writer.WriteSql($" AS {Alias}");
+                if (Alias.AsKeyword)
+                    writer.WriteSql($" AS {Alias}");
+                else
+                    writer.WriteSql($" {Alias}");
             }
         }
     }

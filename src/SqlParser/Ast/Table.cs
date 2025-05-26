@@ -1,4 +1,6 @@
-﻿namespace SqlParser.Ast;
+﻿using System.Reflection.Metadata.Ecma335;
+
+namespace SqlParser.Ast;
 
 /// <summary>
 /// Table object
@@ -24,7 +26,7 @@ public record Table(string Name, string? SchemaName = null) : IWriteSql, IElemen
 /// Table alias
 /// </summary>
 /// <param name="Name">Name identifier</param>
-public record TableAlias(Ident Name, Sequence<Ident>? Columns = null) : IWriteSql, IElement
+public record TableAlias(Ident Name, bool AsKeyword = true, Sequence<Ident>? Columns = null) : IWriteSql, IElement
 {
     public void ToSql(SqlTextWriter writer)
     {
