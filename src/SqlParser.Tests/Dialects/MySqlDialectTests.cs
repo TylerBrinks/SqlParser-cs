@@ -1114,7 +1114,7 @@ public class MySqlDialectTests : ParserTestBase
     [Fact]
     public void Parse_Lock_Tables()
     {
-        OneStatementParsesTo("LOCK TABLES trans t READ, customer WRITE", "LOCK TABLES trans AS t READ, customer WRITE");
+        OneStatementParsesTo("LOCK TABLES trans t READ, customer WRITE", "LOCK TABLES trans t READ, customer WRITE");
 
         //VerifiedStatement("LOCK TABLES trans AS t READ, customer WRITE");
         //VerifiedStatement("LOCK TABLES trans AS t READ LOCAL, customer WRITE");

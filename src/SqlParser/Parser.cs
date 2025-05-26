@@ -4477,7 +4477,7 @@ public partial class Parser
             });
 
             var query = ExpectParens(() => ParseQuery());
-            var alias = new TableAlias(name, false);
+            var alias = new TableAlias(name, true);
             cte = new CommonTableExpression(alias, query.Query, Materialized: isMaterialized);
         }
         else
@@ -6080,7 +6080,7 @@ public partial class Parser
         if (wildcardExpr is BinaryOp { Op: BinaryOperator.Eq } b &&
             _dialect.SupportsEqualAliasAssignment && b.Left is Identifier leftIdent)
         {
-            return new SelectItem.ExpressionWithAlias(b.Right, leftIdent.Ident.Value, false);
+            return new SelectItem.ExpressionWithAlias(b.Right, leftIdent.Ident.Value, true);
         }
 
         var alias = ParseOptionalAlias(Keywords.ReservedForColumnAlias, out var asKeyword);

@@ -1921,7 +1921,7 @@ public class PostgresDialectTests : ParserTestBase
         Assert.Equal(new LiteralValue(new Value.DollarQuotedString(new DollarQuotedStringValue("hello"))), projection[0].AsExpr());
         Assert.Equal(new LiteralValue(new Value.DollarQuotedString(new DollarQuotedStringValue("world", "tag_name"))), projection[1].AsExpr());
         Assert.Equal(new LiteralValue(new Value.DollarQuotedString(new DollarQuotedStringValue("Foo$Bar"))), projection[2].AsExpr());
-        var expr = new SelectItem.ExpressionWithAlias(new LiteralValue(new Value.DollarQuotedString(new DollarQuotedStringValue("Foo$Bar"))), "col_name");
+        var expr = new SelectItem.ExpressionWithAlias(new LiteralValue(new Value.DollarQuotedString(new DollarQuotedStringValue("Foo$Bar"))), "col_name", false);
         Assert.Equal(expr, projection[3]);
         Assert.Equal(new LiteralValue(new Value.DollarQuotedString(new DollarQuotedStringValue(""))), projection[4].AsExpr());
         Assert.Equal(new LiteralValue(new Value.DollarQuotedString(new DollarQuotedStringValue("", "tag_name"))), projection[5].AsExpr());

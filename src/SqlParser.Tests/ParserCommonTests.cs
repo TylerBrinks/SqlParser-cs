@@ -539,8 +539,8 @@ public class ParserCommonTests : ParserTestBase
         Assert.Equal(new SelectItem.UnnamedExpression(new LiteralValue(Number("10e-20"))), select.Projection[0]);
         Assert.Equal(new SelectItem.UnnamedExpression(new LiteralValue(Number("1e3"))), select.Projection[1]);
         Assert.Equal(new SelectItem.UnnamedExpression(new LiteralValue(Number("1e+3"))), select.Projection[2]);
-        Assert.Equal(new SelectItem.ExpressionWithAlias(new LiteralValue(Number("1e3")), "a"), select.Projection[3]);
-        Assert.Equal(new SelectItem.ExpressionWithAlias(new LiteralValue(Number("1")), "e"), select.Projection[4]);
+        Assert.Equal(new SelectItem.ExpressionWithAlias(new LiteralValue(Number("1e3")), "a", false), select.Projection[3]);
+        Assert.Equal(new SelectItem.ExpressionWithAlias(new LiteralValue(Number("1")), "e", false), select.Projection[4]);
         Assert.Equal(new SelectItem.UnnamedExpression(new LiteralValue(Number("0.5e2"))), select.Projection[5]);
     }
 
@@ -3352,7 +3352,7 @@ public class ParserCommonTests : ParserTestBase
 
         OneStatementParsesTo(
             "SELECT * FROM t1 JOIN t2 foo USING(c1)",
-            "SELECT * FROM t1 JOIN t2 AS foo USING(c1)"
+            "SELECT * FROM t1 JOIN t2 foo USING(c1)"
         );
 
         // Test parsing of different join operators
@@ -5220,9 +5220,9 @@ public class ParserCommonTests : ParserTestBase
         };
         var expected = new TableFactor.Pivot(table, functions, new Ident[] { "a", "MONTH" },
             new PivotValueSource.List([
-                new ExpressionWithAlias(new LiteralValue(new Value.Number("1")), "x"),
-                new ExpressionWithAlias(new LiteralValue(new Value.SingleQuotedString("two")), null),
-                new ExpressionWithAlias(new Identifier("three"), "y"),
+                new ExpressionWithAlias(new LiteralValue(new Value.Number("1")), "x", true),
+                new ExpressionWithAlias(new LiteralValue(new Value.SingleQuotedString("two")), null, true),
+                new ExpressionWithAlias(new Identifier("three"), "y", true),
             ]),
             null,
             new TableAlias("p", true, new Ident[] { "c", "d" }));
@@ -5239,7 +5239,7 @@ public class ParserCommonTests : ParserTestBase
                         new CompoundIdentifier([new Ident(t), new Ident("amount")])))
                 ]))
             };
-            return new ExpressionWithAlias(expr, alias != null ? new Ident(alias) : null);
+            return new ExpressionWithAlias(expr, alias != null ? new Ident(alias) : null, true);
         }
     }
 
@@ -5257,7 +5257,7 @@ public class ParserCommonTests : ParserTestBase
 
         var table = new TableFactor.Table("sales")
         {
-            Alias = new TableAlias("s")
+            Alias = new TableAlias("s", true)
         };
         var expected = new TableFactor.Unpivot(table, "quantity", "quarter", ["Q1", "Q2", "Q3", "Q4"])
         {

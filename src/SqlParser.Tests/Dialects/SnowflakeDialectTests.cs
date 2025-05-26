@@ -104,25 +104,25 @@ public class SnowflakeDialectTests : ParserTestBase
 
         OneStatementParsesTo(
             "SELECT * FROM (a NATURAL JOIN (b) c )",
-            "SELECT * FROM (a NATURAL JOIN b AS c)");
+            "SELECT * FROM (a NATURAL JOIN b c)");
         OneStatementParsesTo(
             "SELECT * FROM (a NATURAL JOIN ((b)) c )",
-            "SELECT * FROM (a NATURAL JOIN b AS c)");
+            "SELECT * FROM (a NATURAL JOIN b c)");
         OneStatementParsesTo(
             "SELECT * FROM (a NATURAL JOIN ( (b) c ) )",
-            "SELECT * FROM (a NATURAL JOIN b AS c)");
+            "SELECT * FROM (a NATURAL JOIN b c)");
         OneStatementParsesTo(
             "SELECT * FROM (a NATURAL JOIN ( (b) as c ) )",
             "SELECT * FROM (a NATURAL JOIN b AS c)");
         OneStatementParsesTo(
             "SELECT * FROM (a alias1 NATURAL JOIN ( (b) c ) )",
-            "SELECT * FROM (a AS alias1 NATURAL JOIN b AS c)");
+            "SELECT * FROM (a alias1 NATURAL JOIN b c)");
         OneStatementParsesTo(
             "SELECT * FROM (a as alias1 NATURAL JOIN ( (b) as c ) )",
             "SELECT * FROM (a AS alias1 NATURAL JOIN b AS c)");
         OneStatementParsesTo(
             "SELECT * FROM (a NATURAL JOIN b) c",
-            "SELECT * FROM (a NATURAL JOIN b) AS c");
+            "SELECT * FROM (a NATURAL JOIN b) c");
 
         DefaultDialects = [new SnowflakeDialect()];
         var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT * FROM (a b) c"));
