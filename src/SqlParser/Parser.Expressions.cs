@@ -1251,7 +1251,6 @@ public partial class Parser
 
         return expr;
 
-
         SetOperator ParseSetOperator()
         {
             return PeekToken() switch
