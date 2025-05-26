@@ -6122,6 +6122,7 @@ public partial class Parser
             ReplaceOption = optReplace
         };
     }
+
     /// <summary>
     /// Parse an [`Ilike`](IlikeSelectItem) information for wildcard select items.
     ///
