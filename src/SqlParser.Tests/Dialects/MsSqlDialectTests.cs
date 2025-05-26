@@ -30,7 +30,7 @@ public class MsSqlDialectTests : ParserTestBase
     {
         DefaultDialects = [new MsSqlDialect(), new GenericDialect()];
 
-        OneStatementParsesTo("SELECT foo 'alias'", "SELECT foo AS 'alias'");
+        OneStatementParsesTo("SELECT foo 'alias'", "SELECT foo 'alias'");
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public class MsSqlDialectTests : ParserTestBase
     {
         OneStatementParsesTo(
             "SELECT [a.b!] [FROM] FROM foo [WHERE]",
-            "SELECT [a.b!] AS [FROM] FROM foo AS [WHERE]");
+            "SELECT [a.b!] [FROM] FROM foo [WHERE]");
     }
 
     [Fact]

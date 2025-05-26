@@ -104,25 +104,25 @@ public class SnowflakeDialectTests : ParserTestBase
 
         OneStatementParsesTo(
             "SELECT * FROM (a NATURAL JOIN (b) c )",
-            "SELECT * FROM (a NATURAL JOIN b AS c)");
+            "SELECT * FROM (a NATURAL JOIN b c)");
         OneStatementParsesTo(
             "SELECT * FROM (a NATURAL JOIN ((b)) c )",
-            "SELECT * FROM (a NATURAL JOIN b AS c)");
+            "SELECT * FROM (a NATURAL JOIN b c)");
         OneStatementParsesTo(
             "SELECT * FROM (a NATURAL JOIN ( (b) c ) )",
-            "SELECT * FROM (a NATURAL JOIN b AS c)");
+            "SELECT * FROM (a NATURAL JOIN b c)");
         OneStatementParsesTo(
             "SELECT * FROM (a NATURAL JOIN ( (b) as c ) )",
             "SELECT * FROM (a NATURAL JOIN b AS c)");
         OneStatementParsesTo(
             "SELECT * FROM (a alias1 NATURAL JOIN ( (b) c ) )",
-            "SELECT * FROM (a AS alias1 NATURAL JOIN b AS c)");
+            "SELECT * FROM (a alias1 NATURAL JOIN b c)");
         OneStatementParsesTo(
             "SELECT * FROM (a as alias1 NATURAL JOIN ( (b) as c ) )",
             "SELECT * FROM (a AS alias1 NATURAL JOIN b AS c)");
         OneStatementParsesTo(
             "SELECT * FROM (a NATURAL JOIN b) c",
-            "SELECT * FROM (a NATURAL JOIN b) AS c");
+            "SELECT * FROM (a NATURAL JOIN b) c");
 
         DefaultDialects = [new SnowflakeDialect()];
         var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT * FROM (a b) c"));
@@ -259,7 +259,7 @@ public class SnowflakeDialectTests : ParserTestBase
 
         var table = new TableFactor.Table(new ObjectName(new Ident("a table", Symbols.DoubleQuote)))
         {
-            Alias = new TableAlias(new Ident("alias", Symbols.DoubleQuote))
+            Alias = new TableAlias(new Ident("alias", Symbols.DoubleQuote), true)
         };
 
         Assert.Equal(table, select.From!.Single().Relation);
@@ -1083,14 +1083,14 @@ public class SnowflakeDialectTests : ParserTestBase
 
         var expected = new TableWithJoins(new TableFactor.Table("trades_unixtime")
         {
-            Alias = new TableAlias("tu")
+            Alias = new TableAlias("tu", true)
         })
         {
             Joins =
             [
                 new Join(new TableFactor.Table("quotes_unixtime")
                     {
-                        Alias = new TableAlias("qu")
+                        Alias = new TableAlias("qu", true)
                     },
                     new JoinOperator.AsOf(new BinaryOp(
                         new CompoundIdentifier(["tu", "trade_time"]),

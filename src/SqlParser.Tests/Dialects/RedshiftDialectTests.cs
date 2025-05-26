@@ -56,7 +56,7 @@ public class RedshiftDialectTests : ParserTestBase
 
         var table = new TableFactor.Table(new ObjectName(new Ident("a table", Symbols.DoubleQuote)))
         {
-            Alias = new TableAlias(new Ident("alias", Symbols.DoubleQuote))
+            Alias = new TableAlias(new Ident("alias", Symbols.DoubleQuote), true)
         };
 
         Assert.Equal(table, select.From!.Single().Relation);
