@@ -4455,6 +4455,11 @@ public partial class Parser
 
     public CommonTableExpression ParseCommonTableExpression()
     {
+        return _dialect.ParseCommonTableExpression(this);
+    }
+    
+    public CommonTableExpression ParseCommonTableExpressionInternal()
+    {
         var name = ParseIdentifier();
 
         CommonTableExpression? cte;

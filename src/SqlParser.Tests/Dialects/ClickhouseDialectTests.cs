@@ -9,7 +9,7 @@ public class ClickhouseDialectTests : ParserTestBase
     {
         DefaultDialects = [new ClickHouseDialect()];
     }
-
+  
     [Fact]
     public void Parse_Map_Access_Expr()
     {
@@ -959,5 +959,27 @@ public class ClickhouseDialectTests : ParserTestBase
             Assert.Throws<ParserException>(() => ParseSqlStatements($"ALTER TABLE t0 {keyword} PROJECTION my_name IN PARTITION"));
             Assert.Throws<ParserException>(() => ParseSqlStatements($"ALTER TABLE t0 {{keyword}} PROJECTION my_name IN"));
         }
+    }
+    
+    [Fact]
+    public void Parse_ClickHouse_Alternative_With_Syntax()
+    {
+        var dialect = new ClickHouseDialect();
+        
+        var standardSql = "WITH test AS (SELECT 1 AS col) SELECT * FROM test";
+        
+        var standardSqlStatement = ParseSqlStatements(standardSql, [dialect]);
+        
+        Assert.NotNull(standardSqlStatement);
+        Assert.Single(standardSqlStatement);
+        Assert.IsType<Statement.Select>(standardSqlStatement[0]);
+        
+        var clickhouseSql = "WITH (SELECT 1 AS col) AS test SELECT * FROM test";
+        
+        var clickhouseStatement = ParseSqlStatements(clickhouseSql, [dialect]);
+        
+        Assert.NotNull(clickhouseStatement);
+        Assert.Single(clickhouseStatement);
+        Assert.IsType<Statement.Select>(clickhouseStatement[0]);
     }
 }
