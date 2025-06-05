@@ -50,6 +50,35 @@ public abstract record TableFactor : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// MS SQL OPENJSON table-valued function
+    /// </summary>
+    public record OpenJsonTable(Expression JsonExpression, Sequence<OpenJsonTableColumn> Columns, TableAlias? Alias, Value? JsonPath) : TableFactor
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"OPENJSON({JsonExpression}");
+
+            if (JsonPath != null)
+            {
+                writer.WriteSql($", {JsonPath}");
+            }
+
+            writer.Write(")");
+
+            if (Columns.SafeAny())
+            {
+                writer.Write(" WITH (");
+                writer.WriteDelimited(Columns);
+                writer.Write(")");
+            }
+
+            if (Alias != null)
+            {
+                writer.WriteSql($" AS {Alias}");
+            }
+        }
+    }
+    /// <summary>
     /// Represents a parenthesized table factor. The SQL spec only allows a
     /// join expression ((foo JOIN bar [ JOIN baz ... ])) to be nested,
     /// possibly several times.
@@ -267,7 +296,10 @@ public abstract record TableFactor : IWriteSql, IElement
     /// <param name="JsonExpression"></param>
     /// <param name="JsonPath"></param>
     /// <param name="Columns"></param>
-    public record JsonTable(Expression JsonExpression, Value JsonPath, Sequence<JsonTableColumn> Columns) : TableFactor
+    public record JsonTable(
+        Expression JsonExpression, 
+        Value JsonPath, 
+        Sequence<JsonTableColumn> Columns) : TableFactor
     {
         public override void ToSql(SqlTextWriter writer)
         {

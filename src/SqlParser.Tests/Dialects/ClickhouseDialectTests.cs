@@ -115,6 +115,10 @@ public class ClickhouseDialectTests : ParserTestBase
     [Fact]
     public void Parse_Delimited_Identifiers()
     {
+        var selectx = VerifiedOnlySelect("""
+                                        SELECT a FROM t AS "alias"
+                                        """);
+
         var select = VerifiedOnlySelect("""
                         SELECT "alias"."bar baz", "myfun"(), "simple id" AS "column alias" FROM "a table" AS "alias"
                         """);

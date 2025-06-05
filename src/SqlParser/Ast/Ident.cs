@@ -36,7 +36,7 @@ public record Ident(string Value, char? QuoteStyle = null) : IWriteSql
     /// <param name="writer">Sql writer instance</param>
     public void ToSql(SqlTextWriter writer)
     {
-        switch( QuoteStyle){
+        switch(QuoteStyle){
             case Symbols.DoubleQuote:
             case Symbols.SingleQuote:
             case Symbols.Backtick:

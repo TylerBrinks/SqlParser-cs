@@ -103,6 +103,72 @@ public partial class Parser
         return null;
     }
 
+    public TableAlias? MaybeParseTableAlias()
+    {
+        var inner = ParseOptionalAliasInner(null, Validator);
+
+        if (inner == null){ return null; }
+
+        var columns = ParseTableAliasColumnDefs();
+        //return new TableAlias(inner.Value, columns);
+        return new TableAlias(new Ident(inner.Value, inner.QuoteStyle), columns);
+
+        bool Validator(bool @explicit, Keyword keyword)
+        {
+            return _dialect.IsTableFactorAlias(@explicit, keyword);
+        }
+    }
+
+    private Sequence<TableAliasColumnDef>? ParseTableAliasColumnDefs()
+    {
+        if (ConsumeToken<LeftParen>())
+        {
+            var cols = ParseCommaSeparated(() =>
+            {
+                var name = ParseIdentifier();
+                var dataType = MaybeParse(ParseDataType);
+                return new TableAliasColumnDef(name, dataType);
+            });
+
+            ExpectRightParen();
+            return cols;
+        }
+
+        return null;
+    }
+
+    private Ident? ParseOptionalAliasInner(
+        IEnumerable<Keyword>? reservedKeywords,
+        Func<bool, Keyword, bool> validator)
+    {
+        var afterAs = ParseKeyword(Keyword.AS);
+
+        var next = NextToken();
+        switch (next)
+        {
+            case Word w when afterAs || (reservedKeywords !=null && reservedKeywords.Contains(w.Keyword)):
+                return w.ToIdent();
+
+            case Word w when validator(afterAs, w.Keyword):
+                return w.ToIdent();
+
+            case SingleQuotedString s:
+                return new Ident(s.Value, Symbols.SingleQuote);
+
+            case DoubleQuotedString d:
+                return new Ident(d.Value, Symbols.DoubleQuote);
+
+            default:
+                if (afterAs)
+                {
+                    throw Expected("an identifier after AS", next);
+                }
+
+                PrevToken();
+                return null;
+        }
+    }
+
     public Sequence<ParsedAction> ParseActionsList()
     {
         var values = new Sequence<ParsedAction>();

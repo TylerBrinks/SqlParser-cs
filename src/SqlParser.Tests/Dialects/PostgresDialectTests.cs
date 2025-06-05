@@ -2660,6 +2660,18 @@ public class PostgresDialectTests : ParserTestBase
         ]);
         Assert.Equal(representation, statement.Representation);
     }
+
+    [Fact]
+    public void Oracle()
+    {
+        var sql = """
+                  SELECT x
+                  FROM
+                  	tbl a
+                  """;
+        var op = new SqlQueryParser().Parse(sql);
+        var x = op.ToSql();
+    }
 }
 
 public record TestCase(string Sql, Owner ExpectedOwner);

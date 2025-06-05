@@ -248,7 +248,19 @@ public abstract partial class Dialect
 
     public virtual ColumnOption? ParseColumnOption(Parser parser) => null;
     /// <summary>
+    /// Returns true if the specified keyword should be parsed as a table factor alias;
+    /// When explicit is true, the keyword is preceded by an `AS` word. Parser is provided
+    /// to enable looking ahead if needed.
+    /// </summary>
+    /// <param name="explicit">Explicit flag</param>
+    /// <param name="keyword">Keyword</param>
+    /// <returns>True if the alias should be parsed</returns>
+    /// <exception cref="NotImplementedException"></exception>
+    public virtual bool IsTableFactorAlias(bool @explicit, Keyword keyword) =>
+        @explicit || !Keywords.ReservedForTableAlias.Contains(keyword);
+    /// <summary>
     /// Returns the precedence when the precedence is otherwise unknown
     /// </summary>
     public virtual short PrecedenceUnknown => 0;
+
 }

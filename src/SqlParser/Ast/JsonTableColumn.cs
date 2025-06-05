@@ -1,7 +1,4 @@
-﻿using SqlParser;
-using SqlParser.Ast;
-
-namespace SqlParser.Ast;
+﻿namespace SqlParser.Ast;
 
 public abstract record JsonTableColumn : IWriteSql, IElement
 {
@@ -83,6 +80,37 @@ public abstract record JsonTableColumnErrorHandling : IWriteSql, IElement
             case Error:
                 writer.Write("ERROR");
                 break;
+        }
+    }
+}
+
+public record OpenJsonTableColumn(Ident Name, DataType Type, string? Path, bool AsJson) : IWriteSql, IElement
+{
+    public void ToSql(SqlTextWriter writer)
+    {
+        writer.WriteSql($"{Name} {Type}");
+        
+        if (Path != null)
+        {
+            writer.WriteSql($" '{Path.EscapeSingleQuoteString()}'");
+        }
+
+        if (AsJson)
+        {
+            writer.WriteSql($" AS JSON");
+        }
+    }
+}
+
+public record TableAliasColumnDef(Ident Name, DataType? Type = null) : IWriteSql, IElement
+{
+    public void ToSql(SqlTextWriter writer)
+    {
+        writer.WriteSql($"{Name}");
+
+        if (Type != null)
+        {
+            writer.WriteSql($" {Type}");
         }
     }
 }
