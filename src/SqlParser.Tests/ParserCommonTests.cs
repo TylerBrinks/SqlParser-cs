@@ -3602,7 +3602,11 @@ public class ParserCommonTests : ParserTestBase
     public void Parse_Cte_Renamed_Column()
     {
         var query = VerifiedQuery("WITH cte (col1, col2) AS (SELECT foo, bar FROM baz) SELECT * FROM cte");
-        Assert.Equal(new Ident[] { "col1", "col2" }, query.With!.CteTables.First().Alias.Columns!);
+        Assert.Equal(new []
+        {
+            new TableAliasColumnDef("col1"),
+            new TableAliasColumnDef("col2")
+        }, query.With!.CteTables.First().Alias.Columns!);
     }
 
     [Fact]
@@ -3615,9 +3619,9 @@ public class ParserCommonTests : ParserTestBase
 
         var expected = new CommonTableExpression(new TableAlias("nums")
         {
-            Columns = new Ident[]
+            Columns = new []
             {
-                "val"
+                new TableAliasColumnDef("val")
             }
         }, cteQuery);
 
@@ -5225,7 +5229,11 @@ public class ParserCommonTests : ParserTestBase
                 new ExpressionWithAlias(new Identifier("three"), "y"),
             ]),
             null,
-            new TableAlias("p", new Ident[] { "c", "d" }));
+            new TableAlias("p", new []
+            {
+                new TableAliasColumnDef("c"),
+                new TableAliasColumnDef("d"),
+            }));
 
         Assert.Equal(expected, relation);
         Assert.Equal(sql.Replace("\r", "").Replace("\n", ""), VerifiedStatement(sql).ToSql());
@@ -5261,7 +5269,11 @@ public class ParserCommonTests : ParserTestBase
         };
         var expected = new TableFactor.Unpivot(table, "quantity", "quarter", ["Q1", "Q2", "Q3", "Q4"])
         {
-            PivotAlias = new TableAlias("u", ["product", "quarter", "quantity"])
+            PivotAlias = new TableAlias("u", [
+                new TableAliasColumnDef("product"),
+                new TableAliasColumnDef("quarter"), 
+                new TableAliasColumnDef("quantity")
+            ])
         };
 
 
@@ -6894,7 +6906,7 @@ public class ParserCommonTests : ParserTestBase
             Assert.Throws<ParserException>(() => ParseSqlStatements(statement, dialects));
         }
 
-        statements = new[] { "SELECT !a", "SELECT !a b", "SELECT !a as b" };
+        statements = ["SELECT !a", "SELECT !a b", "SELECT !a as b"];
         dialects = AllDialects.Where(d => !d.SupportsBangNotOperator).ToList();
         foreach (var statement in statements)
         {
@@ -6929,7 +6941,7 @@ public class ParserCommonTests : ParserTestBase
             Assert.Throws<ParserException>(() => ParseSqlStatements(statement, dialects));
         }
 
-        statements = new[] { "SELECT a!", "SELECT a ! b", "SELECT a ! as b" };
+        statements = ["SELECT a!", "SELECT a ! b", "SELECT a ! as b"];
         dialects = AllDialects.Where(d => !d.SupportsBangNotOperator).ToList();
         foreach (var statement in statements)
         {

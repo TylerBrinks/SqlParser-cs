@@ -11,6 +11,8 @@ namespace SqlParser.Dialects;
 /// </summary>
 public class MySqlDialect : Dialect
 {
+    private static readonly IEnumerable<Keyword> MySqlReservedTableAlias = [Keyword.USE, Keyword.IGNORE, Keyword.FORCE];
+
     public override bool IsIdentifierStart(char character)
     {
         return char.IsLetter(character) ||
@@ -51,6 +53,12 @@ public class MySqlDialect : Dialect
     }
 
     public override char? IdentifierQuoteStyle(string identifier) => Symbols.Backtick;
+
+    public override bool IsTableFactorAlias(bool @explicit, Keyword keyword)
+    {
+        return @explicit || 
+               (!Keywords.ReservedForTableAlias.Contains(keyword) && !MySqlReservedTableAlias.Contains(keyword));
+    }
 
     public override bool SupportsStringLiteralBackslashEscape => true;
     public override bool SupportsNumericPrefix => true;

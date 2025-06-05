@@ -261,6 +261,37 @@ public partial class Parser
         return true;
     }
 
+    public bool ParseKeywordWithTokens(Keyword expected, params Type[] tokens)
+    {
+        var token = PeekToken();
+
+        if (token is Word w && w.Keyword == expected)
+        {
+            return ExpectedKeywordToken();
+        }
+        
+        return false;
+
+        bool ExpectedKeywordToken()
+        {
+            for (var i = 0; i < tokens.Length; i++)
+            {
+                if (PeekNthToken(i + 1).GetType() != tokens[i])
+                {
+                    return false;
+                }
+            }
+
+            // Consume all tokens
+            for (var i = 0; i < tokens.Length + 1; i++)
+            {
+                NextToken();
+            }
+
+            return true;
+        }
+    }
+
     /// <summary>
     /// Look for an expected keyword and consume it if it exists
     /// </summary>
@@ -547,13 +578,10 @@ public partial class Parser
     /// Parse a new expression
     /// </summary>
     /// <returns>Expression</returns>
-    public Expression ParseExpr()
-    {
-        return ParseSubExpression(_dialect.PrecedenceUnknown);
-    } 
+    public Expression ParseExpr() => ParseSubExpression(_dialect.PrecedenceUnknown);
     /// <summary>
     /// Parse tokens until the precedence changes
-    /// </summary>
+    /// </summary>`
     /// <param name="precedence">Precedence value</param>
     /// <returns>Parsed sub-expression</returns>
     public Expression ParseSubExpression(short precedence)

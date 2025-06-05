@@ -4077,24 +4077,24 @@ public partial class Parser
     /// </summary>
     /// <param name="keywords"></param>
     /// <returns></returns>
-    public TableAlias? ParseOptionalTableAlias(IEnumerable<Keyword> keywords)
-    {
-        var alias = ParseOptionalAlias(keywords);
+    //public TableAlias? ParseOptionalTableAlias(IEnumerable<Keyword> keywords)
+    //{
+    //    var alias = ParseOptionalAlias(keywords);
 
-        if (alias != null)
-        {
-            var columns = ParseParenthesizedColumnList(IsOptional.Optional, false);
+    //    if (alias != null)
+    //    {
+    //        var columns = ParseParenthesizedColumnList(IsOptional.Optional, false);
 
-            if (!columns.Any())
-            {
-                columns = null;
-            }
+    //        if (!columns.Any())
+    //        {
+    //            columns = null;
+    //        }
 
-            return new TableAlias(alias, columns);
-        }
+    //        return new TableAlias(alias, columns);
+    //    }
 
-        return null;
-    }
+    //    return null;
+    //}
 
     public ObjectName ParseObjectName(bool inTableClause)
     {
@@ -4487,8 +4487,8 @@ public partial class Parser
         }
         else
         {
-            var columns = ParseParenthesizedColumnList(IsOptional.Optional, false);
-            if (!columns.Any())
+            var columns = ParseTableAliasColumnDefs();
+            if (columns != null && !columns.Any())
             {
                 columns = null;
             }
@@ -5160,7 +5160,7 @@ public partial class Parser
             var fnName = ParseObjectName();
             ExpectLeftParen();
             var fnArgs = ParseOptionalArgs();
-            var alias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
+            var alias = MaybeParseTableAlias();
             return new TableFactor.Function(true, fnName, fnArgs) { Alias = alias };
         }
 
@@ -5168,7 +5168,7 @@ public partial class Parser
         {
             var expr = ExpectParens(ParseExpr);
 
-            var alias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
+            var alias = MaybeParseTableAlias();// ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
             return new TableFactor.TableFunction(expr)
             {
                 Alias = alias
@@ -5229,7 +5229,7 @@ public partial class Parser
             {
                 // (A)
                 ExpectRightParen();
-                var alias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
+                var alias = MaybeParseTableAlias();
                 return new TableFactor.NestedJoin
                 {
                     TableWithJoins = tableAndJoins,
@@ -5242,7 +5242,7 @@ public partial class Parser
                 // (B): `table_and_joins` (what we found inside the parentheses)
                 // is a nested join `(foo JOIN bar)`, not followed by other joins.
                 ExpectRightParen();
-                var alias = ParseOptionalTableAlias(Keywords.ReservedForColumnAlias);
+                var alias = MaybeParseTableAlias();// ParseOptionalTableAlias(Keywords.ReservedForColumnAlias);
                 return new TableFactor.NestedJoin
                 {
                     TableWithJoins = tableAndJoins,
@@ -5259,7 +5259,7 @@ public partial class Parser
                 // and around derived tables (e.g. `FROM ((SELECT ...)
                 // [AS alias])`) as well.
                 ExpectRightParen();
-                var outerAlias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
+                var outerAlias = MaybeParseTableAlias();
                 if (outerAlias != null)
                 {
                     switch (tableAndJoins.Relation)
@@ -5269,6 +5269,7 @@ public partial class Parser
                             or TableFactor.Function
                             or TableFactor.UnNest
                             or TableFactor.JsonTable
+                            or TableFactor.OpenJsonTable
                             or TableFactor.TableFunction
                             or TableFactor.Pivot
                             or TableFactor.Unpivot
@@ -5299,7 +5300,7 @@ public partial class Parser
 
             var withOrdinality = ParseKeywordSequence(Keyword.WITH, Keyword.ORDINALITY);
 
-            var alias = ParseOptionalTableAlias(Keywords.ReservedForColumnAlias);
+            var alias = MaybeParseTableAlias();
 
             var withOffset = ParseKeywordSequence(Keyword.WITH, Keyword.OFFSET);
             var withOffsetAlias = withOffset ? ParseOptionalAlias(Keywords.ReservedForColumnAlias) : null;
@@ -5322,11 +5323,24 @@ public partial class Parser
             // SELECT * FROM VALUES (1, 'a'), (2, 'b') AS t (col1, col2)
             // where there are no parentheses around the VALUES clause.
             var values = new SetExpression.ValuesExpression(ParseValues(false));
-            var alias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
+            var alias = MaybeParseTableAlias();
             return new TableFactor.Derived(new Query(values))
             {
                 Alias = alias
             };
+        }
+
+        //if (peekedTokens[0] is Word { Keyword: Keyword.JSON_TABLE } && peekedTokens[1] is LeftParen)
+        if (ParseKeywordWithTokens(Keyword.JSON_TABLE, typeof(LeftParen)))// && peekedTokens[1] is LeftParen)
+        {
+            var jsonExpression = ParseExpr();
+            ExpectToken<Comma>();
+            var jsonPath = ParseValue();
+            ExpectKeyword(Keyword.COLUMNS);
+            var columns = ExpectParens(() => ParseCommaSeparated(ParseJsonTableColumnDef));
+            ExpectRightParen();
+            var alias = MaybeParseTableAlias();
+            return new TableFactor.JsonTable(jsonExpression, jsonPath, columns){Alias = alias};
         }
 
         var nextToken = PeekToken();
@@ -5342,7 +5356,7 @@ public partial class Parser
                 var columns = ExpectParens(() => ParseCommaSeparated(ParseJsonTableColumnDef));
                 return new TableFactor.JsonTable(jsonExpr, path, columns);
             });
-            jsonTable.Alias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
+            jsonTable.Alias = MaybeParseTableAlias();//ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
             return jsonTable;
         }
 
@@ -5358,7 +5372,7 @@ public partial class Parser
         var args = ParseInit(ConsumeToken<LeftParen>(), ParseTableFunctionArgs);
 
         var ordinality = ParseKeywordSequence(Keyword.WITH, Keyword.ORDINALITY);
-        var optionalAlias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
+        var optionalAlias = MaybeParseTableAlias();
 
         Sequence<Expression>? withHints = null;
         if (ParseKeyword(Keyword.WITH))
@@ -5524,7 +5538,7 @@ public partial class Parser
             });
         });
 
-        var alias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
+        var alias = MaybeParseTableAlias();
 
         return new TableFactor.MatchRecognize(table,
             partitionBy,
@@ -5777,7 +5791,7 @@ public partial class Parser
     {
         var subQuery = ParseQuery();
         ExpectRightParen();
-        var alias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
+        var alias = MaybeParseTableAlias();
 
         return new TableFactor.Derived(subQuery.Query, lateral == IsLateral.Lateral)
         {
@@ -5826,7 +5840,7 @@ public partial class Parser
         });
 
 
-        var alias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
+        var alias = MaybeParseTableAlias();
 
         return new TableFactor.Pivot(table, aggregateFunctions, valueColumn, valueSource, defaultOnNull, alias);
     }
@@ -5856,7 +5870,7 @@ public partial class Parser
 
             return new TableFactor.Unpivot(table, value, name, columns);
         });
-        var alias = ParseOptionalTableAlias(Keywords.ReservedForTableAlias);
+        var alias = MaybeParseTableAlias();
 
         unpivot.PivotAlias = alias;
 
