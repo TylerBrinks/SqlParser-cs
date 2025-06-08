@@ -137,6 +137,15 @@ public static class EnumWriter
             MySqlInsertPriority.Delayed => "DELAYED",
             MySqlInsertPriority.HighPriority => "HIGH_PRIORITY",
 
+            MySqlRoutineCharacteristic.ContainsSql => "CONTAINS SQL",
+            MySqlRoutineCharacteristic.NoSql => "NO SQL",
+            MySqlRoutineCharacteristic.ReadsSqlData => "READS SQL DATA",
+            MySqlRoutineCharacteristic.ModifiesSqlData => "MODIFIES SQL DATA",
+
+            MySqlViewAlgorithm.Undefined => "UNDEFINED",
+            MySqlViewAlgorithm.Merge => "MERGE",
+            MySqlViewAlgorithm.TempTable => "TEMPTABLE",
+
             SetQuantifier.ByName => "BY NAME",
             SetQuantifier.AllByName => "ALL BY NAME",
             SetQuantifier.DistinctByName => "DISTINCT BY NAME",
@@ -154,6 +163,9 @@ public static class EnumWriter
             
             ShowClause.In => "IN",
             ShowClause.From => "FROM",
+
+            SqlSecurityContext.Definer => "DEFINER",
+            SqlSecurityContext.Invoker => "INVOKER",
 
             TimezoneInfo.WithTimeZone => "WITH TIME ZONE",
             TimezoneInfo.WithoutTimeZone => "WITHOUT TIME ZONE",

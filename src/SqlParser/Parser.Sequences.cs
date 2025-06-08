@@ -57,7 +57,7 @@ public partial class Parser
     /// </summary>
     /// <returns>List of statements parsed into an Abstract Syntax Tree</returns>
     /// <exception cref="ParserException">ParserException thrown when the expected token or keyword is not encountered.</exception>
-    public Sequence<Statement> ParseStatements()
+    public Sequence<Statement> ParseStatements(bool terminateOnEnd = false)
     {
         var expectingStatementDelimiter = false;
         var statements = new Sequence<Statement>();
@@ -75,7 +75,7 @@ public partial class Parser
                 break;
             }
 
-            if (next is Word { Keyword: Keyword.END } && expectingStatementDelimiter)
+            if (next is Word { Keyword: Keyword.END } && (expectingStatementDelimiter || terminateOnEnd))
             {
                 break;
             }
@@ -847,5 +847,49 @@ public partial class Parser
         }
 
         return sequenceOptions;
+    }
+
+    public SqlSecurityContext? ParseSqlSecurityContext()
+    {
+        SqlSecurityContext? securityContext = null;
+        if (ParseKeywordSequence(Keyword.SQL, Keyword.SECURITY))
+        {
+            var keyword = ExpectOneOfKeywords(Keyword.DEFINER, Keyword.INVOKER);
+            securityContext = keyword switch
+            {
+                Keyword.DEFINER => SqlSecurityContext.Definer,
+                Keyword.INVOKER => SqlSecurityContext.Invoker
+            };
+        }
+
+        return securityContext;
+    }
+
+    public Owner? ParseDefiner()
+    {
+        if (ParseKeyword(Keyword.DEFINER))
+        {
+            ExpectToken<Equal>();
+            var owner = ParseOwner();
+            return owner;
+        }
+        return null;
+    }
+
+    public MySqlViewAlgorithm? ParseMySqlViewAlgorithm()
+    {
+        MySqlViewAlgorithm? algorithm = null;
+        if (ParseKeyword(Keyword.ALGORITHM))
+        {
+            ExpectToken<Equal>();
+            var keyword = ExpectOneOfKeywords(Keyword.UNDEFINED, Keyword.MERGE, Keyword.TEMPTABLE);
+            algorithm = keyword switch
+            {
+                Keyword.UNDEFINED => MySqlViewAlgorithm.Undefined,
+                Keyword.MERGE => MySqlViewAlgorithm.Merge,
+                Keyword.TEMPTABLE => MySqlViewAlgorithm.TempTable,
+            };
+        }
+        return algorithm;
     }
 }

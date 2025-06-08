@@ -227,10 +227,11 @@ public record CreateFunctionBody(Expression Expression) : IWriteSql
     public record AsBeforeOptions(Expression Expression) : CreateFunctionBody(Expression);
     public record AsAfterOptions(Expression Expression) : CreateFunctionBody(Expression);
     public record Return(Expression Expression) : CreateFunctionBody(Expression);
+    public record BeginEnd(Expression.BeginEndWrapper Block) : CreateFunctionBody(Block);
 
     public void ToSql(SqlTextWriter writer)
     {
-       writer.WriteSql($"{Expression}");
+        writer.WriteSql($"{Expression}");
     }
 }
 

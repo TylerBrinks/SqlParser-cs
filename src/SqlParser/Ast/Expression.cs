@@ -1158,6 +1158,15 @@ public abstract record Expression : IWriteSql, IElement
             }
         }
     }
+
+    public record BeginEndWrapper(Statement.BeginEndBlock BeginEndBlock) : Expression
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            BeginEndBlock.ToSql(writer);
+        }
+    }
+
     /// <summary>
     /// BigQuery specific Struct literal expression
     /// </summary>

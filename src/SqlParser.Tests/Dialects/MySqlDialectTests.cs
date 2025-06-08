@@ -7,6 +7,7 @@ using DataType = SqlParser.Ast.DataType;
 // ReSharper disable StringLiteralTypo
 
 namespace SqlParser.Tests.Dialects;
+
 public class MySqlDialectTests : ParserTestBase
 {
     public MySqlDialectTests()
@@ -1370,5 +1371,62 @@ public class MySqlDialectTests : ParserTestBase
         }, create.Query!.Body.AsSelect().Projection);
 
         Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE TABLE foo (id INT(11)) ENGINE=InnoDB AS SELECT 1 DEFAULT CHARSET=utf8mb3"));
+    }
+
+    [Fact]
+    public void Parse_Create_Function_Simple_Return()
+    {
+        var create = VerifiedStatement<Statement.CreateFunction>("CREATE DEFINER = 'user'@'localhost' FUNCTION add_numbers(IN a INT, IN b INTEGER) RETURNS INTEGER COMMENT 'add numbers' DETERMINISTIC LANGUAGE SQL CONTAINS SQL SQL SECURITY INVOKER RETURN a + b");
+
+        Assert.Equal("add_numbers", create!.Name);
+        Assert.Equal(SqlSecurityContext.Invoker, create.SqlSecurityContext);
+        Assert.Equal(new Owner.IdentityWithHost(new Ident("user", '\''), new Ident("localhost", '\'')), create.Definer);
+    }
+
+    [Fact]
+    public void Parse_Create_Function_Begin_End()
+    {
+        var create = VerifiedStatement<Statement.CreateFunction>("CREATE DEFINER = 'user'@'localhost' FUNCTION add_numbers(IN a INT, IN b INTEGER) RETURNS INT\nBEGIN\nreturn a + b;\nEND", unescape: true);
+
+        var expected = new Statement.CreateFunction(new ObjectName(new Ident("add_numbers")))
+        {
+            Args = [
+                new OperateFunctionArg(ArgMode.In) { Name = new Ident("a"), DataType = new DataType.Int() },
+                new OperateFunctionArg(ArgMode.In) { Name = new Ident("b"), DataType = new DataType.Integer() },
+            ],
+            ReturnType = new DataType.Int(),
+            Definer = new Owner.IdentityWithHost(new Ident("user", '\''), new Ident("localhost", '\'')),
+            FunctionBody = new CreateFunctionBody.BeginEnd(new BeginEndWrapper(new Statement.BeginEndBlock([
+                new Statement.ReturnStatement(new BinaryOp(
+                    Left: new Identifier(new Ident("a")),
+                    Op: BinaryOperator.Plus,
+                    Right: new Identifier(new Ident("b"))
+                )),
+
+            ], false)))
+        };
+
+        Assert.Equal(expected, create);
+    }
+
+    [Fact]
+    public void Parse_Create_View_Simple()
+    {
+        var createStatement = "CREATE VIEW my_view AS SELECT `t`.`col1`, `t`.`col2` FROM `table` AS `t`";
+        VerifiedStatement<Statement.CreateView>(createStatement);
+    }
+
+    [Fact]
+    public void Parse_Create_View_With_Definer()
+    {
+        var createStatement = "CREATE DEFINER = 'user'@'localhost' VIEW my_view AS SELECT `t`.`col1`, `t`.`col2` FROM `table` AS `t`";
+        VerifiedStatement<Statement.CreateView>(createStatement);
+    }
+
+    [Fact]
+    public void Parse_Create_View_With_All_Options()
+    {
+        var createStatement = "CREATE OR REPLACE ALGORITHM = MERGE DEFINER = CURRENT_USER SQL SECURITY DEFINER VIEW my_view AS SELECT `t`.`col1`, `t`.`col2` FROM `table` AS `t`";
+        VerifiedStatement<Statement.CreateView>(createStatement);
     }
 }

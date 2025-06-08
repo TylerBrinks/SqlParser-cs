@@ -456,6 +456,21 @@ public enum MySqlInsertPriority
     HighPriority
 }
 
+public enum MySqlRoutineCharacteristic
+{
+    ContainsSql,
+    NoSql,
+    ReadsSqlData,
+    ModifiesSqlData,
+}
+
+public enum MySqlViewAlgorithm
+{
+    Undefined,
+    Merge,
+    TempTable,
+}
+
 public enum NonBlock
 {
     None,
@@ -568,6 +583,12 @@ public enum SqliteOnConflict
     Fail,
     Ignore,
     Replace
+}
+
+public enum SqlSecurityContext
+{
+    Definer,
+    Invoker
 }
 
 public enum TimezoneInfo

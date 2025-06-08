@@ -963,6 +963,8 @@ public ref struct Tokenizer(bool unescape = true)
             Symbols.QuestionMark => TokenizeSingleCharacter(new AtQuestion()),
             Symbols.At => TokenizeAtAt(character),
             Symbols.Space => new AtSign(),
+            Symbols.SingleQuote => new AtSign(),
+            Symbols.Backtick => new AtSign(),
             _ when _dialect.IsIdentifierStart(Symbols.At) => TokenizeIdentifierOrKeyword([character, _state.Peek()]),
             _ => new AtSign()
         };
