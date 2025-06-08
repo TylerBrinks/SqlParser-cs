@@ -6,6 +6,7 @@ public abstract record Owner : IWriteSql, IElement
     public record CurrentRole : Owner;
     public record CurrentUser : Owner;
     public record SessionUser : Owner;
+    public record IdentityWithHost(Ident Name, Ident Host) : Owner;
 
     public void ToSql(SqlTextWriter writer)
     {
@@ -22,6 +23,9 @@ public abstract record Owner : IWriteSql, IElement
                 break;
             case SessionUser:
                 writer.Write("SESSION_USER");
+                break;
+            case IdentityWithHost id:
+                writer.Write($"{id.Name}@{id.Host}");
                 break;
         }
     }

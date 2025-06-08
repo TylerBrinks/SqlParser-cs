@@ -2,6 +2,8 @@
 // ReSharper disable CommentTypo
 // ReSharper disable UnusedMember
 
+using SqlParser.Tokens;
+
 namespace SqlParser.Ast;
 
 public abstract record Statement : IWriteSql, IElement
@@ -218,6 +220,22 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
+
+    public record BeginEndBlock(Sequence<Statement> Statements, bool EndsWithSemicolon) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            var semicolon = EndsWithSemicolon ? ";" : null;
+
+            writer.WriteLine("BEGIN");
+            foreach (var statement in Statements)
+            {
+                writer.WriteSql($"{statement};\n");
+            }
+            writer.WriteSql($"END{semicolon}");
+        }
+    }
+
     /// <summary>
     /// Cache statement
     /// See Spark SQL docs for more details.
@@ -543,6 +561,15 @@ public abstract record Statement : IWriteSql, IElement
             }
         }
     }
+
+    public record ReturnStatement(Expression Expression) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"RETURN {Expression}");
+        }
+    }
+
     /// <summary>
     /// Create function statement
     ///
@@ -567,14 +594,19 @@ public abstract record Statement : IWriteSql, IElement
         public FunctionDeterminismSpecifier? DeterminismSpecifier { get; init; }
         public Sequence<SqlOption>? Options { get; init; }
         public ObjectName? RemoteConnection { get; init; }
+        public Owner? Definer { get; init; }
+        public new CommentDef? Comment { get; init; }
+        public SqlSecurityContext? SqlSecurityContext { get; init; }
+        public MySqlRoutineCharacteristic? RoutineCharacteristic { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
             var ifNot = IfNotExists ? $"{AsIne.IfNotExistsText} " : null;
             var or = OrReplace ? "OR REPLACE " : null;
             var temp = Temporary ? "TEMPORARY " : null;
+            var definer = Definer != null ? $"DEFINER = {Definer.ToSql()} " : null;
 
-            writer.WriteSql($"CREATE {or}{temp}FUNCTION {ifNot}{Name}");
+            writer.WriteSql($"CREATE {or}{definer}{temp}FUNCTION {ifNot}{Name}");
 
             if (Args.SafeAny())
             {
@@ -586,6 +618,19 @@ public abstract record Statement : IWriteSql, IElement
                 writer.WriteSql($" RETURNS {ReturnType}");
             }
 
+            if (Comment != null)
+            {
+                switch (Comment)
+                {
+                    case CommentDef.WithEq we:
+                        writer.WriteSql($" COMMENT = '{we.Comment}'");
+                        break;
+                    case CommentDef.WithoutEq w:
+                        writer.Write($" COMMENT '{w.Comment}'");
+                        break;
+                }
+            }
+
             if (DeterminismSpecifier != null)
             {
                 writer.WriteSql($" {DeterminismSpecifier}");
@@ -593,6 +638,14 @@ public abstract record Statement : IWriteSql, IElement
             if (Language != null)
             {
                 writer.WriteSql($" LANGUAGE {Language}");
+            }
+            if (RoutineCharacteristic != null)
+            {
+                writer.WriteSql($" {RoutineCharacteristic}");
+            }
+            if (SqlSecurityContext != null)
+            {
+                writer.WriteSql($" SQL SECURITY {SqlSecurityContext}");
             }
             if (Behavior != null)
             {
@@ -619,6 +672,10 @@ public abstract record Statement : IWriteSql, IElement
 
                 case CreateFunctionBody.Return r:
                     writer.WriteSql($" RETURN {r}");
+                    break;
+
+                case CreateFunctionBody.BeginEnd be:
+                    writer.WriteSql($"\n{be}");
                     break;
             }
 
@@ -935,6 +992,9 @@ public abstract record Statement : IWriteSql, IElement
         public bool IfNotExists { get; init; }
         public bool Temporary { get; init; }
         public ObjectName? To { get; init; }
+        public MySqlViewAlgorithm? Algorithm { get; init; }
+        public Owner? Definer { get; init; }
+        public SqlSecurityContext? SecurityContext { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
@@ -944,7 +1004,22 @@ public abstract record Statement : IWriteSql, IElement
             var ifNotExists = IfNotExists ? $"{IIfNotExists.IfNotExistsPhrase} " : null;
             var to = To != null ? $" TO {To.ToSql()}" : null;
 
-            writer.WriteSql($"CREATE {orReplace}{materialized}{temporary}VIEW {ifNotExists}{Name}{to}");
+            writer.WriteSql($"CREATE {orReplace}");
+
+            if (Algorithm != null)
+            {
+                writer.WriteSql($"ALGORITHM = {Algorithm} ");
+            }
+            if (Definer != null)
+            {
+                writer.WriteSql($"DEFINER = {Definer} ");
+            }
+            if (SecurityContext != null)
+            {
+                writer.WriteSql($"SQL SECURITY {SecurityContext} ");
+            }
+
+            writer.WriteSql($"{materialized}{temporary}VIEW {ifNotExists}{Name}{to}");
 
             if (Columns.SafeAny())
             {

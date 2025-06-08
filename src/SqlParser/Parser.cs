@@ -804,6 +804,12 @@ public partial class Parser
         Owner ParseOwnerName()
         {
             var ident = ParseIdentifier();
+            if (PeekToken() is AtSign)
+            {
+                NextToken();
+                var host = ParseIdentifier();
+                return new Owner.IdentityWithHost(ident, host);
+            }
             return new Owner.Identity(ident);
         }
     }
@@ -1109,7 +1115,7 @@ public partial class Parser
         };
     }
 
-    public CreateView ParseCreateView(bool orReplace, bool temporary)
+    public CreateView ParseCreateView(bool orReplace, bool temporary, MySqlViewAlgorithm? algorithm, Owner? definer, SqlSecurityContext? securityContext)
     {
         var materialized = ParseKeyword(Keyword.MATERIALIZED);
         ExpectKeyword(Keyword.VIEW);
@@ -1181,7 +1187,10 @@ public partial class Parser
             IfNotExists = ifNotExists,
             Temporary = temporary,
             Options = options,
-            To = to
+            To = to,
+            Algorithm = algorithm,
+            Definer = definer,
+            SecurityContext = securityContext,
         };
     }
 

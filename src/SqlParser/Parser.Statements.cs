@@ -105,6 +105,7 @@ public partial class Parser
             // `LOAD` is DuckDb specific https://duckdb.org/docs/extensions/overview
             Keyword.LOAD when _dialect is DuckDbDialect or GenericDialect => ParseLoad(),
             Keyword.OPTIMIZE when _dialect is ClickHouseDialect or GenericDialect => ParseOptimizeTable(),
+            Keyword.RETURN => new ReturnStatement(ParseExpr()),
 
             _ => throw Expected("a SQL statement", PeekToken())
         };
@@ -264,6 +265,10 @@ public partial class Parser
         var temporary = ParseOneOfKeywords(Keyword.TEMP, Keyword.TEMPORARY) != Keyword.undefined;
         var persistent = _dialect is DuckDbDialect && ParseKeyword(Keyword.PERSISTENT);
 
+        var algorithm = ParseMySqlViewAlgorithm();
+        var definer = ParseDefiner();
+        var securityContext = ParseSqlSecurityContext();
+
         if (ParseKeyword(Keyword.TABLE))
         {
             return new Statement.CreateTable(ParseCreateTable(orReplace, temporary, global, transient));
@@ -272,7 +277,7 @@ public partial class Parser
         if (ParseKeyword(Keyword.MATERIALIZED) || ParseKeyword(Keyword.VIEW))
         {
             PrevToken();
-            return ParseCreateView(orReplace, temporary);
+            return ParseCreateView(orReplace, temporary, algorithm, definer, securityContext);
         }
 
         if (ParseKeyword(Keyword.POLICY))
@@ -287,7 +292,7 @@ public partial class Parser
 
         if (ParseKeyword(Keyword.FUNCTION))
         {
-            return ParseCreateFunction(orReplace, temporary);
+            return ParseCreateFunction(orReplace, temporary, definer);
         }
 
         if (ParseKeyword(Keyword.TRIGGER))
@@ -496,7 +501,7 @@ public partial class Parser
         throw Expected("Expected a QUERY statement", token);
     }
   
-    public Statement ParseCreateFunction(bool orReplace, bool temporary)
+    public Statement ParseCreateFunction(bool orReplace, bool temporary, Owner? definer)
     {
         if (_dialect is HiveDialect)
         {
@@ -516,6 +521,11 @@ public partial class Parser
         if (_dialect is BigQueryDialect)
         {
             return ParseBigqueryCreateFunction();
+        }
+
+        if (_dialect is MySqlDialect)
+        {
+            return ParseMySqlCreateFunction(orReplace);
         }
 
         PrevToken();
@@ -651,6 +661,116 @@ public partial class Parser
                 Parallel = parallel,
                 Language = language,
                 FunctionBody = functionBody,
+            };
+        }
+
+        Statement ParseMySqlCreateFunction(bool orReplace)
+        {
+            var ifNotExists = ParseKeywordSequence(Keyword.IF, Keyword.NOT, Keyword.EXISTS);
+            var name = ParseObjectName();
+            var args = ExpectParens(() =>
+            {
+                Sequence<OperateFunctionArg>? fnArgs = null;
+                if (ConsumeToken<RightParen>())
+                {
+                    PrevToken();
+                }
+                else
+                {
+                    fnArgs = ParseCommaSeparated(ParseFunctionArg);
+                }
+
+                return fnArgs;
+            });
+
+            var returnType = ParseInit(ParseKeyword(Keyword.RETURNS), ParseDataType);
+
+            Ident? language = null;
+            CreateFunctionBody? functionBody = null;
+            SqlSecurityContext? securityContext = null;
+            SqlSecurityContext? tempSecurityContext = null;
+            MySqlRoutineCharacteristic? characteristic = null;
+            FunctionDeterminismSpecifier? determinismSpecifier = null;
+            CommentDef? comment = null;
+
+            while (true)
+            {
+                if (ParseKeyword(Keyword.LANGUAGE))
+                {
+                    EnsureNotSet(language, "LANGUAGE");
+                    language = ParseIdentifier();
+                }
+                else if ((tempSecurityContext = ParseSqlSecurityContext()) is not null)
+                {
+                    EnsureNotSet(securityContext, "SQL SECURITY");
+                    securityContext = tempSecurityContext;
+                }
+                else if (ParseKeywordSequence(Keyword.CONTAINS, Keyword.SQL))
+                {
+                    EnsureNotSet(characteristic, "CONTAINS SQL | NO SQL | READS SQL DATA | MODIFIES SQL DATA");
+                    characteristic = MySqlRoutineCharacteristic.ContainsSql;
+                }
+                else if (ParseKeywordSequence(Keyword.NO, Keyword.SQL))
+                {
+                    EnsureNotSet(characteristic, "CONTAINS SQL | NO SQL | READS SQL DATA | MODIFIES SQL DATA");
+                    characteristic = MySqlRoutineCharacteristic.NoSql;
+                }
+                else if (ParseKeywordSequence(Keyword.READS, Keyword.SQL, Keyword.DATA))
+                {
+                    EnsureNotSet(characteristic, "CONTAINS SQL | NO SQL | READS SQL DATA | MODIFIES SQL DATA");
+                    characteristic = MySqlRoutineCharacteristic.ReadsSqlData;
+                }
+                else if (ParseKeywordSequence(Keyword.MODIFIES, Keyword.SQL, Keyword.DATA))
+                {
+                    EnsureNotSet(characteristic, "CONTAINS SQL | NO SQL | READS SQL DATA | MODIFIES SQL DATA");
+                    characteristic = MySqlRoutineCharacteristic.ModifiesSqlData;
+                }
+                else if (ParseKeyword(Keyword.COMMENT))
+                {
+                    EnsureNotSet(comment, "COMMENT");
+                    // comment = ParseLiteralString();
+                    comment = new CommentDef.WithoutEq(ParseLiteralString());
+                }
+                else if (ParseKeywordSequence(Keyword.NOT, Keyword.DETERMINISTIC))
+                {
+                    EnsureNotSet(determinismSpecifier, "NOT DETERMINISTIC");
+                    determinismSpecifier = FunctionDeterminismSpecifier.NotDeterministic;
+                }
+                else if (ParseKeyword(Keyword.DETERMINISTIC))
+                {
+                    EnsureNotSet(determinismSpecifier, "DETERMINISTIC");
+                    determinismSpecifier = FunctionDeterminismSpecifier.Deterministic;
+                }
+                else if (ParseKeyword(Keyword.RETURN))
+                {
+                    EnsureNotSet(functionBody, "RETURN");
+                    functionBody = new CreateFunctionBody.Return(ParseExpr());
+                }
+                else if (ParseKeyword(Keyword.BEGIN))
+                {
+                    EnsureNotSet(functionBody, "BEGIN");
+                    var statements = new BeginEndWrapper(ParseBeginControlFlow() as BeginEndBlock);
+                    functionBody = new CreateFunctionBody.BeginEnd(statements);
+                }
+                else
+                {
+                    break;
+                }
+            }
+            
+            return new CreateFunction(name)
+            {
+                OrReplace = orReplace,
+                Definer = definer,
+                IfNotExists = ifNotExists,
+                DeterminismSpecifier = determinismSpecifier,
+                ReturnType = returnType,
+                Language = language,
+                Args = args,
+                FunctionBody = functionBody,
+                RoutineCharacteristic = characteristic,
+                SqlSecurityContext = securityContext,
+                Comment = comment,
             };
         }
 
@@ -895,6 +1015,11 @@ public partial class Parser
             return ParseMsSqlDeclare();
         }
 
+        if (_dialect is MySqlDialect)
+        {
+            return ParseMySqlDeclare();
+        }
+
         var name = ParseIdentifier();
         var binary = ParseKeyword(Keyword.BINARY);
         bool? sensitive =
@@ -1018,6 +1143,54 @@ public partial class Parser
             {
                 break;
             }
+        }
+
+        return new Statement.Declare(statements);
+    }
+
+    public Statement.Declare ParseMySqlDeclare()
+    {
+        var statements = new Sequence<Declare>();
+
+        while (true)
+        {
+            var name = ParseIdentifier();
+
+            var token = PeekToken();
+            DeclareType? declareType = null;
+            DataType? dataType = null;
+
+            if (token is Word w)
+            {
+                if (w.Keyword == Keyword.CURSOR)
+                {
+                    NextToken();
+                    declareType = DeclareType.Cursor;
+                }
+                else if (w.Keyword == Keyword.AS)
+                {
+                    NextToken();
+                    dataType = ParseDataType();
+                }
+                else
+                {
+                    dataType = ParseDataType();
+                }
+            }
+            else
+            {
+                dataType = ParseDataType();
+            }
+
+            var assignment = ParseSnowflakeVariableDeclarationExpression();
+
+            statements.Add(new Declare([name], dataType, assignment, declareType));
+
+            if (PeekToken() is not Comma)
+            {
+                break;
+            }
+            NextToken();
         }
 
         return new Statement.Declare(statements);
@@ -2103,6 +2276,27 @@ public partial class Parser
 
     public Statement ParseBegin()
     {
+        var index = _index;
+        try
+        {
+            return ParseBeginControlFlow();
+        }
+        catch (ParserException ex)
+        {
+            _index = index;
+            return ParseBeginTransaction();
+        }
+        var beginTransaction = ParseBeginTransaction();
+        if (beginTransaction is not null)
+        {
+            return beginTransaction;
+        }
+
+        return ParseBeginControlFlow();
+    }
+
+    public Statement ParseBeginTransaction()
+    {
         TransactionModifier? modifier = null;
 
         if (!_dialect.SupportsStartTransactionModifier)
@@ -2129,6 +2323,14 @@ public partial class Parser
     public Statement ParseEnd()
     {
         return new Commit(ParseCommitRollbackChain());
+    }
+
+    public Statement ParseBeginControlFlow()
+    {
+        var statements = ParseStatements(true);
+        ExpectKeyword(Keyword.END);
+        var endsWithSemicolon = PeekToken() is SemiColon;
+        return new BeginEndBlock(statements, endsWithSemicolon);
     }
 
     public Statement ParseUnload()
