@@ -968,22 +968,19 @@ public class ClickhouseDialectTests : ParserTestBase
     [Fact]
     public void Parse_ClickHouse_Alternative_With_Syntax()
     {
-        var dialect = new ClickHouseDialect();
-        
         var standardSql = "WITH test AS (SELECT 1 AS col) SELECT * FROM test";
-        
-        var standardSqlStatement = ParseSqlStatements(standardSql, [dialect]);
-        
-        Assert.NotNull(standardSqlStatement);
-        Assert.Single(standardSqlStatement);
-        Assert.IsType<Statement.Select>(standardSqlStatement[0]);
+        VerifiedStatement<Statement.Select>(standardSql, DefaultDialects!);
         
         var clickhouseSql = "WITH (SELECT 1 AS col) AS test SELECT * FROM test";
-        
-        var clickhouseStatement = ParseSqlStatements(clickhouseSql, [dialect]);
-        
-        Assert.NotNull(clickhouseStatement);
-        Assert.Single(clickhouseStatement);
-        Assert.IsType<Statement.Select>(clickhouseStatement[0]);
+        var expectedCanonical = "WITH test AS (SELECT 1 AS col) SELECT * FROM test";
+        OneStatementParsesTo(clickhouseSql, expectedCanonical, DefaultDialects!);
+    }
+
+    
+    [Fact]
+    public void Parse_With_Expression()
+    {
+        var sql = "WITH (neighbor(player_id, -1)) AS sql_identifier";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
 }
