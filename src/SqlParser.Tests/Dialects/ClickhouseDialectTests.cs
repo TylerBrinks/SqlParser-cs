@@ -9,7 +9,7 @@ public class ClickhouseDialectTests : ParserTestBase
     {
         DefaultDialects = [new ClickHouseDialect()];
     }
-
+  
     [Fact]
     public void Parse_Map_Access_Expr()
     {
@@ -963,5 +963,24 @@ public class ClickhouseDialectTests : ParserTestBase
             Assert.Throws<ParserException>(() => ParseSqlStatements($"ALTER TABLE t0 {keyword} PROJECTION my_name IN PARTITION"));
             Assert.Throws<ParserException>(() => ParseSqlStatements($"ALTER TABLE t0 {{keyword}} PROJECTION my_name IN"));
         }
+    }
+    
+    [Fact]
+    public void Parse_ClickHouse_Alternative_With_Syntax()
+    {
+        var standardSql = "WITH test AS (SELECT 1 AS col) SELECT * FROM test";
+        VerifiedStatement<Statement.Select>(standardSql, DefaultDialects!);
+        
+        var clickhouseSql = "WITH (SELECT 1 AS col) AS test SELECT * FROM test";
+        var expectedCanonical = "WITH test AS (SELECT 1 AS col) SELECT * FROM test";
+        OneStatementParsesTo(clickhouseSql, expectedCanonical, DefaultDialects!);
+    }
+
+    
+    [Fact]
+    public void Parse_With_Expression()
+    {
+        var sql = "WITH (neighbor(player_id, -1)) AS sql_identifier";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
 }
