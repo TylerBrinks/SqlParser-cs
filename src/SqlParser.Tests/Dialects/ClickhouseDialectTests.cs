@@ -971,16 +971,200 @@ public class ClickhouseDialectTests : ParserTestBase
         var standardSql = "WITH test AS (SELECT 1 AS col) SELECT * FROM test";
         VerifiedStatement<Statement.Select>(standardSql, DefaultDialects!);
         
+        var standardSql2 = "WITH city_table AS (SELECT NAME, (POPULATION + 1000000) AS POP FROM CITY) SELECT POP FROM city_table";
+        VerifiedStatement<Statement.Select>(standardSql2, DefaultDialects!);
+        
         var clickhouseSql = "WITH (SELECT 1 AS col) AS test SELECT * FROM test";
         var expectedCanonical = "WITH test AS (SELECT 1 AS col) SELECT * FROM test";
         OneStatementParsesTo(clickhouseSql, expectedCanonical, DefaultDialects!);
     }
+    
+    [Fact]
+    public void Parse_With_Expression_Main_Common_Dialect_As_Test()
+    {
+        var sql = "WITH current_time AS now() SELECT * FROM current_time";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+    
+    [Fact]
+    public void Parse_With_Expression_Main_Test()
+    {
+        var sql = "WITH now() AS current_time SELECT * FROM current_time";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+    
 
+    [Fact]
+    public void Parse_Function()
+    {
+        var sql = "SELECT NOW()";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+    
+    [Fact]
+    public void Parse_Select_Without_Function()
+    {
+        var sql = "WITH SELECT_TEST AS (SELECT 1) SELECT * FROM SELECT_TEST";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+    
+    [Fact]
+    public void Parse_Clickhouse_As_Select_Without_Function()
+    {
+        var sql = "WITH (SELECT 1) AS SELECT_TEST SELECT * FROM SELECT_TEST";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+
+    
     
     [Fact]
     public void Parse_With_Expression()
     {
-        var sql = "WITH (neighbor(player_id, -1)) AS sql_identifier";
+        var sql = "With (select uniq(player_id) FROM (select player_id from mw2.registration where date >=  '2021-02-17' and date <= '2021-02-26' and player_install_source IN ('', 'None') group by player_id)) as All_players Select All_players";
+        var expectedCanonical = "WITH All_players AS (SELECT uniq(player_id) FROM (SELECT player_id FROM mw2.registration WHERE date >= '2021-02-17' AND date <= '2021-02-26' AND player_install_source IN ('', 'None') GROUP BY player_id)) SELECT All_players";
+        OneStatementParsesTo(sql, expectedCanonical, DefaultDialects!);
+    }
+    
+    
+    [Fact]
+    public void Parse_With_Missing_Select()
+    {
+        var sql = "WITH (date - install_date) AS visit_day";
+        Assert.ThrowsAny<Exception>(() =>
+        {
+            VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+        });
+    }
+    
+    [Fact]
+    public void Parse_Inner_With()
+    {
+        // Test 1: WITH inside CTE definition
+        var sql = "WITH city_table AS(WITH (POPULATION - 10000) AS new_pop SELECT NAME, new_pop AS POP FROM (SELECT NAME, POPULATION FROM CITY) AS base_city) SELECT POP FROM city_table";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+    
+    [Fact]
+    public void Parse_With_In_Subqueries()
+    {
+        // Test 2: WITH inside FROM subquery
+        var sql = "SELECT * FROM (WITH (1) AS x SELECT x) AS subquery";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+    
+    [Fact]
+    public void Parse_With_In_Set_Operations()
+    {
+        // WITH in UNION subquery
+        var sql1 = "SELECT 1 UNION ALL (WITH (2) AS val SELECT val)";
+        VerifiedStatement<Statement.Select>(sql1, DefaultDialects!);
+    
+        // WITH in both sides of UNION
+        var sql2 = "(WITH (1) AS a SELECT a) UNION ALL (WITH (2) AS b SELECT b)";
+        VerifiedStatement<Statement.Select>(sql2, DefaultDialects!);
+    }
+    
+    [Fact]
+    public void Parse_With_In_Predicate_Subqueries()
+    {
+        var sql1 = "SELECT * FROM table1 WHERE EXISTS (WITH (1) AS x SELECT x)";
+        VerifiedStatement<Statement.Select>(sql1, DefaultDialects!);
+    
+        var sql2 = "SELECT * FROM table1 WHERE col IN (WITH (SELECT col FROM table2) AS vals SELECT vals)";
+        VerifiedStatement<Statement.Select>(sql2, DefaultDialects!);
+    }
+    
+    [Fact]
+    public void Parse_With_In_Scalar_Subqueries()
+    {
+        var sql = "SELECT (WITH (1) AS val SELECT val) AS result FROM table1";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+    
+    [Fact]
+    public void Parse_With_In_Window_Expressions()
+    {
+        var sql = "SELECT ROW_NUMBER() OVER (ORDER BY (WITH (col) AS sorted_col SELECT sorted_col)) FROM table1";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+    
+    [Fact]
+    public void Parse_With_In_Case_Expressions()
+    {
+        var sql = "SELECT CASE WHEN (WITH (1) AS val SELECT val) = 1 THEN 'one' ELSE 'other' END";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+    
+    [Fact]
+    public void Parse_With_In_Join_Subqueries()
+    {
+        var sql = "SELECT * FROM table1 t1 JOIN (WITH (SELECT id FROM table2) AS ids SELECT * FROM ids) t2 ON t1.id = t2.id";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+    
+    [Fact]
+    public void Parse_With_Table_References()
+    {
+        var sql = "WITH table1.column1 AS alias_col SELECT alias_col FROM table1";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+    
+    [Fact]
+    public void Parse_With_In_Union()
+    {
+        var sql = "WITH (1) AS x SELECT x UNION ALL WITH (2) AS y SELECT y";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+    
+    [Fact]
+    public void Parse_Multiple_With_Expressions()
+    {
+        var sql = "WITH (SELECT 1) AS a, (SELECT 2) AS b SELECT a, b";
+        var expectedCanonical = "WITH a AS (SELECT 1), b AS (SELECT 2) SELECT a, b";
+        OneStatementParsesTo(sql, expectedCanonical, DefaultDialects!);
+    }
+    
+    [Fact]
+    public void Parse_With_Case_Expressions()
+    {
+        var sql = "WITH (CASE WHEN col > 10 THEN 'high' ELSE 'low' END) AS category SELECT category FROM table1";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+    
+    [Fact]
+    public void Parse_With_Array_And_Tuple_Expressions()
+    {
+        var sql = "WITH ([1, 2, 3]) AS arr SELECT arr";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    
+        var sql2 = "WITH ((1, 'a')) AS tup SELECT tup";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+    
+    [Fact]
+    public void Parse_With_Expression_With_Parenthesis()
+    {
+        var sql = "WITH now() AS current_time SELECT current_time";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+        
+        var sql2 = "WITH arrayJoin([1,2,3]) AS arr_val SELECT arr_val";
+        VerifiedStatement<Statement.Select>(sql2, DefaultDialects!);
+        
+        var missingParenthesis = "WITH neighbor(player_id, -1) AS sql_identifier SELECT * FROM sql_identifier";
+        VerifiedStatement<Statement.Select>(missingParenthesis, DefaultDialects!);
+    }
+    
+    
+    [Fact]
+    public void Parse_With_Expression_Without_Parenthesis()
+    {
+        var sql = "WITH (now()) AS current_time SELECT current_time";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+        
+        var sql2 = "WITH (arrayJoin([1,2,3])) AS arr_val SELECT arr_val";
+        VerifiedStatement<Statement.Select>(sql2, DefaultDialects!);
+        
+        var parenthesisExample = "WITH (neighbor(player_id, -1)) AS sql_identifier SELECT * FROM sql_identifier";
+        VerifiedStatement<Statement.Select>(parenthesisExample, DefaultDialects!);
     }
 }

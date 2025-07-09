@@ -7,7 +7,7 @@
 public abstract record SetExpression : IWriteSql, IElement
 {
     /// <summary>
-    /// Insert query bdy
+    /// Insert query body
     /// </summary>
     /// <param name="Statement">Statement</param>
     public record Insert(Statement Statement) : SetExpression
@@ -17,6 +17,19 @@ public abstract record SetExpression : IWriteSql, IElement
             Statement.ToSql(writer);
         }
     }
+    
+    /// <summary>
+    /// Expression-only body
+    /// </summary>
+    /// <param name="Expression">The expression</param>
+    public record ExpressionOnly(Expression Expression) : SetExpression
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            Expression.ToSql(writer);
+        }
+    }
+    
     /// <summary>
     /// Select expression body
     /// </summary>

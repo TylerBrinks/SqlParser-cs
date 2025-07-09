@@ -262,9 +262,4 @@ public abstract partial class Dialect
     /// Returns the precedence when the precedence is otherwise unknown
     /// </summary>
     public virtual short PrecedenceUnknown => 0;
-    
-    public virtual CommonTableExpression ParseCommonTableExpression(Parser parser)
-    {
-        return parser.ParseCommonTableExpressionInternal();
-    }
 }
