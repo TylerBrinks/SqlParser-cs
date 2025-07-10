@@ -4475,10 +4475,23 @@ public partial class Parser
 
                 return null;
             });
-
-            var query = ExpectParens(() => ParseQuery());
-            var alias = new TableAlias(name);
-            cte = new CommonTableExpression(alias, query.Query, Materialized: isMaterialized);
+            
+            if (IsExpression())
+            {
+                var expression = ParseExpr();
+                
+                var expressionBody = new SetExpression.ExpressionOnly(expression);
+                var query = new Query(expressionBody);
+    
+                var alias = new TableAlias(name);
+                cte = new CommonTableExpression(alias, query,null, Materialized: isMaterialized, true);
+            }
+            else
+            {
+                 var query = ExpectParens(() => ParseQuery());
+                 var alias = new TableAlias(name);
+                 cte = new CommonTableExpression(alias, query.Query, Materialized: isMaterialized);
+            }
         }
         else
         {
@@ -4515,6 +4528,38 @@ public partial class Parser
 
         return cte;
     }
+    
+    private bool IsExpression()
+    {
+        var token = PeekToken();
+
+        if (token is Word word)
+        {
+            var keyword = word.Keyword;
+            if (keyword == Keyword.SELECT || 
+                keyword == Keyword.WITH || 
+                keyword == Keyword.VALUES ||
+                keyword == Keyword.TABLE ||
+                keyword == Keyword.INSERT ||
+                keyword == Keyword.UPDATE ||
+                keyword == Keyword.DELETE)
+            {
+                return false;
+            }
+            
+            var peekedToken = PeekNthToken(1);
+            if (peekedToken is LeftParen)
+            {
+                return true;
+            }
+            
+            return true;
+        }
+
+        return false;
+    }
+
+    
     /// <summary>
     /// Parse a `FOR JSON` clause
     /// </summary>
