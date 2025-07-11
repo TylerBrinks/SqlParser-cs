@@ -993,14 +993,6 @@ public class ClickhouseDialectTests : ParserTestBase
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
     
-
-    [Fact]
-    public void Parse_Function()
-    {
-        var sql = "SELECT NOW()";
-        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
-    }
-    
     [Fact]
     public void Parse_Select_Without_Function()
     {
@@ -1015,7 +1007,12 @@ public class ClickhouseDialectTests : ParserTestBase
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
 
-    
+    [Fact]
+    public void Parse_Function()
+    {
+        var sql = "SELECT NOW()";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
     
     [Fact]
     public void Parse_With_Expression()
@@ -1147,7 +1144,7 @@ public class ClickhouseDialectTests : ParserTestBase
         var sql = "WITH now() AS current_time SELECT current_time";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
         
-        var sql2 = "WITH arrayJoin([1,2,3]) AS arr_val SELECT arr_val";
+        var sql2 = "WITH arrayJoin([1, 2, 3]) AS arr_val SELECT arr_val";
         VerifiedStatement<Statement.Select>(sql2, DefaultDialects!);
         
         var missingParenthesis = "WITH neighbor(player_id, -1) AS sql_identifier SELECT * FROM sql_identifier";

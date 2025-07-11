@@ -9,13 +9,29 @@
 /// <param name="Alias">CTE Alias</param>
 /// <param name="Query">CTE Select</param>
 /// <param name="From">Optional From identifier</param>
-public record CommonTableExpression(TableAlias Alias, Query Query, Ident? From = null, CteAsMaterialized? Materialized = null, bool IsExpression = false) : IWriteSql, IElement
+public record CommonTableExpression(TableAlias Alias, Query Query, Ident? From = null, CteAsMaterialized? Materialized = null, bool IsExpression = false, bool IsReversed = false) : IWriteSql, IElement
 {
     public Ident? From { get; internal set; } = From;
 
     public void ToSql(SqlTextWriter writer)
     {
-        if (IsExpression)
+        if (IsReversed && IsExpression)
+        {
+            if (Materialized == null)
+            {
+                writer.WriteSql($"{Query} AS {Alias}");
+            }
+            else
+            {
+                writer.WriteSql($"{Query} AS {Materialized} {Alias}");
+            }
+
+            if (From != null)
+            {
+                writer.WriteSql($" FROM {From}");
+            }
+        }
+        else if (IsExpression)
         {
             if (Materialized == null)
             {

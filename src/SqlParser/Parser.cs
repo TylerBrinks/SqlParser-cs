@@ -4455,7 +4455,86 @@ public partial class Parser
 
     public CommonTableExpression ParseCommonTableExpression()
     {
-        var name = ParseIdentifier();
+        var wasExpression = IsExpression();
+        if (_dialect is ClickHouseDialect && wasExpression)
+        {
+            var expression = ParseExpr();
+
+            CommonTableExpression? cte;
+
+            if (ParseKeyword(Keyword.AS))
+            {
+                var name = ParseIdentifier();
+                var isMaterialized = ParseInit<CteAsMaterialized?>(_dialect is PostgreSqlDialect, () =>
+                {
+                    if (ParseKeyword(Keyword.MATERIALIZED))
+                    {
+                        return CteAsMaterialized.Materialized;
+                    }
+
+                    if (ParseKeywordSequence(Keyword.NOT, Keyword.MATERIALIZED))
+                    {
+                        return CteAsMaterialized.NotMaterialized;
+                    }
+
+                    return null;
+                });
+
+                if (wasExpression)
+                {
+                    var expressionBody = new SetExpression.ExpressionOnly(expression);
+                    var query = new Query(expressionBody);
+
+                    var alias = new TableAlias(name);
+                    cte = new CommonTableExpression(alias, query, null, Materialized: isMaterialized, true, true);
+                }
+                else
+                {
+                    var query = ExpectParens(() => ParseQuery());
+                    var alias = new TableAlias(name);
+                    cte = new CommonTableExpression(alias, query.Query, Materialized: isMaterialized);
+                }
+            }
+            else
+            {
+                var name = ParseIdentifier();
+                var columns = ParseTableAliasColumnDefs();
+                if (columns != null && !columns.Any())
+                {
+                    columns = null;
+                }
+                
+                ExpectKeyword(Keyword.AS);
+                CteAsMaterialized? isMaterialized = ParseInit<CteAsMaterialized?>(_dialect is PostgreSqlDialect, () =>
+                {
+                    if (ParseKeyword(Keyword.MATERIALIZED))
+                    {
+                        return CteAsMaterialized.Materialized;
+                    }
+                
+                    if (ParseKeywordSequence(Keyword.NOT, Keyword.MATERIALIZED))
+                    {
+                        return CteAsMaterialized.NotMaterialized;
+                    }
+                
+                    return null;
+                });
+                var query = ExpectParens(() => ParseQuery());
+                
+                var alias = new TableAlias(name, columns);
+                cte = new CommonTableExpression(alias, query.Query, Materialized: isMaterialized);
+            }
+
+            if (ParseKeyword(Keyword.FROM))
+            {
+                cte.From = ParseIdentifier();
+            }
+
+            return cte;
+        }
+        else
+        {
+            var name = ParseIdentifier();
 
         CommonTableExpression? cte;
 
@@ -4527,6 +4606,7 @@ public partial class Parser
         }
 
         return cte;
+        }
     }
     
     private bool IsExpression()
@@ -4548,15 +4628,17 @@ public partial class Parser
             }
             
             var peekedToken = PeekNthToken(1);
-            if (peekedToken is LeftParen)
+            if (peekedToken is not LeftParen)
             {
-                return true;
+                return false;
             }
             
             return true;
         }
-
-        return false;
+        else
+        {
+           return false; 
+        }
     }
 
     
