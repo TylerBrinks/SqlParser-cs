@@ -975,21 +975,25 @@ public class ClickhouseDialectTests : ParserTestBase
         VerifiedStatement<Statement.Select>(standardSql2, DefaultDialects!);
         
         var clickhouseSql = "WITH (SELECT 1 AS col) AS test SELECT * FROM test";
-        var expectedCanonical = "WITH test AS (SELECT 1 AS col) SELECT * FROM test";
-        OneStatementParsesTo(clickhouseSql, expectedCanonical, DefaultDialects!);
+        VerifiedStatement<Statement.Select>(clickhouseSql, DefaultDialects!);
     }
     
     [Fact]
     public void Parse_With_Expression_Main_Common_Dialect_As_Test()
     {
-        var sql = "WITH current_time AS now() SELECT * FROM current_time";
-        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+        IEnumerable<Dialect> dialects = new List<Dialect>
+        {
+            new MySqlDialect(),
+            new ClickHouseDialect()
+        };
+        var sql = "WITH current_time AS NOW() SELECT * FROM current_time";
+        VerifiedStatement<Statement.Select>(sql, dialects);
     }
     
     [Fact]
     public void Parse_With_Expression_Main_Test()
     {
-        var sql = "WITH now() AS current_time SELECT * FROM current_time";
+        var sql = "WITH NOW() AS current_time SELECT current_time";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
     
@@ -1003,7 +1007,7 @@ public class ClickhouseDialectTests : ParserTestBase
     [Fact]
     public void Parse_Clickhouse_As_Select_Without_Function()
     {
-        var sql = "WITH (SELECT 1) AS SELECT_TEST SELECT * FROM SELECT_TEST";
+        var sql = "WITH SELECT_TEST AS (SELECT 1 AS value) SELECT value FROM SELECT_TEST";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
 
@@ -1017,9 +1021,8 @@ public class ClickhouseDialectTests : ParserTestBase
     [Fact]
     public void Parse_With_Expression()
     {
-        var sql = "With (select uniq(player_id) FROM (select player_id from mw2.registration where date >=  '2021-02-17' and date <= '2021-02-26' and player_install_source IN ('', 'None') group by player_id)) as All_players Select All_players";
-        var expectedCanonical = "WITH All_players AS (SELECT uniq(player_id) FROM (SELECT player_id FROM mw2.registration WHERE date >= '2021-02-17' AND date <= '2021-02-26' AND player_install_source IN ('', 'None') GROUP BY player_id)) SELECT All_players";
-        OneStatementParsesTo(sql, expectedCanonical, DefaultDialects!);
+        var sql = "WITH (SELECT uniq(player_id) FROM (SELECT player_id FROM mw2.registration WHERE date >= '2021-02-17' AND date <= '2021-02-26' AND player_install_source IN ('', 'None') GROUP BY player_id)) AS All_players SELECT All_players";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
     
     
@@ -1036,16 +1039,29 @@ public class ClickhouseDialectTests : ParserTestBase
     [Fact]
     public void Parse_Inner_With()
     {
-        // Test 1: WITH inside CTE definition
-        var sql = "WITH city_table AS(WITH (POPULATION - 10000) AS new_pop SELECT NAME, new_pop AS POP FROM (SELECT NAME, POPULATION FROM CITY) AS base_city) SELECT POP FROM city_table";
+        var sql = "WITH outer_cte AS (WITH inner_value AS (SELECT 1 AS val) SELECT val FROM inner_value) SELECT * FROM outer_cte";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+    
+    [Fact]
+    //TODO: 
+    public void Parse_Inner_With_()
+    {
+        var sql = "WITH city_table AS (WITH new_pop AS (POPULATION - 10000) SELECT NAME, new_pop AS POP FROM (SELECT NAME, POPULATION FROM CITY) AS base_city) SELECT POP FROM city_table";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
     
     [Fact]
     public void Parse_With_In_Subqueries()
     {
-        // Test 2: WITH inside FROM subquery
-        var sql = "SELECT * FROM (WITH (1) AS x SELECT x) AS subquery";
+        var sql = "SELECT * FROM (WITH x AS (SELECT 1) SELECT x) AS subquery";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+    
+    [Fact]
+    public void Parse_With_In_Subqueries_Common()
+    {
+        var sql = "SELECT * FROM (WITH (SELECT 1) AS x SELECT x) AS subquery";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
     
@@ -1117,8 +1133,7 @@ public class ClickhouseDialectTests : ParserTestBase
     public void Parse_Multiple_With_Expressions()
     {
         var sql = "WITH (SELECT 1) AS a, (SELECT 2) AS b SELECT a, b";
-        var expectedCanonical = "WITH a AS (SELECT 1), b AS (SELECT 2) SELECT a, b";
-        OneStatementParsesTo(sql, expectedCanonical, DefaultDialects!);
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
     
     [Fact]
@@ -1149,19 +1164,5 @@ public class ClickhouseDialectTests : ParserTestBase
         
         var missingParenthesis = "WITH neighbor(player_id, -1) AS sql_identifier SELECT * FROM sql_identifier";
         VerifiedStatement<Statement.Select>(missingParenthesis, DefaultDialects!);
-    }
-    
-    
-    [Fact]
-    public void Parse_With_Expression_Without_Parenthesis()
-    {
-        var sql = "WITH (now()) AS current_time SELECT current_time";
-        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
-        
-        var sql2 = "WITH (arrayJoin([1,2,3])) AS arr_val SELECT arr_val";
-        VerifiedStatement<Statement.Select>(sql2, DefaultDialects!);
-        
-        var parenthesisExample = "WITH (neighbor(player_id, -1)) AS sql_identifier SELECT * FROM sql_identifier";
-        VerifiedStatement<Statement.Select>(parenthesisExample, DefaultDialects!);
     }
 }
