@@ -9,24 +9,59 @@
 /// <param name="Alias">CTE Alias</param>
 /// <param name="Query">CTE Select</param>
 /// <param name="From">Optional From identifier</param>
-public record CommonTableExpression(TableAlias Alias, Query Query, Ident? From = null, CteAsMaterialized? Materialized = null) : IWriteSql, IElement
+public record CommonTableExpression(TableAlias Alias, Query Query, Ident? From = null, CteAsMaterialized? Materialized = null, bool IsExpression = false, bool IsReversed = false) : IWriteSql, IElement
 {
     public Ident? From { get; internal set; } = From;
 
     public void ToSql(SqlTextWriter writer)
     {
-        if (Materialized == null)
+        if (IsReversed && IsExpression)
         {
-            writer.WriteSql($"{Alias} AS ({Query})");
+            if (Materialized == null)
+            {
+                writer.WriteSql($"{Query} AS {Alias}");
+            }
+            else
+            {
+                writer.WriteSql($"{Query} AS {Materialized} {Alias}");
+            }
+
+            if (From != null)
+            {
+                writer.WriteSql($" FROM {From}");
+            }
+        }
+        else if (IsExpression)
+        {
+            if (Materialized == null)
+            {
+                writer.WriteSql($"{Alias} AS {Query}");
+            }
+            else
+            {
+                writer.WriteSql($"{Alias} AS {Materialized} {Query}");
+            }
+
+            if (From != null)
+            {
+                writer.WriteSql($" FROM {From}");
+            }
         }
         else
         {
-            writer.WriteSql($"{Alias} AS {Materialized} ({Query})");
-        }
-        
-        if (From != null)
-        {
-            writer.WriteSql($" FROM {From}");
+            if (Materialized == null)
+            {
+                writer.WriteSql($"{Alias} AS ({Query})");
+            }
+            else
+            {
+                writer.WriteSql($"{Alias} AS {Materialized} ({Query})");
+            }
+
+            if (From != null)
+            {
+                writer.WriteSql($" FROM {From}");
+            }
         }
     }
 }

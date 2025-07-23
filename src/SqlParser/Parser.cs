@@ -4455,8 +4455,90 @@ public partial class Parser
 
     public CommonTableExpression ParseCommonTableExpression()
     {
-        var name = ParseIdentifier();
+        var isExpression = IsExpression();
+        var isScalarSubquery = IsScalarSubquery();
+        var isAlias = IsAlias();
+        
+        if (_dialect is ClickHouseDialect && (isExpression || isScalarSubquery))
+        {
+            return ParseCommonTableExpression_ClickhouseQuery();
+        }
+        else
+        { 
+            return ParseCommonTableExpression_CommonQuery();
+        }
+    }
 
+    private CommonTableExpression ParseCommonTableExpression_ClickhouseQuery()
+    {
+        var expression = ParseExpr();
+
+        CommonTableExpression? cte;
+
+        if (ParseKeyword(Keyword.AS))
+        {
+            var name = ParseIdentifier();
+            var isMaterialized = ParseInit<CteAsMaterialized?>(_dialect is PostgreSqlDialect, () =>
+            {
+                if (ParseKeyword(Keyword.MATERIALIZED))
+                {
+                    return CteAsMaterialized.Materialized;
+                }
+
+                if (ParseKeywordSequence(Keyword.NOT, Keyword.MATERIALIZED))
+                {
+                    return CteAsMaterialized.NotMaterialized;
+                }
+
+                return null;
+            });
+
+            var expressionBody = new SetExpression.ExpressionOnly(expression);
+            var query = new Query(expressionBody);
+            var alias = new TableAlias(name);
+            cte = new CommonTableExpression(alias, query, null, Materialized: isMaterialized, true, true);
+        }
+        else
+        {
+            var name = ParseIdentifier();
+            var columns = ParseTableAliasColumnDefs();
+            if (columns != null && !columns.Any())
+            {
+                columns = null;
+            }
+            
+            ExpectKeyword(Keyword.AS);
+            CteAsMaterialized? isMaterialized = ParseInit<CteAsMaterialized?>(_dialect is PostgreSqlDialect, () =>
+            {
+                if (ParseKeyword(Keyword.MATERIALIZED))
+                {
+                    return CteAsMaterialized.Materialized;
+                }
+            
+                if (ParseKeywordSequence(Keyword.NOT, Keyword.MATERIALIZED))
+                {
+                    return CteAsMaterialized.NotMaterialized;
+                }
+            
+                return null;
+            });
+            var query = ExpectParens(() => ParseQuery());
+            
+            var alias = new TableAlias(name, columns);
+            cte = new CommonTableExpression(alias, query.Query, Materialized: isMaterialized);
+        }
+
+        if (ParseKeyword(Keyword.FROM))
+        {
+            cte.From = ParseIdentifier();
+        }
+
+        return cte;
+    }
+
+    private CommonTableExpression ParseCommonTableExpression_CommonQuery()
+    {
+        var name = ParseIdentifier();
         CommonTableExpression? cte;
 
         if (ParseKeyword(Keyword.AS))
@@ -4475,10 +4557,23 @@ public partial class Parser
 
                 return null;
             });
-
-            var query = ExpectParens(() => ParseQuery());
-            var alias = new TableAlias(name);
-            cte = new CommonTableExpression(alias, query.Query, Materialized: isMaterialized);
+            
+            if (IsExpression())
+            {
+                var expression = ParseExpr();
+                
+                var expressionBody = new SetExpression.ExpressionOnly(expression);
+                var query = new Query(expressionBody);
+    
+                var alias = new TableAlias(name);
+                cte = new CommonTableExpression(alias, query,null, Materialized: isMaterialized, true);
+            }
+            else
+            {
+                 var query = ExpectParens(() => ParseQuery());
+                 var alias = new TableAlias(name);
+                 cte = new CommonTableExpression(alias, query.Query, Materialized: isMaterialized);
+            }
         }
         else
         {
@@ -4487,7 +4582,7 @@ public partial class Parser
             {
                 columns = null;
             }
-
+            
             ExpectKeyword(Keyword.AS);
             CteAsMaterialized? isMaterialized = ParseInit<CteAsMaterialized?>(_dialect is PostgreSqlDialect, () =>
             {
@@ -4515,6 +4610,82 @@ public partial class Parser
 
         return cte;
     }
+
+    private bool IsExpression()
+    {
+        var token = PeekToken();
+
+        if (token is Word word)
+        {
+            var keyword = word.Keyword;
+            if (keyword == Keyword.SELECT || 
+                keyword == Keyword.WITH || 
+                keyword == Keyword.VALUES ||
+                keyword == Keyword.TABLE ||
+                keyword == Keyword.INSERT ||
+                keyword == Keyword.UPDATE ||
+                keyword == Keyword.DELETE)
+            {
+                return false;
+            }
+            
+            var peekedToken = PeekNthToken(1);
+                        
+            return peekedToken is LeftParen or Minus;
+        }
+        else
+        {
+           return false; 
+        }
+    }
+    
+    private bool IsScalarSubquery()
+    {
+        var token = PeekToken();
+
+        if (token is LeftParen)
+        {
+            var nextToken = PeekNthToken(1);
+        
+            if (nextToken is Word word)
+            {
+                var keyword = word.Keyword;
+                if (keyword == Keyword.SELECT || keyword == Keyword.WITH)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    
+    private bool IsAlias()
+    {
+        var token = PeekToken();
+
+        if (token is Word word)
+        {
+            var keyword = word.Keyword;
+        
+            // Only allow non-keyword identifiers to be aliases
+            if (keyword != Keyword.undefined)
+            {
+                return false;
+            }
+        
+            var nextToken = PeekNthToken(1);
+            if (nextToken is Word nextWord && nextWord.Keyword == Keyword.AS)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    
     /// <summary>
     /// Parse a `FOR JSON` clause
     /// </summary>
@@ -4996,6 +5167,43 @@ public partial class Parser
 
         while (true)
         {
+            if (_dialect is ClickHouseDialect)
+            {
+                var left = ParseKeyword(Keyword.LEFT);
+                var inner = ParseKeyword(Keyword.INNER);
+
+                if (ParseKeyword(Keyword.ARRAY))
+                {
+                    ExpectKeyword(Keyword.JOIN);
+                    var arrayExpr = ParseExpr();
+                    var arrayAlias = MaybeParseTableAlias();
+                    var arrayRel = new TableFactor.ExpressionTable(arrayExpr) { Alias = arrayAlias };
+
+                    if (inner && left)
+                    {
+                        throw new ParserException("Cannot have both LEFT and INNER for ARRAY JOIN",
+                            PeekToken().Location);
+                    }
+
+                    var op = left ? (JoinOperator)new JoinOperator.LeftArrayJoin() : new JoinOperator.InnerArrayJoin();
+
+                    var item = new Join(arrayRel, op);
+                    joins ??= [];
+                    joins.Add(item);
+                    continue;
+                }
+
+                if (inner)
+                {
+                    PrevToken();
+                }
+
+                if (left)
+                {
+                    PrevToken();
+                }
+            }
+            
             var global = ParseKeyword(Keyword.GLOBAL);
 
             Join join;
@@ -5367,7 +5575,12 @@ public partial class Parser
         var args = ParseInit(ConsumeToken<LeftParen>(), ParseTableFunctionArgs);
 
         var ordinality = ParseKeywordSequence(Keyword.WITH, Keyword.ORDINALITY);
-        var optionalAlias = MaybeParseTableAlias();
+        
+        TableAlias? optionalAlias = null;
+        if (!(_dialect is ClickHouseDialect && PeekToken() is Word { Keyword: Keyword.ARRAY }))
+        {
+            optionalAlias = MaybeParseTableAlias();
+        }
 
         Sequence<Expression>? withHints = null;
         if (ParseKeyword(Keyword.WITH))
