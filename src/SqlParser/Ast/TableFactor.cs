@@ -312,6 +312,22 @@ public abstract record TableFactor : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// An expression that can be used as a table factor.
+    /// Used for `ARRAY JOIN` in ClickHouse.
+    /// </summary>
+    /// <param name="Expression">Expression</param>
+    public record ExpressionTable(Expression Expression) : TableFactor
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            Expression.ToSql(writer);
+            if (Alias != null)
+            {
+                writer.WriteSql($" AS {Alias}");
+            }
+        }
+    }
+    /// <summary>
     /// Match_Recognize operation on a table
     /// </summary>
     /// <param name="MatchTable">Table factor</param>

@@ -5167,6 +5167,43 @@ public partial class Parser
 
         while (true)
         {
+            if (_dialect is ClickHouseDialect)
+            {
+                var left = ParseKeyword(Keyword.LEFT);
+                var inner = ParseKeyword(Keyword.INNER);
+
+                if (ParseKeyword(Keyword.ARRAY))
+                {
+                    ExpectKeyword(Keyword.JOIN);
+                    var arrayExpr = ParseExpr();
+                    var arrayAlias = MaybeParseTableAlias();
+                    var arrayRel = new TableFactor.ExpressionTable(arrayExpr) { Alias = arrayAlias };
+
+                    if (inner && left)
+                    {
+                        throw new ParserException("Cannot have both LEFT and INNER for ARRAY JOIN",
+                            PeekToken().Location);
+                    }
+
+                    var op = left ? (JoinOperator)new JoinOperator.LeftArrayJoin() : new JoinOperator.InnerArrayJoin();
+
+                    var item = new Join(arrayRel, op);
+                    joins ??= [];
+                    joins.Add(item);
+                    continue;
+                }
+
+                if (inner)
+                {
+                    PrevToken();
+                }
+
+                if (left)
+                {
+                    PrevToken();
+                }
+            }
+            
             var global = ParseKeyword(Keyword.GLOBAL);
 
             Join join;
@@ -5538,7 +5575,12 @@ public partial class Parser
         var args = ParseInit(ConsumeToken<LeftParen>(), ParseTableFunctionArgs);
 
         var ordinality = ParseKeywordSequence(Keyword.WITH, Keyword.ORDINALITY);
-        var optionalAlias = MaybeParseTableAlias();
+        
+        TableAlias? optionalAlias = null;
+        if (!(_dialect is ClickHouseDialect && PeekToken() is Word { Keyword: Keyword.ARRAY }))
+        {
+            optionalAlias = MaybeParseTableAlias();
+        }
 
         Sequence<Expression>? withHints = null;
         if (ParseKeyword(Keyword.WITH))
