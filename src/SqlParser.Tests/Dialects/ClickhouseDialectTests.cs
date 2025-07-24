@@ -270,11 +270,11 @@ public class ClickhouseDialectTests : ParserTestBase
 
         var columns = new Sequence<ColumnDef>
         {
-            new ("k", new DataType.UInt8()),
-            new (new Ident("a", Symbols.Backtick), new DataType.Nullable(new DataType.StringType())),
-            new (new Ident("b", Symbols.Backtick), new DataType.Nullable(new DataType.Datetime64(9, "UTC"))),
-            new ("c", new DataType.Nullable(new DataType.Datetime64(9))),
-            new ("d", new DataType.Date32(), Options:[new ColumnOptionDef(new ColumnOption.Null())]),
+            new("k", new DataType.UInt8()),
+            new(new Ident("a", Symbols.Backtick), new DataType.Nullable(new DataType.StringType())),
+            new(new Ident("b", Symbols.Backtick), new DataType.Nullable(new DataType.Datetime64(9, "UTC"))),
+            new("c", new DataType.Nullable(new DataType.Datetime64(9))),
+            new("d", new DataType.Date32(), Options: [new ColumnOptionDef(new ColumnOption.Null())]),
         };
 
         Assert.Equal("table", create.Name);
@@ -1181,21 +1181,95 @@ public class ClickhouseDialectTests : ParserTestBase
     [Fact]
     public void Private_Test_Case_Expected_Join_Table()
     {
-        var sql = "SELECT toUInt32(toDateTime(install_date)) * 1000 AS t, groupArray(('Day ' || toString(day), rr / users)) FROM (SELECT install_date, total AS users, rr, day FROM (SELECT install_date, sum(r[1]) AS total, sumForEach(r) AS retention FROM (WITH date - install_date AS visit_day SELECT install_date,player_id, retention(visit_day = 0, visit_day = 1, visit_day = 3, visit_day = 7, visit_day = 14, visit_day = 28) AS r FROM (SELECT player_id, date, toDate(toDateTimeOrZero(player_install_date)) AS install_date FROM mw2.pause WHERE date BETWEEN toDate(1741163029) AND toDate(1748935429) + INTERVAL 28 day AND install_date BETWEEN toDate(1741163029) AND toDate(1748935429) UNION ALL SELECT player_id, date, toDate(toDateTimeOrZero(player_install_date)) AS install_date FROM mw2.registration WHERE date BETWEEN toDate(1741163029) AND toDate(1748935429) + INTERVAL 28 day AND install_date BETWEEN toDate(1741163029) AND toDate(1748935429)) GROUP BY install_date, player_id) GROUP BY install_date) ARRAY JOIN\n  retention AS rr, [0, 1, 3, 7, 14, 28] AS day)GROUP BY t ORDER BY t ASC FORMAT JSON";
-        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
-    }   
-    
-    [Fact]
-    public void Private_Test_Case_Expected_Right_FoundLeft()
-    {
-        var sql = "SELECT toUInt32(toDateTime(install_date)) * 1000 AS t, groupArray(('Day ' || toString(cohort_day), visit_users / total_users)) FROM (WITH toDate(toDateTimeOrZero(player_install_date)) AS install_date, date - install_date AS visit_day SELECT install_date, cohort_day, uniqExactIf(player_id, visit_day = cohort_day) AS visit_users, uniqExactIf(player_id, visit_day = 0) AS total_users FROM mw2.pause ARRAY JOIN [0, 1, 3, 7, 14, 28] AS cohort_day WHERE date BETWEEN toDate(1741163034) AND toDate(1748935434) + toIntervalDay(28) AND install_date BETWEEN toDate(1741163034) AND toDate(1748935434) GROUP BY install_date, cohort_day ORDER BY install_date, cohort_day) GROUP BY t ORDER BY t ASC FORMAT JSON"; 
+        var sql = "SELECT toUInt32(toDateTime(install_date)) * 1000 AS t, groupArray(('Day ' || toString(day), rr / users)) FROM (SELECT install_date, total AS users, rr, day FROM (SELECT install_date, sum(r[1]) AS total, sumForEach(r) AS retention FROM (WITH date - install_date AS visit_day SELECT install_date,player_id, retention (visit_day = 0, visit_day = 1, visit_day = 3, visit_day = 7, visit_day = 14, visit_day = 28) AS r FROM (SELECT player_id, date, toDate(toDateTimeOrZero(player_install_date)) AS install_date FROM mw2.pause WHERE date BETWEEN toDate(1741163029) AND toDate(1748935429) + INTERVAL 28 day AND install_date BETWEEN toDate(1741163029) AND toDate(1748935429) UNION ALL SELECT player_id, date, toDate(toDateTimeOrZero(player_install_date)) AS install_date FROM mw2.registration WHERE date BETWEEN toDate(1741163029) AND toDate(1748935429) + INTERVAL 28 day AND install_date BETWEEN toDate(1741163029) AND toDate(1748935429)) GROUP BY install_date, player_id) GROUP BY install_date) ARRAY JOIN retention AS rr, [0, 1, 3, 7, 14, 28] AS day) GROUP BY t ORDER BY t ASC FORMAT JSON";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
 
     [Fact]
-    public void With_Substraction()
+    public void Reduction_Test()
     {
-        var sql = "WITH visit_day AS date - install_date SELECT visit_day";
+        var changedOneLinesSql = "SELECT toUInt32(toDateTime(install_date)) * 1000 AS t, groupArray(('Day ' || toString(day), rr / users)) FROM (SELECT install_date, total AS users, rr, day FROM (SELECT install_date, sum(r[1]) AS total, sumForEach(r) AS retention FROM (WITH date - install_date AS visit_day SELECT install_date, player_id, retention (visit_day = 0, visit_day = 1, visit_day = 3, visit_day = 7, visit_day = 14, visit_day = 28) AS r FROM (SELECT player_id, date, toDate(toDateTimeOrZero(player_install_date)) AS install_date FROM mw2.pause WHERE date BETWEEN toDate(1741163029) AND toDate(1748935429) + INTERVAL 28 day AND install_date BETWEEN toDate(1741163029) AND toDate(1748935429) UNION ALL SELECT player_id, date, toDate(toDateTimeOrZero(player_install_date)) AS install_date FROM mw2.registration WHERE date BETWEEN toDate(1741163029) AND toDate(1748935429) + INTERVAL 28 day AND install_date BETWEEN toDate(1741163029) AND toDate(1748935429)) GROUP BY install_date, player_id) GROUP BY install_date) ARRAY JOIN retention AS rr, [0, 1, 3, 7, 14, 28] AS day) GROUP BY t ORDER BY t ASC FORMAT JSON";
+        var sql = @"
+            SELECT
+                toUInt32(toDateTime(install_date)) * 1000 AS t,
+                groupArray(('Day ' || toString(day), rr / users))
+            FROM (
+            SELECT install_date, total AS users, rr, day FROM (      
+                                                                                                     
+              SELECT install_date, sum(r[1]) AS total, sumForEach(r) AS retention FROM (
+                                                             
+                WITH date - install_date AS visit_day
+
+                SELECT install_date,
+                       player_id,
+                       retention(visit_day = 0, visit_day = 1, visit_day = 3, visit_day = 7, visit_day = 14, visit_day = 28) AS r
+                FROM (
+
+                 SELECT player_id, date, toDate(toDateTimeOrZero(player_install_date)) AS install_date
+                 FROM mw2.pause
+                 WHERE date BETWEEN toDate(1741163029) AND toDate(1748935429) + INTERVAL 28 day
+                   AND install_date BETWEEN toDate(1741163029) AND toDate(1748935429)
+
+                 UNION ALL
+
+                 SELECT player_id, date, toDate(toDateTimeOrZero(player_install_date)) AS install_date
+                 FROM mw2.registration
+                 WHERE date BETWEEN toDate(1741163029) AND toDate(1748935429) + INTERVAL 28 day
+                   AND install_date BETWEEN toDate(1741163029) AND toDate(1748935429)
+                )
+
+                GROUP BY install_date, player_id
+              )
+              GROUP BY install_date
+            ) ARRAY JOIN                                                                                                                                                                                                                          
+              retention AS rr ARRAY JOIN                                                                                                                                                                                                          
+              [0, 1, 3, 7, 14, 28] AS day
+            )
+            GROUP BY t
+            ORDER BY t ASC FORMAT JSON
+        ";
+        VerifiedStatement<Statement.Select>(changedOneLinesSql, DefaultDialects!);
+    }
+    
+    [Fact]
+    public void Parse_Double_Array_Join()
+    {
+        var sql = "SELECT user_id, rr, day FROM my_table ARRAY JOIN retention AS rr, [0, 1, 3, 7, 14, 28] AS day";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+    
+    [Fact]
+    public void Private_Test_Case_Expected_Right_FoundLeft()
+    {
+        var sql = "SELECT toUInt32(toDateTime(install_date)) * 1000 AS t, groupArray(('Day ' || toString(cohort_day), visit_users / total_users)) FROM (WITH toDate(toDateTimeOrZero(player_install_date)) AS install_date, date - install_date AS visit_day SELECT install_date, cohort_day, uniqExactIf(player_id, visit_day = cohort_day) AS visit_users, uniqExactIf(player_id, visit_day = 0) AS total_users FROM mw2.pause ARRAY JOIN [0, 1, 3, 7, 14, 28] AS cohort_day WHERE date BETWEEN toDate(1741163034) AND toDate(1748935434) + toIntervalDay(28) AND install_date BETWEEN toDate(1741163034) AND toDate(1748935434) GROUP BY install_date, cohort_day ORDER BY install_date, cohort_day) GROUP BY t ORDER BY t ASC FORMAT JSON";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+
+    [Fact]
+    public void Function_In_Function()
+    {
+        var sql = "WITH toDate(toDateTimeOrZero(player_install_date)) AS install_date SELECT * FROM install_date";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+    
+    [Fact]
+    public void Function_In_Function_In_With_In_From()
+    {
+        var sql = "SELECT install_date FROM (WITH toDate(toDateTimeOrZero(player_install_date)) AS install_date, date - install_date AS visit_day SELECT install_date FROM mw2.pause)";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+    
+    [Fact]
+    public void With_Several()
+    {
+        var sql = "WITH toDate(toDateTimeOrZero(player_install_date)) AS install_date, date - install_date AS visit_day SELECT * FROM install_date";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+    
+    [Fact]
+    public void Reducing_Test()
+    {
+        var sql = "SELECT toUInt32(toDateTime(install_date)) * 1000 AS t, groupArray(('Day ' || toString(cohort_day), visit_users / total_users)) FROM (WITH toDate(toDateTimeOrZero(player_install_date)) AS install_date, date - install_date AS visit_day SELECT install_date, cohort_day, uniqExactIf(player_id, visit_day = cohort_day) AS visit_users, uniqExactIf(player_id, visit_day = 0) AS total_users FROM mw2.pause ARRAY JOIN [0, 1, 3, 7, 14, 28] AS cohort_day WHERE date BETWEEN toDate(1741163034) AND toDate(1748935434) + toIntervalDay(28) AND install_date BETWEEN toDate(1741163034) AND toDate(1748935434) GROUP BY install_date, cohort_day ORDER BY install_date, cohort_day) GROUP BY t ORDER BY t ASC FORMAT JSON";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
     
@@ -1205,6 +1279,14 @@ public class ClickhouseDialectTests : ParserTestBase
         var sql = "WITH date - install_date AS visit_day SELECT visit_day";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
+    
+    [Fact]
+    public void With_ArrayJoin_Explicit_List()
+    {
+        var sql = "SELECT cohort_day FROM mw2.pause ARRAY JOIN [0, 1, 3, 7, 14, 28] AS cohort_day";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+
     
     [Fact]
     public void With_Substraction2_Common()

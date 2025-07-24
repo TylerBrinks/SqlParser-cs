@@ -16,7 +16,23 @@ public record TableWithJoins(TableFactor Relation) : IWriteSql, IElement
 
         if (Joins.SafeAny())
         {
-            writer.WriteList(Joins);
+            Join? previousJoin = null;
+
+            foreach (var join in Joins)
+            {
+                var isArrayJoin = join.JoinOperator is JoinOperator.InnerArrayJoin or JoinOperator.LeftArrayJoin;
+                var previousIsArrayJoin = previousJoin?.JoinOperator is JoinOperator.InnerArrayJoin or JoinOperator.LeftArrayJoin;
+
+                if (isArrayJoin && previousIsArrayJoin)
+                {
+                    writer.WriteSql($", {join.Relation}");
+                }
+                else
+                {
+                    writer.WriteSql($"{join}");
+                }
+                previousJoin = join;
+            }
         }
     }
 }

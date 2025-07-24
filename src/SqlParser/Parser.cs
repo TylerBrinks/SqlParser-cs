@@ -5175,9 +5175,6 @@ public partial class Parser
                 if (ParseKeyword(Keyword.ARRAY))
                 {
                     ExpectKeyword(Keyword.JOIN);
-                    var arrayExpr = ParseExpr();
-                    var arrayAlias = MaybeParseTableAlias();
-                    var arrayRel = new TableFactor.ExpressionTable(arrayExpr) { Alias = arrayAlias };
 
                     if (inner && left)
                     {
@@ -5187,9 +5184,17 @@ public partial class Parser
 
                     var op = left ? (JoinOperator)new JoinOperator.LeftArrayJoin() : new JoinOperator.InnerArrayJoin();
 
-                    var item = new Join(arrayRel, op);
-                    joins ??= [];
-                    joins.Add(item);
+                    do
+                    {
+                        var arrayExpr = ParseExpr();
+                        var arrayAlias = MaybeParseTableAlias();
+                        var arrayRel = new TableFactor.ExpressionTable(arrayExpr) { Alias = arrayAlias };
+
+                        var item = new Join(arrayRel, op);
+                        joins ??= [];
+                        joins.Add(item);
+                    } while (ConsumeToken<Comma>());
+                    
                     continue;
                 }
 
