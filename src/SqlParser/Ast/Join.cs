@@ -20,11 +20,9 @@ public record Join(TableFactor? Relation = null, JoinOperator? JoinOperator = nu
             case JoinOperator.CrossJoin:
                 writer.WriteSql($" CROSS JOIN {Relation}");
                 return;
-            case JoinOperator.InnerArrayJoin:
-                writer.WriteSql($" ARRAY JOIN {Relation}");
-                return;
-            case JoinOperator.LeftArrayJoin:
-                writer.WriteSql($" LEFT ARRAY JOIN {Relation}");
+            case JoinOperator.ArrayJoin arrayJoin:
+                writer.Write(arrayJoin.Left ? " LEFT ARRAY JOIN " : " ARRAY JOIN ");
+                writer.WriteDelimited(arrayJoin.Relations, ", ");
                 return;
 
             case JoinOperator.AsOf a:
@@ -151,13 +149,11 @@ public abstract record JoinOperator : IElement
     public record OuterApply : JoinOperator;
 
     /// <summary>
-    /// Inner array join
+    /// ARRAY JOIN operator
     /// </summary>
-    public record InnerArrayJoin : JoinOperator;
-    /// <summary>
-    /// Left array join
-    /// </summary>
-    public record LeftArrayJoin : JoinOperator;
+    /// <param name="Left">True if LEFT ARRAY JOIN</param>
+    /// <param name="Relations">Expressions to join</param>
+    public record ArrayJoin(bool Left, Sequence<TableFactor> Relations) : JoinOperator;
 
     public record AsOf(Expression MatchCondition, JoinConstraint Constraint) : JoinOperator;
 }

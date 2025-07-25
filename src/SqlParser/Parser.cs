@@ -5176,25 +5176,32 @@ public partial class Parser
                 {
                     ExpectKeyword(Keyword.JOIN);
 
+                    var relations = new Sequence<TableFactor>();
+                    do
+                    {
+                        var arrayExpr = ParseExpr();
+                        var aliasIdent = ParseOptionalAlias(System.Array.Empty<Keyword>());
+                        var arrayRel = new TableFactor.ExpressionTable(arrayExpr)
+                        {
+                            Alias = aliasIdent != null ? new TableAlias(aliasIdent) : null
+                        };
+                        relations.Add(arrayRel);
+
+                    } while (ConsumeToken<Comma>());
+
+
                     if (inner && left)
                     {
                         throw new ParserException("Cannot have both LEFT and INNER for ARRAY JOIN",
                             PeekToken().Location);
                     }
-
-                    var op = left ? (JoinOperator)new JoinOperator.LeftArrayJoin() : new JoinOperator.InnerArrayJoin();
-
-                    do
-                    {
-                        var arrayExpr = ParseExpr();
-                        var arrayAlias = MaybeParseTableAlias();
-                        var arrayRel = new TableFactor.ExpressionTable(arrayExpr) { Alias = arrayAlias };
-
-                        var item = new Join(arrayRel, op);
-                        joins ??= [];
-                        joins.Add(item);
-                    } while (ConsumeToken<Comma>());
                     
+                    var op = new JoinOperator.ArrayJoin(left, relations);
+
+                    var item = new Join(JoinOperator: op);
+                    joins ??= [];
+                    joins.Add(item);
+
                     continue;
                 }
 
@@ -5208,7 +5215,7 @@ public partial class Parser
                     PrevToken();
                 }
             }
-            
+
             var global = ParseKeyword(Keyword.GLOBAL);
 
             Join join;
