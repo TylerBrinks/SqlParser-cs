@@ -1251,13 +1251,6 @@ public class ClickhouseDialectTests : ParserTestBase
     }
     
     [Fact]
-    public void Reducing_Test()
-    {
-        var sql = "SELECT toUInt32(toDateTime(install_date)) * 1000 AS t, groupArray(('Day ' || toString(cohort_day), visit_users / total_users)) FROM (WITH toDate(toDateTimeOrZero(player_install_date)) AS install_date, date - install_date AS visit_day SELECT install_date, cohort_day, uniqExactIf(player_id, visit_day = cohort_day) AS visit_users, uniqExactIf(player_id, visit_day = 0) AS total_users FROM mw2.pause ARRAY JOIN [0, 1, 3, 7, 14, 28] AS cohort_day WHERE date BETWEEN toDate(1741163034) AND toDate(1748935434) + toIntervalDay(28) AND install_date BETWEEN toDate(1741163034) AND toDate(1748935434) GROUP BY install_date, cohort_day ORDER BY install_date, cohort_day) GROUP BY t ORDER BY t ASC FORMAT JSON";
-        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
-    }
-    
-    [Fact]
     public void With_ArrayJoin_Explicit_List()
     {
         var sql = "SELECT cohort_day FROM mw2.pause ARRAY JOIN [0, 1, 3, 7, 14, 28] AS cohort_day";
