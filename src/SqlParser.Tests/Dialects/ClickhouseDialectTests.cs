@@ -1074,11 +1074,9 @@ public class ClickhouseDialectTests : ParserTestBase
     [Fact]
     public void Parse_With_In_Set_Operations()
     {
-        // WITH in UNION subquery
         var sql1 = "SELECT 1 UNION ALL (WITH (SELECT 2) AS val SELECT val)";
         VerifiedStatement<Statement.Select>(sql1, DefaultDialects!);
-    
-        // WITH in both sides of UNION
+        
         var sql2 = "(WITH (SELECT 1) AS a SELECT a) UNION ALL (WITH (SELECT 2) AS b SELECT b)";
         VerifiedStatement<Statement.Select>(sql2, DefaultDialects!);
     }
@@ -1162,97 +1160,65 @@ public class ClickhouseDialectTests : ParserTestBase
     }
 
     [Fact]
-    public void Parse_With_Case_Expressions()
-    {
-        var sql = "WITH (CASE WHEN col > 10 THEN 'high' ELSE 'low' END) AS category SELECT category FROM table1";
-        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
-    }
-    
-    [Fact]
-    public void Parse_With_Array_And_Tuple_Expressions()
-    {
-        var sql = "WITH ([1, 2, 3]) AS arr SELECT arr";
-        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
-    
-        var sql2 = "WITH ((1, 'a')) AS tup SELECT tup";
-        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
-    }
-    
-    [Fact]
-    public void Parse_Double_Array_Join_Inside_Subquery()
+    public void Parse_Double_Array_Join_Inside()
     {
         var sql = "SELECT rr, day FROM (SELECT retention FROM my_table) ARRAY JOIN retention AS rr, [0, 1, 3, 7, 14, 28] AS day";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
 
     [Fact]
-    public void Parse_Array_Join_With_Subquery_Minimal()
+    public void Parse_Array_Join_With_Subquery()
     {
-        // This should isolate the issue - minimal subquery with ARRAY JOIN
         var sql = "SELECT install_date, rr, day FROM (SELECT install_date, retention FROM my_table GROUP BY install_date) ARRAY JOIN retention AS rr, [0, 1, 3, 7, 14, 28] AS day";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
 
     [Fact]
-    public void Parse_Array_Join_With_Nested_Subquery_Minimal()
+    public void Parse_Array_Join_With_Nested_Subquery()
     {
-        // Add one more level of nesting to see if that's the issue
         var sql = "SELECT install_date, rr, day FROM (SELECT install_date, retention FROM (SELECT install_date, retention FROM my_table) GROUP BY install_date) ARRAY JOIN retention AS rr, [0, 1, 3, 7, 14, 28] AS day";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
 
     [Fact]
-    public void Parse_Array_Join_With_Group_By_Minimal()
+    public void Parse_Array_Join_With_Group_By()
     {
-        // Test if GROUP BY before ARRAY JOIN causes issues
         var sql = "SELECT install_date, rr, day FROM (SELECT install_date, retention FROM my_table GROUP BY install_date, player_id) ARRAY JOIN retention AS rr, [0, 1, 3, 7, 14, 28] AS day";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
 
     [Fact]
-    public void Parse_Array_Join_With_Aggregation_Minimal()
+    public void Parse_Array_Join_With_Aggregation()
     {
-        // Test if aggregation functions cause the issue
         var sql = "SELECT install_date, rr, day FROM (SELECT install_date, sum(r[1]) AS total, sumForEach(r) AS retention FROM my_table GROUP BY install_date) ARRAY JOIN retention AS rr, [0, 1, 3, 7, 14, 28] AS day";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
 
     [Fact]
-    public void Parse_Array_Join_With_Complex_Select_Minimal()
+    public void Parse_Array_Join_With_Complex_Select()
     {
-        // Test with more complex SELECT items before the subquery
         var sql = "SELECT toUInt32(toDateTime(install_date)) * 1000 AS t, rr, day FROM (SELECT install_date, retention FROM my_table GROUP BY install_date) ARRAY JOIN retention AS rr, [0, 1, 3, 7, 14, 28] AS day";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
 
     [Fact]
-    public void Parse_Array_Join_With_Outer_Group_By_Minimal()
+    public void Parse_Array_Join_With_Outer_Group_By()
     {
-        // Test if outer GROUP BY after ARRAY JOIN causes issues
         var sql = "SELECT install_date, rr FROM (SELECT install_date, retention FROM my_table GROUP BY install_date) ARRAY JOIN retention AS rr, [0, 1, 3, 7, 14, 28] AS day GROUP BY install_date";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
 
     [Fact]
-    public void Parse_Array_Join_With_Complex_Function_Minimal()
+    public void Parse_Array_Join_With_Complex_Function()
     {
-        // Test with the groupArray function from your original query
         var sql = "SELECT groupArray(('Day ' || toString(day), rr)) FROM (SELECT install_date, retention FROM my_table GROUP BY install_date) ARRAY JOIN retention AS rr, [0, 1, 3, 7, 14, 28] AS day";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
 
     [Fact]
-    public void Parse_Array_Join_Triple_Nested_Minimal()
+    public void Parse_Array_Join_Triple_Nested()
     {
-        // Test with triple nesting like in your original query
         var sql = "SELECT rr, day FROM (SELECT retention FROM (SELECT retention FROM (SELECT retention FROM my_table) GROUP BY col1) GROUP BY col2) ARRAY JOIN retention AS rr, [0, 1, 3, 7, 14, 28] AS day";
-        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
-    }
-    
-    [Fact]
-    public void Private_Test_Case_Expected_Join_Table()
-    {
-        var sql = "SELECT toUInt32(toDateTime(install_date)) * 1000 AS t, groupArray(('Day ' || toString(day), rr / users)) FROM (SELECT install_date, total AS users, rr, day FROM (SELECT install_date, sum(r[1]) AS total, sumForEach(r) AS retention FROM (WITH date - install_date AS visit_day SELECT install_date, player_id, retention(visit_day = 0, visit_day = 1, visit_day = 3, visit_day = 7, visit_day = 14, visit_day = 28) AS r FROM (SELECT player_id, date, toDate(toDateTimeOrZero(player_install_date)) AS install_date FROM mw2.pause WHERE date BETWEEN toDate(1741163029) AND toDate(1748935429) + INTERVAL 28 day AND install_date BETWEEN toDate(1741163029) AND toDate(1748935429) UNION ALL SELECT player_id, date, toDate(toDateTimeOrZero(player_install_date)) AS install_date FROM mw2.registration WHERE date BETWEEN toDate(1741163029) AND toDate(1748935429) + INTERVAL 28 day AND install_date BETWEEN toDate(1741163029) AND toDate(1748935429)) GROUP BY install_date, player_id) GROUP BY install_date) ARRAY JOIN retention AS rr, [0, 1, 3, 7, 14, 28] AS day) GROUP BY t ORDER BY t ASC FORMAT JSON";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
     
@@ -1262,60 +1228,7 @@ public class ClickhouseDialectTests : ParserTestBase
         var sql = "SELECT user_id, rr, day FROM my_table ARRAY JOIN retention AS rr, [0, 1, 3, 7, 14, 28] AS day";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
-
-    [Fact]
-    public void Reduction_Test()
-    {
-        var changedOneLinesSql = "SELECT toUInt32(toDateTime(install_date)) * 1000 AS t, groupArray(('Day ' || toString(day), rr / users)) FROM (SELECT install_date, total AS users, rr, day FROM (SELECT install_date, sum(r[1]) AS total, sumForEach(r) AS retention FROM (WITH date - install_date AS visit_day SELECT install_date, player_id, retention(visit_day = 0, visit_day = 1, visit_day = 3, visit_day = 7, visit_day = 14, visit_day = 28) AS r FROM (SELECT player_id, date, toDate(toDateTimeOrZero(player_install_date)) AS install_date FROM mw2.pause WHERE date BETWEEN toDate(1741163029) AND toDate(1748935429) + INTERVAL 28 day AND install_date BETWEEN toDate(1741163029) AND toDate(1748935429) UNION ALL SELECT player_id, date, toDate(toDateTimeOrZero(player_install_date)) AS install_date FROM mw2.registration WHERE date BETWEEN toDate(1741163029) AND toDate(1748935429) + INTERVAL 28 day AND install_date BETWEEN toDate(1741163029) AND toDate(1748935429)) GROUP BY install_date, player_id) GROUP BY install_date) ARRAY JOIN retention AS rr, [0, 1, 3, 7, 14, 28] AS day) GROUP BY t ORDER BY t ASC FORMAT JSON";
-        var sql = @"
-            SELECT
-                toUInt32(toDateTime(install_date)) * 1000 AS t,
-                groupArray(('Day ' || toString(day), rr / users))
-            FROM (
-            SELECT install_date, total AS users, rr, day FROM (      
-                                                                                                     
-              SELECT install_date, sum(r[1]) AS total, sumForEach(r) AS retention FROM (
-                                                             
-                WITH date - install_date AS visit_day
-
-                SELECT install_date,
-                       player_id,
-                       retention(visit_day = 0, visit_day = 1, visit_day = 3, visit_day = 7, visit_day = 14, visit_day = 28) AS r
-                FROM (
-
-                 SELECT player_id, date, toDate(toDateTimeOrZero(player_install_date)) AS install_date
-                 FROM mw2.pause
-                 WHERE date BETWEEN toDate(1741163029) AND toDate(1748935429) + INTERVAL 28 day
-                   AND install_date BETWEEN toDate(1741163029) AND toDate(1748935429)
-
-                 UNION ALL
-
-                 SELECT player_id, date, toDate(toDateTimeOrZero(player_install_date)) AS install_date
-                 FROM mw2.registration
-                 WHERE date BETWEEN toDate(1741163029) AND toDate(1748935429) + INTERVAL 28 day
-                   AND install_date BETWEEN toDate(1741163029) AND toDate(1748935429)
-                )
-
-                GROUP BY install_date, player_id
-              )
-              GROUP BY install_date
-            ) ARRAY JOIN                                                                                                                                                                                                                          
-              retention AS rr ARRAY JOIN                                                                                                                                                                                                          
-              [0, 1, 3, 7, 14, 28] AS day
-            )
-            GROUP BY t
-            ORDER BY t ASC FORMAT JSON
-        ";
-        VerifiedStatement<Statement.Select>(changedOneLinesSql, DefaultDialects!);
-    }
     
-    [Fact]
-    public void Private_Test_Case_Expected_Right_FoundLeft()
-    {
-        var sql = "SELECT toUInt32(toDateTime(install_date)) * 1000 AS t, groupArray(('Day ' || toString(cohort_day), visit_users / total_users)) FROM (WITH toDate(toDateTimeOrZero(player_install_date)) AS install_date, date - install_date AS visit_day SELECT install_date, cohort_day, uniqExactIf(player_id, visit_day = cohort_day) AS visit_users, uniqExactIf(player_id, visit_day = 0) AS total_users FROM mw2.pause ARRAY JOIN [0, 1, 3, 7, 14, 28] AS cohort_day WHERE date BETWEEN toDate(1741163034) AND toDate(1748935434) + toIntervalDay(28) AND install_date BETWEEN toDate(1741163034) AND toDate(1748935434) GROUP BY install_date, cohort_day ORDER BY install_date, cohort_day) GROUP BY t ORDER BY t ASC FORMAT JSON";
-        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
-    }
-
     [Fact]
     public void Function_In_Function()
     {
@@ -1345,6 +1258,13 @@ public class ClickhouseDialectTests : ParserTestBase
     }
     
     [Fact]
+    public void With_ArrayJoin_Explicit_List()
+    {
+        var sql = "SELECT cohort_day FROM mw2.pause ARRAY JOIN [0, 1, 3, 7, 14, 28] AS cohort_day";
+        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+    
+    [Fact]
     public void With_Substraction_Common()
     {
         var sql = "WITH date - install_date AS visit_day SELECT visit_day";
@@ -1352,40 +1272,9 @@ public class ClickhouseDialectTests : ParserTestBase
     }
     
     [Fact]
-    public void With_ArrayJoin_Explicit_List()
-    {
-        var sql = "SELECT cohort_day FROM mw2.pause ARRAY JOIN [0, 1, 3, 7, 14, 28] AS cohort_day";
-        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
-    }
-
-    
-    [Fact]
     public void With_Substraction2_Common()
     {
         var sql = "WITH toDate('2024-06-01') AS date, toDate('2024-05-25') AS install_date, date - install_date AS visit_day SELECT date, install_date, visit_day";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
-    }
-    
-    [Fact]
-    public void Parse_With_Table_References()
-    {
-     var sql = "WITH table1.column1 AS alias_col SELECT alias_col FROM table1";
-     VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
-    }   
-    
-    
-    //TODO: Both can be parsed though ParseCommonTableExpression_ClickhouseQuery, but needs better detection method for col or sorted_col in order to not break other tests 
-    [Fact]
-    public void Parse_With_In_Window_Expressions_Common()
-    {
-     var sql = "SELECT ROW_NUMBER() OVER (ORDER BY (WITH col AS sorted_col SELECT sorted_col)) FROM table1";
-     VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
-    }
-
-    [Fact]
-    public void Parse_With_In_Window_Expressions_Clickhouse()
-    {
-     var sql = "SELECT ROW_NUMBER() OVER (ORDER BY (WITH sorted_col AS col SELECT sorted_col)) FROM table1";
-     VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }
 }

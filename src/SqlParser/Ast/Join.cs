@@ -147,12 +147,6 @@ public abstract record JoinOperator : IElement
     /// Outer apply join
     /// </summary>
     public record OuterApply : JoinOperator;
-
-    /// <summary>
-    /// ARRAY JOIN operator
-    /// </summary>
-    /// <param name="Left">True if LEFT ARRAY JOIN</param>
-    /// <param name="Relations">Expressions to join</param>
     public record ArrayJoin(bool Left, Sequence<TableFactor> Relations) : JoinOperator;
 
     public record AsOf(Expression MatchCondition, JoinConstraint Constraint) : JoinOperator;

@@ -4457,158 +4457,145 @@ public partial class Parser
     {
         var isExpression = IsExpression();
         var isScalarSubquery = IsScalarSubquery();
-        var isAlias = IsAlias();
         
         if (_dialect is ClickHouseDialect && (isExpression || isScalarSubquery))
         {
-            return ParseCommonTableExpression_ClickhouseQuery();
-        }
-        else
-        { 
-            return ParseCommonTableExpression_CommonQuery();
-        }
-    }
-
-    private CommonTableExpression ParseCommonTableExpression_ClickhouseQuery()
-    {
-        var expression = ParseExpr();
-
-        CommonTableExpression? cte;
-
-        if (ParseKeyword(Keyword.AS))
-        {
-            var name = ParseIdentifier();
-            var isMaterialized = ParseInit<CteAsMaterialized?>(_dialect is PostgreSqlDialect, () =>
+            var expression = ParseExpr();
+            CommonTableExpression? cte;
+            if (ParseKeyword(Keyword.AS))
             {
-                if (ParseKeyword(Keyword.MATERIALIZED))
+                var name = ParseIdentifier();
+                var isMaterialized = ParseInit<CteAsMaterialized?>(_dialect is PostgreSqlDialect, () =>
                 {
-                    return CteAsMaterialized.Materialized;
-                }
+                    if (ParseKeyword(Keyword.MATERIALIZED))
+                    {
+                        return CteAsMaterialized.Materialized;
+                    }
 
-                if (ParseKeywordSequence(Keyword.NOT, Keyword.MATERIALIZED))
-                {
-                    return CteAsMaterialized.NotMaterialized;
-                }
+                    if (ParseKeywordSequence(Keyword.NOT, Keyword.MATERIALIZED))
+                    {
+                        return CteAsMaterialized.NotMaterialized;
+                    }
 
-                return null;
-            });
+                    return null;
+                });
 
-            var expressionBody = new SetExpression.ExpressionOnly(expression);
-            var query = new Query(expressionBody);
-            var alias = new TableAlias(name);
-            cte = new CommonTableExpression(alias, query, null, Materialized: isMaterialized, true, true);
-        }
-        else
-        {
-            var name = ParseIdentifier();
-            var columns = ParseTableAliasColumnDefs();
-            if (columns != null && !columns.Any())
-            {
-                columns = null;
-            }
-            
-            ExpectKeyword(Keyword.AS);
-            CteAsMaterialized? isMaterialized = ParseInit<CteAsMaterialized?>(_dialect is PostgreSqlDialect, () =>
-            {
-                if (ParseKeyword(Keyword.MATERIALIZED))
-                {
-                    return CteAsMaterialized.Materialized;
-                }
-            
-                if (ParseKeywordSequence(Keyword.NOT, Keyword.MATERIALIZED))
-                {
-                    return CteAsMaterialized.NotMaterialized;
-                }
-            
-                return null;
-            });
-            var query = ExpectParens(() => ParseQuery());
-            
-            var alias = new TableAlias(name, columns);
-            cte = new CommonTableExpression(alias, query.Query, Materialized: isMaterialized);
-        }
-
-        if (ParseKeyword(Keyword.FROM))
-        {
-            cte.From = ParseIdentifier();
-        }
-
-        return cte;
-    }
-
-    private CommonTableExpression ParseCommonTableExpression_CommonQuery()
-    {
-        var name = ParseIdentifier();
-        CommonTableExpression? cte;
-
-        if (ParseKeyword(Keyword.AS))
-        {
-            var isMaterialized = ParseInit<CteAsMaterialized?>(_dialect is PostgreSqlDialect, () =>
-            {
-                if (ParseKeyword(Keyword.MATERIALIZED))
-                {
-                    return CteAsMaterialized.Materialized;
-                }
-
-                if (ParseKeywordSequence(Keyword.NOT, Keyword.MATERIALIZED))
-                {
-                    return CteAsMaterialized.NotMaterialized;
-                }
-
-                return null;
-            });
-            
-            if (IsExpression())
-            {
-                var expression = ParseExpr();
-                
                 var expressionBody = new SetExpression.ExpressionOnly(expression);
                 var query = new Query(expressionBody);
-    
                 var alias = new TableAlias(name);
-                cte = new CommonTableExpression(alias, query,null, Materialized: isMaterialized, true);
+                cte = new CommonTableExpression(alias, query, null, Materialized: isMaterialized, true, true);
             }
             else
             {
-                 var query = ExpectParens(() => ParseQuery());
-                 var alias = new TableAlias(name);
-                 cte = new CommonTableExpression(alias, query.Query, Materialized: isMaterialized);
+                var name = ParseIdentifier();
+                var columns = ParseTableAliasColumnDefs();
+                if (columns != null && !columns.Any())
+                {
+                    columns = null;
+                }
+                
+                ExpectKeyword(Keyword.AS);
+                CteAsMaterialized? isMaterialized = ParseInit<CteAsMaterialized?>(_dialect is PostgreSqlDialect, () =>
+                {
+                    if (ParseKeyword(Keyword.MATERIALIZED))
+                    {
+                        return CteAsMaterialized.Materialized;
+                    }
+                
+                    if (ParseKeywordSequence(Keyword.NOT, Keyword.MATERIALIZED))
+                    {
+                        return CteAsMaterialized.NotMaterialized;
+                    }
+                
+                    return null;
+                });
+                var query = ExpectParens(() => ParseQuery());
+                
+                var alias = new TableAlias(name, columns);
+                cte = new CommonTableExpression(alias, query.Query, Materialized: isMaterialized);
             }
+
+            if (ParseKeyword(Keyword.FROM))
+            {
+                cte.From = ParseIdentifier();
+            }
+
+            return cte;
         }
         else
-        {
-            var columns = ParseTableAliasColumnDefs();
-            if (columns != null && !columns.Any())
+        { 
+            var name = ParseIdentifier();
+            CommonTableExpression? cte;
+
+            if (ParseKeyword(Keyword.AS))
             {
-                columns = null;
+                var isMaterialized = ParseInit<CteAsMaterialized?>(_dialect is PostgreSqlDialect, () =>
+                {
+                    if (ParseKeyword(Keyword.MATERIALIZED))
+                    {
+                        return CteAsMaterialized.Materialized;
+                    }
+
+                    if (ParseKeywordSequence(Keyword.NOT, Keyword.MATERIALIZED))
+                    {
+                        return CteAsMaterialized.NotMaterialized;
+                    }
+
+                    return null;
+                });
+                
+                if (IsExpression())
+                {
+                    var expression = ParseExpr();
+                    
+                    var expressionBody = new SetExpression.ExpressionOnly(expression);
+                    var query = new Query(expressionBody);
+        
+                    var alias = new TableAlias(name);
+                    cte = new CommonTableExpression(alias, query,null, Materialized: isMaterialized, true);
+                }
+                else
+                {
+                     var query = ExpectParens(() => ParseQuery());
+                     var alias = new TableAlias(name);
+                     cte = new CommonTableExpression(alias, query.Query, Materialized: isMaterialized);
+                }
             }
-            
-            ExpectKeyword(Keyword.AS);
-            CteAsMaterialized? isMaterialized = ParseInit<CteAsMaterialized?>(_dialect is PostgreSqlDialect, () =>
+            else
             {
-                if (ParseKeyword(Keyword.MATERIALIZED))
+                var columns = ParseTableAliasColumnDefs();
+                if (columns != null && !columns.Any())
                 {
-                    return CteAsMaterialized.Materialized;
+                    columns = null;
                 }
-                if (ParseKeywordSequence(Keyword.NOT, Keyword.MATERIALIZED))
+                
+                ExpectKeyword(Keyword.AS);
+                CteAsMaterialized? isMaterialized = ParseInit<CteAsMaterialized?>(_dialect is PostgreSqlDialect, () =>
                 {
-                    return CteAsMaterialized.NotMaterialized;
-                }
+                    if (ParseKeyword(Keyword.MATERIALIZED))
+                    {
+                        return CteAsMaterialized.Materialized;
+                    }
+                    if (ParseKeywordSequence(Keyword.NOT, Keyword.MATERIALIZED))
+                    {
+                        return CteAsMaterialized.NotMaterialized;
+                    }
 
-                return null;
-            });
-            var query = ExpectParens(() => ParseQuery());
+                    return null;
+                });
+                var query = ExpectParens(() => ParseQuery());
 
-            var alias = new TableAlias(name, columns);
-            cte = new CommonTableExpression(alias, query.Query, Materialized: isMaterialized);
+                var alias = new TableAlias(name, columns);
+                cte = new CommonTableExpression(alias, query.Query, Materialized: isMaterialized);
+            }
+
+            if (ParseKeyword(Keyword.FROM))
+            {
+                cte.From = ParseIdentifier();
+            }
+
+            return cte;
         }
-
-        if (ParseKeyword(Keyword.FROM))
-        {
-            cte.From = ParseIdentifier();
-        }
-
-        return cte;
     }
 
     private bool IsExpression()
@@ -4659,32 +4646,6 @@ public partial class Parser
 
         return false;
     }
-
-    
-    private bool IsAlias()
-    {
-        var token = PeekToken();
-
-        if (token is Word word)
-        {
-            var keyword = word.Keyword;
-        
-            // Only allow non-keyword identifiers to be aliases
-            if (keyword != Keyword.undefined)
-            {
-                return false;
-            }
-        
-            var nextToken = PeekNthToken(1);
-            if (nextToken is Word nextWord && nextWord.Keyword == Keyword.AS)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     
     /// <summary>
     /// Parse a `FOR JSON` clause
