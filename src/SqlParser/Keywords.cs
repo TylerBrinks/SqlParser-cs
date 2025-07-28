@@ -122,6 +122,7 @@ internal static class Keywords
         Keyword.AS, // TODO remove?
         // Reserved for snowflake MATCH_RECOGNIZE
         Keyword.MATCH_RECOGNIZE,
+        Keyword.ARRAY,
     ];
 }
 
