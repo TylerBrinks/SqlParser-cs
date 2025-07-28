@@ -270,11 +270,11 @@ public class ClickhouseDialectTests : ParserTestBase
 
         var columns = new Sequence<ColumnDef>
         {
-            new("k", new DataType.UInt8()),
-            new(new Ident("a", Symbols.Backtick), new DataType.Nullable(new DataType.StringType())),
-            new(new Ident("b", Symbols.Backtick), new DataType.Nullable(new DataType.Datetime64(9, "UTC"))),
-            new("c", new DataType.Nullable(new DataType.Datetime64(9))),
-            new("d", new DataType.Date32(), Options: [new ColumnOptionDef(new ColumnOption.Null())]),
+            new ("k", new DataType.UInt8()),
+            new (new Ident("a", Symbols.Backtick), new DataType.Nullable(new DataType.StringType())),
+            new (new Ident("b", Symbols.Backtick), new DataType.Nullable(new DataType.Datetime64(9, "UTC"))),
+            new ("c", new DataType.Nullable(new DataType.Datetime64(9))),
+            new ("d", new DataType.Date32(), Options:[new ColumnOptionDef(new ColumnOption.Null())]),
         };
 
         Assert.Equal("table", create.Name);
@@ -1048,13 +1048,9 @@ public class ClickhouseDialectTests : ParserTestBase
     {
         var sql = "WITH outer_cte AS (WITH inner_value AS (SELECT 1 AS val) SELECT val FROM inner_value) SELECT * FROM outer_cte";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
-    }
-    
-    [Fact]
-    public void Parse_Inner_With_()
-    {
-        var sql = "WITH city_table AS (WITH new_pop AS (SELECT POPULATION - 10000) SELECT NAME, new_pop AS POP FROM (SELECT NAME, POPULATION FROM CITY) AS base_city) SELECT POP FROM city_table";
-        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+        
+        var sql2 = "WITH city_table AS (WITH new_pop AS (SELECT POPULATION - 10000) SELECT NAME, new_pop AS POP FROM (SELECT NAME, POPULATION FROM CITY) AS base_city) SELECT POP FROM city_table";
+        VerifiedStatement<Statement.Select>(sql2, DefaultDialects!);
     }
     
     [Fact]
@@ -1262,12 +1258,7 @@ public class ClickhouseDialectTests : ParserTestBase
     {
         var sql = "WITH date - install_date AS visit_day SELECT visit_day";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
-    }
-    
-    [Fact]
-    public void With_Substraction2_Common()
-    {
-        var sql = "WITH toDate('2024-06-01') AS date, toDate('2024-05-25') AS install_date, date - install_date AS visit_day SELECT date, install_date, visit_day";
-        VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+        var sql2 = "WITH toDate('2024-06-01') AS date, toDate('2024-05-25') AS install_date, date - install_date AS visit_day SELECT date, install_date, visit_day";
+        VerifiedStatement<Statement.Select>(sql2, DefaultDialects!);
     }
 }
