@@ -14,7 +14,7 @@ namespace SqlParser.Tests.Visitors
             ast.Visit(visitor);
 
             Assert.Equal(2, visitor.Elements.Count);
-            Assert.Equal(6, visitor.Visited.Count);
+            Assert.Equal(8, visitor.Visited.Count);
         }
 
         [Fact]
@@ -44,10 +44,12 @@ namespace SqlParser.Tests.Visitors
                 {
                     "SELECT * from table_name as my_table", [
                         "PRE: STATEMENT: SELECT * FROM table_name AS my_table",
+                        "PRE: QUERY: SELECT * FROM table_name AS my_table",
                         "PRE: TABLE FACTOR: table_name AS my_table",
                         "PRE: RELATION: table_name",
                         "POST: RELATION: table_name",
                         "POST: TABLE FACTOR: table_name AS my_table",
+                        "POST: QUERY: SELECT * FROM table_name AS my_table",
                         "POST: STATEMENT: SELECT * FROM table_name AS my_table"
                     ]
                 },
@@ -55,6 +57,7 @@ namespace SqlParser.Tests.Visitors
                     "SELECT * from t1 join t2 on t1.id = t2.t1_id",
                     [
                         "PRE: STATEMENT: SELECT * FROM t1 JOIN t2 ON t1.id = t2.t1_id",
+                        "PRE: QUERY: SELECT * FROM t1 JOIN t2 ON t1.id = t2.t1_id",
                         "PRE: TABLE FACTOR: t1",
                         "PRE: RELATION: t1",
                         "POST: RELATION: t1",
@@ -69,6 +72,7 @@ namespace SqlParser.Tests.Visitors
                         "PRE: EXPR: t2.t1_id",
                         "POST: EXPR: t2.t1_id",
                         "POST: EXPR: t1.id = t2.t1_id",
+                        "POST: QUERY: SELECT * FROM t1 JOIN t2 ON t1.id = t2.t1_id",
                         "POST: STATEMENT: SELECT * FROM t1 JOIN t2 ON t1.id = t2.t1_id"
                     ]
                 },
@@ -76,18 +80,22 @@ namespace SqlParser.Tests.Visitors
                     "SELECT * from t1 where EXISTS(SELECT column from t2)",
                     [
                         "PRE: STATEMENT: SELECT * FROM t1 WHERE EXISTS (SELECT column FROM t2)",
+                        "PRE: QUERY: SELECT * FROM t1 WHERE EXISTS (SELECT column FROM t2)",
                         "PRE: TABLE FACTOR: t1",
                         "PRE: RELATION: t1",
                         "POST: RELATION: t1",
                         "POST: TABLE FACTOR: t1",
                         "PRE: EXPR: EXISTS (SELECT column FROM t2)",
+                        "PRE: QUERY: SELECT column FROM t2",
                         "PRE: EXPR: column",
                         "POST: EXPR: column",
                         "PRE: TABLE FACTOR: t2",
                         "PRE: RELATION: t2",
                         "POST: RELATION: t2",
                         "POST: TABLE FACTOR: t2",
+                        "POST: QUERY: SELECT column FROM t2",
                         "POST: EXPR: EXISTS (SELECT column FROM t2)",
+                        "POST: QUERY: SELECT * FROM t1 WHERE EXISTS (SELECT column FROM t2)",
                         "POST: STATEMENT: SELECT * FROM t1 WHERE EXISTS (SELECT column FROM t2)"
                     ]
                 },
@@ -95,22 +103,26 @@ namespace SqlParser.Tests.Visitors
                     "SELECT * from t1 where EXISTS(SELECT column from t2) UNION SELECT * from t3",
                     [
                         "PRE: STATEMENT: SELECT * FROM t1 WHERE EXISTS (SELECT column FROM t2) UNION SELECT * FROM t3",
+                        "PRE: QUERY: SELECT * FROM t1 WHERE EXISTS (SELECT column FROM t2) UNION SELECT * FROM t3",
                         "PRE: TABLE FACTOR: t1",
                         "PRE: RELATION: t1",
                         "POST: RELATION: t1",
                         "POST: TABLE FACTOR: t1",
                         "PRE: EXPR: EXISTS (SELECT column FROM t2)",
+                        "PRE: QUERY: SELECT column FROM t2",
                         "PRE: EXPR: column",
                         "POST: EXPR: column",
                         "PRE: TABLE FACTOR: t2",
                         "PRE: RELATION: t2",
                         "POST: RELATION: t2",
                         "POST: TABLE FACTOR: t2",
+                        "POST: QUERY: SELECT column FROM t2",
                         "POST: EXPR: EXISTS (SELECT column FROM t2)",
                         "PRE: TABLE FACTOR: t3",
                         "PRE: RELATION: t3",
                         "POST: RELATION: t3",
                         "POST: TABLE FACTOR: t3",
+                        "POST: QUERY: SELECT * FROM t1 WHERE EXISTS (SELECT column FROM t2) UNION SELECT * FROM t3",
                         "POST: STATEMENT: SELECT * FROM t1 WHERE EXISTS (SELECT column FROM t2) UNION SELECT * FROM t3"
                     ]
                 }
@@ -119,19 +131,21 @@ namespace SqlParser.Tests.Visitors
 
             foreach (var query in queries)
             {
-                var actual = Visit(query.Key);
+                var (visited, preVisitDefaultCalled, postVisitDefaultCalled) = Visit(query.Key);
 
-                Assert.Equal(query.Value, actual);
+                Assert.Equal(query.Value, visited);
+                Assert.True(preVisitDefaultCalled);
+                Assert.True(postVisitDefaultCalled);
             }
 
-            List<string> Visit(string sql)
+            static (List<string> visited, bool preVisitDefaultCalled, bool postVisitDefaultCalled) Visit(string sql)
             {
                 var dialect = new GenericDialect();
                 var parser = new Parser().TryWithSql(sql, dialect);
                 var statements = parser.ParseStatements();
                 var visitor = new TestVisitor();
                 statements.Visit(visitor);
-                return visitor.Visited;
+                return (visitor.Visited, visitor.PreVisitDefaultCalled, visitor.PostVisitDefaultCalled);
             }
         }
     }
@@ -141,6 +155,8 @@ namespace SqlParser.Tests.Visitors
     {
         public List<string> Visited = [];
         public List<IElement> Elements = [];
+        public bool PreVisitDefaultCalled = false;
+        public bool PostVisitDefaultCalled = false;
 
         public override ControlFlow PreVisitStatement(Statement statement)
         {
@@ -193,6 +209,30 @@ namespace SqlParser.Tests.Visitors
         {
             var sql = tableFactor.ToSql();
             Visited.Add($"POST: TABLE FACTOR: {sql}");
+            return ControlFlow.Continue;
+        }
+
+        public override ControlFlow PreVisitQuery(Query query)
+        {
+            Visited.Add($"PRE: QUERY: {query.ToSql()}");
+            return ControlFlow.Continue;
+        }
+
+        public override ControlFlow PostVisitQuery(Query query)
+        {
+            Visited.Add($"POST: QUERY: {query.ToSql()}");
+            return ControlFlow.Continue;
+        }
+
+        public override ControlFlow PreVisitDefault(IElement element)
+        {
+            PreVisitDefaultCalled = true;
+            return ControlFlow.Continue;
+        }
+
+        public override ControlFlow PostVisitDefault(IElement element)
+        {
+            PostVisitDefaultCalled = true;
             return ControlFlow.Continue;
         }
     }
