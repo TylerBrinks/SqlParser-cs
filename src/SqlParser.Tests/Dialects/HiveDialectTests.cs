@@ -244,7 +244,7 @@ public class HiveDialectTests : ParserTestBase
     [Fact]
     public void Filter_As_Alias()
     {
-        OneStatementParsesTo("SELECT name filter FROM region", "SELECT name AS filter FROM region");
+        OneStatementParsesTo("SELECT name filter FROM region", "SELECT name filter FROM region");
     }
 
     [Fact]

@@ -195,7 +195,7 @@ public class BigQueryDialectTests : ParserTestBase
         {
             new (new TableFactor.UnNest([new CompoundIdentifier(new Ident[] { "t1", "a" })])
                 {
-                    Alias = new TableAlias("f"),
+                    Alias = new TableAlias("f", true),
                 },
                 new JoinOperator.Inner(new JoinConstraint.On(
                     new BinaryOp(
@@ -442,12 +442,12 @@ public class BigQueryDialectTests : ParserTestBase
         Assert.Equal(expected, select.Projection.Skip(2).First().AsExpr());
 
         expected = new Struct([
-            new Named(new LiteralValue(new Value.Number("1")), "a"),
-            new Named(new LiteralValue(new Value.SingleQuotedString("abc")), "b")
+            new Named(new LiteralValue(new Value.Number("1")), "a", true),
+            new Named(new LiteralValue(new Value.SingleQuotedString("abc")), "b", true)
         ], []);
         Assert.Equal(expected, select.Projection.Skip(3).First().AsExpr());
 
-        expected = new Struct([new Named(new Identifier("str_col"), "abc")], []);
+        expected = new Struct([new Named(new Identifier("str_col"), "abc", true)], []);
         Assert.Equal(expected, select.Projection.Skip(4).First().AsExpr());
     }
 
@@ -769,7 +769,7 @@ public class BigQueryDialectTests : ParserTestBase
         var create = VerifiedStatement<Statement.CreateView>(sql);
         var columns = new Sequence<ViewColumnDef>
         {
-            new("name"), 
+            new("name"),
             new("age", Options: [new ColumnOption.Options([new SqlOption.KeyValue("description", new LiteralValue(new Value.DoubleQuotedString("field age")))])])
         };
         Assert.Equal(new ObjectName(["myproject", "mydataset", "newview"]), create.Name);
