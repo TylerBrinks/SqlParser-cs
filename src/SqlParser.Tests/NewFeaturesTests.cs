@@ -891,4 +891,789 @@ public class NewFeaturesTests : ParserTestBase
     }
 
     #endregion
+
+    #region PostgreSQL Table Partitioning Tests
+
+    [Fact]
+    public void Parse_Create_Table_Partition_Of_Default()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE TABLE measurement_default PARTITION OF measurement DEFAULT";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateTable>(statement);
+    }
+
+    [Fact]
+    public void Parse_Create_Table_Partition_Of_List()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE TABLE measurement_y2020 PARTITION OF measurement FOR VALUES IN ('2020')";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateTable>(statement);
+    }
+
+    [Fact]
+    public void Parse_Create_Table_Partition_Of_Range()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE TABLE measurement_y2020 PARTITION OF measurement FOR VALUES FROM ('2020-01-01') TO ('2021-01-01')";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateTable>(statement);
+    }
+
+    [Fact]
+    public void Parse_Create_Table_Partition_Of_Hash()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE TABLE measurement_p0 PARTITION OF measurement FOR VALUES WITH (MODULUS 4, REMAINDER 0)";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateTable>(statement);
+    }
+
+    [Fact]
+    public void Parse_Create_Table_Partition_Of_Range_Minvalue_Maxvalue()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE TABLE measurement_old PARTITION OF measurement FOR VALUES FROM (MINVALUE) TO ('2020-01-01')";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateTable>(statement);
+
+        sql = "CREATE TABLE measurement_future PARTITION OF measurement FOR VALUES FROM ('2030-01-01') TO (MAXVALUE)";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<CreateTable>(statement);
+    }
+
+    [Fact]
+    public void Parse_Create_Table_Partition_Of_Multicolumn_Range()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE TABLE measurement_y2020m01 PARTITION OF measurement FOR VALUES FROM ('2020-01-01', 1) TO ('2020-02-01', 1)";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateTable>(statement);
+    }
+
+    [Fact]
+    public void Parse_Create_Table_Partitioned_By()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE TABLE measurement (id INT, created_at DATE) PARTITION BY RANGE (created_at)";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateTable>(statement);
+
+        sql = "CREATE TABLE measurement (id INT, region TEXT) PARTITION BY LIST (region)";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<CreateTable>(statement);
+
+        sql = "CREATE TABLE measurement (id INT) PARTITION BY HASH (id)";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<CreateTable>(statement);
+    }
+
+    #endregion
+
+    #region PostgreSQL Operator DDL Tests
+
+    // Note: CREATE OPERATOR, CREATE OPERATOR CLASS, CREATE OPERATOR FAMILY,
+    // ALTER OPERATOR, ALTER OPERATOR CLASS, ALTER OPERATOR FAMILY
+    // are not yet implemented in the parser. Only DROP variants are supported.
+    // Tests for DROP OPERATOR/CLASS/FAMILY are in Parse_Drop_Operator_Statements() above.
+
+    #endregion
+
+    #region PostgreSQL Advanced Trigger Tests
+
+    [Fact]
+    public void Parse_Create_Trigger_Instead_Of()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE TRIGGER my_trigger INSTEAD OF DELETE ON my_view FOR EACH ROW EXECUTE FUNCTION my_func()";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateTrigger>(statement);
+        var trigger = (CreateTrigger)statement;
+        Assert.Equal(TriggerPeriod.InsteadOf, trigger.Period);
+    }
+
+    [Fact]
+    public void Parse_Create_Trigger_With_Condition()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE TRIGGER my_trigger AFTER UPDATE ON my_table FOR EACH ROW WHEN (OLD.value <> NEW.value) EXECUTE FUNCTION my_func()";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateTrigger>(statement);
+    }
+
+    [Fact]
+    public void Parse_Create_Trigger_Multiple_Events()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE TRIGGER my_trigger AFTER INSERT OR UPDATE OR DELETE ON my_table FOR EACH ROW EXECUTE FUNCTION my_func()";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateTrigger>(statement);
+    }
+
+    [Fact]
+    public void Parse_Create_Trigger_With_Referencing()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE TRIGGER my_trigger AFTER UPDATE ON my_table REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table FOR EACH STATEMENT EXECUTE FUNCTION my_func()";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateTrigger>(statement);
+    }
+
+    [Fact]
+    public void Parse_Create_Trigger_Deferrable()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE CONSTRAINT TRIGGER my_trigger AFTER INSERT ON my_table DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION my_func()";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateTrigger>(statement);
+    }
+
+    [Fact]
+    public void Parse_Drop_Trigger()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "DROP TRIGGER my_trigger ON my_table";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<DropTrigger>(statement);
+
+        sql = "DROP TRIGGER IF EXISTS my_trigger ON my_table CASCADE";
+        statement = VerifiedStatement(sql);
+        var dropTrigger = (DropTrigger)statement;
+        Assert.True(dropTrigger.IfExists);
+    }
+
+    #endregion
+
+    #region PostgreSQL Function Advanced Options Tests
+
+    [Fact]
+    public void Parse_Create_Function_With_Security()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE FUNCTION my_func() RETURNS void LANGUAGE SQL SECURITY DEFINER AS 'SELECT 1'";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateFunction>(statement);
+
+        sql = "CREATE FUNCTION my_func() RETURNS void LANGUAGE SQL SECURITY INVOKER AS 'SELECT 1'";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<CreateFunction>(statement);
+    }
+
+    [Fact]
+    public void Parse_Create_Function_With_Set_Params()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE FUNCTION my_func() RETURNS void LANGUAGE SQL SET search_path TO my_schema AS 'SELECT 1'";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateFunction>(statement);
+    }
+
+    [Fact]
+    public void Parse_Create_Function_Parallel()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE FUNCTION my_func() RETURNS void LANGUAGE SQL PARALLEL SAFE AS 'SELECT 1'";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateFunction>(statement);
+
+        sql = "CREATE FUNCTION my_func() RETURNS void LANGUAGE SQL PARALLEL UNSAFE AS 'SELECT 1'";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<CreateFunction>(statement);
+
+        sql = "CREATE FUNCTION my_func() RETURNS void LANGUAGE SQL PARALLEL RESTRICTED AS 'SELECT 1'";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<CreateFunction>(statement);
+    }
+
+    [Fact]
+    public void Parse_Create_Function_C_Language()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE FUNCTION my_func() RETURNS void LANGUAGE C AS 'my_module', 'my_symbol'";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateFunction>(statement);
+    }
+
+    #endregion
+
+    #region PostgreSQL Advanced Index Tests
+
+    [Fact]
+    public void Parse_Create_Index_Nulls_Distinct()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE INDEX idx ON t (col) NULLS DISTINCT";
+        var statement = VerifiedStatement(sql);
+        var createIndex = (CreateIndex)statement;
+        Assert.True(createIndex.Element.NullsDistinct);
+
+        sql = "CREATE INDEX idx ON t (col) NULLS NOT DISTINCT";
+        statement = VerifiedStatement(sql);
+        createIndex = (CreateIndex)statement;
+        Assert.False(createIndex.Element.NullsDistinct);
+    }
+
+    [Fact]
+    public void Parse_Create_Index_With_Include()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE INDEX idx ON t (col1) INCLUDE (col2, col3)";
+        var statement = VerifiedStatement(sql);
+        var createIndex = (CreateIndex)statement;
+        Assert.NotNull(createIndex.Element.Include);
+        Assert.Equal(2, createIndex.Element.Include!.Count);
+    }
+
+    [Fact]
+    public void Parse_Create_Index_With_Where()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE INDEX idx ON t (col) WHERE col > 0";
+        var statement = VerifiedStatement(sql);
+        var createIndex = (CreateIndex)statement;
+        Assert.NotNull(createIndex.Element.Predicate);
+    }
+
+    [Fact]
+    public void Parse_Create_Index_Concurrently()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE INDEX CONCURRENTLY idx ON t (col)";
+        var statement = VerifiedStatement(sql);
+        var createIndex = (CreateIndex)statement;
+        Assert.True(createIndex.Element.Concurrently);
+    }
+
+    [Fact]
+    public void Parse_Create_Index_With_Options()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE INDEX idx ON t USING GIN(col) WITH (fastupdate = off)";
+        var statement = VerifiedStatement(sql);
+        var createIndex = (CreateIndex)statement;
+        Assert.NotNull(createIndex.Element.With);
+    }
+
+    #endregion
+
+    #region PostgreSQL TRUNCATE Tests
+
+    [Fact]
+    public void Parse_Truncate_Basic()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "TRUNCATE TABLE my_table";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<Truncate>(statement);
+    }
+
+    [Fact]
+    public void Parse_Truncate_Multiple_Tables()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "TRUNCATE TABLE table1, table2, table3";
+        var statement = VerifiedStatement(sql);
+        var truncate = (Truncate)statement;
+        Assert.Equal(3, truncate.TableNames.Count);
+    }
+
+    [Fact]
+    public void Parse_Truncate_With_Options()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "TRUNCATE TABLE my_table RESTART IDENTITY";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<Truncate>(statement);
+
+        sql = "TRUNCATE TABLE my_table CONTINUE IDENTITY";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<Truncate>(statement);
+    }
+
+    [Fact]
+    public void Parse_Truncate_Cascade()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "TRUNCATE TABLE my_table CASCADE";
+        var statement = VerifiedStatement(sql);
+        var truncate = (Truncate)statement;
+        Assert.True(truncate.Cascade);
+
+        sql = "TRUNCATE TABLE my_table RESTRICT";
+        statement = VerifiedStatement(sql);
+        truncate = (Truncate)statement;
+        Assert.False(truncate.Cascade);
+    }
+
+    #endregion
+
+    #region PostgreSQL ALTER TABLE Advanced Tests
+
+    [Fact]
+    public void Parse_Alter_Table_Replica_Identity()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "ALTER TABLE my_table REPLICA IDENTITY FULL";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<AlterTable>(statement);
+
+        sql = "ALTER TABLE my_table REPLICA IDENTITY DEFAULT";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<AlterTable>(statement);
+
+        sql = "ALTER TABLE my_table REPLICA IDENTITY NOTHING";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<AlterTable>(statement);
+
+        sql = "ALTER TABLE my_table REPLICA IDENTITY USING INDEX my_index";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<AlterTable>(statement);
+    }
+
+    [Fact]
+    public void Parse_Alter_Table_Validate_Constraint()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "ALTER TABLE my_table VALIDATE CONSTRAINT my_constraint";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<AlterTable>(statement);
+    }
+
+    [Fact]
+    public void Parse_Alter_Table_Set_Schema()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "ALTER TABLE my_table SET SCHEMA new_schema";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<AlterTable>(statement);
+    }
+
+    [Fact]
+    public void Parse_Alter_Table_Owner_To()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "ALTER TABLE my_table OWNER TO new_owner";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<AlterTable>(statement);
+    }
+
+    #endregion
+
+    #region Other Missing Tests
+
+    [Fact]
+    public void Parse_Drop_Extension()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "DROP EXTENSION my_extension";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<DropExtension>(statement);
+
+        sql = "DROP EXTENSION IF EXISTS my_extension CASCADE";
+        statement = VerifiedStatement(sql);
+        var dropExt = (DropExtension)statement;
+        Assert.True(dropExt.IfExists);
+        Assert.True(dropExt.Cascade);
+    }
+
+    [Fact]
+    public void Parse_Alter_Type()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "ALTER TYPE my_type ADD VALUE 'new_value'";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<AlterType>(statement);
+
+        sql = "ALTER TYPE my_type RENAME TO new_type";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<AlterType>(statement);
+
+        sql = "ALTER TYPE my_type OWNER TO new_owner";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<AlterType>(statement);
+    }
+
+    [Fact]
+    public void Parse_Copy_From()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "COPY my_table FROM '/path/to/file.csv' WITH (FORMAT CSV, HEADER true)";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<Copy>(statement);
+    }
+
+    [Fact]
+    public void Parse_Copy_To()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "COPY my_table TO '/path/to/file.csv' WITH (FORMAT CSV, HEADER true)";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<Copy>(statement);
+    }
+
+    [Fact]
+    public void Parse_Listen_Notify()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "LISTEN my_channel";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<Listen>(statement);
+
+        sql = "NOTIFY my_channel";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<Notify>(statement);
+
+        sql = "NOTIFY my_channel, 'payload'";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<Notify>(statement);
+    }
+
+    [Fact]
+    public void Parse_Discard()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "DISCARD ALL";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<Discard>(statement);
+
+        sql = "DISCARD PLANS";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<Discard>(statement);
+
+        sql = "DISCARD SEQUENCES";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<Discard>(statement);
+
+        sql = "DISCARD TEMP";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<Discard>(statement);
+    }
+
+    [Fact]
+    public void Parse_Deallocate()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "DEALLOCATE my_statement";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<Deallocate>(statement);
+
+        sql = "DEALLOCATE ALL";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<Deallocate>(statement);
+
+        sql = "DEALLOCATE PREPARE my_statement";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<Deallocate>(statement);
+    }
+
+    [Fact]
+    public void Parse_Prepare_Execute()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "PREPARE my_stmt (int, text) AS SELECT * FROM t WHERE id = $1 AND name = $2";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<Prepare>(statement);
+
+        sql = "EXECUTE my_stmt(1, 'test')";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<Execute>(statement);
+    }
+
+    [Fact]
+    public void Parse_Comment_On()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "COMMENT ON TABLE my_table IS 'This is a table comment'";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<Comment>(statement);
+
+        sql = "COMMENT ON COLUMN my_table.my_column IS 'This is a column comment'";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<Comment>(statement);
+    }
+
+    [Fact]
+    public void Parse_Set_Transaction()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "SET TRANSACTION ISOLATION LEVEL SERIALIZABLE";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<SetTransaction>(statement);
+
+        sql = "SET TRANSACTION READ ONLY";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<SetTransaction>(statement);
+    }
+
+    [Fact]
+    public void Parse_Create_Sequence()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE SEQUENCE my_seq";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateSequence>(statement);
+
+        sql = "CREATE SEQUENCE my_seq START WITH 100 INCREMENT BY 10 MINVALUE 1 MAXVALUE 1000 CYCLE";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<CreateSequence>(statement);
+    }
+
+    [Fact]
+    public void Parse_Alter_Sequence()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "ALTER SEQUENCE my_seq RESTART WITH 100";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<AlterSequence>(statement);
+
+        sql = "ALTER SEQUENCE my_seq INCREMENT BY 5";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<AlterSequence>(statement);
+    }
+
+    [Fact]
+    public void Parse_Drop_Sequence()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "DROP SEQUENCE my_seq";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<Drop>(statement);
+
+        sql = "DROP SEQUENCE IF EXISTS my_seq CASCADE";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<Drop>(statement);
+    }
+
+    [Fact]
+    public void Parse_Create_Type()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE TYPE my_enum AS ENUM ('value1', 'value2', 'value3')";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateType>(statement);
+    }
+
+    [Fact]
+    public void Parse_Create_Schema()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE SCHEMA my_schema";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateSchema>(statement);
+
+        sql = "CREATE SCHEMA IF NOT EXISTS my_schema AUTHORIZATION my_user";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<CreateSchema>(statement);
+    }
+
+    [Fact]
+    public void Parse_Drop_Schema()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "DROP SCHEMA my_schema";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<Drop>(statement);
+
+        sql = "DROP SCHEMA IF EXISTS my_schema CASCADE";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<Drop>(statement);
+    }
+
+    [Fact]
+    public void Parse_Create_Role()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE ROLE my_role";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateRole>(statement);
+
+        sql = "CREATE ROLE my_role WITH LOGIN PASSWORD 'secret' SUPERUSER";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<CreateRole>(statement);
+    }
+
+    [Fact]
+    public void Parse_Drop_Role()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "DROP ROLE my_role";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<Drop>(statement);
+
+        sql = "DROP ROLE IF EXISTS my_role";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<Drop>(statement);
+    }
+
+    [Fact]
+    public void Parse_Grant_Revoke()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "GRANT SELECT, INSERT ON my_table TO my_role";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<Grant>(statement);
+
+        sql = "REVOKE SELECT ON my_table FROM my_role";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<Revoke>(statement);
+
+        sql = "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO my_role";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<Grant>(statement);
+    }
+
+    [Fact]
+    public void Parse_Create_Policy()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE POLICY my_policy ON my_table FOR SELECT USING (user_id = current_user_id())";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreatePolicy>(statement);
+
+        sql = "CREATE POLICY my_policy ON my_table FOR ALL TO my_role USING (true) WITH CHECK (true)";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<CreatePolicy>(statement);
+    }
+
+    [Fact]
+    public void Parse_Drop_Policy()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "DROP POLICY my_policy ON my_table";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<DropPolicy>(statement);
+
+        sql = "DROP POLICY IF EXISTS my_policy ON my_table";
+        statement = VerifiedStatement(sql);
+        var dropPolicy = (DropPolicy)statement;
+        Assert.True(dropPolicy.IfExists);
+    }
+
+    [Fact]
+    public void Parse_Savepoint_Release_Rollback()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "SAVEPOINT my_savepoint";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<Savepoint>(statement);
+
+        sql = "RELEASE SAVEPOINT my_savepoint";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<ReleaseSavepoint>(statement);
+
+        sql = "ROLLBACK TO SAVEPOINT my_savepoint";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<Rollback>(statement);
+    }
+
+    [Fact]
+    public void Parse_Lock_Table()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "LOCK TABLE my_table IN ACCESS EXCLUSIVE MODE";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<LockTables>(statement);
+    }
+
+    [Fact]
+    public void Parse_Explain()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "EXPLAIN SELECT * FROM my_table";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<Explain>(statement);
+
+        sql = "EXPLAIN ANALYZE SELECT * FROM my_table";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<Explain>(statement);
+
+        sql = "EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) SELECT * FROM my_table";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<Explain>(statement);
+    }
+
+    [Fact]
+    public void Parse_Show()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "SHOW search_path";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<ShowVariable>(statement);
+
+        sql = "SHOW ALL";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<ShowVariable>(statement);
+    }
+
+    [Fact]
+    public void Parse_Set_Variable()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "SET search_path TO my_schema, public";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<SetVariable>(statement);
+
+        sql = "SET LOCAL timezone = 'UTC'";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<SetVariable>(statement);
+    }
+
+    #endregion
 }
