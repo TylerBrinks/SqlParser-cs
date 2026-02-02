@@ -389,6 +389,11 @@ public partial class Parser
             return ParseCreateServer();
         }
 
+        if (ParseKeyword(Keyword.OPERATOR))
+        {
+            return ParseCreateOperator();
+        }
+
         throw Expected("Expected an object type after CREATE", PeekToken());
     }
 
@@ -1448,7 +1453,7 @@ public partial class Parser
 
     public Statement ParseAlter()
     {
-        var objectType = ExpectOneOfKeywords(Keyword.VIEW, Keyword.TABLE, Keyword.INDEX, Keyword.ROLE, Keyword.POLICY, Keyword.SCHEMA, Keyword.CONNECTOR, Keyword.USER);
+        var objectType = ExpectOneOfKeywords(Keyword.VIEW, Keyword.TABLE, Keyword.INDEX, Keyword.ROLE, Keyword.POLICY, Keyword.SCHEMA, Keyword.CONNECTOR, Keyword.USER, Keyword.OPERATOR);
 
         switch (objectType)
         {
@@ -1460,6 +1465,9 @@ public partial class Parser
 
             case Keyword.USER:
                 return ParseAlterUser();
+
+            case Keyword.OPERATOR:
+                return ParseAlterOperator();
             case Keyword.VIEW:
                 {
                     var name = ParseObjectName();
@@ -2862,5 +2870,329 @@ public partial class Parser
             Into = into,
             Using = usingVars
         });
+    }
+
+    /// <summary>
+    /// Parse CREATE OPERATOR statement
+    /// CREATE OPERATOR name ( option [, ...] )
+    /// </summary>
+    public Statement ParseCreateOperator()
+    {
+        // Check for CLASS or FAMILY
+        if (ParseKeyword(Keyword.CLASS))
+        {
+            return ParseCreateOperatorClass();
+        }
+
+        if (ParseKeyword(Keyword.FAMILY))
+        {
+            return ParseCreateOperatorFamily();
+        }
+
+        var name = ParseObjectName();
+        ExpectLeftParen();
+        var options = ParseCommaSeparated(ParseOperatorOption);
+        ExpectRightParen();
+
+        return new CreateOperator(name, options);
+    }
+
+    /// <summary>
+    /// Parse CREATE OPERATOR CLASS statement
+    /// CREATE OPERATOR CLASS name [DEFAULT] FOR TYPE data_type USING index_method [ FAMILY family_name ] AS (item [, ...])
+    /// </summary>
+    public Statement ParseCreateOperatorClass()
+    {
+        var name = ParseObjectName();
+        var isDefault = ParseKeyword(Keyword.DEFAULT);
+        ExpectKeywordSequence(Keyword.FOR, Keyword.TYPE);
+        var dataType = ParseDataType();
+        ExpectKeyword(Keyword.USING);
+        var indexMethod = ParseIdentifier();
+
+        ObjectName? family = null;
+        if (ParseKeyword(Keyword.FAMILY))
+        {
+            family = ParseObjectName();
+        }
+
+        ExpectKeyword(Keyword.AS);
+        var items = ParseCommaSeparated(ParseOperatorClassItem);
+
+        return new CreateOperatorClass(name, dataType, indexMethod, items)
+        {
+            IsDefault = isDefault,
+            Family = family
+        };
+    }
+
+    /// <summary>
+    /// Parse CREATE OPERATOR FAMILY statement
+    /// CREATE OPERATOR FAMILY name USING index_method
+    /// </summary>
+    public Statement ParseCreateOperatorFamily()
+    {
+        var name = ParseObjectName();
+        ExpectKeyword(Keyword.USING);
+        var indexMethod = ParseIdentifier();
+
+        return new CreateOperatorFamily(name, indexMethod);
+    }
+
+    /// <summary>
+    /// Parse ALTER OPERATOR statement
+    /// ALTER OPERATOR name ( { left_type | NONE }, right_type ) ...
+    /// </summary>
+    public Statement ParseAlterOperator()
+    {
+        // Check for CLASS or FAMILY
+        if (ParseKeyword(Keyword.CLASS))
+        {
+            return ParseAlterOperatorClass();
+        }
+
+        if (ParseKeyword(Keyword.FAMILY))
+        {
+            return ParseAlterOperatorFamily();
+        }
+
+        var name = ParseObjectName();
+        ExpectLeftParen();
+
+        DataType? leftType = null;
+        if (!ParseKeyword(Keyword.NONE))
+        {
+            leftType = ParseDataType();
+        }
+
+        ExpectToken<Comma>();
+
+        var rightType = ParseDataType();
+        ExpectRightParen();
+
+        ExpectKeyword(Keyword.SET);
+        ExpectLeftParen();
+        var options = ParseCommaSeparated(ParseOperatorOption);
+        ExpectRightParen();
+
+        return new AlterOperator(name, leftType, rightType, options);
+    }
+
+    /// <summary>
+    /// Parse ALTER OPERATOR CLASS statement
+    /// ALTER OPERATOR CLASS name USING index_method operation
+    /// </summary>
+    public Statement ParseAlterOperatorClass()
+    {
+        var name = ParseObjectName();
+        ExpectKeyword(Keyword.USING);
+        var indexMethod = ParseIdentifier();
+
+        AlterOperatorClassOperation operation;
+        if (ParseKeywordSequence(Keyword.RENAME, Keyword.TO))
+        {
+            operation = new AlterOperatorClassOperation.RenameTo(ParseObjectName());
+        }
+        else if (ParseKeywordSequence(Keyword.OWNER, Keyword.TO))
+        {
+            operation = new AlterOperatorClassOperation.OwnerTo(ParseIdentifier());
+        }
+        else if (ParseKeywordSequence(Keyword.SET, Keyword.SCHEMA))
+        {
+            operation = new AlterOperatorClassOperation.SetSchema(ParseObjectName());
+        }
+        else
+        {
+            throw Expected("RENAME TO, OWNER TO, or SET SCHEMA", PeekToken());
+        }
+
+        return new AlterOperatorClass(name, indexMethod, operation);
+    }
+
+    /// <summary>
+    /// Parse ALTER OPERATOR FAMILY statement
+    /// ALTER OPERATOR FAMILY name USING index_method operation
+    /// </summary>
+    public Statement ParseAlterOperatorFamily()
+    {
+        var name = ParseObjectName();
+        ExpectKeyword(Keyword.USING);
+        var indexMethod = ParseIdentifier();
+
+        AlterOperatorFamilyOperation operation;
+        if (ParseKeyword(Keyword.ADD))
+        {
+            var items = ParseCommaSeparated(ParseOperatorClassItem);
+            operation = new AlterOperatorFamilyOperation.Add(items);
+        }
+        else if (ParseKeyword(Keyword.DROP))
+        {
+            var items = ParseCommaSeparated(ParseOperatorFamilyDropItem);
+            operation = new AlterOperatorFamilyOperation.Drop(items);
+        }
+        else if (ParseKeywordSequence(Keyword.RENAME, Keyword.TO))
+        {
+            operation = new AlterOperatorFamilyOperation.RenameTo(ParseObjectName());
+        }
+        else if (ParseKeywordSequence(Keyword.OWNER, Keyword.TO))
+        {
+            operation = new AlterOperatorFamilyOperation.OwnerTo(ParseIdentifier());
+        }
+        else if (ParseKeywordSequence(Keyword.SET, Keyword.SCHEMA))
+        {
+            operation = new AlterOperatorFamilyOperation.SetSchema(ParseObjectName());
+        }
+        else
+        {
+            throw Expected("ADD, DROP, RENAME TO, OWNER TO, or SET SCHEMA", PeekToken());
+        }
+
+        return new AlterOperatorFamily(name, indexMethod, operation);
+    }
+
+    /// <summary>
+    /// Parse operator option (NAME = VALUE)
+    /// </summary>
+    public OperatorOption ParseOperatorOption()
+    {
+        var name = ParseIdentifier();
+        ExpectToken<Equal>();
+        var value = ParseExpr();
+        return new OperatorOption(name, value);
+    }
+
+    /// <summary>
+    /// Parse operator class item
+    /// OPERATOR strategy_number operator_name [ ( op_type, op_type ) ] [ FOR SEARCH | FOR ORDER BY sort_family_name ]
+    /// FUNCTION support_number [ ( op_type [, op_type ] ) ] function_name ( argument_type [, ...] )
+    /// STORAGE storage_type
+    /// </summary>
+    public OperatorClassItem ParseOperatorClassItem()
+    {
+        if (ParseKeyword(Keyword.OPERATOR))
+        {
+            var strategyNumber = (int)ParseLiteralUint();
+
+            var opName = ParseObjectName();
+
+            DataType? leftType = null;
+            DataType? rightType = null;
+            if (ConsumeToken<LeftParen>())
+            {
+                if (!ParseKeyword(Keyword.NONE))
+                {
+                    leftType = ParseDataType();
+                }
+                ExpectToken<Comma>();
+                if (!ParseKeyword(Keyword.NONE))
+                {
+                    rightType = ParseDataType();
+                }
+                ExpectRightParen();
+            }
+
+            OperatorClassItemPurpose? purpose = null;
+            if (ParseKeywordSequence(Keyword.FOR, Keyword.SEARCH))
+            {
+                purpose = new OperatorClassItemPurpose.ForSearch();
+            }
+            else if (ParseKeywordSequence(Keyword.FOR, Keyword.ORDER, Keyword.BY))
+            {
+                purpose = new OperatorClassItemPurpose.ForOrderBy(ParseObjectName());
+            }
+
+            return new OperatorClassItem.Operator(strategyNumber, opName)
+            {
+                LeftType = leftType,
+                RightType = rightType,
+                Purpose = purpose
+            };
+        }
+        else if (ParseKeyword(Keyword.FUNCTION))
+        {
+            var supportNumber = (int)ParseLiteralUint();
+
+            var funcName = ParseObjectName();
+
+            Sequence<DataType>? argTypes = null;
+            if (ConsumeToken<LeftParen>())
+            {
+                argTypes = ParseCommaSeparated(ParseDataType);
+                ExpectRightParen();
+            }
+
+            return new OperatorClassItem.Function(supportNumber, funcName)
+            {
+                ArgumentTypes = argTypes
+            };
+        }
+        else if (ParseKeyword(Keyword.STORAGE))
+        {
+            var storageType = ParseDataType();
+            return new OperatorClassItem.Storage(storageType);
+        }
+        else
+        {
+            throw Expected("OPERATOR, FUNCTION, or STORAGE", PeekToken());
+        }
+    }
+
+    /// <summary>
+    /// Parse operator family drop item
+    /// OPERATOR strategy_number ( op_type, op_type )
+    /// FUNCTION support_number ( op_type, op_type )
+    /// </summary>
+    public OperatorFamilyDropItem ParseOperatorFamilyDropItem()
+    {
+        if (ParseKeyword(Keyword.OPERATOR))
+        {
+            var strategyNumber = (int)ParseLiteralUint();
+            ExpectLeftParen();
+
+            DataType? leftType = null;
+            if (!ParseKeyword(Keyword.NONE))
+            {
+                leftType = ParseDataType();
+            }
+
+            ExpectToken<Comma>();
+
+            DataType? rightType = null;
+            if (!ParseKeyword(Keyword.NONE))
+            {
+                rightType = ParseDataType();
+            }
+
+            ExpectRightParen();
+
+            return new OperatorFamilyDropItem.Operator(strategyNumber, leftType, rightType);
+        }
+        else if (ParseKeyword(Keyword.FUNCTION))
+        {
+            var supportNumber = (int)ParseLiteralUint();
+            ExpectLeftParen();
+
+            DataType? leftType = null;
+            if (!ParseKeyword(Keyword.NONE))
+            {
+                leftType = ParseDataType();
+            }
+
+            ExpectToken<Comma>();
+
+            DataType? rightType = null;
+            if (!ParseKeyword(Keyword.NONE))
+            {
+                rightType = ParseDataType();
+            }
+
+            ExpectRightParen();
+
+            return new OperatorFamilyDropItem.Function(supportNumber, leftType, rightType);
+        }
+        else
+        {
+            throw Expected("OPERATOR or FUNCTION", PeekToken());
+        }
     }
 }

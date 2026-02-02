@@ -2637,6 +2637,104 @@ public abstract record Statement : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// CREATE OPERATOR statement - PostgreSQL
+    /// CREATE OPERATOR name ( { option_name = option_value [, ...] } )
+    /// </summary>
+    public record CreateOperator(ObjectName Name, Sequence<OperatorOption> Options) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"CREATE OPERATOR {Name} ({Options.ToSqlDelimited()})");
+        }
+    }
+    /// <summary>
+    /// ALTER OPERATOR statement - PostgreSQL
+    /// ALTER OPERATOR name ( { left_type | NONE }, right_type ) SET ( { option_name = option_value [, ...] } )
+    /// </summary>
+    public record AlterOperator(ObjectName Name, DataType? LeftType, DataType RightType, Sequence<OperatorOption> Options) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"ALTER OPERATOR {Name}(");
+            if (LeftType != null)
+            {
+                writer.WriteSql($"{LeftType}");
+            }
+            else
+            {
+                writer.Write("NONE");
+            }
+            writer.WriteSql($", {RightType}) SET ({Options.ToSqlDelimited()})");
+        }
+    }
+    /// <summary>
+    /// CREATE OPERATOR CLASS statement - PostgreSQL
+    /// CREATE OPERATOR CLASS name [ DEFAULT ] FOR TYPE data_type USING index_method [ FAMILY family_name ] AS operator_class_item [, ...]
+    /// </summary>
+    public record CreateOperatorClass(
+        ObjectName Name,
+        DataType DataType,
+        Ident IndexMethod,
+        Sequence<OperatorClassItem> Items) : Statement
+    {
+        public bool IsDefault { get; init; }
+        public ObjectName? Family { get; init; }
+
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"CREATE OPERATOR CLASS {Name}");
+            if (IsDefault)
+            {
+                writer.Write(" DEFAULT");
+            }
+            writer.WriteSql($" FOR TYPE {DataType} USING {IndexMethod}");
+            if (Family != null)
+            {
+                writer.WriteSql($" FAMILY {Family}");
+            }
+            writer.WriteSql($" AS {Items.ToSqlDelimited()}");
+        }
+    }
+    /// <summary>
+    /// ALTER OPERATOR CLASS statement - PostgreSQL
+    /// ALTER OPERATOR CLASS name USING index_method RENAME TO new_name
+    /// ALTER OPERATOR CLASS name USING index_method OWNER TO new_owner
+    /// ALTER OPERATOR CLASS name USING index_method SET SCHEMA new_schema
+    /// </summary>
+    public record AlterOperatorClass(ObjectName Name, Ident IndexMethod, AlterOperatorClassOperation Operation) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"ALTER OPERATOR CLASS {Name} USING {IndexMethod} {Operation}");
+        }
+    }
+    /// <summary>
+    /// CREATE OPERATOR FAMILY statement - PostgreSQL
+    /// CREATE OPERATOR FAMILY name USING index_method
+    /// </summary>
+    public record CreateOperatorFamily(ObjectName Name, Ident IndexMethod) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"CREATE OPERATOR FAMILY {Name} USING {IndexMethod}");
+        }
+    }
+    /// <summary>
+    /// ALTER OPERATOR FAMILY statement - PostgreSQL
+    /// ALTER OPERATOR FAMILY name USING index_method ADD operator_family_item [, ...]
+    /// ALTER OPERATOR FAMILY name USING index_method DROP operator_family_item [, ...]
+    /// ALTER OPERATOR FAMILY name USING index_method RENAME TO new_name
+    /// ALTER OPERATOR FAMILY name USING index_method OWNER TO new_owner
+    /// ALTER OPERATOR FAMILY name USING index_method SET SCHEMA new_schema
+    /// </summary>
+    public record AlterOperatorFamily(ObjectName Name, Ident IndexMethod, AlterOperatorFamilyOperation Operation) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"ALTER OPERATOR FAMILY {Name} USING {IndexMethod} {Operation}");
+        }
+    }
+    /// <summary>
     /// RAISE statement - PostgreSQL/Snowflake
     /// </summary>
     public record Raise(RaiseStatement RaiseStatement) : Statement

@@ -980,10 +980,253 @@ public class NewFeaturesTests : ParserTestBase
 
     #region PostgreSQL Operator DDL Tests
 
-    // Note: CREATE OPERATOR, CREATE OPERATOR CLASS, CREATE OPERATOR FAMILY,
-    // ALTER OPERATOR, ALTER OPERATOR CLASS, ALTER OPERATOR FAMILY
-    // are not yet implemented in the parser. Only DROP variants are supported.
-    // Tests for DROP OPERATOR/CLASS/FAMILY are in Parse_Drop_Operator_Statements() above.
+    [Fact]
+    public void Parse_Create_Operator()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE OPERATOR === (LEFTARG = box, RIGHTARG = box, FUNCTION = area_equal_function)";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateOperator>(statement);
+        var createOp = (CreateOperator)statement;
+        Assert.Equal("===", createOp.Name.ToString());
+        Assert.Equal(3, createOp.Options.Count);
+    }
+
+    [Fact]
+    public void Parse_Create_Operator_With_Commutator()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE OPERATOR @@ (LEFTARG = text, RIGHTARG = text, FUNCTION = ts_match, COMMUTATOR = @@, NEGATOR = !@@)";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateOperator>(statement);
+        var createOp = (CreateOperator)statement;
+        Assert.Equal("@@", createOp.Name.ToString());
+        Assert.Equal(5, createOp.Options.Count);
+    }
+
+    [Fact]
+    public void Parse_Alter_Operator()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "ALTER OPERATOR === (box, box) SET (RESTRICT = contsel, JOIN = contjoinsel)";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<AlterOperator>(statement);
+        var alterOp = (AlterOperator)statement;
+        Assert.Equal("===", alterOp.Name.ToString());
+        Assert.NotNull(alterOp.LeftType);
+        Assert.NotNull(alterOp.RightType);
+        Assert.Equal(2, alterOp.Options.Count);
+    }
+
+    [Fact]
+    public void Parse_Alter_Operator_With_None_Left()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "ALTER OPERATOR @@ (NONE, text) SET (RESTRICT = contsel)";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<AlterOperator>(statement);
+        var alterOp = (AlterOperator)statement;
+        Assert.Null(alterOp.LeftType);
+        Assert.NotNull(alterOp.RightType);
+    }
+
+    [Fact]
+    public void Parse_Create_Operator_Class()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE OPERATOR CLASS int4_ops FOR TYPE int4 USING btree AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, FUNCTION 1 btint4cmp(int4, int4)";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateOperatorClass>(statement);
+        var createOpClass = (CreateOperatorClass)statement;
+        Assert.Equal("int4_ops", createOpClass.Name.ToString());
+        Assert.Equal("btree", createOpClass.IndexMethod.Value);
+        Assert.Equal(4, createOpClass.Items.Count);
+        Assert.False(createOpClass.IsDefault);
+    }
+
+    [Fact]
+    public void Parse_Create_Operator_Class_Default()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE OPERATOR CLASS text_ops DEFAULT FOR TYPE text USING hash AS OPERATOR 1 =, FUNCTION 1 hashtext(text)";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateOperatorClass>(statement);
+        var createOpClass = (CreateOperatorClass)statement;
+        Assert.True(createOpClass.IsDefault);
+    }
+
+    [Fact]
+    public void Parse_Create_Operator_Class_With_Family()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE OPERATOR CLASS int4_ops FOR TYPE int4 USING btree FAMILY integer_ops AS OPERATOR 1 <";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateOperatorClass>(statement);
+        var createOpClass = (CreateOperatorClass)statement;
+        Assert.NotNull(createOpClass.Family);
+        Assert.Equal("integer_ops", createOpClass.Family!.ToString());
+    }
+
+    [Fact]
+    public void Parse_Alter_Operator_Class_Rename()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "ALTER OPERATOR CLASS int4_ops USING btree RENAME TO int4_ops_v2";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<AlterOperatorClass>(statement);
+        var alterOpClass = (AlterOperatorClass)statement;
+        Assert.IsType<AlterOperatorClassOperation.RenameTo>(alterOpClass.Operation);
+    }
+
+    [Fact]
+    public void Parse_Alter_Operator_Class_Owner()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "ALTER OPERATOR CLASS int4_ops USING btree OWNER TO admin";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<AlterOperatorClass>(statement);
+        var alterOpClass = (AlterOperatorClass)statement;
+        Assert.IsType<AlterOperatorClassOperation.OwnerTo>(alterOpClass.Operation);
+    }
+
+    [Fact]
+    public void Parse_Alter_Operator_Class_Set_Schema()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "ALTER OPERATOR CLASS int4_ops USING btree SET SCHEMA other_schema";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<AlterOperatorClass>(statement);
+        var alterOpClass = (AlterOperatorClass)statement;
+        Assert.IsType<AlterOperatorClassOperation.SetSchema>(alterOpClass.Operation);
+    }
+
+    [Fact]
+    public void Parse_Create_Operator_Family()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE OPERATOR FAMILY integer_ops USING btree";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateOperatorFamily>(statement);
+        var createOpFamily = (CreateOperatorFamily)statement;
+        Assert.Equal("integer_ops", createOpFamily.Name.ToString());
+        Assert.Equal("btree", createOpFamily.IndexMethod.Value);
+    }
+
+    [Fact]
+    public void Parse_Alter_Operator_Family_Add()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "ALTER OPERATOR FAMILY integer_ops USING btree ADD OPERATOR 1 < (int4, int4), FUNCTION 1 btint4cmp(int4, int4)";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<AlterOperatorFamily>(statement);
+        var alterOpFamily = (AlterOperatorFamily)statement;
+        Assert.IsType<AlterOperatorFamilyOperation.Add>(alterOpFamily.Operation);
+        var addOp = (AlterOperatorFamilyOperation.Add)alterOpFamily.Operation;
+        Assert.Equal(2, addOp.Items.Count);
+    }
+
+    [Fact]
+    public void Parse_Alter_Operator_Family_Drop()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "ALTER OPERATOR FAMILY integer_ops USING btree DROP OPERATOR 1 (int4, int4), FUNCTION 1 (int4, int4)";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<AlterOperatorFamily>(statement);
+        var alterOpFamily = (AlterOperatorFamily)statement;
+        Assert.IsType<AlterOperatorFamilyOperation.Drop>(alterOpFamily.Operation);
+        var dropOp = (AlterOperatorFamilyOperation.Drop)alterOpFamily.Operation;
+        Assert.Equal(2, dropOp.Items.Count);
+    }
+
+    [Fact]
+    public void Parse_Alter_Operator_Family_Rename()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "ALTER OPERATOR FAMILY integer_ops USING btree RENAME TO integer_ops_v2";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<AlterOperatorFamily>(statement);
+        var alterOpFamily = (AlterOperatorFamily)statement;
+        Assert.IsType<AlterOperatorFamilyOperation.RenameTo>(alterOpFamily.Operation);
+    }
+
+    [Fact]
+    public void Parse_Alter_Operator_Family_Owner()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "ALTER OPERATOR FAMILY integer_ops USING btree OWNER TO admin";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<AlterOperatorFamily>(statement);
+        var alterOpFamily = (AlterOperatorFamily)statement;
+        Assert.IsType<AlterOperatorFamilyOperation.OwnerTo>(alterOpFamily.Operation);
+    }
+
+    [Fact]
+    public void Parse_Alter_Operator_Family_Set_Schema()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "ALTER OPERATOR FAMILY integer_ops USING btree SET SCHEMA other_schema";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<AlterOperatorFamily>(statement);
+        var alterOpFamily = (AlterOperatorFamily)statement;
+        Assert.IsType<AlterOperatorFamilyOperation.SetSchema>(alterOpFamily.Operation);
+    }
+
+    [Fact]
+    public void Parse_Create_Operator_Class_With_Storage()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE OPERATOR CLASS gist_point_ops FOR TYPE point USING gist AS OPERATOR 1 <<, FUNCTION 1 gist_point_consistent(internal, point, smallint, oid, internal), STORAGE box";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateOperatorClass>(statement);
+        var createOpClass = (CreateOperatorClass)statement;
+        var storageItem = createOpClass.Items.LastOrDefault();
+        Assert.IsType<OperatorClassItem.Storage>(storageItem);
+    }
+
+    [Fact]
+    public void Parse_Create_Operator_Class_With_For_Search()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE OPERATOR CLASS text_pattern_ops FOR TYPE text USING btree AS OPERATOR 1 ~<~ FOR SEARCH";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateOperatorClass>(statement);
+        var createOpClass = (CreateOperatorClass)statement;
+        var opItem = (OperatorClassItem.Operator)createOpClass.Items[0];
+        Assert.IsType<OperatorClassItemPurpose.ForSearch>(opItem.Purpose);
+    }
+
+    [Fact]
+    public void Parse_Create_Operator_Class_With_For_Order_By()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "CREATE OPERATOR CLASS text_pattern_ops FOR TYPE text USING gist AS OPERATOR 1 < FOR ORDER BY integer_ops";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<CreateOperatorClass>(statement);
+        var createOpClass = (CreateOperatorClass)statement;
+        var opItem = (OperatorClassItem.Operator)createOpClass.Items[0];
+        Assert.IsType<OperatorClassItemPurpose.ForOrderBy>(opItem.Purpose);
+        var forOrderBy = (OperatorClassItemPurpose.ForOrderBy)opItem.Purpose!;
+        Assert.Equal("integer_ops", forOrderBy.SortFamilyName.ToString());
+    }
 
     #endregion
 
