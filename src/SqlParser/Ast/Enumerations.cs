@@ -700,3 +700,12 @@ public enum NormalForm
     NFKC,
     NFKD
 }
+
+/// <summary>
+/// DROP behavior for statements like DROP DOMAIN
+/// </summary>
+public enum DropBehavior
+{
+    Cascade,
+    Restrict
+}

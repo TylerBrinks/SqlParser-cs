@@ -2664,6 +2664,83 @@ public abstract record Statement : IWriteSql, IElement
             writer.WriteSql($"{VacuumStatement}");
         }
     }
+    /// <summary>
+    /// IF statement (procedural SQL)
+    /// </summary>
+    public record If(IfStatement IfStatement) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{IfStatement}");
+        }
+    }
+    /// <summary>
+    /// CASE statement (procedural SQL - different from CASE expression)
+    /// </summary>
+    public record Case(CaseStatement CaseStatement) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{CaseStatement}");
+        }
+    }
+    /// <summary>
+    /// WHILE statement (procedural SQL)
+    /// </summary>
+    public record While(WhileStatement WhileStatement) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{WhileStatement}");
+        }
+    }
+    /// <summary>
+    /// CREATE CONNECTOR statement
+    /// </summary>
+    public record CreateConnector(CreateConnectorStatement ConnectorStatement) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{ConnectorStatement}");
+        }
+    }
+    /// <summary>
+    /// ALTER CONNECTOR statement
+    /// </summary>
+    public record AlterConnector(AlterConnectorStatement ConnectorStatement) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{ConnectorStatement}");
+        }
+    }
+    /// <summary>
+    /// DROP CONNECTOR statement
+    /// </summary>
+    public record DropConnector(Ident Name, bool IfExists) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("DROP CONNECTOR ");
+
+            if (IfExists)
+            {
+                writer.Write("IF EXISTS ");
+            }
+
+            writer.WriteSql($"{Name}");
+        }
+    }
+    /// <summary>
+    /// EXECUTE IMMEDIATE statement
+    /// </summary>
+    public record ExecuteImmediate(ExecuteImmediateStatement ExecuteStatement) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{ExecuteStatement}");
+        }
+    }
 
     public abstract void ToSql(SqlTextWriter writer);
 
