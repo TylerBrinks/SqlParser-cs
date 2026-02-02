@@ -91,7 +91,7 @@ public partial class Parser
             // `PREPARE`, `EXECUTE` and `DEALLOCATE` are Postgres-specific
             // syntax. They are used for Postgres prepared statement.
             Keyword.DEALLOCATE => ParseDeallocate(),
-            Keyword.EXECUTE or Keyword.EXEC => ParseExecute(),
+            Keyword.EXECUTE or Keyword.EXEC => ParseKeyword(Keyword.IMMEDIATE) ? ParseExecuteImmediate() : ParseExecute(),
             Keyword.PREPARE => ParsePrepare(),
             Keyword.MERGE => ParseMerge(),
             // `LISTEN` and `NOTIFY` are Postgres-specific
@@ -105,6 +105,15 @@ public partial class Parser
             // `LOAD` is DuckDb specific https://duckdb.org/docs/extensions/overview
             Keyword.LOAD when _dialect is DuckDbDialect or GenericDialect => ParseLoad(),
             Keyword.OPTIMIZE when _dialect is ClickHouseDialect or GenericDialect => ParseOptimizeTable(),
+            Keyword.PRINT => ParsePrint(),
+            Keyword.VACUUM => ParseVacuum(),
+            Keyword.RAISE when _dialect.SupportsRaise => ParseRaise(),
+            Keyword.RAISERROR => ParseRaiseError(),
+            Keyword.RESET => ParseReset(),
+            Keyword.DENY => ParseDeny(),
+            Keyword.IF => ParseIf(),
+            Keyword.WHILE => ParseWhile(),
+            Keyword.CASE when _dialect.SupportsCaseStatement => ParseCaseStatement(),
 
             _ => throw Expected("a SQL statement", PeekToken())
         };
@@ -363,6 +372,21 @@ public partial class Parser
         if (ParseKeyword(Keyword.PROCEDURE))
         {
             return ParseCreateProcedure(orAlter);
+        }
+
+        if (ParseKeyword(Keyword.DOMAIN))
+        {
+            return ParseCreateDomain();
+        }
+
+        if (ParseKeyword(Keyword.CONNECTOR))
+        {
+            return ParseCreateConnector();
+        }
+
+        if (ParseKeyword(Keyword.SERVER))
+        {
+            return ParseCreateServer();
         }
 
         throw Expected("Expected an object type after CREATE", PeekToken());
@@ -839,10 +863,22 @@ public partial class Parser
         {
             return ParseDropTrigger();
         }
+        else if (ParseKeyword(Keyword.DOMAIN))
+        {
+            return ParseDropDomain();
+        }
+        else if (ParseKeyword(Keyword.CONNECTOR))
+        {
+            return ParseDropConnector();
+        }
+        else if (ParseKeyword(Keyword.USER))
+        {
+            return ParseDropUser();
+        }
 
         if (objectType == null)
         {
-            throw Expected("TABLE, VIEW, INDEX, ROLE, SCHEMA, DATABASE, FUNCTION, PROCEDURE, STAGE, TRIGGER, SECRET,SEQUENCE, or TYPE after DROP", PeekToken());
+            throw Expected("TABLE, VIEW, INDEX, ROLE, SCHEMA, DATABASE, FUNCTION, PROCEDURE, STAGE, TRIGGER, SECRET, SEQUENCE, TYPE, DOMAIN, CONNECTOR, or USER after DROP", PeekToken());
         }
 
         // Many dialects support the non-standard `IF EXISTS` clause and allow
@@ -1408,10 +1444,15 @@ public partial class Parser
 
     public Statement ParseAlter()
     {
-        var objectType = ExpectOneOfKeywords(Keyword.VIEW, Keyword.TABLE, Keyword.INDEX, Keyword.ROLE, Keyword.POLICY);
+        var objectType = ExpectOneOfKeywords(Keyword.VIEW, Keyword.TABLE, Keyword.INDEX, Keyword.ROLE, Keyword.POLICY, Keyword.SCHEMA, Keyword.CONNECTOR);
 
         switch (objectType)
         {
+            case Keyword.SCHEMA:
+                return ParseAlterSchema();
+
+            case Keyword.CONNECTOR:
+                return ParseAlterConnector();
             case Keyword.VIEW:
                 {
                     var name = ParseObjectName();
@@ -2176,5 +2217,514 @@ public partial class Parser
     public Statement ParseLoad()
     {
         return new Load(ParseIdentifier());
+    }
+
+    /// <summary>
+    /// Parse a PRINT statement
+    /// </summary>
+    public Statement ParsePrint()
+    {
+        var message = ParseExpr();
+        return new Print(new PrintStatement(message));
+    }
+
+    /// <summary>
+    /// Parse a VACUUM statement
+    /// </summary>
+    public Statement ParseVacuum()
+    {
+        var table = ParseInit(!ParseKeyword(Keyword.ANALYZE), ParseObjectName);
+        var columns = ParseParenthesizedColumnList(IsOptional.Optional, false);
+
+        return new Vacuum(new VacuumStatement(table, columns.Any() ? columns : null));
+    }
+
+    /// <summary>
+    /// Parse a RAISE statement (PostgreSQL/Snowflake)
+    /// </summary>
+    public Statement ParseRaise()
+    {
+        // RAISE; - simple raise
+        if (PeekTokenIs<SemiColon>() || PeekToken() is EOF)
+        {
+            return new Raise(new RaiseStatement());
+        }
+
+        // Try to parse a level
+        RaiseStatementLevel? level = ParseOneOfKeywords(
+            Keyword.DEBUG, Keyword.LOG, Keyword.INFO,
+            Keyword.NOTICE, Keyword.WARNING, Keyword.EXCEPTION) switch
+        {
+            Keyword.DEBUG => RaiseStatementLevel.Debug,
+            Keyword.LOG => RaiseStatementLevel.Log,
+            Keyword.INFO => RaiseStatementLevel.Info,
+            Keyword.NOTICE => RaiseStatementLevel.Notice,
+            Keyword.WARNING => RaiseStatementLevel.Warning,
+            Keyword.EXCEPTION => RaiseStatementLevel.Exception,
+            _ => null
+        };
+
+        // Check for USING
+        Sequence<RaiseStatementOption>? options = null;
+        if (ParseKeyword(Keyword.USING))
+        {
+            options = ParseCommaSeparated(ParseRaiseOption);
+        }
+
+        // Check for format string/expression
+        Expression? value = null;
+        if (!PeekTokenIs<SemiColon>() && PeekToken() is not EOF && !ParseKeyword(Keyword.USING))
+        {
+            value = ParseExpr();
+
+            // Check for USING after expression
+            if (ParseKeyword(Keyword.USING))
+            {
+                options = ParseCommaSeparated(ParseRaiseOption);
+            }
+        }
+
+        return new Raise(new RaiseStatement
+        {
+            Level = level,
+            Value = value,
+            Options = options
+        });
+
+        RaiseStatementOption ParseRaiseOption()
+        {
+            var name = ParseIdentifier();
+            ExpectToken<Equal>();
+            var expr = ParseExpr();
+            return new RaiseStatementOption(name, expr);
+        }
+    }
+
+    /// <summary>
+    /// Parse a RAISERROR statement (SQL Server)
+    /// </summary>
+    public Statement ParseRaiseError()
+    {
+        ExpectToken<LeftParen>();
+        var message = ParseExpr();
+        ExpectToken<Comma>();
+        var severity = ParseExpr();
+        ExpectToken<Comma>();
+        var state = ParseExpr();
+
+        Sequence<Expression>? arguments = null;
+        if (ConsumeToken<Comma>())
+        {
+            arguments = ParseCommaSeparated(ParseExpr);
+        }
+
+        ExpectToken<RightParen>();
+
+        Sequence<RaiseErrorOption>? options = null;
+        if (ParseKeyword(Keyword.WITH))
+        {
+            options = ParseCommaSeparated(() =>
+            {
+                var kw = ExpectOneOfKeywords(Keyword.LOG, Keyword.NOWAIT, Keyword.SETERROR);
+                return kw switch
+                {
+                    Keyword.LOG => RaiseErrorOption.Log,
+                    Keyword.NOWAIT => RaiseErrorOption.NoWait,
+                    Keyword.SETERROR => RaiseErrorOption.SetError,
+                    _ => throw Expected("LOG, NOWAIT, or SETERROR", PeekToken())
+                };
+            });
+        }
+
+        return new RaiseError(new RaiseErrorStatement(message, severity, state)
+        {
+            Arguments = arguments,
+            Options = options
+        });
+    }
+
+    /// <summary>
+    /// Parse a RESET statement
+    /// </summary>
+    public Statement ParseReset()
+    {
+        if (ParseKeyword(Keyword.ALL))
+        {
+            return new Reset(new ResetStatement.All());
+        }
+
+        var name = ParseObjectName();
+        return new Reset(new ResetStatement.Name(name));
+    }
+
+    /// <summary>
+    /// Parse a DENY statement
+    /// </summary>
+    public Statement ParseDeny()
+    {
+        var (privileges, grantObjects) = ParseGrantRevokePrivilegesObject();
+        ExpectKeyword(Keyword.TO);
+        var grantee = ParseIdentifier();
+        Ident? grantedBy = ParseInit(ParseKeywordSequence(Keyword.AS), ParseIdentifier);
+
+        return new Deny(new DenyStatement(privileges, grantObjects, grantee)
+        {
+            GrantedBy = grantedBy
+        });
+    }
+
+    /// <summary>
+    /// Parse an IF statement
+    /// </summary>
+    public Statement ParseIf()
+    {
+        var condition = ParseExpr();
+        ExpectKeyword(Keyword.THEN);
+        var thenBody = ParseStatementBlock();
+
+        var elseIfs = new Sequence<IfStatementElseIf>();
+        while (ParseKeyword(Keyword.ELSEIF))
+        {
+            var elseIfCondition = ParseExpr();
+            ExpectKeyword(Keyword.THEN);
+            var elseIfBody = ParseStatementBlock();
+            elseIfs.Add(new IfStatementElseIf(elseIfCondition, elseIfBody));
+        }
+
+        Sequence<Statement>? elseBlock = null;
+        if (ParseKeyword(Keyword.ELSE))
+        {
+            elseBlock = ParseStatementBlock();
+        }
+
+        ExpectKeywords(Keyword.END, Keyword.IF);
+
+        return new If(new IfStatement(condition, thenBody)
+        {
+            ElseIfs = elseIfs.Any() ? elseIfs : null,
+            ElseBlock = elseBlock
+        });
+    }
+
+    /// <summary>
+    /// Parse a WHILE statement
+    /// </summary>
+    public Statement ParseWhile()
+    {
+        Ident? label = null;
+        // Check for label - need to look ahead
+        var snapshot = _index;
+        var maybeLabel = MaybeParse(ParseIdentifier);
+        if (maybeLabel != null && ConsumeToken<Colon>())
+        {
+            label = maybeLabel;
+        }
+        else
+        {
+            _index = snapshot; // Restore position if not a label
+        }
+
+        var condition = ParseExpr();
+        ExpectKeyword(Keyword.DO);
+        var body = ParseStatementBlock();
+        ExpectKeywords(Keyword.END, Keyword.WHILE);
+
+        Ident? endLabel = null;
+        if (PeekToken() is Word)
+        {
+            endLabel = MaybeParse(ParseIdentifier);
+        }
+
+        return new While(new WhileStatement(condition, body)
+        {
+            Label = label
+        });
+    }
+
+    /// <summary>
+    /// Parse a CASE statement (procedural, not expression)
+    /// </summary>
+    public Statement ParseCaseStatement()
+    {
+        Expression? operand = null;
+        if (!ParseKeyword(Keyword.WHEN))
+        {
+            operand = ParseExpr();
+            ExpectKeyword(Keyword.WHEN);
+        }
+
+        var branches = new Sequence<CaseStatementBranch>();
+
+        do
+        {
+            var condition = ParseExpr();
+            ExpectKeyword(Keyword.THEN);
+            var statements = ParseStatementBlock();
+            branches.Add(new CaseStatementBranch(condition, statements));
+        } while (ParseKeyword(Keyword.WHEN));
+
+        Sequence<Statement>? elseBlock = null;
+        if (ParseKeyword(Keyword.ELSE))
+        {
+            elseBlock = ParseStatementBlock();
+        }
+
+        ExpectKeywords(Keyword.END, Keyword.CASE);
+
+        return new Case(new CaseStatement(branches)
+        {
+            Operand = operand,
+            ElseBlock = elseBlock
+        });
+    }
+
+    /// <summary>
+    /// Parse a block of statements terminated by certain keywords
+    /// </summary>
+    public Sequence<Statement> ParseStatementBlock()
+    {
+        var statements = new Sequence<Statement>();
+
+        while (true)
+        {
+            var token = PeekToken();
+            if (token is Word word)
+            {
+                // Check for keywords that terminate a block
+                if (word.Keyword is Keyword.END or Keyword.ELSE or Keyword.ELSEIF or Keyword.WHEN)
+                {
+                    break;
+                }
+            }
+
+            if (token is EOF)
+            {
+                break;
+            }
+
+            var stmt = ParseStatement();
+            statements.Add(stmt);
+
+            // Consume the semicolon if present
+            ConsumeToken<SemiColon>();
+        }
+
+        return statements;
+    }
+
+    /// <summary>
+    /// Parse CREATE DOMAIN statement
+    /// </summary>
+    public Statement ParseCreateDomain()
+    {
+        var name = ParseObjectName();
+        ExpectKeyword(Keyword.AS);
+        var dataType = ParseDataType();
+
+        Expression? defaultValue = null;
+        if (ParseKeyword(Keyword.DEFAULT))
+        {
+            defaultValue = ParseExpr();
+        }
+
+        ObjectName? collationName = null;
+        if (ParseKeyword(Keyword.COLLATE))
+        {
+            collationName = ParseObjectName();
+        }
+
+        Sequence<TableConstraint>? constraints = null;
+        while (PeekToken() is Word { Keyword: Keyword.CONSTRAINT or Keyword.NOT or Keyword.CHECK or Keyword.NULL })
+        {
+            constraints ??= [];
+            constraints.Add(ParseOptionalTableConstraint());
+        }
+
+        return new CreateDomain(name, dataType)
+        {
+            Default = defaultValue,
+            Constraints = constraints,
+            CollationName = collationName
+        };
+    }
+
+    /// <summary>
+    /// Parse DROP DOMAIN statement
+    /// </summary>
+    public Statement ParseDropDomain()
+    {
+        var ifExists = ParseIfExists();
+        var name = ParseObjectName();
+
+        DropBehavior? dropBehavior = null;
+        if (ParseKeyword(Keyword.CASCADE))
+        {
+            dropBehavior = DropBehavior.Cascade;
+        }
+        else if (ParseKeyword(Keyword.RESTRICT))
+        {
+            dropBehavior = DropBehavior.Restrict;
+        }
+
+        return new DropDomain(name, ifExists, dropBehavior);
+    }
+
+    /// <summary>
+    /// Parse DROP USER statement
+    /// </summary>
+    public Statement ParseDropUser()
+    {
+        var ifExists = ParseIfExists();
+        var names = ParseCommaSeparated(ParseIdentifier);
+        return new DropUser(names, ifExists);
+    }
+
+    /// <summary>
+    /// Parse CREATE CONNECTOR statement
+    /// </summary>
+    public Statement ParseCreateConnector()
+    {
+        var ifNotExists = ParseIfNotExists();
+        var name = ParseIdentifier();
+        ExpectKeyword(Keyword.TYPE);
+        var connectorType = ParseObjectName();
+
+        Sequence<SqlOption>? options = null;
+        if (ParseKeyword(Keyword.OPTIONS))
+        {
+            options = ExpectParens(() => ParseCommaSeparated(ParseSqlOption));
+        }
+
+        return new CreateConnector(new CreateConnectorStatement(name, connectorType)
+        {
+            IfNotExists = ifNotExists,
+            Options = options
+        });
+    }
+
+    /// <summary>
+    /// Parse ALTER CONNECTOR statement
+    /// </summary>
+    public Statement ParseAlterConnector()
+    {
+        var name = ParseIdentifier();
+        AlterConnectorOperation operation;
+
+        if (ParseKeywordSequence(Keyword.SET, Keyword.OPTIONS))
+        {
+            var options = ExpectParens(() => ParseCommaSeparated(ParseSqlOption));
+            operation = new AlterConnectorOperation.SetOptions(options);
+        }
+        else if (ParseKeywordSequence(Keyword.SET, Keyword.CREDENTIAL))
+        {
+            var credentialName = ParseIdentifier();
+            operation = new AlterConnectorOperation.SetCredential(credentialName);
+        }
+        else
+        {
+            throw Expected("SET OPTIONS or SET CREDENTIAL", PeekToken());
+        }
+
+        return new AlterConnector(new AlterConnectorStatement(name, operation));
+    }
+
+    /// <summary>
+    /// Parse DROP CONNECTOR statement
+    /// </summary>
+    public Statement ParseDropConnector()
+    {
+        var ifExists = ParseIfExists();
+        var name = ParseIdentifier();
+        return new DropConnector(name, ifExists);
+    }
+
+    /// <summary>
+    /// Parse CREATE SERVER statement
+    /// </summary>
+    public Statement ParseCreateServer()
+    {
+        var ifNotExists = ParseIfNotExists();
+        var name = ParseObjectName();
+
+        ObjectName? serverType = null;
+        if (ParseKeyword(Keyword.TYPE))
+        {
+            serverType = ParseObjectName();
+        }
+
+        ObjectName? version = null;
+        if (ParseKeyword(Keyword.VERSION))
+        {
+            version = ParseObjectName();
+        }
+
+        ExpectKeywords(Keyword.FOREIGN, Keyword.DATA, Keyword.WRAPPER);
+        var foreignDataWrapper = ParseObjectName();
+
+        Sequence<SqlOption>? options = null;
+        if (ParseKeyword(Keyword.OPTIONS))
+        {
+            options = ExpectParens(() => ParseCommaSeparated(ParseSqlOption));
+        }
+
+        return new CreateServer(new CreateServerStatement(name, foreignDataWrapper)
+        {
+            IfNotExists = ifNotExists,
+            ServerType = serverType,
+            Version = version,
+            Options = options
+        });
+    }
+
+    /// <summary>
+    /// Parse ALTER SCHEMA statement
+    /// </summary>
+    public Statement ParseAlterSchema()
+    {
+        var name = ParseObjectName();
+        AlterSchemaOperation operation;
+
+        if (ParseKeywordSequence(Keyword.RENAME, Keyword.TO))
+        {
+            var newName = ParseObjectName();
+            operation = new AlterSchemaOperation.RenameTo(newName);
+        }
+        else if (ParseKeywordSequence(Keyword.OWNER, Keyword.TO))
+        {
+            var newOwner = ParseOwner();
+            operation = new AlterSchemaOperation.OwnerTo(newOwner);
+        }
+        else
+        {
+            throw Expected("RENAME TO or OWNER TO", PeekToken());
+        }
+
+        return new AlterSchema(name, operation);
+    }
+
+    /// <summary>
+    /// Parse EXECUTE IMMEDIATE statement
+    /// </summary>
+    public Statement ParseExecuteImmediate()
+    {
+        var statement = ParseExpr();
+
+        Sequence<ExecuteImmediateInto>? into = null;
+        if (ParseKeyword(Keyword.INTO))
+        {
+            into = ParseCommaSeparated(() => new ExecuteImmediateInto(ParseIdentifier()));
+        }
+
+        Sequence<ExecuteImmediateUsing>? usingVars = null;
+        if (ParseKeyword(Keyword.USING))
+        {
+            usingVars = ParseCommaSeparated(() => new ExecuteImmediateUsing(ParseExpr()));
+        }
+
+        return new ExecuteImmediate(new ExecuteImmediateStatement(statement)
+        {
+            Into = into,
+            Using = usingVars
+        });
     }
 }

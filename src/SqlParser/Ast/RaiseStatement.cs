@@ -3,30 +3,31 @@ namespace SqlParser.Ast;
 /// <summary>
 /// RAISE statement for PostgreSQL/Snowflake
 /// </summary>
-public abstract record RaiseStatement : IWriteSql, IElement
+public record RaiseStatement : IWriteSql, IElement
 {
-    /// <summary>
-    /// RAISE with no parameters
-    /// </summary>
-    public record RaiseExceptionLevel(RaiseStatementLevel? Level, RaiseStatementValue? Value) : RaiseStatement
+    public RaiseStatementLevel? Level { get; init; }
+    public Expression? Value { get; init; }
+    public Sequence<RaiseStatementOption>? Options { get; init; }
+
+    public void ToSql(SqlTextWriter writer)
     {
-        public override void ToSql(SqlTextWriter writer)
+        writer.Write("RAISE");
+
+        if (Level != null)
         {
-            writer.Write("RAISE");
+            writer.WriteSql($" {Level}");
+        }
 
-            if (Level != null)
-            {
-                writer.WriteSql($" {Level}");
-            }
+        if (Value != null)
+        {
+            writer.WriteSql($" {Value}");
+        }
 
-            if (Value != null)
-            {
-                writer.WriteSql($" {Value}");
-            }
+        if (Options.SafeAny())
+        {
+            writer.WriteSql($" USING {Options.ToSqlDelimited()}");
         }
     }
-
-    public abstract void ToSql(SqlTextWriter writer);
 }
 
 /// <summary>
@@ -43,30 +44,12 @@ public enum RaiseStatementLevel
 }
 
 /// <summary>
-/// Raise statement value
+/// RAISE USING option (name = expression)
 /// </summary>
-public abstract record RaiseStatementValue : IWriteSql, IElement
+public record RaiseStatementOption(Ident Name, Expression Value) : IWriteSql, IElement
 {
-    public record UsingMessage(Expression Message) : RaiseStatementValue
+    public void ToSql(SqlTextWriter writer)
     {
-        public override void ToSql(SqlTextWriter writer)
-        {
-            writer.WriteSql($"USING MESSAGE = {Message}");
-        }
+        writer.WriteSql($"{Name} = {Value}");
     }
-
-    public record Format(Value Format, Sequence<Expression>? Arguments = null) : RaiseStatementValue
-    {
-        public override void ToSql(SqlTextWriter writer)
-        {
-            writer.WriteSql($"{Format}");
-
-            if (Arguments.SafeAny())
-            {
-                writer.WriteSql($", {Arguments.ToSqlDelimited()}");
-            }
-        }
-    }
-
-    public abstract void ToSql(SqlTextWriter writer);
 }

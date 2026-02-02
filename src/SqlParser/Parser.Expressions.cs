@@ -769,6 +769,7 @@ public partial class Parser
             Word { Keyword: Keyword.MATCH } when _dialect is MySqlDialect or GenericDialect => ParseMatchAgainst(),
             Word { Keyword: Keyword.STRUCT } when _dialect is BigQueryDialect or GenericDialect => ParseStruct(),
             Word { Keyword: Keyword.PRIOR } when _parserState == ParserState.ConnectBy => ParseConnectByExpression(),
+            Word { Keyword: Keyword.CONNECT_BY_ROOT } when _dialect.SupportsConnectBy => new ConnectByRoot(ParseExpr()),
             Word { Keyword: Keyword.MAP } when _dialect.SupportMapLiteralSyntax && PeekTokenIs<LeftBrace>() => ParseDuckDbMapLiteral(),
             //  
             // Here `word` is a word, check if it's a part of a multipart

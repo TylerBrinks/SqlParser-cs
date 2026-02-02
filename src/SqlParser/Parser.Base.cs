@@ -769,13 +769,53 @@ public partial class Parser
                     return new IsNotDistinctFrom(expr, ParseExpr());
 
                 case Keyword.IS:
-                    throw Expected("[NOT] NULL or TRUE|FALSE or [NOT] DISTINCT FROM after IS", PeekToken());
+                    {
+                        var negated = ParseKeyword(Keyword.NOT);
+                        // Parse optional normalization form
+                        var form = ParseOneOfKeywords(Keyword.NFC, Keyword.NFD, Keyword.NFKC, Keyword.NFKD) switch
+                        {
+                            Keyword.NFC => (NormalForm?)NormalForm.NFC,
+                            Keyword.NFD => NormalForm.NFD,
+                            Keyword.NFKC => NormalForm.NFKC,
+                            Keyword.NFKD => NormalForm.NFKD,
+                            _ => null
+                        };
+
+                        if (ParseKeyword(Keyword.NORMALIZED))
+                        {
+                            return new IsNormalized(expr, negated, form);
+                        }
+
+                        // If we consumed NOT but didn't find NORMALIZED, that's an error
+                        if (negated)
+                        {
+                            throw Expected("NORMALIZED after IS NOT", PeekToken());
+                        }
+                        // If we consumed a normalization form but didn't find NORMALIZED
+                        if (form != null)
+                        {
+                            throw Expected("NORMALIZED after normalization form", PeekToken());
+                        }
+
+                        throw Expected("[NOT] NULL or TRUE|FALSE or [NOT] DISTINCT FROM or [NOT] NORMALIZED after IS", PeekToken());
+                    }
 
                 case Keyword.AT:
                     {
                         ExpectKeywords(Keyword.TIME, Keyword.ZONE);
                         return new AtTimeZone(expr, ParseSubExpression(precedence));
                     }
+
+                case Keyword.MEMBER:
+                    {
+                        ExpectKeyword(Keyword.OF);
+                        var array = ExpectParens(ParseExpr);
+                        return new MemberOf(expr, array);
+                    }
+
+                case Keyword.NOTNULL:
+                    return new NotNull(expr);
+
                 case Keyword.NOT or
                     Keyword.IN or
                     Keyword.BETWEEN or

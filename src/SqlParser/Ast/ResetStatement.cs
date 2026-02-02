@@ -8,7 +8,7 @@ public abstract record ResetStatement : IWriteSql, IElement
     /// <summary>
     /// RESET configuration_parameter
     /// </summary>
-    public record ResetConfig(Ident ConfigName) : ResetStatement
+    public record Name(ObjectName ConfigName) : ResetStatement
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -19,7 +19,7 @@ public abstract record ResetStatement : IWriteSql, IElement
     /// <summary>
     /// RESET ALL
     /// </summary>
-    public record ResetAll : ResetStatement
+    public record All : ResetStatement
     {
         public override void ToSql(SqlTextWriter writer)
         {

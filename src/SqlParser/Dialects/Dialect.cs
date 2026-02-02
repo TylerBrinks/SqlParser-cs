@@ -132,8 +132,8 @@ public abstract partial class Dialect
             Word { Keyword: Keyword.XOR } => GetPrecedence(Precedence.Xor),
             Word { Keyword: Keyword.AT } => GetAtPrecedence(),
             Word { Keyword: Keyword.NOT } => GetNotPrecedence(),
-            Word { Keyword: Keyword.IS } => GetPrecedence(Precedence.Is),
-            Word { Keyword: Keyword.IN or Keyword.BETWEEN or Keyword.OPERATOR } => GetPrecedence(Precedence.Between),
+            Word { Keyword: Keyword.IS or Keyword.NOTNULL } => GetPrecedence(Precedence.Is),
+            Word { Keyword: Keyword.IN or Keyword.BETWEEN or Keyword.OPERATOR or Keyword.MEMBER } => GetPrecedence(Precedence.Between),
             Word {
                 Keyword: Keyword.LIKE 
                 or Keyword.ILIKE 

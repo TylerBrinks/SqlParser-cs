@@ -3699,6 +3699,8 @@ public partial class Parser
             Word { Keyword: Keyword.INT64 } => new DataType.Int64(),
             Word { Keyword: Keyword.INT128 } => new DataType.Int128(),
             Word { Keyword: Keyword.INT256 } => new DataType.Int256(),
+            Word { Keyword: Keyword.HUGEINT } => new DataType.HugeInt(),
+            Word { Keyword: Keyword.UHUGEINT } => new DataType.UHugeInt(),
 
             Word { Keyword: Keyword.INTEGER } => ParseInteger(),
             Word { Keyword: Keyword.BIGINT } => ParseBigInt(),
@@ -3709,6 +3711,9 @@ public partial class Parser
             Word { Keyword: Keyword.UINT64 } => new DataType.UInt64(),
             Word { Keyword: Keyword.UINT128 } => new DataType.UInt128(),
             Word { Keyword: Keyword.UINT256 } => new DataType.UInt256(),
+            Word { Keyword: Keyword.UTINYINT } => new DataType.UTinyInt(),
+            Word { Keyword: Keyword.USMALLINT } => new DataType.USmallInt(),
+            Word { Keyword: Keyword.UBIGINT } => new DataType.UBigInt(),
 
             Word { Keyword: Keyword.VARCHAR } => new DataType.Varchar(ParseOptionalCharacterLength()),
             Word { Keyword: Keyword.NVARCHAR } => new DataType.Nvarchar(ParseOptionalCharacterLength()),
@@ -3718,8 +3723,13 @@ public partial class Parser
             Word { Keyword: Keyword.BINARY } => new DataType.Binary(ParseOptionalPrecision()),
             Word { Keyword: Keyword.VARBINARY } => new DataType.Varbinary(ParseOptionalBinaryLength()),
             Word { Keyword: Keyword.BLOB } => new DataType.Blob(ParseOptionalPrecision()),
+            Word { Keyword: Keyword.TINYBLOB } => new DataType.TinyBlob(),
+            Word { Keyword: Keyword.MEDIUMBLOB } => new DataType.MediumBlob(),
+            Word { Keyword: Keyword.LONGBLOB } => new DataType.LongBlob(),
             Word { Keyword: Keyword.BYTES } => new DataType.Bytes(ParseOptionalPrecision()),
             Word { Keyword: Keyword.UUID } => new DataType.Uuid(),
+            Word { Keyword: Keyword.BIT } => ParseBit(),
+            Word { Keyword: Keyword.VARBIT } => new DataType.VarBit(ParseOptionalPrecision()),
 
             Word { Keyword: Keyword.DATE } => new DataType.Date(),
             Word { Keyword: Keyword.DATE32 } => new DataType.Date32(),
@@ -3729,6 +3739,7 @@ public partial class Parser
 
             Word { Keyword: Keyword.TIMESTAMP } => ParseTimestamp(),
             Word { Keyword: Keyword.TIMESTAMPTZ } => new DataType.Timestamp(TimezoneInfo.Tz, ParseOptionalPrecision()),
+            Word { Keyword: Keyword.TIMESTAMP_NTZ } => new DataType.TimestampNtz(ParseOptionalPrecision()),
 
             Word { Keyword: Keyword.TIME } => ParseTime(),
             Word { Keyword: Keyword.TIMETZ } => new DataType.Time(TimezoneInfo.Tz, ParseOptionalPrecision()),
@@ -3743,12 +3754,20 @@ public partial class Parser
             Word { Keyword: Keyword.FIXEDSTRING } => ParseFixedString(),
 
             Word { Keyword: Keyword.TEXT } => new DataType.Text(),
+            Word { Keyword: Keyword.TINYTEXT } => new DataType.TinyText(),
+            Word { Keyword: Keyword.MEDIUMTEXT } => new DataType.MediumText(),
+            Word { Keyword: Keyword.LONGTEXT } => new DataType.LongText(),
             Word { Keyword: Keyword.BYTEA } => new DataType.Bytea(),
+            Word { Keyword: Keyword.TSVECTOR } => new DataType.TsVector(),
+            Word { Keyword: Keyword.TSQUERY } => new DataType.TsQuery(),
             Word { Keyword: Keyword.NUMERIC } => new DataType.Numeric(ParseExactNumberOptionalPrecisionScale()),
             Word { Keyword: Keyword.DECIMAL } => new DataType.Decimal(ParseExactNumberOptionalPrecisionScale()),
             Word { Keyword: Keyword.DEC } => new DataType.Dec(ParseExactNumberOptionalPrecisionScale()),
             Word { Keyword: Keyword.BIGNUMERIC } => new DataType.BigNumeric(ParseExactNumberOptionalPrecisionScale()),
+            Word { Keyword: Keyword.BIGDECIMAL } => new DataType.BigDecimal(ParseExactNumberOptionalPrecisionScale()),
             Word { Keyword: Keyword.ENUM } => new DataType.Enum(ParseStringValue()),
+            Word { Keyword: Keyword.ENUM8 } => new DataType.Enum8(ParseStringValue()),
+            Word { Keyword: Keyword.ENUM16 } => new DataType.Enum16(ParseStringValue()),
             Word { Keyword: Keyword.SET } => new DataType.Set(ParseStringValue()),
             Word { Keyword: Keyword.ARRAY } => ParseArray(),
             Word { Keyword: Keyword.STRUCT } when _dialect is DuckDbDialect => ParseDuckDbStruct(),
@@ -3765,6 +3784,7 @@ public partial class Parser
 
             Word { Keyword: Keyword.TUPLE } when _dialect is ClickHouseDialect or GenericDialect => ParseClickhouseTuple(),
             Word { Keyword: Keyword.TRIGGER } => new DataType.Trigger(),
+            Word w when w.Keyword == Keyword.ANY && ParseKeyword(Keyword.TYPE) => new DataType.AnyType(),
             _ => ParseUnmatched()
         };
 
@@ -3845,6 +3865,15 @@ public partial class Parser
         {
             var precision = ParseOptionalPrecision();
             return ParseKeyword(Keyword.UNSIGNED) ? new DataType.UnsignedBigInt(precision) : new DataType.BigInt(precision);
+        }
+
+        DataType ParseBit()
+        {
+            if (ParseKeywordSequence(Keyword.VARYING))
+            {
+                return new DataType.BitVarying(ParseOptionalPrecision());
+            }
+            return new DataType.Bit(ParseOptionalPrecision());
         }
 
         DataType ParseCharacter()
@@ -5563,6 +5592,12 @@ public partial class Parser
             return jsonTable;
         }
 
+        // XMLTABLE
+        if (nextToken is Word { Keyword: Keyword.XMLTABLE } && PeekNthTokenIs<LeftParen>(1))
+        {
+            return ParseXmlTable();
+        }
+
         var name = ParseObjectNameWithClause(true);
 
         var partitions = ParseInit(
@@ -5622,7 +5657,149 @@ public partial class Parser
             table = ParseMatchRecognize(table);
         }
 
+        // Parse TABLESAMPLE clause
+        if (ParseKeyword(Keyword.TABLESAMPLE))
+        {
+            var tableSample = ParseTableSample();
+            return new TableFactor.TableSample(table, tableSample);
+        }
+
         return table;
+    }
+
+    /// <summary>
+    /// Parse TABLESAMPLE clause
+    /// </summary>
+    public TableSampleKind ParseTableSample()
+    {
+        // Parse optional method (BERNOULLI, SYSTEM, ROW)
+        TableSampleMethod? method = ParseOneOfKeywords(Keyword.BERNOULLI, Keyword.SYSTEM, Keyword.ROW) switch
+        {
+            Keyword.BERNOULLI => TableSampleMethod.Bernoulli,
+            Keyword.SYSTEM => TableSampleMethod.System,
+            Keyword.ROW => TableSampleMethod.Row,
+            _ => null
+        };
+
+        ExpectToken<LeftParen>();
+
+        // Check for BUCKET syntax
+        if (ParseKeyword(Keyword.BUCKET))
+        {
+            var bucketNum = ParseExpr();
+            ExpectKeywords(Keyword.OUT, Keyword.OF);
+            var totalBuckets = ParseExpr();
+            Ident? onColumn = null;
+            if (ParseKeyword(Keyword.ON))
+            {
+                onColumn = ParseIdentifier();
+            }
+            ExpectToken<RightParen>();
+            return new TableSampleKind.Bucket(bucketNum, totalBuckets) { OnColumn = onColumn };
+        }
+
+        var sampleExpr = ParseExpr();
+
+        // Check for PERCENT or ROWS
+        if (ParseKeyword(Keyword.PERCENT))
+        {
+            ExpectToken<RightParen>();
+            bool? repeatable = null;
+            if (ParseKeyword(Keyword.REPEATABLE))
+            {
+                repeatable = ExpectParens(() => ParseLiteralBool());
+            }
+            return new TableSampleKind.Percent(method, sampleExpr) { RepeatableSeed = repeatable };
+        }
+
+        if (ParseKeyword(Keyword.ROWS))
+        {
+            ExpectToken<RightParen>();
+            return new TableSampleKind.Rows(method, sampleExpr);
+        }
+
+        // Default to PERCENT if no suffix
+        ExpectToken<RightParen>();
+        return new TableSampleKind.Percent(method, sampleExpr);
+    }
+
+    /// <summary>
+    /// Parse XMLTABLE expression
+    /// </summary>
+    public TableFactor ParseXmlTable()
+    {
+        ExpectKeyword(Keyword.XMLTABLE);
+        ExpectToken<LeftParen>();
+
+        // Parse optional XMLNAMESPACES
+        Sequence<XmlNamespace>? namespaces = null;
+        if (ParseKeyword(Keyword.XMLNAMESPACES))
+        {
+            namespaces = ExpectParens(() => ParseCommaSeparated(ParseXmlNamespace));
+            ExpectToken<Comma>();
+        }
+
+        var rowExpression = ParseExpr();
+        ExpectKeyword(Keyword.PASSING);
+        var passingExpression = ParseExpr();
+        ExpectKeyword(Keyword.COLUMNS);
+        var columns = ParseCommaSeparated(ParseXmlTableColumn);
+
+        ExpectToken<RightParen>();
+        var alias = MaybeParseTableAlias();
+
+        return new TableFactor.XmlTable(new XmlTableExpression(rowExpression, passingExpression, columns)
+        {
+            Namespaces = namespaces
+        })
+        {
+            Alias = alias
+        };
+    }
+
+    public XmlNamespace ParseXmlNamespace()
+    {
+        var uri = ParseValue();
+
+        if (ParseKeywordSequence(Keyword.AS, Keyword.DEFAULT))
+        {
+            return new XmlNamespace(uri) { IsDefault = true };
+        }
+
+        if (ParseKeyword(Keyword.AS))
+        {
+            var prefix = ParseIdentifier();
+            return new XmlNamespace(uri, prefix);
+        }
+
+        return new XmlNamespace(uri);
+    }
+
+    public XmlTableColumn ParseXmlTableColumn()
+    {
+        var name = ParseIdentifier();
+        var dataType = ParseDataType();
+
+        Expression? path = null;
+        if (ParseKeyword(Keyword.PATH))
+        {
+            path = ParseExpr();
+        }
+
+        Expression? defaultVal = null;
+        if (ParseKeyword(Keyword.DEFAULT))
+        {
+            defaultVal = ParseExpr();
+        }
+
+        var notNull = ParseKeywordSequence(Keyword.NOT, Keyword.NULL);
+
+        return new XmlTableColumn(name, dataType)
+        {
+            Path = path,
+            Default = defaultVal,
+            NotNull = notNull
+        };
     }
 
     private TableFunctionArgs ParseTableFunctionArgs()
