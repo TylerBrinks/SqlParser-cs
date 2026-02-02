@@ -5343,6 +5343,11 @@ public partial class Parser
                     ExpectKeyword(Keyword.JOIN);
                     joinAction = constraint => new JoinOperator.FullOuter(constraint);
                 }
+                else if (peekKeyword == Keyword.STRAIGHT_JOIN)
+                {
+                    NextToken();  // consume STRAIGHT_JOIN
+                    joinAction = constraint => new JoinOperator.StraightJoin(constraint);
+                }
                 else if (peekKeyword == Keyword.OUTER)
                 {
                     throw Expected("LEFT, RIGHT, or FULL", PeekToken());
@@ -5596,6 +5601,22 @@ public partial class Parser
         if (nextToken is Word { Keyword: Keyword.XMLTABLE } && PeekNthTokenIs<LeftParen>(1))
         {
             return ParseXmlTable();
+        }
+
+        // SEMANTIC_VIEW
+        if (nextToken is Word { Keyword: Keyword.SEMANTIC_VIEW } && PeekNthTokenIs<LeftParen>(1))
+        {
+            NextToken(); // consume SEMANTIC_VIEW
+            ExpectToken<LeftParen>();
+            var semanticName = ParseObjectName();
+            Sequence<FunctionArg>? args = null;
+            if (ConsumeToken<Comma>())
+            {
+                args = ParseCommaSeparated(ParseFunctionArgs);
+            }
+            ExpectToken<RightParen>();
+            var alias = MaybeParseTableAlias();
+            return new TableFactor.SemanticView(semanticName, args ?? new Sequence<FunctionArg>()) { Alias = alias };
         }
 
         var name = ParseObjectNameWithClause(true);

@@ -1383,16 +1383,6 @@ public abstract record Expression : IWriteSql, IElement
         }
     }
     /// <summary>
-    /// Lambda function expression
-    /// </summary>
-    public record Lambda(LambdaFunction LambdaFunction) : Expression
-    {
-        public override void ToSql(SqlTextWriter writer)
-        {
-            writer.WriteSql($"{LambdaFunction}");
-        }
-    }
-    /// <summary>
     /// NOT NULL expression (without IS)
     /// </summary>
     public record NotNull(Expression Expression) : Expression

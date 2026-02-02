@@ -816,6 +816,27 @@ public partial class Parser
                 case Keyword.NOTNULL:
                     return new NotNull(expr);
 
+                case Keyword.OVERLAPS:
+                    {
+                        // OVERLAPS takes two row expressions: (a, b) OVERLAPS (c, d)
+                        // The left expression is already parsed, now parse the right side
+                        var right = ParseExpr();
+                        // Extract sequences from both sides (they should be tuple/row expressions)
+                        var leftSequence = ExtractOverlapExpressions(expr);
+                        var rightSequence = ExtractOverlapExpressions(right);
+                        return new Overlaps(leftSequence, rightSequence);
+
+                        Sequence<Expression> ExtractOverlapExpressions(Expression e)
+                        {
+                            return e switch
+                            {
+                                Nested n => ExtractOverlapExpressions(n.Expression),
+                                Tuple t => t.Expressions,
+                                _ => [e]
+                            };
+                        }
+                    }
+
                 case Keyword.NOT or
                     Keyword.IN or
                     Keyword.BETWEEN or

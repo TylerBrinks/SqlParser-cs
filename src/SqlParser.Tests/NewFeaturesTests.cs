@@ -509,4 +509,53 @@ public class NewFeaturesTests : ParserTestBase
     }
 
     #endregion
+
+    #region Additional Expression Tests
+
+    [Fact]
+    public void Parse_Overlaps_Expression()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        var sql = "SELECT (start1, end1) OVERLAPS (start2, end2)";
+        var select = VerifiedOnlySelect(sql);
+        var expr = select.Projection[0].AsExpr();
+        Assert.IsType<Overlaps>(expr);
+
+        var overlaps = (Overlaps)expr;
+        Assert.Equal(2, overlaps.Left.Count);
+        Assert.Equal(2, overlaps.Right.Count);
+    }
+
+    #endregion
+
+    #region Additional Table Factor Tests
+
+    [Fact]
+    public void Parse_SemanticView()
+    {
+        DefaultDialects = [new GenericDialect()];
+
+        var sql = "SELECT * FROM SEMANTIC_VIEW(my_view)";
+        var select = VerifiedOnlySelect(sql);
+        var from = select.From!.First();
+        Assert.IsType<TableFactor.SemanticView>(from.Relation);
+
+        var semanticView = (TableFactor.SemanticView)from.Relation!;
+        Assert.Equal("my_view", semanticView.Name.ToString());
+    }
+
+    [Fact]
+    public void Parse_SemanticView_With_Args()
+    {
+        DefaultDialects = [new GenericDialect()];
+
+        var sql = "SELECT * FROM SEMANTIC_VIEW(my_view, arg1, arg2)";
+        var select = VerifiedOnlySelect(sql);
+        var from = select.From!.First();
+        var semanticView = (TableFactor.SemanticView)from.Relation!;
+        Assert.Equal(2, semanticView.Args.Count);
+    }
+
+    #endregion
 }
