@@ -875,10 +875,14 @@ public partial class Parser
         {
             return ParseDropUser();
         }
+        else if (ParseKeyword(Keyword.OPERATOR))
+        {
+            return ParseDropOperator();
+        }
 
         if (objectType == null)
         {
-            throw Expected("TABLE, VIEW, INDEX, ROLE, SCHEMA, DATABASE, FUNCTION, PROCEDURE, STAGE, TRIGGER, SECRET, SEQUENCE, TYPE, DOMAIN, CONNECTOR, or USER after DROP", PeekToken());
+            throw Expected("TABLE, VIEW, INDEX, ROLE, SCHEMA, DATABASE, FUNCTION, PROCEDURE, STAGE, TRIGGER, SECRET, SEQUENCE, TYPE, DOMAIN, CONNECTOR, USER, or OPERATOR after DROP", PeekToken());
         }
 
         // Many dialects support the non-standard `IF EXISTS` clause and allow
@@ -1444,7 +1448,7 @@ public partial class Parser
 
     public Statement ParseAlter()
     {
-        var objectType = ExpectOneOfKeywords(Keyword.VIEW, Keyword.TABLE, Keyword.INDEX, Keyword.ROLE, Keyword.POLICY, Keyword.SCHEMA, Keyword.CONNECTOR);
+        var objectType = ExpectOneOfKeywords(Keyword.VIEW, Keyword.TABLE, Keyword.INDEX, Keyword.ROLE, Keyword.POLICY, Keyword.SCHEMA, Keyword.CONNECTOR, Keyword.USER);
 
         switch (objectType)
         {
@@ -1453,6 +1457,9 @@ public partial class Parser
 
             case Keyword.CONNECTOR:
                 return ParseAlterConnector();
+
+            case Keyword.USER:
+                return ParseAlterUser();
             case Keyword.VIEW:
                 {
                     var name = ParseObjectName();
@@ -2580,6 +2587,93 @@ public partial class Parser
     }
 
     /// <summary>
+    /// Parse DROP OPERATOR variants
+    /// DROP OPERATOR CLASS [ IF EXISTS ] name USING index_method [ CASCADE | RESTRICT ]
+    /// DROP OPERATOR FAMILY [ IF EXISTS ] name USING index_method [ CASCADE | RESTRICT ]
+    /// DROP OPERATOR [ IF EXISTS ] name ( { left_type | NONE } , right_type ) [, ...] [ CASCADE | RESTRICT ]
+    /// </summary>
+    public Statement ParseDropOperator()
+    {
+        // Check for CLASS or FAMILY keywords
+        if (ParseKeyword(Keyword.CLASS))
+        {
+            var ifExists = ParseIfExists();
+            var name = ParseObjectName();
+            ExpectKeyword(Keyword.USING);
+            var indexMethod = ParseIdentifier();
+
+            DropBehavior? dropBehavior = null;
+            if (ParseKeyword(Keyword.CASCADE))
+            {
+                dropBehavior = DropBehavior.Cascade;
+            }
+            else if (ParseKeyword(Keyword.RESTRICT))
+            {
+                dropBehavior = DropBehavior.Restrict;
+            }
+
+            return new DropOperatorClass(name, indexMethod, ifExists, dropBehavior);
+        }
+
+        if (ParseKeyword(Keyword.FAMILY))
+        {
+            var ifExists = ParseIfExists();
+            var name = ParseObjectName();
+            ExpectKeyword(Keyword.USING);
+            var indexMethod = ParseIdentifier();
+
+            DropBehavior? dropBehavior = null;
+            if (ParseKeyword(Keyword.CASCADE))
+            {
+                dropBehavior = DropBehavior.Cascade;
+            }
+            else if (ParseKeyword(Keyword.RESTRICT))
+            {
+                dropBehavior = DropBehavior.Restrict;
+            }
+
+            return new DropOperatorFamily(name, indexMethod, ifExists, dropBehavior);
+        }
+
+        // DROP OPERATOR name ( ... )
+        var opIfExists = ParseIfExists();
+        var operators = ParseCommaSeparated(ParseDropOperatorInfo);
+
+        DropBehavior? opDropBehavior = null;
+        if (ParseKeyword(Keyword.CASCADE))
+        {
+            opDropBehavior = DropBehavior.Cascade;
+        }
+        else if (ParseKeyword(Keyword.RESTRICT))
+        {
+            opDropBehavior = DropBehavior.Restrict;
+        }
+
+        return new DropOperator(operators, opIfExists, opDropBehavior);
+    }
+
+    /// <summary>
+    /// Parse single operator info: name ( { left_type | NONE } , right_type )
+    /// </summary>
+    public DropOperatorInfo ParseDropOperatorInfo()
+    {
+        var name = ParseObjectName();
+        ExpectToken<LeftParen>();
+
+        DataType? leftType = null;
+        if (!ParseKeyword(Keyword.NONE))
+        {
+            leftType = ParseDataType();
+        }
+
+        ExpectToken<Comma>();
+        var rightType = ParseDataType();
+        ExpectToken<RightParen>();
+
+        return new DropOperatorInfo(name, leftType, rightType);
+    }
+
+    /// <summary>
     /// Parse CREATE CONNECTOR statement
     /// </summary>
     public Statement ParseCreateConnector()
@@ -2700,6 +2794,48 @@ public partial class Parser
         }
 
         return new AlterSchema(name, operation);
+    }
+
+    /// <summary>
+    /// Parse ALTER USER statement
+    /// </summary>
+    public Statement ParseAlterUser()
+    {
+        var name = ParseObjectName();
+        AlterUserOperation operation;
+
+        if (ParseKeywordSequence(Keyword.RENAME, Keyword.TO))
+        {
+            var newName = ParseObjectName();
+            operation = new AlterUserOperation.RenameTo(newName);
+        }
+        else if (ParseKeyword(Keyword.SET))
+        {
+            var options = ParseCommaSeparated(ParseKeyValueOption);
+            operation = new AlterUserOperation.Set(options);
+        }
+        else if (ParseKeyword(Keyword.RESET))
+        {
+            var options = ParseCommaSeparated(ParseIdentifier);
+            operation = new AlterUserOperation.Reset(options);
+        }
+        else
+        {
+            throw Expected("SET, RESET, or RENAME TO", PeekToken());
+        }
+
+        return new AlterUser(name, operation);
+    }
+
+    /// <summary>
+    /// Parse key-value option (KEY = VALUE)
+    /// </summary>
+    public KeyValueOption ParseKeyValueOption()
+    {
+        var key = ParseIdentifier();
+        ExpectToken<Equal>();
+        var value = ParseExpr();
+        return new KeyValueOption(key, value);
     }
 
     /// <summary>

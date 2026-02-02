@@ -39,6 +39,16 @@ public abstract record Statement : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// ALTER USER statement - Snowflake specific
+    /// </summary>
+    public record AlterUser(ObjectName Name, AlterUserOperation Operation) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"ALTER USER {Name} {Operation}");
+        }
+    }
+    /// <summary>
     /// Alter table statement
     /// </summary>
     public record AlterTable(
@@ -2550,6 +2560,75 @@ public abstract record Statement : IWriteSql, IElement
             }
 
             writer.WriteSql($"{Name}");
+
+            if (DropBehavior != null)
+            {
+                writer.WriteSql($" {DropBehavior}");
+            }
+        }
+    }
+    /// <summary>
+    /// DROP OPERATOR statement - PostgreSQL
+    /// DROP OPERATOR [ IF EXISTS ] name ( { left_type | NONE } , right_type ) [, ...] [ CASCADE | RESTRICT ]
+    /// </summary>
+    public record DropOperator(Sequence<DropOperatorInfo> Operators, bool IfExists, DropBehavior? DropBehavior) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("DROP OPERATOR ");
+
+            if (IfExists)
+            {
+                writer.Write("IF EXISTS ");
+            }
+
+            writer.WriteSql($"{Operators.ToSqlDelimited()}");
+
+            if (DropBehavior != null)
+            {
+                writer.WriteSql($" {DropBehavior}");
+            }
+        }
+    }
+    /// <summary>
+    /// DROP OPERATOR CLASS statement - PostgreSQL
+    /// DROP OPERATOR CLASS [ IF EXISTS ] name USING index_method [ CASCADE | RESTRICT ]
+    /// </summary>
+    public record DropOperatorClass(ObjectName Name, Ident IndexMethod, bool IfExists, DropBehavior? DropBehavior) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("DROP OPERATOR CLASS ");
+
+            if (IfExists)
+            {
+                writer.Write("IF EXISTS ");
+            }
+
+            writer.WriteSql($"{Name} USING {IndexMethod}");
+
+            if (DropBehavior != null)
+            {
+                writer.WriteSql($" {DropBehavior}");
+            }
+        }
+    }
+    /// <summary>
+    /// DROP OPERATOR FAMILY statement - PostgreSQL
+    /// DROP OPERATOR FAMILY [ IF EXISTS ] name USING index_method [ CASCADE | RESTRICT ]
+    /// </summary>
+    public record DropOperatorFamily(ObjectName Name, Ident IndexMethod, bool IfExists, DropBehavior? DropBehavior) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("DROP OPERATOR FAMILY ");
+
+            if (IfExists)
+            {
+                writer.Write("IF EXISTS ");
+            }
+
+            writer.WriteSql($"{Name} USING {IndexMethod}");
 
             if (DropBehavior != null)
             {

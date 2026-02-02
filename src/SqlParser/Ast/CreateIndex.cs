@@ -2,7 +2,17 @@
 
 public record CreateIndex([property: Visit(0)] ObjectName? Name, [property: Visit(1)] ObjectName TableName) : IWriteSql, IIfNotExists
 {
-    public Ident? Using { get; init; }
+    /// <summary>
+    /// Index type (USING clause)
+    /// </summary>
+    public IndexType? IndexType { get; init; }
+    /// <summary>
+    /// Custom index type name when IndexType is Custom
+    /// </summary>
+    public Ident? CustomIndexTypeName { get; init; }
+    /// <summary>
+    /// Columns for the index
+    /// </summary>
     [Visit(2)] public Sequence<OrderByExpression>? Columns { get; init; }
     public bool Unique { get; init; }
     public bool IfNotExists { get; init; }
@@ -27,9 +37,27 @@ public record CreateIndex([property: Visit(0)] ObjectName? Name, [property: Visi
 
         writer.WriteSql($"ON {TableName}");
 
-        if (Using != null)
+        if (IndexType != null && IndexType != Ast.IndexType.None)
         {
-            writer.WriteSql($" USING {Using}");
+            if (IndexType == Ast.IndexType.Custom && CustomIndexTypeName != null)
+            {
+                writer.WriteSql($" USING {CustomIndexTypeName}");
+            }
+            else
+            {
+                var indexTypeName = IndexType switch
+                {
+                    Ast.IndexType.BTree => "BTREE",
+                    Ast.IndexType.Hash => "HASH",
+                    Ast.IndexType.GIN => "GIN",
+                    Ast.IndexType.GiST => "GIST",
+                    Ast.IndexType.SPGiST => "SPGIST",
+                    Ast.IndexType.BRIN => "BRIN",
+                    Ast.IndexType.Bloom => "BLOOM",
+                    _ => IndexType.ToString()!.ToUpperInvariant()
+                };
+                writer.Write($" USING {indexTypeName}");
+            }
         }
 
         writer.Write($"({Columns.ToSqlDelimited(Symbols.Comma)})");

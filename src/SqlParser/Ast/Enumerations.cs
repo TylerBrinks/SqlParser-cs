@@ -365,7 +365,19 @@ public enum IndexType
 {
     None,
     BTree,
-    Hash
+    Hash,
+    // PostgreSQL GIN index
+    GIN,
+    // PostgreSQL GiST index
+    GiST,
+    // PostgreSQL SP-GiST index
+    SPGiST,
+    // PostgreSQL BRIN index
+    BRIN,
+    // PostgreSQL Bloom index
+    Bloom,
+    // Custom index type with custom name
+    Custom
 }
 
 public enum IsLateral
@@ -666,6 +678,8 @@ public enum UnaryOperator
     Minus,
     // Not, e.g. `NOT(true)`
     Not,
+    // Bitwise Not, e.g. ~9 (cross-dialect)
+    BitwiseNot,
     // Bitwise Not, e.g. ~9 (PostgreSQL-specific)
     PGBitwiseNot,
     // Square root, e.g. |/9 (PostgreSQL-specific)
@@ -708,4 +722,14 @@ public enum DropBehavior
 {
     Cascade,
     Restrict
+}
+
+/// <summary>
+/// MATCH type for foreign key constraints
+/// </summary>
+public enum MatchType
+{
+    Full,
+    Partial,
+    Simple
 }

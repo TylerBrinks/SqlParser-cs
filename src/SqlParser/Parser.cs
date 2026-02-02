@@ -1708,7 +1708,33 @@ public partial class Parser
         }
 
         var tableName = ParseObjectName();
-        var @using = ParseInit(ParseKeyword(Keyword.USING), ParseIdentifier);
+
+        IndexType? indexType = null;
+        Ident? customIndexTypeName = null;
+
+        if (ParseKeyword(Keyword.USING))
+        {
+            var typeIdent = ParseIdentifier();
+            var typeName = typeIdent.Value.ToUpperInvariant();
+
+            indexType = typeName switch
+            {
+                "BTREE" => IndexType.BTree,
+                "HASH" => IndexType.Hash,
+                "GIN" => IndexType.GIN,
+                "GIST" => IndexType.GiST,
+                "SPGIST" => IndexType.SPGiST,
+                "BRIN" => IndexType.BRIN,
+                "BLOOM" => IndexType.Bloom,
+                _ => IndexType.Custom
+            };
+
+            if (indexType == IndexType.Custom)
+            {
+                customIndexTypeName = typeIdent;
+            }
+        }
+
         var columns = ExpectParens(() => ParseCommaSeparated(ParseOrderByExpr));
 
         var include = ParseInit(ParseKeyword(Keyword.INCLUDE), () =>
@@ -1733,7 +1759,8 @@ public partial class Parser
 
         return new Ast.CreateIndex(indexName, tableName)
         {
-            Using = @using,
+            IndexType = indexType,
+            CustomIndexTypeName = customIndexTypeName,
             Columns = columns,
             Unique = unique,
             IfNotExists = ifNotExists,
@@ -2318,6 +2345,7 @@ public partial class Parser
             var referredColumns = ParseParenthesizedColumnList(IsOptional.Optional, false);
             var onDelete = ReferentialAction.None;
             var onUpdate = ReferentialAction.None;
+            MatchType? matchType = null;
 
             while (true)
             {
@@ -2328,6 +2356,16 @@ public partial class Parser
                 else if (onUpdate == ReferentialAction.None && ParseKeywordSequence(Keyword.ON, Keyword.UPDATE))
                 {
                     onUpdate = ParseReferentialAction();
+                }
+                else if (matchType == null && ParseKeyword(Keyword.MATCH))
+                {
+                    matchType = ParseOneOfKeywords(Keyword.FULL, Keyword.PARTIAL, Keyword.SIMPLE) switch
+                    {
+                        Keyword.FULL => MatchType.Full,
+                        Keyword.PARTIAL => MatchType.Partial,
+                        Keyword.SIMPLE => MatchType.Simple,
+                        _ => throw Expected("FULL, PARTIAL, or SIMPLE", PeekToken())
+                    };
                 }
                 else
                 {
@@ -2343,7 +2381,8 @@ public partial class Parser
                 onDelete,
                 onUpdate)
             {
-                Characteristics = characteristics
+                Characteristics = characteristics,
+                Match = matchType
             };
         }
 
@@ -2416,6 +2455,12 @@ public partial class Parser
         if (_dialect is SQLiteDialect or GenericDialect && ParseKeywordSequence(Keyword.ON, Keyword.CONFLICT))
         {
             return new ColumnOption.OnConflict(ExpectOneOfKeywords(Keyword.ROLLBACK, Keyword.ABORT, Keyword.FAIL, Keyword.IGNORE, Keyword.REPLACE));
+        }
+
+        // MySQL INVISIBLE column option
+        if (_dialect is MySqlDialect or GenericDialect && ParseKeyword(Keyword.INVISIBLE))
+        {
+            return new ColumnOption.Invisible();
         }
 
         return null;

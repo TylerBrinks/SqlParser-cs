@@ -558,4 +558,229 @@ public class NewFeaturesTests : ParserTestBase
     }
 
     #endregion
+
+    #region v0.60.0 Feature Tests
+
+    [Fact]
+    public void Parse_Invisible_Column_Option()
+    {
+        DefaultDialects = [new GenericDialect(), new MySqlDialect()];
+
+        // Create table with INVISIBLE column
+        var sql = "CREATE TABLE t (id INT, secret VARCHAR(100) INVISIBLE)";
+        var statement = VerifiedStatement(sql);
+        var create = (CreateTable)statement;
+        var columns = create.Element.Columns;
+
+        Assert.Equal(2, columns.Count);
+        var secretCol = columns[1];
+        Assert.Contains(secretCol.Options, opt => opt.Option is ColumnOption.Invisible);
+    }
+
+    [Fact]
+    public void Parse_Foreign_Key_Match_Type()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        // MATCH FULL
+        var sql = "CREATE TABLE t (id INT REFERENCES parent(id) MATCH FULL)";
+        var statement = VerifiedStatement(sql);
+        var create = (CreateTable)statement;
+        var col = create.Element.Columns[0];
+        var fk = col.Options.First(o => o.Option is ColumnOption.ForeignKey).Option as ColumnOption.ForeignKey;
+        Assert.NotNull(fk);
+        Assert.Equal(MatchType.Full, fk!.Match);
+
+        // MATCH PARTIAL
+        sql = "CREATE TABLE t (id INT REFERENCES parent(id) MATCH PARTIAL)";
+        statement = VerifiedStatement(sql);
+        create = (CreateTable)statement;
+        col = create.Element.Columns[0];
+        fk = col.Options.First(o => o.Option is ColumnOption.ForeignKey).Option as ColumnOption.ForeignKey;
+        Assert.Equal(MatchType.Partial, fk!.Match);
+
+        // MATCH SIMPLE
+        sql = "CREATE TABLE t (id INT REFERENCES parent(id) MATCH SIMPLE)";
+        statement = VerifiedStatement(sql);
+        create = (CreateTable)statement;
+        col = create.Element.Columns[0];
+        fk = col.Options.First(o => o.Option is ColumnOption.ForeignKey).Option as ColumnOption.ForeignKey;
+        Assert.Equal(MatchType.Simple, fk!.Match);
+    }
+
+    [Fact]
+    public void Parse_Index_Types()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        // GIN index
+        var sql = "CREATE INDEX idx ON t USING GIN(col)";
+        var statement = VerifiedStatement(sql);
+        var createIndex = (CreateIndex)statement;
+        Assert.Equal(IndexType.GIN, createIndex.Element.IndexType);
+
+        // GiST index
+        sql = "CREATE INDEX idx ON t USING GIST(col)";
+        statement = VerifiedStatement(sql);
+        createIndex = (CreateIndex)statement;
+        Assert.Equal(IndexType.GiST, createIndex.Element.IndexType);
+
+        // BRIN index
+        sql = "CREATE INDEX idx ON t USING BRIN(col)";
+        statement = VerifiedStatement(sql);
+        createIndex = (CreateIndex)statement;
+        Assert.Equal(IndexType.BRIN, createIndex.Element.IndexType);
+
+        // Custom index type
+        sql = "CREATE INDEX idx ON t USING custom_type(col)";
+        statement = VerifiedStatement(sql);
+        createIndex = (CreateIndex)statement;
+        Assert.Equal(IndexType.Custom, createIndex.Element.IndexType);
+        Assert.NotNull(createIndex.Element.CustomIndexTypeName);
+    }
+
+    [Fact]
+    public void Parse_Drop_Operator_Statements()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        // DROP OPERATOR CLASS
+        var sql = "DROP OPERATOR CLASS my_opclass USING btree";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<DropOperatorClass>(statement);
+        var dropOpClass = (DropOperatorClass)statement;
+        Assert.Equal("my_opclass", dropOpClass.Name.ToString());
+        Assert.Equal("btree", dropOpClass.IndexMethod.Value);
+
+        // DROP OPERATOR CLASS IF EXISTS CASCADE
+        sql = "DROP OPERATOR CLASS IF EXISTS my_opclass USING btree CASCADE";
+        statement = VerifiedStatement(sql);
+        dropOpClass = (DropOperatorClass)statement;
+        Assert.True(dropOpClass.IfExists);
+        Assert.Equal(DropBehavior.Cascade, dropOpClass.DropBehavior);
+
+        // DROP OPERATOR FAMILY
+        sql = "DROP OPERATOR FAMILY my_opfamily USING hash";
+        statement = VerifiedStatement(sql);
+        Assert.IsType<DropOperatorFamily>(statement);
+        var dropOpFamily = (DropOperatorFamily)statement;
+        Assert.Equal("my_opfamily", dropOpFamily.Name.ToString());
+        Assert.Equal("hash", dropOpFamily.IndexMethod.Value);
+    }
+
+    [Fact]
+    public void Parse_Alter_User()
+    {
+        DefaultDialects = [new GenericDialect(), new SnowflakeDialect()];
+
+        // ALTER USER SET
+        var sql = "ALTER USER test_user SET PASSWORD = 'new_pass'";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<AlterUser>(statement);
+        var alterUser = (AlterUser)statement;
+        Assert.Equal("test_user", alterUser.Name.ToString());
+        Assert.IsType<AlterUserOperation.Set>(alterUser.Operation);
+
+        // ALTER USER RENAME
+        sql = "ALTER USER old_user RENAME TO new_user";
+        statement = VerifiedStatement(sql);
+        alterUser = (AlterUser)statement;
+        Assert.IsType<AlterUserOperation.RenameTo>(alterUser.Operation);
+    }
+
+    [Fact]
+    public void Test_Dynamic_Table_Ast()
+    {
+        // Test that dynamic table AST types work correctly
+        var targetLag = new DynamicTableLag.IntervalLag("1 minute");
+        var writer = new SqlTextWriter();
+        targetLag.ToSql(writer);
+        Assert.Equal("TARGET_LAG = '1 minute'", writer.ToString());
+
+        var downstream = new DynamicTableLag.Downstream();
+        writer = new SqlTextWriter();
+        downstream.ToSql(writer);
+        Assert.Equal("TARGET_LAG = DOWNSTREAM", writer.ToString());
+    }
+
+    [Fact]
+    public void Test_Oracle_Dialect()
+    {
+        // Test that OracleDialect can be instantiated and used
+        var dialect = new OracleDialect();
+
+        Assert.True(dialect.SupportsConnectBy);
+        Assert.True(dialect.IsIdentifierStart('a'));
+        Assert.True(dialect.IsIdentifierPart('1'));
+        Assert.True(dialect.IsIdentifierPart('_'));
+        Assert.True(dialect.IsIdentifierPart('$'));
+        Assert.False(dialect.IsIdentifierStart('1'));
+
+        // Parse a simple query
+        var parser = new Parser();
+        var sql = "SELECT * FROM dual";
+        var statements = parser.ParseSql(sql, dialect);
+        Assert.Single(statements);
+    }
+
+    [Fact]
+    public void Test_Index_Column_With_Operator_Class()
+    {
+        // This tests the IndexColumn struct can be used
+        var indexCol = new IndexColumn(new Identifier("my_col"))
+        {
+            OperatorClass = new Ident("text_pattern_ops"),
+            Asc = true,
+            NullsFirst = false
+        };
+
+        var writer = new SqlTextWriter();
+        indexCol.ToSql(writer);
+        var result = writer.ToString();
+
+        Assert.Contains("my_col", result);
+        Assert.Contains("text_pattern_ops", result);
+        Assert.Contains("ASC", result);
+        Assert.Contains("NULLS LAST", result);
+    }
+
+    [Fact]
+    public void Test_Drop_Operator_Info_Ast()
+    {
+        // Test DropOperatorInfo AST serialization
+        var info = new DropOperatorInfo(
+            new ObjectName("my_operator"),
+            new DataType.Int(),
+            new DataType.Text()
+        );
+
+        var writer = new SqlTextWriter();
+        info.ToSql(writer);
+        var result = writer.ToString();
+
+        Assert.Contains("my_operator", result);
+        Assert.Contains("INT", result);
+        Assert.Contains("TEXT", result);
+    }
+
+    [Fact]
+    public void Test_Procedure_Param_With_Default()
+    {
+        // Test that ProcedureParam with default value works
+        var param = new ProcedureParam(new Ident("param1"), new DataType.Int())
+        {
+            Default = new Expression.LiteralValue(new Value.Number("42"))
+        };
+
+        var writer = new SqlTextWriter();
+        param.ToSql(writer);
+        var result = writer.ToString();
+
+        Assert.Contains("param1", result);
+        Assert.Contains("INT", result);
+        Assert.Contains("DEFAULT", result);
+        Assert.Contains("42", result);
+    }
+
+    #endregion
 }

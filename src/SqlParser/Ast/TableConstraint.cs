@@ -52,11 +52,17 @@ public abstract record TableConstraint : IWriteSql, IElement
         public ReferentialAction OnDelete { get; init; }
         public ReferentialAction OnUpdate { get; init; }
         public ConstraintCharacteristics? Characteristics { get; init; }
+        public MatchType? Match { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
             writer.WriteConstraint(Name);
             writer.WriteSql($"FOREIGN KEY ({Columns}) REFERENCES {ForeignTable}({ReferredColumns})");
+
+            if (Match != null)
+            {
+                writer.WriteSql($" MATCH {Match}");
+            }
 
             if (OnDelete != ReferentialAction.None)
             {
