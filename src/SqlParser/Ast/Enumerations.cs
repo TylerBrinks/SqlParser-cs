@@ -689,3 +689,14 @@ public enum WindowFrameUnit
     Range,
     Groups
 }
+
+/// <summary>
+/// Unicode normalization form for IS NORMALIZED expression
+/// </summary>
+public enum NormalForm
+{
+    NFC,
+    NFD,
+    NFKC,
+    NFKD
+}

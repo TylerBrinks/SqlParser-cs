@@ -2503,6 +2503,167 @@ public abstract record Statement : IWriteSql, IElement
             writer.WriteSql($"{Name}");
         }
     }
+    /// <summary>
+    /// CREATE DOMAIN - PostgreSQL specific
+    /// </summary>
+    public record CreateDomain(ObjectName Name, DataType DataType) : Statement
+    {
+        public Expression? Default { get; init; }
+        public Sequence<TableConstraint>? Constraints { get; init; }
+        public ObjectName? CollationName { get; init; }
+
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"CREATE DOMAIN {Name} AS {DataType}");
+
+            if (CollationName != null)
+            {
+                writer.WriteSql($" COLLATE {CollationName}");
+            }
+
+            if (Default != null)
+            {
+                writer.WriteSql($" DEFAULT {Default}");
+            }
+
+            if (Constraints.SafeAny())
+            {
+                foreach (var constraint in Constraints!)
+                {
+                    writer.WriteSql($" {constraint}");
+                }
+            }
+        }
+    }
+    /// <summary>
+    /// DROP DOMAIN - PostgreSQL specific
+    /// </summary>
+    public record DropDomain(ObjectName Name, bool IfExists, DropBehavior? DropBehavior) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("DROP DOMAIN ");
+
+            if (IfExists)
+            {
+                writer.Write("IF EXISTS ");
+            }
+
+            writer.WriteSql($"{Name}");
+
+            if (DropBehavior != null)
+            {
+                writer.WriteSql($" {DropBehavior}");
+            }
+        }
+    }
+    /// <summary>
+    /// RAISE statement - PostgreSQL/Snowflake
+    /// </summary>
+    public record Raise(RaiseStatement RaiseStatement) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{RaiseStatement}");
+        }
+    }
+    /// <summary>
+    /// RAISERROR statement - SQL Server
+    /// </summary>
+    public record RaiseError(RaiseErrorStatement RaiseErrorStatement) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{RaiseErrorStatement}");
+        }
+    }
+    /// <summary>
+    /// PRINT statement - SQL Server
+    /// </summary>
+    public record Print(PrintStatement PrintStatement) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{PrintStatement}");
+        }
+    }
+    /// <summary>
+    /// ALTER SCHEMA statement
+    /// </summary>
+    public record AlterSchema(ObjectName Name, AlterSchemaOperation Operation) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"ALTER SCHEMA {Name} {Operation}");
+        }
+    }
+    /// <summary>
+    /// DENY - SQL Server specific
+    /// </summary>
+    public record Deny(DenyStatement DenyStatement) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{DenyStatement}");
+        }
+    }
+    /// <summary>
+    /// SET SESSION AUTHORIZATION statement
+    /// </summary>
+    public record SetSessionAuthorization(SetSessionAuthorizationStatement Auth) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{Auth}");
+        }
+    }
+    /// <summary>
+    /// RESET statement
+    /// </summary>
+    public record Reset(ResetStatement ResetStatement) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{ResetStatement}");
+        }
+    }
+    /// <summary>
+    /// DROP USER statement
+    /// </summary>
+    public record DropUser(Sequence<Ident> Names, bool IfExists) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("DROP USER ");
+
+            if (IfExists)
+            {
+                writer.Write("IF EXISTS ");
+            }
+
+            writer.WriteDelimited(Names, ", ");
+        }
+    }
+    /// <summary>
+    /// CREATE SERVER statement - PostgreSQL
+    /// </summary>
+    public record CreateServer(CreateServerStatement ServerStatement) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{ServerStatement}");
+        }
+    }
+    /// <summary>
+    /// VACUUM statement - PostgreSQL/Redshift
+    /// </summary>
+    public record Vacuum(VacuumStatement VacuumStatement) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{VacuumStatement}");
+        }
+    }
 
     public abstract void ToSql(SqlTextWriter writer);
 

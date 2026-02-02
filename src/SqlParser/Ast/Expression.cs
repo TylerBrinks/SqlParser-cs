@@ -1340,6 +1340,68 @@ public abstract record Expression : IWriteSql, IElement
             writer.Write('*');
         }
     }
+    /// <summary>
+    /// IS [NOT] [form] NORMALIZED expression
+    /// </summary>
+    public record IsNormalized(Expression Expression, bool Negated, NormalForm? Form = null) : Expression, INegated
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            var negated = Negated ? "NOT " : null;
+            var form = Form != null ? $"{Form} " : null;
+            writer.WriteSql($"{Expression} IS {negated}{form}NORMALIZED");
+        }
+    }
+    /// <summary>
+    /// MySQL MEMBER OF expression
+    /// </summary>
+    public record MemberOf(Expression Member, Expression Array) : Expression
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{Member} MEMBER OF({Array})");
+        }
+    }
+    /// <summary>
+    /// OVERLAPS predicate
+    /// </summary>
+    public record Overlaps(Sequence<Expression> Left, Sequence<Expression> Right) : Expression
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"({Left.ToSqlDelimited()}) OVERLAPS ({Right.ToSqlDelimited()})");
+        }
+    }
+    /// <summary>
+    /// Snowflake CONNECT_BY_ROOT expression
+    /// </summary>
+    public record ConnectByRoot(Expression Expression) : Expression
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"CONNECT_BY_ROOT {Expression}");
+        }
+    }
+    /// <summary>
+    /// Lambda function expression
+    /// </summary>
+    public record Lambda(LambdaFunction LambdaFunction) : Expression
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{LambdaFunction}");
+        }
+    }
+    /// <summary>
+    /// NOT NULL expression (without IS)
+    /// </summary>
+    public record NotNull(Expression Expression) : Expression
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{Expression} NOTNULL");
+        }
+    }
 
     public virtual void ToSql(SqlTextWriter writer) { }
 
