@@ -625,11 +625,23 @@ public class NewFeaturesTests : ParserTestBase
         createIndex = (CreateIndex)statement;
         Assert.Equal(IndexType.GiST, createIndex.Element.IndexType);
 
+        // SP-GiST index
+        sql = "CREATE INDEX idx ON t USING SPGIST(col)";
+        statement = VerifiedStatement(sql);
+        createIndex = (CreateIndex)statement;
+        Assert.Equal(IndexType.SPGiST, createIndex.Element.IndexType);
+
         // BRIN index
         sql = "CREATE INDEX idx ON t USING BRIN(col)";
         statement = VerifiedStatement(sql);
         createIndex = (CreateIndex)statement;
         Assert.Equal(IndexType.BRIN, createIndex.Element.IndexType);
+
+        // Bloom index
+        sql = "CREATE INDEX idx ON t USING BLOOM(col)";
+        statement = VerifiedStatement(sql);
+        createIndex = (CreateIndex)statement;
+        Assert.Equal(IndexType.Bloom, createIndex.Element.IndexType);
 
         // Custom index type
         sql = "CREATE INDEX idx ON t USING custom_type(col)";
@@ -644,9 +656,33 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        // DROP OPERATOR CLASS
-        var sql = "DROP OPERATOR CLASS my_opclass USING btree";
+        // DROP OPERATOR (standalone)
+        var sql = "DROP OPERATOR @(NONE, INT)";
         var statement = VerifiedStatement(sql);
+        Assert.IsType<DropOperator>(statement);
+        var dropOp = (DropOperator)statement;
+        Assert.Single(dropOp.Operators);
+        Assert.Null(dropOp.Operators[0].LeftType);
+        Assert.IsType<DataType.Int>(dropOp.Operators[0].RightType);
+
+        // DROP OPERATOR with both types
+        sql = "DROP OPERATOR +(INT, INT)";
+        statement = VerifiedStatement(sql);
+        dropOp = (DropOperator)statement;
+        Assert.NotNull(dropOp.Operators[0].LeftType);
+        Assert.IsType<DataType.Int>(dropOp.Operators[0].LeftType);
+        Assert.IsType<DataType.Int>(dropOp.Operators[0].RightType);
+
+        // DROP OPERATOR IF EXISTS CASCADE
+        sql = "DROP OPERATOR IF EXISTS @(NONE, INT) CASCADE";
+        statement = VerifiedStatement(sql);
+        dropOp = (DropOperator)statement;
+        Assert.True(dropOp.IfExists);
+        Assert.Equal(DropBehavior.Cascade, dropOp.DropBehavior);
+
+        // DROP OPERATOR CLASS
+        sql = "DROP OPERATOR CLASS my_opclass USING btree";
+        statement = VerifiedStatement(sql);
         Assert.IsType<DropOperatorClass>(statement);
         var dropOpClass = (DropOperatorClass)statement;
         Assert.Equal("my_opclass", dropOpClass.Name.ToString());
@@ -666,6 +702,13 @@ public class NewFeaturesTests : ParserTestBase
         var dropOpFamily = (DropOperatorFamily)statement;
         Assert.Equal("my_opfamily", dropOpFamily.Name.ToString());
         Assert.Equal("hash", dropOpFamily.IndexMethod.Value);
+
+        // DROP OPERATOR FAMILY IF EXISTS RESTRICT
+        sql = "DROP OPERATOR FAMILY IF EXISTS my_opfamily USING hash RESTRICT";
+        statement = VerifiedStatement(sql);
+        dropOpFamily = (DropOperatorFamily)statement;
+        Assert.True(dropOpFamily.IfExists);
+        Assert.Equal(DropBehavior.Restrict, dropOpFamily.DropBehavior);
     }
 
     [Fact]
@@ -780,6 +823,71 @@ public class NewFeaturesTests : ParserTestBase
         Assert.Contains("INT", result);
         Assert.Contains("DEFAULT", result);
         Assert.Contains("42", result);
+    }
+
+    [Fact]
+    public void Test_Bitwise_Not_Operator()
+    {
+        // Test cross-dialect BitwiseNot operator AST
+        var expr = new Expression.UnaryOp(
+            new Identifier("a"),
+            UnaryOperator.BitwiseNot
+        );
+
+        var writer = new SqlTextWriter();
+        expr.ToSql(writer);
+        var result = writer.ToString();
+
+        Assert.Equal("~a", result);
+    }
+
+    [Fact]
+    public void Test_Alter_User_Reset()
+    {
+        DefaultDialects = [new GenericDialect(), new SnowflakeDialect()];
+
+        // ALTER USER RESET
+        var sql = "ALTER USER test_user RESET PASSWORD";
+        var statement = VerifiedStatement(sql);
+        Assert.IsType<AlterUser>(statement);
+        var alterUser = (AlterUser)statement;
+        Assert.IsType<AlterUserOperation.Reset>(alterUser.Operation);
+    }
+
+    [Fact]
+    public void Test_Match_Type_ToSql()
+    {
+        // Test MATCH type serialization in foreign key
+        var fk = new ColumnOption.ForeignKey(
+            new ObjectName("parent"),
+            new Sequence<Ident> { new Ident("id") },
+            ReferentialAction.Cascade,
+            ReferentialAction.None)
+        {
+            Match = MatchType.Full
+        };
+
+        var writer = new SqlTextWriter();
+        fk.ToSql(writer);
+        var result = writer.ToString();
+
+        Assert.Contains("REFERENCES parent", result);
+        Assert.Contains("MATCH Full", result);
+        Assert.Contains("ON DELETE CASCADE", result);
+    }
+
+    [Fact]
+    public void Test_Table_Constraint_Foreign_Key_Match()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        // Table constraint with MATCH FULL
+        var sql = "CREATE TABLE t (id INT, FOREIGN KEY (id) REFERENCES parent(id) MATCH FULL ON DELETE CASCADE)";
+        var statement = VerifiedStatement(sql);
+        var create = (CreateTable)statement;
+        var constraint = create.Element.Constraints!.First() as TableConstraint.ForeignKey;
+        Assert.NotNull(constraint);
+        Assert.Equal(MatchType.Full, constraint!.Match);
     }
 
     #endregion

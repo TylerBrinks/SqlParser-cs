@@ -2731,6 +2731,7 @@ public partial class Parser
             var referredColumns = ParseParenthesizedColumnList(IsOptional.Mandatory, false);
             var onDelete = ReferentialAction.None;
             var onUpdate = ReferentialAction.None;
+            MatchType? matchType = null;
 
             while (true)
             {
@@ -2741,6 +2742,16 @@ public partial class Parser
                 else if (onUpdate == ReferentialAction.None && ParseKeywordSequence(Keyword.ON, Keyword.UPDATE))
                 {
                     onUpdate = ParseReferentialAction();
+                }
+                else if (matchType == null && ParseKeyword(Keyword.MATCH))
+                {
+                    matchType = ParseOneOfKeywords(Keyword.FULL, Keyword.PARTIAL, Keyword.SIMPLE) switch
+                    {
+                        Keyword.FULL => MatchType.Full,
+                        Keyword.PARTIAL => MatchType.Partial,
+                        Keyword.SIMPLE => MatchType.Simple,
+                        _ => throw Expected("FULL, PARTIAL, or SIMPLE", PeekToken())
+                    };
                 }
                 else
                 {
@@ -2756,7 +2767,8 @@ public partial class Parser
                 ReferredColumns = referredColumns,
                 OnDelete = onDelete,
                 OnUpdate = onUpdate,
-                Characteristics = characteristics
+                Characteristics = characteristics,
+                Match = matchType
             };
         }
 
