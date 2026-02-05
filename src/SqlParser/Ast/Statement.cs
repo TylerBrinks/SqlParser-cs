@@ -354,6 +354,8 @@ public abstract record Statement : IWriteSql, IElement
         public Sequence<CopyLegacyOption>? LegacyOptions { get; init; }
         // VALUES a vector of values to be copied
         public Sequence<string?>? Values { get; init; }
+        // Whether the WITH keyword was present
+        public bool WithKeyword { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
@@ -377,7 +379,8 @@ public abstract record Statement : IWriteSql, IElement
 
             if (Options.SafeAny())
             {
-                writer.WriteSql($" ({Options})");
+                var withKw = WithKeyword ? "WITH " : "";
+                writer.WriteSql($" {withKw}({Options})");
             }
 
             if (LegacyOptions.SafeAny())
@@ -577,6 +580,14 @@ public abstract record Statement : IWriteSql, IElement
         public FunctionDeterminismSpecifier? DeterminismSpecifier { get; init; }
         public Sequence<SqlOption>? Options { get; init; }
         public ObjectName? RemoteConnection { get; init; }
+        /// <summary>
+        /// PostgreSQL SECURITY DEFINER/INVOKER
+        /// </summary>
+        public FunctionSecurity? Security { get; init; }
+        /// <summary>
+        /// PostgreSQL SET configuration parameters
+        /// </summary>
+        public Sequence<FunctionDefinitionSetParam>? SetParams { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
@@ -586,7 +597,7 @@ public abstract record Statement : IWriteSql, IElement
 
             writer.WriteSql($"CREATE {or}{temp}FUNCTION {ifNot}{Name}");
 
-            if (Args.SafeAny())
+            if (Args != null)
             {
                 writer.WriteSql($"({Args})");
             }
@@ -616,20 +627,48 @@ public abstract record Statement : IWriteSql, IElement
             {
                 writer.WriteSql($" {Parallel}");
             }
+            if (Security != null)
+            {
+                var securityStr = Security switch
+                {
+                    FunctionSecurity.Definer => "SECURITY DEFINER",
+                    FunctionSecurity.Invoker => "SECURITY INVOKER",
+                    _ => $"SECURITY {Security.ToString()!.ToUpperInvariant()}"
+                };
+                writer.Write($" {securityStr}");
+            }
+            if (SetParams.SafeAny())
+            {
+                foreach (var param in SetParams!)
+                {
+                    writer.WriteSql($" {param}");
+                }
+            }
             if (RemoteConnection != null)
             {
                 writer.WriteSql($" REMOTE WITH CONNECTION {RemoteConnection}");
             }
 
-            switch (FunctionBody)
+            // Handle AS before OPTIONS
+            if (FunctionBody is CreateFunctionBody.AsBeforeOptions { Body: var body, LinkSymbol: var linkSymbol })
             {
-                case CreateFunctionBody.AsBeforeOptions b:
-                    writer.WriteSql($" AS {b}");
-                    break;
-
-                case CreateFunctionBody.Return r:
-                    writer.WriteSql($" RETURN {r}");
-                    break;
+                writer.WriteSql($" AS {body}");
+                if (linkSymbol != null)
+                {
+                    writer.WriteSql($", {linkSymbol}");
+                }
+            }
+            if (FunctionBody is CreateFunctionBody.Return r)
+            {
+                writer.WriteSql($" RETURN {r}");
+            }
+            if (FunctionBody is CreateFunctionBody.AsReturnExpr re)
+            {
+                writer.WriteSql($" AS RETURN {re}");
+            }
+            if (FunctionBody is CreateFunctionBody.AsReturnSelect rs)
+            {
+                writer.WriteSql($" AS RETURN {rs}");
             }
 
             if (Using != null)
@@ -640,11 +679,14 @@ public abstract record Statement : IWriteSql, IElement
             {
                 writer.WriteSql($" OPTIONS({Options.ToSqlDelimited()})");
             }
-            if (FunctionBody is CreateFunctionBody.AsAfterOptions f)
+            if (FunctionBody is CreateFunctionBody.AsAfterOptions af)
             {
-                writer.WriteSql($" AS {f}");
+                writer.WriteSql($" AS {af}");
             }
-            //writer.WriteSql($"{Parameters}");
+            if (FunctionBody is CreateFunctionBody.AsBeginEnd be)
+            {
+                writer.WriteSql($" AS {be}");
+            }
         }
     }
     /// <summary>
@@ -683,7 +725,7 @@ public abstract record Statement : IWriteSql, IElement
             switch (Command)
             {
                 case CreatePolicyCommand.All:
-                    writer.Write(" FOR PERMISSIVE");
+                    writer.Write(" FOR ALL");
                     break;
                 case CreatePolicyCommand.Select:
                     writer.Write(" FOR SELECT");
@@ -885,7 +927,7 @@ public abstract record Statement : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             var orReplace = OrReplace ? "OR REPLACE " : string.Empty;
-            var isConstraint = IsConstraint ? " CONSTRAINT " : string.Empty;
+            var isConstraint = IsConstraint ? "CONSTRAINT " : string.Empty;
             writer.WriteSql($"CREATE {orReplace}{isConstraint}TRIGGER {Name} {Period}");
 
             if (Events.SafeAny())
@@ -1314,7 +1356,7 @@ public abstract record Statement : IWriteSql, IElement
         }
     }
 
-    public record DropTrigger(bool IfExists, ObjectName TriggerName, ObjectName TableName, ReferentialAction Option) : Statement
+    public record DropTrigger(bool IfExists, ObjectName TriggerName, ObjectName TableName, ReferentialAction? Option) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -1326,6 +1368,11 @@ public abstract record Statement : IWriteSql, IElement
             }
 
             writer.WriteSql($" {TriggerName} ON {TableName}");
+
+            if (Option != null)
+            {
+                writer.WriteSql($" {Option}");
+            }
         }
     }
     /// <summary>
@@ -1471,7 +1518,7 @@ public abstract record Statement : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             Name.ToSql(writer);
-            if (Args.SafeAny())
+            if (Args != null)
             {
                 writer.WriteSql($"({Args})");
             }
@@ -1669,7 +1716,8 @@ public abstract record Statement : IWriteSql, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            var tableName = InsertOperation.Alias != null ? $"{InsertOperation.Name.ToSql()} as {InsertOperation.Alias.ToSql()}" : $"{InsertOperation.Name.ToSql()}";
+            var tableObj = InsertOperation.TableFunction != null ? $"FUNCTION {InsertOperation.TableFunction.ToSql()}" : InsertOperation.Name.ToSql();
+            var tableName = InsertOperation.Alias != null ? $"{tableObj} as {InsertOperation.Alias.ToSql()}" : tableObj;
 
             if (InsertOperation.Or != SqliteOnConflict.None)
             {
@@ -1706,9 +1754,18 @@ public abstract record Statement : IWriteSql, IElement
                 writer.WriteSql($"({InsertOperation.AfterColumns}) ");
             }
 
+            if (InsertOperation.Settings.SafeAny())
+            {
+                writer.Write($"SETTINGS {InsertOperation.Settings.ToSqlDelimited()} ");
+            }
+
             if (InsertOperation.Source != null)
             {
                 InsertOperation.Source.ToSql(writer);
+            }
+            else if (InsertOperation.FormatClause != null)
+            {
+                InsertOperation.FormatClause.ToSql(writer);
             }
             else if (!InsertOperation.Columns.SafeAny())
             {
@@ -1768,13 +1825,26 @@ public abstract record Statement : IWriteSql, IElement
     }
     /// <summary>
     /// MySql `LOCK TABLES table_name  [READ [LOCAL] | [LOW_PRIORITY] WRITE]`
+    /// PostgreSQL `LOCK [ TABLE ] name [, ...] [ IN lockmode MODE ] [ NOWAIT ]`
     /// </summary>
     /// <param name="Tables"></param>
     public record LockTables(Sequence<LockTable> Tables) : Statement
     {
+        /// <summary>
+        /// True for PostgreSQL LOCK TABLE syntax, false for MySQL LOCK TABLES syntax
+        /// </summary>
+        public bool PostgresMode { get; init; }
+
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"LOCK TABLES {Tables.ToSqlDelimited()}");
+            if (PostgresMode)
+            {
+                writer.WriteSql($"LOCK TABLE {Tables.ToSqlDelimited()}");
+            }
+            else
+            {
+                writer.WriteSql($"LOCK TABLES {Tables.ToSqlDelimited()}");
+            }
         }
     }
     /// <summary>
@@ -1935,7 +2005,7 @@ public abstract record Statement : IWriteSql, IElement
     /// <param name="Grantees">Grantees</param>
     /// <param name="GrantedBy">Granted by name</param>
     /// <param name="Cascade">Cascade</param>
-    public record Revoke(Privileges Privileges, GrantObjects Objects, Sequence<Ident> Grantees, bool Cascade = false, Ident? GrantedBy = null) : Statement
+    public record Revoke(Privileges Privileges, GrantObjects Objects, Sequence<Ident> Grantees, bool? Cascade = null, Ident? GrantedBy = null) : Statement
     {
         public override void ToSql(SqlTextWriter writer)
         {
@@ -1948,7 +2018,10 @@ public abstract record Statement : IWriteSql, IElement
                 writer.WriteSql($" GRANTED BY {GrantedBy}");
             }
 
-            writer.Write(Cascade ? " CASCADE" : " RESTRICT");
+            if (Cascade.HasValue)
+            {
+                writer.Write(Cascade.Value ? " CASCADE" : " RESTRICT");
+            }
         }
     }
     /// <summary>
@@ -2370,8 +2443,11 @@ public abstract record Statement : IWriteSql, IElement
     /// <summary>
     /// Truncate (Hive)
     /// </summary>
-    /// <param name="Name">Object name</param>
+    /// <param name="Names">Object name</param>
+    /// <param name="Only">True if only; otherwise false</param>
     /// <param name="Partitions">List of partitions</param>
+    /// <param name="Identity">Identity options</param>
+    /// <param name="Cascade">Cascade options</param>
     public record Truncate(
         Sequence<TruncateTableTarget> Names,
         bool Table,
@@ -2655,7 +2731,7 @@ public abstract record Statement : IWriteSql, IElement
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"ALTER OPERATOR {Name}(");
+            writer.WriteSql($"ALTER OPERATOR {Name} (");
             if (LeftType != null)
             {
                 writer.WriteSql($"{LeftType}");
@@ -2784,16 +2860,16 @@ public abstract record Statement : IWriteSql, IElement
             writer.WriteSql($"{DenyStatement}");
         }
     }
-    /// <summary>
-    /// SET SESSION AUTHORIZATION statement
-    /// </summary>
-    public record SetSessionAuthorization(SetSessionAuthorizationStatement Auth) : Statement
-    {
-        public override void ToSql(SqlTextWriter writer)
-        {
-            writer.WriteSql($"{Auth}");
-        }
-    }
+    // <summary>
+    // SET SESSION AUTHORIZATION statement
+    // </summary>
+    //public record SetSessionAuthorization(SetSessionAuthorizationStatement Auth) : Statement
+    //{
+    //    public override void ToSql(SqlTextWriter writer)
+    //    {
+    //        writer.WriteSql($"{Auth}");
+    //    }
+    //}
     /// <summary>
     /// RESET statement
     /// </summary>
@@ -2916,6 +2992,70 @@ public abstract record Statement : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             writer.WriteSql($"{ExecuteStatement}");
+        }
+    }
+    /// <summary>
+    /// DROP EXTENSION statement - PostgreSQL
+    /// </summary>
+    public record DropExtension(Ident Name) : Statement
+    {
+        public bool IfExists { get; init; }
+        public bool Cascade { get; init; }
+        public bool Restrict { get; init; }
+
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("DROP EXTENSION ");
+
+            if (IfExists)
+            {
+                writer.Write("IF EXISTS ");
+            }
+
+            writer.WriteSql($"{Name}");
+
+            if (Cascade)
+            {
+                writer.Write(" CASCADE");
+            }
+            else if (Restrict)
+            {
+                writer.Write(" RESTRICT");
+            }
+        }
+    }
+    /// <summary>
+    /// ALTER TYPE statement - PostgreSQL
+    /// </summary>
+    public record AlterType(ObjectName Name, AlterTypeOperation Operation) : Statement
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"ALTER TYPE {Name} {Operation}");
+        }
+    }
+    /// <summary>
+    /// ALTER SEQUENCE statement - PostgreSQL
+    /// </summary>
+    public record AlterSequence(ObjectName Name, Sequence<SequenceOptions> Options) : Statement
+    {
+        public bool IfExists { get; init; }
+
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("ALTER SEQUENCE ");
+
+            if (IfExists)
+            {
+                writer.Write("IF EXISTS ");
+            }
+
+            writer.WriteSql($"{Name}");
+
+            if (Options.SafeAny())
+            {
+                writer.WriteSql($"{Options.ToSqlDelimited(string.Empty)}");
+            }
         }
     }
 

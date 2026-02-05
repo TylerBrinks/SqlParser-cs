@@ -50,6 +50,14 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
     public RowAccessPolicy? WithRowAccessPolicy { get; init; }
     public Sequence<Tag>? WithTags { get; init; }
     /// <summary>
+    /// PostgreSQL PARTITION OF clause - specifies the parent table
+    /// </summary>
+    [Visit(6)] public ObjectName? PartitionOf { get; init; }
+    /// <summary>
+    /// PostgreSQL partition bound specification (FOR VALUES IN, FROM/TO, WITH, or DEFAULT)
+    /// </summary>
+    public PartitionBound? PartitionBoundSpec { get; init; }
+    /// <summary>
     /// Snowflake dynamic table support
     /// </summary>
     public bool Dynamic { get; init; }
@@ -88,6 +96,17 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
             writer.WriteSql($" ON CLUSTER {OnCluster}");
         }
 
+        // PostgreSQL PARTITION OF
+        if (PartitionOf != null)
+        {
+            writer.WriteSql($" PARTITION OF {PartitionOf}");
+
+            if (PartitionBoundSpec != null)
+            {
+                writer.WriteSql($" {PartitionBoundSpec}");
+            }
+        }
+
         var hasColumns = Columns.SafeAny();
         var hasConstraints = Constraints.SafeAny();
 
@@ -102,7 +121,7 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
 
             writer.WriteSql($"{Constraints})");
         }
-        else if (Query == null && Like == null && CloneClause == null)
+        else if (Query == null && Like == null && CloneClause == null && PartitionOf == null)
         {
             // PostgreSQL allows `CREATE TABLE t ();`, but requires empty parens
             writer.Write(" ()");

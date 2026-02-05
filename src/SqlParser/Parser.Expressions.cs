@@ -484,13 +484,28 @@ public partial class Parser
             }
             else
             {
-                var expressions = ParseCommaSeparated(ParseExpr);
-                expr = expressions.Count switch
+                // Parentheses in expressions switch to "normal" parsing state.
+                // This matters for dialects where NOT NULL can be an alias for
+                // IS NOT NULL. In column definitions like:
+                //   CREATE TABLE t (c INT DEFAULT (42 NOT NULL) NOT NULL)
+                // The (42 NOT NULL) is a parenthesized expression, so it parses
+                // as IsNotNull(42). The trailing NOT NULL remains a column constraint.
+                var prevColumnDef = _inColumnDefinition;
+                _inColumnDefinition = false;
+                try
                 {
-                    0 => throw Expected("comma separated list with at least 1 item", PeekToken()),
-                    1 => new Nested(expressions.First()),
-                    _ => new Expression.Tuple(expressions)
-                };
+                    var expressions = ParseCommaSeparated(ParseExpr);
+                    expr = expressions.Count switch
+                    {
+                        0 => throw Expected("comma separated list with at least 1 item", PeekToken()),
+                        1 => new Nested(expressions.First()),
+                        _ => new Expression.Tuple(expressions)
+                    };
+                }
+                finally
+                {
+                    _inColumnDefinition = prevColumnDef;
+                }
             }
 
             ExpectRightParen();
@@ -767,7 +782,7 @@ public partial class Parser
             //Word { Keyword: Keyword.ARRAY_AGG } => ParseArrayAggregateExpression(),
             Word { Keyword: Keyword.NOT } => ParseNot(),
             Word { Keyword: Keyword.MATCH } when _dialect is MySqlDialect or GenericDialect => ParseMatchAgainst(),
-            Word { Keyword: Keyword.STRUCT } when _dialect is BigQueryDialect or GenericDialect => ParseStruct(),
+            Word { Keyword: Keyword.STRUCT } when _dialect is BigQueryDialect or GenericDialect or DatabricksDialect => ParseStruct(),
             Word { Keyword: Keyword.PRIOR } when _parserState == ParserState.ConnectBy => ParseConnectByExpression(),
             Word { Keyword: Keyword.CONNECT_BY_ROOT } when _dialect.SupportsConnectBy => new ConnectByRoot(ParseExpr()),
             Word { Keyword: Keyword.MAP } when _dialect.SupportMapLiteralSyntax && PeekTokenIs<LeftBrace>() => ParseDuckDbMapLiteral(),
@@ -985,8 +1000,6 @@ public partial class Parser
                 // e.g. `GROUP BY (), name`. Please refer to GROUP BY Clause section in
                 return new Expression.Tuple([]);
             }
-
-            return ParseExpr();
         }
 
         return ParseExpr();

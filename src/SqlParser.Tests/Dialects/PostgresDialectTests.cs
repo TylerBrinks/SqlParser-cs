@@ -758,7 +758,8 @@ public class PostgresDialectTests : ParserTestBase
                     new CopyOption.ForceNotNull(new Ident[] {"a"}),
                     new CopyOption.ForceNull(new Ident[] {"b"}),
                     new CopyOption.Encoding("utf8"),
-            }
+            },
+            WithKeyword = true
         };
 
         Assert.Equal(expected, copy);
@@ -2672,6 +2673,331 @@ public class PostgresDialectTests : ParserTestBase
         var op = new SqlQueryParser().Parse(sql);
         var x = op.ToSql();
     }
+
+    [Fact]
+    public void Parse_Cast_In_Default_Expr()
+    {
+        VerifiedStatement("CREATE TABLE t (c TEXT DEFAULT (foo())::TEXT)");
+        VerifiedStatement("CREATE TABLE t (c TEXT DEFAULT (foo())::INT::TEXT)");
+        VerifiedStatement("CREATE TABLE t (c TEXT DEFAULT (foo())::TEXT NOT NULL)");
+    }
+
+    [Fact]
+    public void Parse_Update_Has_Keyword()
+    {
+        OneStatementParsesTo(
+            """
+            UPDATE test SET name=$1,
+                            value=$2,
+                            where=$3,
+                            create=$4,
+                            is_default=$5,
+                            classification=$6,
+                            sort=$7
+                            WHERE id=$8
+            """,
+            "UPDATE test SET name = $1, value = $2, where = $3, create = $4, is_default = $5, classification = $6, sort = $7 WHERE id = $8");
+    }
+
+    [Fact]
+    public void Parse_Create_Function_With_Security()
+    {
+        DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
+
+        VerifiedStatement("CREATE FUNCTION test_fn() RETURNS void LANGUAGE sql SECURITY DEFINER AS $$ SELECT 1 $$");
+        VerifiedStatement("CREATE FUNCTION test_fn() RETURNS void LANGUAGE sql SECURITY INVOKER AS $$ SELECT 1 $$");
+    }
+
+    [Fact]
+    public void Parse_Create_Function_With_Set_Params()
+    {
+        DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
+
+        VerifiedStatement("CREATE FUNCTION test_fn() RETURNS void LANGUAGE sql SET search_path = auth, pg_temp, public AS $$ SELECT 1 $$");
+        VerifiedStatement("CREATE FUNCTION test_fn() RETURNS void LANGUAGE sql SET search_path = public SET statement_timeout = '5s' AS $$ SELECT 1 $$");
+        VerifiedStatement("CREATE FUNCTION test_fn() RETURNS void LANGUAGE sql SET search_path FROM CURRENT AS $$ SELECT 1 $$");
+    }
+
+    [Fact]
+    public void Parse_Create_Function_C_With_Module_Pathname()
+    {
+        DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
+
+        VerifiedStatement("CREATE FUNCTION cas_in(input cstring) RETURNS cas LANGUAGE c IMMUTABLE PARALLEL SAFE AS 'MODULE_PATHNAME', 'cas_in_wrapper'");
+        OneStatementParsesTo(
+            "CREATE FUNCTION cas_in(input cstring) RETURNS cas IMMUTABLE PARALLEL SAFE LANGUAGE c AS 'MODULE_PATHNAME', 'cas_in_wrapper'",
+            "CREATE FUNCTION cas_in(input cstring) RETURNS cas LANGUAGE c IMMUTABLE PARALLEL SAFE AS 'MODULE_PATHNAME', 'cas_in_wrapper'");
+    }
+
+    [Fact]
+    public void Parse_Array_Agg()
+    {
+        VerifiedStatement("SELECT GREATEST(sections_tbl.*) AS sections FROM sections_tbl");
+        VerifiedStatement("SELECT ARRAY_AGG(sections_tbl.*) AS sections FROM sections_tbl");
+        VerifiedStatement("SELECT GREATEST(my_schema.sections_tbl.*) AS sections FROM sections_tbl");
+        VerifiedStatement("SELECT ARRAY_AGG(my_schema.sections_tbl.*) AS sections FROM sections_tbl");
+    }
+
+    [Fact]
+    public void Parse_Foreign_Key_Match_With_Actions()
+    {
+        DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
+
+        VerifiedStatement("CREATE TABLE orders (order_id INT REFERENCES another_table (id) MATCH FULL ON DELETE CASCADE ON UPDATE RESTRICT, customer_id INT, CONSTRAINT fk_customer FOREIGN KEY (customer_id) REFERENCES customers(customer_id) MATCH SIMPLE ON DELETE SET NULL ON UPDATE CASCADE)");
+    }
+
+    [Fact]
+    public void Parse_Foreign_Key_Match()
+    {
+        DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
+
+        VerifiedStatement("CREATE TABLE t (id INT REFERENCES other_table (id) MATCH FULL)");
+        VerifiedStatement("CREATE TABLE t (id INT REFERENCES other_table (id) MATCH SIMPLE)");
+        VerifiedStatement("CREATE TABLE t (id INT REFERENCES other_table (id) MATCH PARTIAL)");
+        VerifiedStatement("CREATE TABLE t (id INT, FOREIGN KEY (id) REFERENCES other_table(id) MATCH FULL)");
+        VerifiedStatement("CREATE TABLE t (id INT, FOREIGN KEY (id) REFERENCES other_table(id) MATCH SIMPLE)");
+        VerifiedStatement("CREATE TABLE t (id INT, FOREIGN KEY (id) REFERENCES other_table(id) MATCH PARTIAL)");
+    }
+
+    [Fact]
+    public void Parse_Varbit_Datatype()
+    {
+        DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
+
+        VerifiedStatement("CREATE TABLE foo (x VARBIT, y VARBIT(42))");
+    }
+
+    [Fact]
+    public void Parse_Ts_Datatypes()
+    {
+        DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
+
+        VerifiedStatement("CREATE TABLE foo (x TSVECTOR)");
+        VerifiedStatement("CREATE TABLE foo (x TSQUERY)");
+    }
+
+    [Fact]
+    public void Parse_Alter_Table_Replica_Identity()
+    {
+        DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
+
+        VerifiedStatement("ALTER TABLE foo REPLICA IDENTITY FULL");
+        VerifiedStatement("ALTER TABLE foo REPLICA IDENTITY USING INDEX foo_idx");
+        VerifiedStatement("ALTER TABLE foo REPLICA IDENTITY NOTHING");
+        VerifiedStatement("ALTER TABLE foo REPLICA IDENTITY DEFAULT");
+    }
+
+    [Fact]
+    public void Parse_Alter_Table_Validate_Constraint()
+    {
+        DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
+
+        VerifiedStatement("ALTER TABLE foo VALIDATE CONSTRAINT bar");
+    }
+
+    [Fact]
+    public void Parse_Alter_Schema()
+    {
+        DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
+
+        VerifiedStatement("ALTER SCHEMA foo RENAME TO bar");
+        VerifiedStatement("ALTER SCHEMA foo OWNER TO bar");
+        VerifiedStatement("ALTER SCHEMA foo OWNER TO CURRENT_ROLE");
+        VerifiedStatement("ALTER SCHEMA foo OWNER TO CURRENT_USER");
+        VerifiedStatement("ALTER SCHEMA foo OWNER TO SESSION_USER");
+    }
+
+    [Fact]
+    public void Parse_Bitstring_Literal()
+    {
+        DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
+
+        VerifiedOnlySelect("SELECT B'111'");
+    }
+
+    [Fact]
+    public void Parse_Truncate_With_Table_List()
+    {
+        VerifiedStatement("TRUNCATE TABLE db.table_name, db.other_table_name RESTART IDENTITY CASCADE");
+    }
+
+    [Fact]
+    public void Parse_Create_Table_With_Options()
+    {
+        VerifiedStatement("CREATE TABLE t (c INT) WITH (foo = 'bar', a = 123)");
+    }
+
+    [Fact]
+    public void Parse_Create_Table_Partition_Of_Range()
+    {
+        DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
+
+        VerifiedStatement("CREATE TABLE measurement_y2006m02 PARTITION OF measurement FOR VALUES FROM ('2006-02-01') TO ('2006-03-01')");
+    }
+
+    [Fact]
+    public void Parse_Create_Table_Partition_Of_Range_With_Minvalue_Maxvalue()
+    {
+        DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
+
+        VerifiedStatement("CREATE TABLE orders_old PARTITION OF orders FOR VALUES FROM (MINVALUE) TO ('2020-01-01')");
+        VerifiedStatement("CREATE TABLE orders_new PARTITION OF orders FOR VALUES FROM ('2024-01-01') TO (MAXVALUE)");
+    }
+
+    [Fact]
+    public void Parse_Create_Table_Partition_Of_List()
+    {
+        DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
+
+        VerifiedStatement("CREATE TABLE orders_us PARTITION OF orders FOR VALUES IN ('US', 'CA', 'MX')");
+    }
+
+    [Fact]
+    public void Parse_Create_Table_Partition_Of_Hash()
+    {
+        DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
+
+        VerifiedStatement("CREATE TABLE orders_p0 PARTITION OF orders FOR VALUES WITH (MODULUS 4, REMAINDER 0)");
+    }
+
+    [Fact]
+    public void Parse_Create_Table_Partition_Of_Default()
+    {
+        DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
+
+        VerifiedStatement("CREATE TABLE orders_default PARTITION OF orders DEFAULT");
+    }
+
+    [Fact]
+    public void Parse_Create_Table_Partition_Of_Multicolumn_Range()
+    {
+        DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
+
+        VerifiedStatement("CREATE TABLE sales_2023_q1 PARTITION OF sales FOR VALUES FROM ('2023-01-01', 1) TO ('2023-04-01', 1)");
+    }
+
+    [Fact]
+    public void Parse_Create_Table_With_Empty_Inherits_Fails()
+    {
+        Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE TABLE child_table (child_column INT) INHERITS ()"));
+    }
+
+    [Fact]
+    public void Parse_Copy_From_Error()
+    {
+        Assert.Throws<ParserException>(() => ParseSqlStatements("COPY (SELECT 42 AS a, 'hello' AS b) FROM 'query.csv'"));
+    }
+
+    [Fact]
+    public void Parse_Create_Table_With_Alias()
+    {
+        DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
+
+        OneStatementParsesTo(
+            """
+            CREATE TABLE public.datatype_aliases
+            (
+              int8_col INT8,
+              int4_col INT4,
+              int2_col INT2,
+              float8_col FLOAT8,
+              float4_col FLOAT4,
+              bool_col BOOL
+            );
+            """,
+            "");
+    }
+
+    [Fact]
+    public void Parse_Create_Server()
+    {
+        VerifiedStatement("CREATE SERVER myserver FOREIGN DATA WRAPPER postgres_fdw");
+        VerifiedStatement("CREATE SERVER IF NOT EXISTS myserver TYPE 'server_type' VERSION 'server_version' FOREIGN DATA WRAPPER postgres_fdw");
+        VerifiedStatement("CREATE SERVER myserver2 FOREIGN DATA WRAPPER postgres_fdw OPTIONS (host 'foo', dbname 'foodb', port '5432')");
+    }
+
+    [Fact]
+    public void Parse_Drop_Domain()
+    {
+        VerifiedStatement("DROP DOMAIN IF EXISTS jpeg_domain");
+        VerifiedStatement("DROP DOMAIN jpeg_domain");
+        VerifiedStatement("DROP DOMAIN IF EXISTS jpeg_domain CASCADE");
+        VerifiedStatement("DROP DOMAIN IF EXISTS jpeg_domain RESTRICT");
+    }
+
+    [Fact]
+    public void Parse_Create_After_Update_Trigger_With_Condition()
+    {
+        VerifiedStatement("CREATE TRIGGER check_update AFTER UPDATE ON accounts FOR EACH ROW WHEN (NEW.balance > 10000) EXECUTE FUNCTION check_account_update", [new PostgreSqlDialect()]);
+    }
+
+    [Fact]
+    public void Parse_Create_Instead_Of_Delete_Trigger()
+    {
+        VerifiedStatement("CREATE TRIGGER check_delete INSTEAD OF DELETE ON accounts FOR EACH ROW EXECUTE FUNCTION check_account_deletes", [new PostgreSqlDialect()]);
+    }
+
+    [Fact]
+    public void Parse_Create_Trigger_With_Multiple_Events_And_Deferrable()
+    {
+        VerifiedStatement("CREATE CONSTRAINT TRIGGER check_multiple_events BEFORE INSERT OR UPDATE OR DELETE ON accounts DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION check_account_changes", [new PostgreSqlDialect()]);
+    }
+
+    [Fact]
+    public void Parse_Create_Trigger_With_Referencing()
+    {
+        VerifiedStatement("CREATE TRIGGER check_referencing BEFORE INSERT ON accounts REFERENCING NEW TABLE AS new_accounts OLD TABLE AS old_accounts FOR EACH ROW EXECUTE FUNCTION check_account_referencing", [new PostgreSqlDialect()]);
+    }
+
+    [Fact]
+    public void Parse_Drop_Trigger()
+    {
+        VerifiedStatement("DROP TRIGGER check_update ON table_name", [new PostgreSqlDialect()]);
+        VerifiedStatement("DROP TRIGGER check_update ON table_name CASCADE", [new PostgreSqlDialect()]);
+        VerifiedStatement("DROP TRIGGER check_update ON table_name RESTRICT", [new PostgreSqlDialect()]);
+        VerifiedStatement("DROP TRIGGER IF EXISTS check_update ON table_name", [new PostgreSqlDialect()]);
+        VerifiedStatement("DROP TRIGGER IF EXISTS check_update ON table_name CASCADE", [new PostgreSqlDialect()]);
+        VerifiedStatement("DROP TRIGGER IF EXISTS check_update ON table_name RESTRICT", [new PostgreSqlDialect()]);
+    }
+
+    [Fact]
+    public void Parse_Select_Group_By_Grouping_Sets()
+    {
+        DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
+
+        VerifiedOnlySelect("SELECT brand, size, sum(sales) FROM items_sold GROUP BY size, GROUPING SETS ((brand), (size), ())");
+    }
+
+    [Fact]
+    public void Parse_Select_Group_By_Rollup()
+    {
+        DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
+
+        VerifiedOnlySelect("SELECT brand, size, sum(sales) FROM items_sold GROUP BY size, ROLLUP (brand, size)");
+    }
+
+    [Fact]
+    public void Parse_Select_Group_By_Cube()
+    {
+        DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
+
+        VerifiedOnlySelect("SELECT brand, size, sum(sales) FROM items_sold GROUP BY size, CUBE (brand, size)");
+    }
+
+    [Fact]
+    public void Parse_Alter_Type()
+    {
+        DefaultDialects = [new PostgreSqlDialect(), new GenericDialect()];
+
+        VerifiedStatement("ALTER TYPE public.my_type RENAME TO my_new_type");
+        VerifiedStatement("ALTER TYPE public.my_type ADD VALUE IF NOT EXISTS 'label3.5' BEFORE 'label4'");
+        VerifiedStatement("ALTER TYPE public.my_type ADD VALUE 'label3.5' BEFORE 'label4'");
+        VerifiedStatement("ALTER TYPE public.my_type ADD VALUE IF NOT EXISTS 'label3.5' AFTER 'label3'");
+        VerifiedStatement("ALTER TYPE public.my_type ADD VALUE 'label3.5' AFTER 'label3'");
+        VerifiedStatement("ALTER TYPE public.my_type ADD VALUE IF NOT EXISTS 'label5'");
+        VerifiedStatement("ALTER TYPE public.my_type ADD VALUE 'label5'");
+    }
+
 }
 
 public record TestCase(string Sql, Owner ExpectedOwner);

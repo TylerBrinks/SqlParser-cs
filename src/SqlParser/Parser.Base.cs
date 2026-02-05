@@ -1,4 +1,5 @@
-﻿using SqlParser.Ast;
+﻿using System.Text;
+using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
 using static SqlParser.Ast.Expression;
@@ -10,6 +11,7 @@ namespace SqlParser;
 public partial class Parser
 {
     private int _index;
+    private bool _inColumnDefinition;
     private Sequence<Token> _tokens = null!;
     private DepthGuard _depthGuard = null!;
     private Dialect _dialect = null!;
@@ -54,6 +56,8 @@ public partial class Parser
     {
         return _dialect.GetNextPrecedenceDefault(this);
     }
+
+    public bool InColumnDefinition => _inColumnDefinition;
 
     /// <summary>
     /// Gets the next token in the queue without advancing the current
@@ -831,7 +835,7 @@ public partial class Parser
                             return e switch
                             {
                                 Nested n => ExtractOverlapExpressions(n.Expression),
-                                Tuple t => t.Expressions,
+                                Expression.Tuple t => t.Expressions,
                                 _ => [e]
                             };
                         }
@@ -850,13 +854,19 @@ public partial class Parser
                         var negated = ParseKeyword(Keyword.NOT);
                         var regexp = ParseKeyword(Keyword.REGEXP);
                         var rlike = ParseKeyword(Keyword.RLIKE);
+                        var @null = !_inColumnDefinition && ParseKeyword(Keyword.NULL);
                         if (regexp || rlike)
                         {
                             return new RLike(
-                                negated, 
-                                expr, 
-                                ParseSubExpression(_dialect.GetPrecedence(Precedence.Like)), 
+                                negated,
+                                expr,
+                                ParseSubExpression(_dialect.GetPrecedence(Precedence.Like)),
                                 regexp);
+                        }
+
+                        if (negated && @null)
+                        {
+                            return new IsNotNull(expr);
                         }
 
                         if (ParseKeyword(Keyword.IN))
@@ -888,8 +898,8 @@ public partial class Parser
                         if (ParseKeywordSequence(Keyword.SIMILAR, Keyword.TO))
                         {
                             return new SimilarTo(
-                                expr, 
-                                negated, 
+                                expr,
+                                negated,
                                 ParseSubExpression(_dialect.GetPrecedence(Precedence.Like)),
                                 ParseEscapeChar());
                         }
@@ -1061,6 +1071,71 @@ public partial class Parser
     }
 
     /// <summary>
+    /// Parse a PostgreSQL operator name (e.g., ===, @@, ~, &lt;, etc.)
+    /// Operators can contain: + - * / &lt; &gt; = ~ ! @ # % ^ &amp; | ` ?
+    /// </summary>
+    public ObjectName ParseOperatorSymbol()
+    {
+        var sb = new StringBuilder();
+
+        while (true)
+        {
+            var token = PeekToken();
+            var part = token switch
+            {
+                Plus => "+",
+                Minus => "-",
+                Multiply => "*",
+                Divide => "/",
+                LessThan => "<",
+                GreaterThan => ">",
+                Equal => "=",
+                Tilde => "~",
+                ExclamationMark => "!",
+                AtSign => "@",
+                Hash => "#",
+                Modulo => "%",
+                Caret => "^",
+                Ampersand => "&",
+                Pipe => "|",
+                Question => "?",
+                AtAt => "@@",
+                LessThanOrEqual => "<=",
+                GreaterThanOrEqual => ">=",
+                NotEqual => "<>",
+                DoubleEqual => "==",
+                ShiftLeft => "<<",
+                ShiftRight => ">>",
+                DoubleTilde => "~~",
+                DoubleTildeAsterisk => "~~*",
+                ExclamationMarkTilde => "!~",
+                ExclamationMarkTildeAsterisk => "!~*",
+                ExclamationMarkDoubleTilde => "!~~",
+                ExclamationMarkDoubleTildeAsterisk => "!~~*",
+                TildeAsterisk => "~*",
+                StringConcat => "||",
+                CustomBinaryOperator custom => custom.Value,
+                _ => null
+            };
+
+            if (part == null)
+            {
+                break;
+            }
+
+            NextToken();
+            sb.Append(part);
+        }
+
+        if (sb.Length == 0)
+        {
+            throw Expected("operator symbol", PeekToken());
+        }
+
+        return new ObjectName(new Ident(sb.ToString()));
+    }
+
+    /// <summary>
     /// Initializes a field if the input condition is met; default initialization if not.
     /// </summary>
     /// <typeparam name="T">Type to initialize</typeparam>
@@ -1187,6 +1262,11 @@ public partial class Parser
                 if (limit == null && ParseKeyword(Keyword.LIMIT))
                 {
                     limit = ParseLimit();
+
+                    if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.BY))
+                    {
+                        limitBy = ParseCommaSeparated(ParseExpr);
+                    }
                 }
 
                 if (offset == null && ParseKeyword(Keyword.OFFSET))
@@ -1201,11 +1281,6 @@ public partial class Parser
                     offset = new Offset(limit, OffsetRows.None);
                     limit = ParseExpr();
                 }
-            }
-
-            if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.BY))
-            {
-                limitBy = ParseCommaSeparated(ParseExpr);
             }
 
             var settings = ParseSettings();
@@ -1345,6 +1420,14 @@ public partial class Parser
             });
 
         return settings;
+    }
+
+    public InputFormatClause ParseInputFormatClause()
+    {
+        var ident = ParseIdentifier();
+        var values = MaybeParse(() => ParseCommaSeparated(ParseExpr));
+
+        return new InputFormatClause(ident, values);
     }
 
     public static void ThrowExpectedToken(Token expected, Token actual)

@@ -2,7 +2,6 @@
 
 public abstract record JsonTableColumn : IWriteSql, IElement
 {
-
     public record Named(JsonTableNamedColumn Column) : JsonTableColumn
     {
         public override void ToSql(SqlTextWriter writer)

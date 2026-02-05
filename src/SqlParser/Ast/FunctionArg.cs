@@ -220,18 +220,82 @@ public abstract record FunctionArgOperator : IWriteSql, IElement
 }
 
 /// <summary>
-/// Create function body
+/// Create function body - represents the expression body of a CREATE FUNCTION statement
 /// </summary>
-public record CreateFunctionBody(Expression Expression) : IWriteSql
+public abstract record CreateFunctionBody : IWriteSql
 {
-    public record AsBeforeOptions(Expression Expression) : CreateFunctionBody(Expression);
-    public record AsAfterOptions(Expression Expression) : CreateFunctionBody(Expression);
-    public record Return(Expression Expression) : CreateFunctionBody(Expression);
-
-    public void ToSql(SqlTextWriter writer)
+    /// <summary>
+    /// AS expression, before any OPTIONS clause. Includes optional link_symbol for C functions.
+    /// Example: AS 'body' or AS 'module', 'symbol'
+    /// </summary>
+    public record AsBeforeOptions(Expression Body, Expression? LinkSymbol = null) : CreateFunctionBody
     {
-       writer.WriteSql($"{Expression}");
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{Body}");
+            if (LinkSymbol != null)
+            {
+                writer.WriteSql($", {LinkSymbol}");
+            }
+        }
     }
+
+    /// <summary>
+    /// AS expression, after OPTIONS clause
+    /// </summary>
+    public record AsAfterOptions(Expression Body) : CreateFunctionBody
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{Body}");
+        }
+    }
+
+    /// <summary>
+    /// RETURN expression
+    /// </summary>
+    public record Return(Expression Expression) : CreateFunctionBody
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{Expression}");
+        }
+    }
+
+    /// <summary>
+    /// AS RETURN expression (MsSql)
+    /// </summary>
+    public record AsReturnExpr(Expression Expression) : CreateFunctionBody
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{Expression}");
+        }
+    }
+
+    /// <summary>
+    /// AS RETURN SELECT ... (MsSql)
+    /// </summary>
+    public record AsReturnSelect(Select Select) : CreateFunctionBody
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{Select}");
+        }
+    }
+
+    /// <summary>
+    /// AS BEGIN ... END (MsSql)
+    /// </summary>
+    public record AsBeginEnd(BeginEndStatements Statements) : CreateFunctionBody
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{Statements}");
+        }
+    }
+
+    public abstract void ToSql(SqlTextWriter writer);
 }
 
 /// <summary>

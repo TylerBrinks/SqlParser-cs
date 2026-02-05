@@ -408,4 +408,26 @@ public class HiveDialectTests : ParserTestBase
           
         Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
     }
+
+    [Fact]
+    public void Parse_Set_HiveVar()
+    {
+        VerifiedStatement("SET HIVEVAR:name = a, b, c_d");
+    }
+
+    [Fact]
+    public void Test_Spaceship()
+    {
+        VerifiedStatement("SELECT * FROM db.table WHERE a <=> b");
+    }
+
+    [Fact]
+    public void Test_Table_Sample()
+    {
+        VerifiedStatement("SELECT * FROM source TABLESAMPLE (BUCKET 3 OUT OF 32 ON rand()) AS s");
+        VerifiedStatement("SELECT * FROM source TABLESAMPLE (BUCKET 3 OUT OF 16 ON id)");
+        VerifiedStatement("SELECT * FROM source TABLESAMPLE (100M) AS s");
+        VerifiedStatement("SELECT * FROM source TABLESAMPLE (0.1 PERCENT) AS s");
+        VerifiedStatement("SELECT * FROM source TABLESAMPLE (10 ROWS)");
+    }
 }

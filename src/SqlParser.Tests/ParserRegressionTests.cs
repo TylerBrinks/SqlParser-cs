@@ -6,15 +6,8 @@ using Xunit.Sdk;
 
 namespace SqlParser.Tests;
 
-public class ParserRegressionTests : ParserTestBase
+public class ParserRegressionTests(ITestOutputHelper output) : ParserTestBase
 {
-    private readonly ITestOutputHelper _output;
-
-    public ParserRegressionTests(ITestOutputHelper output)
-    {
-        _output = output;
-    }
-
     [Theory]
     [SqlFile("1.sql")]
     [SqlFile("2.sql")]
@@ -48,9 +41,9 @@ public class ParserRegressionTests : ParserTestBase
         }
 
         Assert.NotNull(ast);
-        _output.WriteLine(ast.ToSql());
-        _output.WriteLine(new string('-', 50));
-        _output.WriteLine(JsonConvert.SerializeObject(ast));
+        output.WriteLine(ast.ToSql());
+        output.WriteLine(new string('-', 50));
+        output.WriteLine(JsonConvert.SerializeObject(ast));
     }
 }
 

@@ -4903,7 +4903,7 @@ public class ParserCommonTests : ParserTestBase
         VerifiedStatement("SELECT f FROM foo WHERE field IS NOT UNKNOWN");
 
         var ex = Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT f from foo where field is 0"));
-        Assert.Equal("Expected [NOT] NULL or TRUE|FALSE or [NOT] DISTINCT FROM after IS, found 0, Line: 1, Col: 34",
+        Assert.Equal("Expected [NOT] NULL or TRUE|FALSE or [NOT] DISTINCT FROM or [NOT] NORMALIZED after IS, found 0, Line: 1, Col: 34",
             ex.Message);
     }
 
@@ -6956,5 +6956,310 @@ public class ParserCommonTests : ParserTestBase
 
             Assert.Throws<ParserException>(() => ParseSqlStatements(statement, dialects));
         }
+    }
+
+    [Fact]
+    public void Parse_Insert_Into_With_Cte()
+    {
+        VerifiedStatement("INSERT INTO customer WITH foo AS (SELECT 1) SELECT * FROM foo UNION VALUES (1)");
+    }
+
+    [Fact]
+    public void Parse_Update_Multiple_Assignments()
+    {
+        VerifiedStatement("UPDATE t SET a = 1, a = 2, a = 3");
+    }
+
+    [Fact]
+    public void Parse_Select_Limit_1()
+    {
+        VerifiedStatement("SELECT * FROM user LIMIT 1");
+    }
+
+    [Fact]
+    public void Parse_Drop_User()
+    {
+        VerifiedStatement("DROP USER IF EXISTS u1");
+    }
+
+    [Fact]
+    public void Parse_Is_Normalized()
+    {
+        VerifiedStatement("SELECT f FROM foo WHERE field IS NORMALIZED");
+        VerifiedStatement("SELECT f FROM foo WHERE field IS NFC NORMALIZED");
+        VerifiedStatement("SELECT f FROM foo WHERE field IS NFD NORMALIZED");
+        VerifiedStatement("SELECT f FROM foo WHERE field IS NOT NORMALIZED");
+        VerifiedStatement("SELECT f FROM foo WHERE field IS NOT NFKC NORMALIZED");
+    }
+
+    [Fact]
+    public void Parse_Create_Type_Empty()
+    {
+        VerifiedStatement("CREATE TYPE empty AS ()");
+    }
+
+    [Fact]
+    public void Parse_Overlaps()
+    {
+        VerifiedStatement("SELECT (DATE '2016-01-10', DATE '2016-02-01') OVERLAPS (DATE '2016-01-20', DATE '2016-02-10')");
+    }
+
+    [Fact]
+    public void Parse_Select_Offset_No_Limit()
+    {
+        VerifiedStatement("SELECT foo FROM bar OFFSET 2");
+    }
+
+    [Fact]
+    public void Parse_Offset_Limit_Order()
+    {
+        OneStatementParsesTo("SELECT foo FROM bar OFFSET 2 LIMIT 1", "SELECT foo FROM bar LIMIT 1 OFFSET 2");
+    }
+
+    [Fact]
+    public void Parse_Release_Savepoint_Short()
+    {
+        OneStatementParsesTo("RELEASE test1", "RELEASE SAVEPOINT test1");
+    }
+
+    [Fact]
+    public void Parse_Rollback_To_Short()
+    {
+        OneStatementParsesTo("ROLLBACK TO test1", "ROLLBACK TO SAVEPOINT test1");
+        OneStatementParsesTo("ROLLBACK AND CHAIN TO test1", "ROLLBACK AND CHAIN TO SAVEPOINT test1");
+    }
+
+    [Fact]
+    public void Parse_Extract_Year_Canonical()
+    {
+        OneStatementParsesTo("SELECT EXTRACT(year from d)", "SELECT EXTRACT(YEAR FROM d)");
+    }
+
+    [Fact]
+    public void Parse_Bignumeric_Verified_Stmt()
+    {
+        VerifiedStatement("SELECT BIGNUMERIC '0'");
+        VerifiedStatement("SELECT BIGNUMERIC '123456'");
+        VerifiedStatement("SELECT BIGNUMERIC '-3.14'");
+        VerifiedStatement("SELECT BIGNUMERIC '-0.54321'");
+        VerifiedStatement("SELECT BIGNUMERIC '1.23456e05'");
+        VerifiedStatement("SELECT BIGNUMERIC '-9.876e-3'");
+    }
+
+    [Fact]
+    public void Parse_Hex_And_National_String_Canonical()
+    {
+        OneStatementParsesTo("SELECT x'deadBEEF'", "SELECT X'deadBEEF'");
+        OneStatementParsesTo("SELECT n'national string'", "SELECT N'national string'");
+    }
+
+    [Fact]
+    public void Parse_Timestamp_Canonical()
+    {
+        OneStatementParsesTo("SELECT TIMESTAMP '1999-01-01 01:23:34'", "SELECT TIMESTAMP '1999-01-01 01:23:34'");
+        OneStatementParsesTo("SELECT TIMESTAMPTZ '1999-01-01 01:23:34Z'", "SELECT TIMESTAMPTZ '1999-01-01 01:23:34Z'");
+    }
+
+    [Fact]
+    public void Parse_Select_All_Canonical()
+    {
+        OneStatementParsesTo("SELECT ALL name FROM customer", "SELECT name FROM customer");
+    }
+
+    [Fact]
+    public void Parse_Column_Alias_Without_As()
+    {
+        OneStatementParsesTo("SELECT a.col + 1 newname FROM foo AS a", "SELECT a.col + 1 AS newname FROM foo AS a");
+    }
+
+    [Fact]
+    public void Parse_Percentile_Cont()
+    {
+        VerifiedExpr("PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY sales_amount)");
+    }
+
+    [Fact]
+    public void Parse_Alter_Policy_Verified_Stmt()
+    {
+        VerifiedStatement("ALTER POLICY my_policy ON my_table");
+    }
+
+    [Fact]
+    public void Parse_Create_Table_Table_Level_Constraint_Text()
+    {
+        VerifiedStatement("CREATE TABLE foo (id INT, CONSTRAINT address_pkey PRIMARY KEY (address_id))");
+        VerifiedStatement("CREATE TABLE foo (id INT, CONSTRAINT uk_task UNIQUE (report_date, task_id))");
+        VerifiedStatement("CREATE TABLE foo (id INT, PRIMARY KEY (foo, bar))");
+        VerifiedStatement("CREATE TABLE foo (id INT, UNIQUE (id))");
+        VerifiedStatement("CREATE TABLE foo (id INT, FOREIGN KEY (foo, bar) REFERENCES AnotherTable(foo, bar))");
+        VerifiedStatement("CREATE TABLE foo (id INT, CHECK (end_date > start_date OR end_date IS NULL))");
+    }
+
+    [Fact]
+    public void Parse_Merge_Into_Using_NewArrivals()
+    {
+        VerifiedStatement("MERGE INTO s.bar AS dest USING newArrivals AS S ON (1 > 1) WHEN NOT MATCHED THEN INSERT VALUES (stg.A, stg.B, stg.C)");
+    }
+
+    [Fact]
+    public void Parse_Select_Into_Canonical()
+    {
+        OneStatementParsesTo(
+            "SELECT * INTO TEMPORARY UNLOGGED TABLE table0 FROM table1",
+            "SELECT * INTO TEMPORARY UNLOGGED TABLE table0 FROM table1");
+    }
+
+    [Fact]
+    public void Parse_Negative_Value_Canonical()
+    {
+        OneStatementParsesTo("SELECT -1", "SELECT -1");
+    }
+
+    [Fact]
+    public void Parse_Set_Something_To()
+    {
+        OneStatementParsesTo("SET SOMETHING TO '1'", "SET SOMETHING = '1'");
+    }
+
+    [Fact]
+    public void Parse_Set_Time_Zone_To()
+    {
+        OneStatementParsesTo("SET TIME ZONE TO 'UTC'", "SET TIMEZONE = 'UTC'");
+    }
+
+    [Fact]
+    public void Parse_Multiple_Statements_Single_Create_Table()
+    {
+        OneStatementParsesTo("CREATE TABLE foo (baz INT);", "CREATE TABLE foo (baz INT)");
+    }
+
+    [Fact]
+    public void Parse_Begin_Transaction_Variants()
+    {
+        OneStatementParsesTo("BEGIN", "BEGIN TRANSACTION");
+        OneStatementParsesTo("BEGIN WORK", "BEGIN TRANSACTION");
+        OneStatementParsesTo("BEGIN TRANSACTION", "BEGIN TRANSACTION");
+    }
+
+    [Fact]
+    public void Parse_Commit_Variants()
+    {
+        OneStatementParsesTo("COMMIT AND NO CHAIN", "COMMIT");
+        OneStatementParsesTo("COMMIT WORK AND NO CHAIN", "COMMIT");
+        OneStatementParsesTo("COMMIT TRANSACTION AND NO CHAIN", "COMMIT");
+        OneStatementParsesTo("COMMIT WORK AND CHAIN", "COMMIT AND CHAIN");
+        OneStatementParsesTo("COMMIT TRANSACTION AND CHAIN", "COMMIT AND CHAIN");
+        OneStatementParsesTo("COMMIT WORK", "COMMIT");
+        OneStatementParsesTo("COMMIT TRANSACTION", "COMMIT");
+    }
+
+    [Fact]
+    public void Parse_End_Variants()
+    {
+        OneStatementParsesTo("END AND NO CHAIN", "COMMIT");
+        OneStatementParsesTo("END WORK AND NO CHAIN", "COMMIT");
+        OneStatementParsesTo("END TRANSACTION AND NO CHAIN", "COMMIT");
+        OneStatementParsesTo("END WORK AND CHAIN", "COMMIT AND CHAIN");
+        OneStatementParsesTo("END TRANSACTION AND CHAIN", "COMMIT AND CHAIN");
+        OneStatementParsesTo("END WORK", "COMMIT");
+        OneStatementParsesTo("END TRANSACTION", "COMMIT");
+    }
+
+    [Fact]
+    public void Parse_Rollback_Variants()
+    {
+        OneStatementParsesTo("ROLLBACK AND NO CHAIN", "ROLLBACK");
+        OneStatementParsesTo("ROLLBACK WORK AND NO CHAIN", "ROLLBACK");
+        OneStatementParsesTo("ROLLBACK TRANSACTION AND NO CHAIN", "ROLLBACK");
+        OneStatementParsesTo("ROLLBACK WORK AND CHAIN", "ROLLBACK AND CHAIN");
+        OneStatementParsesTo("ROLLBACK TRANSACTION AND CHAIN", "ROLLBACK AND CHAIN");
+        OneStatementParsesTo("ROLLBACK WORK", "ROLLBACK");
+        OneStatementParsesTo("ROLLBACK TRANSACTION", "ROLLBACK");
+        OneStatementParsesTo("ROLLBACK TO test1", "ROLLBACK TO SAVEPOINT test1");
+    }
+
+    [Fact]
+    public void Parse_Listagg_Verified_Stmts()
+    {
+        VerifiedStatement("SELECT LISTAGG(sellerid) WITHIN GROUP (ORDER BY dateid)");
+        VerifiedStatement("SELECT LISTAGG(dateid)");
+        VerifiedStatement("SELECT LISTAGG(DISTINCT dateid)");
+        VerifiedStatement("SELECT LISTAGG(dateid ON OVERFLOW ERROR)");
+        VerifiedStatement("SELECT LISTAGG(dateid ON OVERFLOW TRUNCATE N'...' WITH COUNT)");
+        VerifiedStatement("SELECT LISTAGG(dateid ON OVERFLOW TRUNCATE X'deadbeef' WITH COUNT)");
+    }
+
+    [Fact]
+    public void Parse_Cast_Verified_Stmts()
+    {
+        VerifiedStatement("SELECT CAST(id AS NUMERIC) FROM customer");
+        VerifiedStatement("SELECT CAST(id AS DEC) FROM customer");
+        VerifiedStatement("SELECT CAST(id AS DECIMAL) FROM customer");
+    }
+
+    [Fact]
+    public void Parse_Try_Cast_Verified_Stmts()
+    {
+        VerifiedStatement("SELECT TRY_CAST(id AS BIGINT) FROM customer");
+        VerifiedStatement("SELECT TRY_CAST(id AS NUMERIC) FROM customer");
+        VerifiedStatement("SELECT TRY_CAST(id AS DEC) FROM customer");
+        VerifiedStatement("SELECT TRY_CAST(id AS DECIMAL) FROM customer");
+    }
+
+    [Fact]
+    public void Parse_Trim_Variants()
+    {
+        OneStatementParsesTo("SELECT TRIM(BOTH 'xyz' FROM 'xyzfooxyz')", "SELECT TRIM(BOTH 'xyz' FROM 'xyzfooxyz')");
+        OneStatementParsesTo("SELECT TRIM(LEADING 'xyz' FROM 'xyzfooxyz')", "SELECT TRIM(LEADING 'xyz' FROM 'xyzfooxyz')");
+        OneStatementParsesTo("SELECT TRIM(TRAILING 'xyz' FROM 'xyzfooxyz')", "SELECT TRIM(TRAILING 'xyz' FROM 'xyzfooxyz')");
+        OneStatementParsesTo("SELECT TRIM('xyz' FROM 'xyzfooxyz')", "SELECT TRIM('xyz' FROM 'xyzfooxyz')");
+        OneStatementParsesTo("SELECT TRIM('   foo   ')", "SELECT TRIM('   foo   ')");
+        OneStatementParsesTo("SELECT TRIM(LEADING '   foo   ')", "SELECT TRIM(LEADING '   foo   ')");
+    }
+
+    [Fact]
+    public void Parse_Overlay_Variants()
+    {
+        OneStatementParsesTo("SELECT OVERLAY('abccccde' PLACING 'abc' FROM 3)", "SELECT OVERLAY('abccccde' PLACING 'abc' FROM 3)");
+        OneStatementParsesTo("SELECT OVERLAY('abccccde' PLACING 'abc' FROM 3 FOR 12)", "SELECT OVERLAY('abccccde' PLACING 'abc' FROM 3 FOR 12)");
+    }
+
+    [Fact]
+    public void Parse_Fetch_Row_Variations()
+    {
+        OneStatementParsesTo(
+            "SELECT foo FROM bar FETCH FIRST 10 ROW ONLY",
+            "SELECT foo FROM bar FETCH FIRST 10 ROWS ONLY");
+        OneStatementParsesTo(
+            "SELECT foo FROM bar FETCH NEXT 10 ROW ONLY",
+            "SELECT foo FROM bar FETCH FIRST 10 ROWS ONLY");
+        OneStatementParsesTo(
+            "SELECT foo FROM bar FETCH NEXT 10 ROWS WITH TIES",
+            "SELECT foo FROM bar FETCH FIRST 10 ROWS WITH TIES");
+        OneStatementParsesTo(
+            "SELECT foo FROM bar FETCH NEXT ROWS WITH TIES",
+            "SELECT foo FROM bar FETCH FIRST ROWS WITH TIES");
+    }
+
+    [Fact]
+    public void Parse_Ceil_Floor_Datetime_Canonical()
+    {
+        OneStatementParsesTo("SELECT CEIL(d to day)", "SELECT CEIL(d TO DAY)");
+        OneStatementParsesTo("SELECT FLOOR(d to day)", "SELECT FLOOR(d TO DAY)");
+    }
+
+    [Fact]
+    public void Parse_Select_Into_Temporary()
+    {
+        var sql = "SELECT * INTO TEMPORARY UNLOGGED TABLE table0 FROM table1";
+        OneStatementParsesTo(sql, sql);
+    }
+
+    [Fact]
+    public void Parse_Select_Group_By_Parens()
+    {
+        OneStatementParsesTo(
+            "SELECT id, fname, lname FROM customer GROUP BY (lname, fname)",
+            "SELECT id, fname, lname FROM customer GROUP BY (lname, fname)");
     }
 }

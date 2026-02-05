@@ -185,11 +185,11 @@ public abstract record CopyOption : IWriteSql, IElement
                 break;
 
             case Header { HeaderValue: true }:
-                writer.Write("HEADER");
+                writer.Write("HEADER true");
                 break;
 
             case Header { HeaderValue: false }:
-                writer.Write("HEADER FALSE");
+                writer.Write("HEADER false");
                 break;
 
             case Quote q:

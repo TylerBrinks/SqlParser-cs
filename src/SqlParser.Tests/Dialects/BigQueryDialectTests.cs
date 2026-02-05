@@ -775,4 +775,134 @@ public class BigQueryDialectTests : ParserTestBase
         Assert.Equal(new ObjectName(["myproject", "mydataset", "newview"]), create.Name);
         Assert.Equal(columns, create.Columns);
     }
+
+    [Fact]
+    public void Parse_Hyphenated_Table_Identifiers()
+    {
+        OneStatementParsesTo(
+            "select * from foo-bar f join baz-qux b on f.id = b.id",
+            "SELECT * FROM foo-bar AS f JOIN baz-qux AS b ON f.id = b.id");
+    }
+
+    [Fact]
+    public void Test_Triple_Quote_Typed_Strings()
+    {
+        VerifiedExpr("JSON '''{\\'foo\\':\\'bar\\'s\\'}'''");
+        VerifiedExpr(
+            "JSON \"\"\"{\"foo\":\"bar's\"}\"\"\"");
+    }
+
+    [Fact]
+    public void Test_Array_Agg()
+    {
+        DefaultDialects = [new BigQueryDialect(), new GenericDialect()];
+        VerifiedExpr("ARRAY_AGG(state)");
+        VerifiedExpr("ARRAY_CONCAT_AGG(x LIMIT 2)");
+        VerifiedExpr("ARRAY_AGG(state IGNORE NULLS LIMIT 10)");
+        VerifiedExpr("ARRAY_AGG(state RESPECT NULLS ORDER BY population)");
+        VerifiedExpr("ARRAY_AGG(DISTINCT state IGNORE NULLS ORDER BY population DESC LIMIT 10)");
+        VerifiedExpr("ARRAY_CONCAT_AGG(x ORDER BY ARRAY_LENGTH(x))");
+    }
+
+    [Fact]
+    public void Test_Any_Type()
+    {
+        var statements = ParseSqlStatements(
+            "CREATE OR REPLACE TEMPORARY FUNCTION my_function(param1 ANY TYPE) AS ((SELECT 1))");
+        Assert.Single(statements);
+        var stmt = statements.First()!;
+        var createFunc = Assert.IsType<Statement.CreateFunction>(stmt);
+        Assert.True(createFunc.OrReplace);
+        Assert.True(createFunc.Temporary);
+        Assert.Equal("my_function", createFunc.Name);
+    }
+
+    [Fact]
+    public void Test_Any_Type_Dont_Break_Custom_Type()
+    {
+        DefaultDialects = [new BigQueryDialect(), new GenericDialect()];
+        VerifiedStatement("CREATE TABLE foo (x ANY)");
+    }
+
+    [Fact]
+    public void Test_Begin_Transaction()
+    {
+        VerifiedStatement("BEGIN TRANSACTION");
+    }
+
+    [Fact]
+    public void Test_BigQuery_Create_Function()
+    {
+        // Helper to verify that a CREATE FUNCTION SQL parses successfully
+        void VerifyCreateFunctionParses(string sql)
+        {
+            var statements = ParseSqlStatements(sql);
+            Assert.Single(statements);
+            Assert.IsType<Statement.CreateFunction>(statements.First());
+        }
+
+        // Basic function with options before body
+        VerifyCreateFunctionParses(
+            "CREATE OR REPLACE TEMPORARY FUNCTION " +
+            "project1.mydataset.myfunction(x FLOAT64) " +
+            "RETURNS FLOAT64 " +
+            "OPTIONS(x = 'y') " +
+            "AS 42");
+
+        // Arbitrary Options expressions
+        VerifyCreateFunctionParses(
+            "CREATE OR REPLACE TEMPORARY FUNCTION " +
+            "myfunction(a FLOAT64, b INT64, c STRING) " +
+            "RETURNS ARRAY<FLOAT64> " +
+            "OPTIONS(a = [1, 2], b = 'two', c = [('k1', 'v1'), ('k2', 'v2')]) " +
+            "AS ((SELECT 1 FROM mytable))");
+
+        // Options after body
+        VerifyCreateFunctionParses(
+            "CREATE OR REPLACE TEMPORARY FUNCTION " +
+            "myfunction(a FLOAT64, b INT64, c STRING) " +
+            "RETURNS ARRAY<FLOAT64> " +
+            "AS ((SELECT 1 FROM mytable)) " +
+            "OPTIONS(a = [1, 2], b = 'two', c = [('k1', 'v1'), ('k2', 'v2')])");
+
+        // IF NOT EXISTS
+        VerifyCreateFunctionParses(
+            "CREATE OR REPLACE TEMPORARY FUNCTION IF NOT EXISTS " +
+            "myfunction(a FLOAT64, b INT64, c STRING) " +
+            "RETURNS ARRAY<FLOAT64> " +
+            "OPTIONS(a = [1, 2]) " +
+            "AS ((SELECT 1 FROM mytable))");
+
+        // No return type
+        VerifyCreateFunctionParses(
+            "CREATE OR REPLACE TEMPORARY FUNCTION " +
+            "myfunction(a FLOAT64, b INT64, c STRING) " +
+            "OPTIONS(a = [1, 2]) " +
+            "AS ((SELECT 1 FROM mytable))");
+
+        // With language - body after options (with DETERMINISTIC, round-trips exactly)
+        VerifiedStatement(
+            "CREATE OR REPLACE TEMPORARY FUNCTION " +
+            "myfunction(a FLOAT64, b INT64, c STRING) " +
+            "DETERMINISTIC " +
+            "LANGUAGE js " +
+            "OPTIONS(a = [1, 2]) " +
+            "AS \"console.log('hello');\"");
+
+        // With language - body before options (without DETERMINISTIC spec)
+        VerifyCreateFunctionParses(
+            "CREATE OR REPLACE TEMPORARY FUNCTION " +
+            "myfunction(a FLOAT64, b INT64, c STRING) " +
+            "LANGUAGE js " +
+            "AS \"console.log('hello');\" " +
+            "OPTIONS(a = [1, 2])");
+
+        // Remote
+        VerifyCreateFunctionParses(
+            "CREATE OR REPLACE TEMPORARY FUNCTION " +
+            "myfunction(a FLOAT64, b INT64, c STRING) " +
+            "RETURNS INT64 " +
+            "REMOTE WITH CONNECTION us.myconnection " +
+            "OPTIONS(a = [1, 2])");
+    }
 }

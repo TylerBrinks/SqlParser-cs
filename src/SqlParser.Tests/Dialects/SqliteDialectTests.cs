@@ -1,7 +1,6 @@
 ﻿using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
-using System.Linq.Expressions;
 using static SqlParser.Ast.Expression;
 using DataType = SqlParser.Ast.DataType;
 using Expression = SqlParser.Ast.Expression;
@@ -202,9 +201,14 @@ public class SqliteDialectTests : ParserTestBase
     [Fact]
     public void Parse_Create_Table_Gencol()
     {
+        DefaultDialects = [new SQLiteDialect(), new GenericDialect()];
+
         VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2))");
         VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2) VIRTUAL)");
         VerifiedStatement("CREATE TABLE t1 (a INT, b INT GENERATED ALWAYS AS (a * 2) STORED)");
+        VerifiedStatement("CREATE TABLE t1 (a INT, b INT AS (a * 2))");
+        VerifiedStatement("CREATE TABLE t1 (a INT, b INT AS (a * 2) VIRTUAL)");
+        VerifiedStatement("CREATE TABLE t1 (a INT, b INT AS (a * 2) STORED)");
     }
 
     [Fact]
@@ -326,4 +330,20 @@ public class SqliteDialectTests : ParserTestBase
             new ColumnOptionDef(new ColumnOption.DialectSpecific([new Word("DESC")])),
         ])], create.Element.Columns);
     }
+
+    [Fact]
+    public void Double_Equality_Operator()
+    {
+        // Sqlite supports this operator: https://www.sqlite.org/lang_expr.html#binaryops
+        DefaultDialects = [new SQLiteDialect(), new GenericDialect()];
+        OneStatementParsesTo("SELECT a==b FROM t", "SELECT a = b FROM t");
+    }
+
+    [Fact]
+    public void Parse_Attach_Database()
+    {
+        var sql = "ATTACH DATABASE 'test.db' AS test";
+        VerifiedStatement(sql);
+    }
+
 }

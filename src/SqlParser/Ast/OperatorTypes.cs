@@ -31,7 +31,7 @@ public abstract record OperatorClassItem : IWriteSql, IElement
             writer.WriteSql($"OPERATOR {StrategyNumber} {Name}");
             if (LeftType != null || RightType != null)
             {
-                writer.Write("(");
+                writer.Write(" (");
                 if (LeftType != null)
                 {
                     writer.WriteSql($"{LeftType}");

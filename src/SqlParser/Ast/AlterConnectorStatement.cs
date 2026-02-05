@@ -5,7 +5,8 @@ namespace SqlParser.Ast;
 /// </summary>
 public record AlterConnectorStatement(
     Ident Name,
-    AlterConnectorOperation Operation) : IWriteSql, IElement
+    AlterConnectorOperation Operation
+    ) : IWriteSql, IElement
 {
     public void ToSql(SqlTextWriter writer)
     {

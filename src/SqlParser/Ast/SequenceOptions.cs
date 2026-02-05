@@ -99,6 +99,37 @@ public abstract record SequenceOptions : IWriteSql, IElement
             writer.WriteSql($" {cycle}CYCLE");
         }
     }
+    /// <summary>
+    /// Restart sequence (for ALTER SEQUENCE)
+    /// </summary>
+    /// <param name="Expression">Expression</param>
+    /// <param name="With">True if WITH keyword is present</param>
+    public record Restart(Expression Expression, bool With) : SequenceOptions
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            var with = With ? " WITH" : null;
+            writer.WriteSql($" RESTART{with} {Expression}");
+        }
+    }
+    /// <summary>
+    /// Owned By (for sequence ownership)
+    /// </summary>
+    /// <param name="OwnerName">Owner name or null for NONE</param>
+    public record OwnedBy(ObjectName? OwnerName) : SequenceOptions
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            if (OwnerName != null)
+            {
+                writer.WriteSql($" OWNED BY {OwnerName}");
+            }
+            else
+            {
+                writer.Write(" OWNED BY NONE");
+            }
+        }
+    }
 
     public abstract void ToSql(SqlTextWriter writer);
 }

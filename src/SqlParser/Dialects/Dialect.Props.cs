@@ -89,4 +89,6 @@ public partial class Dialect
     /// Returns true if the dialect supports the procedural CASE statement
     /// </summary>
     public virtual bool SupportsCaseStatement => false;
+    public virtual bool SupportsInsertTableFunction => false;
+    public virtual bool SupportsInsertFormat => false;
 }

@@ -24,7 +24,14 @@ public record RaiseErrorStatement(
 
         if (Options.SafeAny())
         {
-            writer.WriteSql($" WITH {Options.ToSqlDelimited()}");
+            var optionStrings = Options!.Select(o => o switch
+            {
+                RaiseErrorOption.Log => "LOG",
+                RaiseErrorOption.NoWait => "NOWAIT",
+                RaiseErrorOption.SetError => "SETERROR",
+                _ => throw new InvalidOperationException($"Unknown RaiseErrorOption: {o}")
+            });
+            writer.Write($" WITH {string.Join(", ", optionStrings)}");
         }
     }
 }

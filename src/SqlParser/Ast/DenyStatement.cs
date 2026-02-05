@@ -5,7 +5,7 @@ namespace SqlParser.Ast;
 /// </summary>
 public record DenyStatement(
     Privileges Privileges,
-    Sequence<Grantee> Grantees) : IWriteSql, IElement
+    Sequence<Ident> Grantees) : IWriteSql, IElement
 {
     public GrantObjects? Objects { get; init; }
     public Ident? GrantedBy { get; init; }

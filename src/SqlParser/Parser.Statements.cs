@@ -114,6 +114,8 @@ public partial class Parser
             Keyword.IF => ParseIf(),
             Keyword.WHILE => ParseWhile(),
             Keyword.CASE when _dialect.SupportsCaseStatement => ParseCaseStatement(),
+            Keyword.COMMENT => ParseComment(),
+            Keyword.LOCK when _dialect is PostgreSqlDialect or GenericDialect => ParseLockTableStatement(),
 
             _ => throw Expected("a SQL statement", PeekToken())
         };
@@ -124,11 +126,117 @@ public partial class Parser
         var channel = ParseIdentifier();
         return new Listen(channel);
     }
+
+    /// <summary>
+    /// Parse PostgreSQL LOCK TABLE statement
+    /// LOCK [ TABLE ] name [, ...] [ IN lockmode MODE ] [ NOWAIT ]
+    /// </summary>
+    public Statement ParseLockTableStatement()
+    {
+        // TABLE is optional
+        ParseKeyword(Keyword.TABLE);
+
+        // Parse table names
+        var tables = ParseCommaSeparated(() =>
+        {
+            var table = ParseIdentifier();
+            LockTableType? lockType = null;
+
+            // Check for IN ... MODE
+            if (ParseKeyword(Keyword.IN))
+            {
+                lockType = ParseLockMode();
+                ExpectKeyword(Keyword.MODE);
+            }
+
+            // Default to ACCESS SHARE if no mode specified
+            lockType ??= new LockTableType.AccessShare();
+
+            return new LockTable(table, null, lockType) { PostgresMode = true };
+        });
+
+        return new LockTables(tables) { PostgresMode = true };
+    }
+
+    private LockTableType ParseLockMode()
+    {
+        if (ParseKeywordSequence(Keyword.ACCESS, Keyword.SHARE))
+        {
+            return new LockTableType.AccessShare();
+        }
+        if (ParseKeywordSequence(Keyword.ROW, Keyword.SHARE))
+        {
+            return new LockTableType.RowShare();
+        }
+        if (ParseKeywordSequence(Keyword.ROW, Keyword.EXCLUSIVE))
+        {
+            return new LockTableType.RowExclusive();
+        }
+        if (ParseKeywordSequence(Keyword.SHARE, Keyword.UPDATE, Keyword.EXCLUSIVE))
+        {
+            return new LockTableType.ShareUpdateExclusive();
+        }
+        if (ParseKeywordSequence(Keyword.SHARE, Keyword.ROW, Keyword.EXCLUSIVE))
+        {
+            return new LockTableType.ShareRowExclusive();
+        }
+        if (ParseKeyword(Keyword.SHARE))
+        {
+            return new LockTableType.Share();
+        }
+        if (ParseKeywordSequence(Keyword.ACCESS, Keyword.EXCLUSIVE))
+        {
+            return new LockTableType.AccessExclusive();
+        }
+        if (ParseKeyword(Keyword.EXCLUSIVE))
+        {
+            return new LockTableType.Exclusive();
+        }
+
+        throw Expected("lock mode (ACCESS SHARE, ROW SHARE, ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, or ACCESS EXCLUSIVE)", PeekToken());
+    }
     public Statement ParseNotify()
     {
         var channel = ParseIdentifier();
         var payload = ConsumeToken<Comma>() ? ParseLiteralString() : null;
         return new Notify(channel, payload);
+    }
+
+    public Statement ParseComment()
+    {
+        var ifExists = ParseIfExists();
+
+        ExpectKeyword(Keyword.ON);
+        var token = NextToken();
+        CommentObject objectType;
+        ObjectName name;
+
+        switch (token)
+        {
+            case Word { Keyword: Keyword.COLUMN }:
+                objectType = CommentObject.Column;
+                name = ParseObjectName();
+                break;
+
+            case Word { Keyword: Keyword.TABLE }:
+                objectType = CommentObject.Table;
+                name = ParseObjectName();
+                break;
+
+            case Word { Keyword: Keyword.EXTENSION }:
+                objectType = CommentObject.Extension;
+                name = ParseObjectName();
+                break;
+
+            default:
+                throw Expected("comment object_type", token);
+        }
+
+        ExpectKeyword(Keyword.IS);
+
+        var comment = ParseKeyword(Keyword.NULL) ? null : ParseLiteralString();
+
+        return new Comment(name, objectType, comment, ifExists);
     }
 
     public Statement ParseAnalyze()
@@ -216,6 +324,15 @@ public partial class Parser
         var name = ParseObjectName();
         ExpectKeyword(Keyword.AS);
 
+        // Check if this is CREATE TYPE ... AS ENUM
+        if (ParseKeyword(Keyword.ENUM))
+        {
+            ExpectToken<LeftParen>();
+            var labels = ParseCommaSeparated0(ParseIdentifier, typeof(RightParen));
+            ExpectRightParen();
+            return new CreateType(name, new UserDefinedTypeRepresentation.Enum(labels));
+        }
+
         var attributes = new Sequence<UserDefinedTypeCompositeAttributeDef>();
 
         if (!ConsumeToken<LeftParen>() || ConsumeToken<RightParen>())
@@ -231,7 +348,7 @@ public partial class Parser
             var attributeCollation = ParseInit (ParseKeyword(Keyword.COLLATE),  ParseObjectName);
 
             attributes.Add(new UserDefinedTypeCompositeAttributeDef(attributeName, attributeDataType, attributeCollation));
-            
+
             var comma = ConsumeToken<Comma>();
             if (ConsumeToken<RightParen>())
             {
@@ -573,17 +690,13 @@ public partial class Parser
 
             var args = ExpectParens(() =>
             {
-                Sequence<OperateFunctionArg>? fnArgs = null;
                 if (ConsumeToken<RightParen>())
                 {
                     PrevToken();
-                }
-                else
-                {
-                    fnArgs = ParseCommaSeparated(ParseFunctionArg);
+                    return new Sequence<OperateFunctionArg>();
                 }
 
-                return fnArgs;
+                return ParseCommaSeparated(ParseFunctionArg);
             });
 
             var returnType = ParseInit(ParseKeyword(Keyword.RETURNS), ParseDataType);
@@ -593,14 +706,23 @@ public partial class Parser
             FunctionBehavior? behavior = null;
             FunctionCalledOnNull? calledOnNull = null;
             FunctionParallel? parallel = null;
+            FunctionSecurity? security = null;
+            Sequence<FunctionDefinitionSetParam>? setParams = null;
 
             while (true)
             {
                 if (ParseKeyword(Keyword.AS))
                 {
                     EnsureNotSet(functionBody, "AS");
+                    var expr = ParseCreateFunctionBodyString();
 
-                    functionBody = new CreateFunctionBody.AsBeforeOptions(ParseCreateFunctionBodyString());
+                    // Check for C language syntax: AS 'file', 'symbol'
+                    Expression? linkSymbol = null;
+                    if (ConsumeToken<Comma>())
+                    {
+                        linkSymbol = ParseCreateFunctionBodyString();
+                    }
+                    functionBody = new CreateFunctionBody.AsBeforeOptions(expr, linkSymbol);
                 }
                 else if (ParseKeyword(Keyword.LANGUAGE))
                 {
@@ -663,6 +785,39 @@ public partial class Parser
                     EnsureNotSet(functionBody, "RETURN");
                     functionBody = new CreateFunctionBody.Return(ParseExpr());
                 }
+                else if (ParseKeyword(Keyword.SECURITY))
+                {
+                    EnsureNotSet(security, "SECURITY DEFINER | SECURITY INVOKER");
+                    if (ParseKeyword(Keyword.DEFINER))
+                    {
+                        security = FunctionSecurity.Definer;
+                    }
+                    else if (ParseKeyword(Keyword.INVOKER))
+                    {
+                        security = FunctionSecurity.Invoker;
+                    }
+                    else
+                    {
+                        throw Expected("DEFINER or INVOKER", PeekToken());
+                    }
+                }
+                else if (ParseKeyword(Keyword.SET))
+                {
+                    setParams ??= new Sequence<FunctionDefinitionSetParam>();
+                    var paramName = ParseIdentifier();
+                    FunctionSetValue setValue;
+                    if (ParseKeywordSequence(Keyword.FROM, Keyword.CURRENT))
+                    {
+                        setValue = new FunctionSetValue.FromCurrent();
+                    }
+                    else
+                    {
+                        ExpectToken<Equal>();
+                        var values = ParseCommaSeparated(ParseExpr);
+                        setValue = new FunctionSetValue.Values(values);
+                    }
+                    setParams.Add(new FunctionDefinitionSetParam(paramName, setValue));
+                }
                 else
                 {
                     break;
@@ -679,6 +834,8 @@ public partial class Parser
                 CalledOnNull = calledOnNull,
                 Parallel = parallel,
                 Language = language,
+                Security = security,
+                SetParams = setParams,
                 FunctionBody = functionBody,
             };
         }
@@ -884,10 +1041,14 @@ public partial class Parser
         {
             return ParseDropOperator();
         }
+        else if (ParseKeyword(Keyword.EXTENSION))
+        {
+            return ParseDropExtension();
+        }
 
         if (objectType == null)
         {
-            throw Expected("TABLE, VIEW, INDEX, ROLE, SCHEMA, DATABASE, FUNCTION, PROCEDURE, STAGE, TRIGGER, SECRET, SEQUENCE, TYPE, DOMAIN, CONNECTOR, USER, or OPERATOR after DROP", PeekToken());
+            throw Expected("TABLE, VIEW, INDEX, ROLE, SCHEMA, DATABASE, FUNCTION, PROCEDURE, STAGE, TRIGGER, SECRET, SEQUENCE, TYPE, DOMAIN, CONNECTOR, USER, OPERATOR, or EXTENSION after DROP", PeekToken());
         }
 
         // Many dialects support the non-standard `IF EXISTS` clause and allow
@@ -1453,7 +1614,7 @@ public partial class Parser
 
     public Statement ParseAlter()
     {
-        var objectType = ExpectOneOfKeywords(Keyword.VIEW, Keyword.TABLE, Keyword.INDEX, Keyword.ROLE, Keyword.POLICY, Keyword.SCHEMA, Keyword.CONNECTOR, Keyword.USER, Keyword.OPERATOR);
+        var objectType = ExpectOneOfKeywords(Keyword.VIEW, Keyword.TABLE, Keyword.INDEX, Keyword.ROLE, Keyword.POLICY, Keyword.SCHEMA, Keyword.CONNECTOR, Keyword.USER, Keyword.OPERATOR, Keyword.TYPE, Keyword.SEQUENCE);
 
         switch (objectType)
         {
@@ -1468,6 +1629,12 @@ public partial class Parser
 
             case Keyword.OPERATOR:
                 return ParseAlterOperator();
+
+            case Keyword.TYPE:
+                return ParseAlterType();
+
+            case Keyword.SEQUENCE:
+                return ParseAlterSequence();
             case Keyword.VIEW:
                 {
                     var name = ParseObjectName();
@@ -2004,7 +2171,19 @@ public partial class Parser
         }
 
         var table = ParseKeyword(Keyword.TABLE);
-        var tableName = ParseObjectName();
+
+        Expression? tableFunction = null;
+        ObjectName tableName;
+        if (_dialect.SupportsInsertTableFunction && ParseKeyword(Keyword.FUNCTION))
+        {
+            var fnName = ParseObjectName();
+            tableFunction = ParseFunction(fnName);
+            tableName = fnName;
+        }
+        else
+        {
+            tableName = ParseObjectName();
+        }
 
         var tableAlias = _dialect is PostgreSqlDialect && ParseKeyword(Keyword.AS) ? ParseIdentifier() : null;
 
@@ -2027,7 +2206,27 @@ public partial class Parser
                 afterColumns = ParseParenthesizedColumnList(IsOptional.Optional, false);
             }
 
-            source = ParseQuery();
+            if (_dialect.SupportsInsertFormat && PeekToken() is Word { Keyword: Keyword.FORMAT or Keyword.SETTINGS })
+            {
+                // Skip query parsing - FORMAT/SETTINGS will be parsed below
+            }
+            else
+            {
+                source = ParseQuery();
+            }
+        }
+
+        // Parse SETTINGS and FORMAT for ClickHouse
+        Sequence<Setting>? insertSettings = null;
+        InputFormatClause? formatClause = null;
+        if (_dialect.SupportsInsertFormat)
+        {
+            insertSettings = ParseSettings();
+
+            if (ParseKeyword(Keyword.FORMAT))
+            {
+                formatClause = ParseInputFormatClause();
+            }
         }
 
         var insertAliases = _dialect is MySqlDialect or GenericDialect && ParseKeyword(Keyword.AS)
@@ -2096,7 +2295,10 @@ public partial class Parser
             ReplaceInto = false,
             Priority = priority,
             Alias = tableAlias,
-            InsertAlias = insertAliases
+            InsertAlias = insertAliases,
+            TableFunction = tableFunction,
+            Settings = insertSettings,
+            FormatClause = formatClause
         });
 
         InsertAliases ParseInsertAlias()
@@ -2248,10 +2450,77 @@ public partial class Parser
     /// </summary>
     public Statement ParseVacuum()
     {
-        var table = ParseInit(!ParseKeyword(Keyword.ANALYZE), ParseObjectName);
+        Sequence<VacuumOption>? options = null;
+        var optionsInParens = false;
+
+        // Parse optional options in parentheses: VACUUM (FULL, VERBOSE)
+        if (PeekTokenIs<LeftParen>() && PeekNthTokenIs<Word>(1))
+        {
+            options = ExpectParens(() => ParseCommaSeparated(ParseVacuumOption));
+            optionsInParens = true;
+        }
+        else
+        {
+            // Parse optional inline options (FULL, FREEZE, VERBOSE, ANALYZE)
+            while (true)
+            {
+                if (ParseKeyword(Keyword.FULL))
+                {
+                    options ??= [];
+                    options.Add(new VacuumOption.Full());
+                }
+                else if (ParseKeyword(Keyword.FREEZE))
+                {
+                    options ??= [];
+                    options.Add(new VacuumOption.Freeze());
+                }
+                else if (ParseKeyword(Keyword.VERBOSE))
+                {
+                    options ??= [];
+                    options.Add(new VacuumOption.Verbose());
+                }
+                else if (ParseKeyword(Keyword.ANALYZE))
+                {
+                    options ??= [];
+                    options.Add(new VacuumOption.Analyze());
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+
+        // Parse optional table name
+        ObjectName? table = null;
+        if (PeekToken() is Word { Keyword: Keyword.undefined })
+        {
+            table = ParseObjectName();
+        }
+
         var columns = ParseParenthesizedColumnList(IsOptional.Optional, false);
 
-        return new Vacuum(new VacuumStatement(table, columns.Any() ? columns : null));
+        return new Vacuum(new VacuumStatement
+        {
+            TableName = table,
+            Columns = columns.Any() ? columns : null,
+            Options = options,
+            OptionsInParens = optionsInParens
+        });
+    }
+
+    private VacuumOption ParseVacuumOption()
+    {
+        var keyword = ExpectOneOfKeywords(Keyword.FULL, Keyword.FREEZE, Keyword.VERBOSE, Keyword.ANALYZE, Keyword.TRUNCATE);
+        return keyword switch
+        {
+            Keyword.FULL => new VacuumOption.Full(),
+            Keyword.FREEZE => new VacuumOption.Freeze(),
+            Keyword.VERBOSE => new VacuumOption.Verbose(),
+            Keyword.ANALYZE => new VacuumOption.Analyze(),
+            Keyword.TRUNCATE => new VacuumOption.Truncate(),
+            _ => throw Expected("vacuum option")
+        };
     }
 
     /// <summary>
@@ -2379,11 +2648,12 @@ public partial class Parser
     {
         var (privileges, grantObjects) = ParseGrantRevokePrivilegesObject();
         ExpectKeyword(Keyword.TO);
-        var grantee = ParseIdentifier();
+        var grantees = ParseCommaSeparated(ParseIdentifier);
         Ident? grantedBy = ParseInit(ParseKeywordSequence(Keyword.AS), ParseIdentifier);
 
-        return new Deny(new DenyStatement(privileges, grantObjects, grantee)
+        return new Deny(new DenyStatement(privileges, grantees)
         {
+            Objects = grantObjects,
             GrantedBy = grantedBy
         });
     }
@@ -2444,10 +2714,10 @@ public partial class Parser
         var body = ParseStatementBlock();
         ExpectKeywords(Keyword.END, Keyword.WHILE);
 
-        Ident? endLabel = null;
+        //Ident? endLabel = null;
         if (PeekToken() is Word)
         {
-            endLabel = MaybeParse(ParseIdentifier);
+            _ = MaybeParse(ParseIdentifier);
         }
 
         return new While(new WhileStatement(condition, body)
@@ -2486,7 +2756,7 @@ public partial class Parser
 
         ExpectKeywords(Keyword.END, Keyword.CASE);
 
-        return new Case(new CaseStatement(branches)
+        return new Statement.Case(new CaseStatement(branches)
         {
             Operand = operand,
             ElseBlock = elseBlock
@@ -2552,7 +2822,7 @@ public partial class Parser
         while (PeekToken() is Word { Keyword: Keyword.CONSTRAINT or Keyword.NOT or Keyword.CHECK or Keyword.NULL })
         {
             constraints ??= [];
-            constraints.Add(ParseOptionalTableConstraint());
+            constraints.Add(ParseOptionalTableConstraint(false, false));
         }
 
         return new CreateDomain(name, dataType)
@@ -2665,7 +2935,7 @@ public partial class Parser
     /// </summary>
     public DropOperatorInfo ParseDropOperatorInfo()
     {
-        var name = ParseObjectName();
+        var name = ParseOperatorSymbol();
         ExpectToken<LeftParen>();
 
         DataType? leftType = null;
@@ -2741,23 +3011,156 @@ public partial class Parser
     }
 
     /// <summary>
+    /// Parse DROP EXTENSION statement
+    /// </summary>
+    public Statement ParseDropExtension()
+    {
+        var ifExists = ParseIfExists();
+        var name = ParseIdentifier();
+        var cascade = ParseKeyword(Keyword.CASCADE);
+        var restrict = !cascade && ParseKeyword(Keyword.RESTRICT);
+
+        return new DropExtension(name)
+        {
+            IfExists = ifExists,
+            Cascade = cascade,
+            Restrict = restrict
+        };
+    }
+
+    /// <summary>
+    /// Parse ALTER TYPE statement
+    /// </summary>
+    public Statement ParseAlterType()
+    {
+        var name = ParseObjectName();
+        AlterTypeOperation operation;
+
+        if (ParseKeywordSequence(Keyword.ADD, Keyword.VALUE))
+        {
+            var ifNotExists = ParseIfNotExists();
+            var newValue = ParseLiteralString();
+
+            string? beforeValue = null;
+            string? afterValue = null;
+
+            if (ParseKeyword(Keyword.BEFORE))
+            {
+                beforeValue = ParseLiteralString();
+            }
+            else if (ParseKeyword(Keyword.AFTER))
+            {
+                afterValue = ParseLiteralString();
+            }
+
+            operation = new AlterTypeOperation.AddValue(newValue)
+            {
+                IfNotExists = ifNotExists,
+                BeforeValue = beforeValue,
+                AfterValue = afterValue
+            };
+        }
+        else if (ParseKeywordSequence(Keyword.RENAME, Keyword.TO))
+        {
+            var newName = ParseObjectName();
+            operation = new AlterTypeOperation.RenameTo(newName);
+        }
+        else if (ParseKeywordSequence(Keyword.RENAME, Keyword.VALUE))
+        {
+            var oldValue = ParseLiteralString();
+            ExpectKeyword(Keyword.TO);
+            var newValue = ParseLiteralString();
+            operation = new AlterTypeOperation.RenameValue(oldValue, newValue);
+        }
+        else if (ParseKeywordSequence(Keyword.OWNER, Keyword.TO))
+        {
+            var newOwner = ParseIdentifier();
+            operation = new AlterTypeOperation.OwnerTo(newOwner);
+        }
+        else if (ParseKeywordSequence(Keyword.SET, Keyword.SCHEMA))
+        {
+            var newSchema = ParseObjectName();
+            operation = new AlterTypeOperation.SetSchema(newSchema);
+        }
+        else if (ParseKeywordSequence(Keyword.ADD, Keyword.ATTRIBUTE))
+        {
+            var attrName = ParseIdentifier();
+            var dataType = ParseDataType();
+            ObjectName? collation = null;
+            if (ParseKeyword(Keyword.COLLATE))
+            {
+                collation = ParseObjectName();
+            }
+            operation = new AlterTypeOperation.AddAttribute(attrName, dataType)
+            {
+                Collation = collation
+            };
+        }
+        else if (ParseKeywordSequence(Keyword.DROP, Keyword.ATTRIBUTE))
+        {
+            var attrIfExists = ParseIfExists();
+            var attrName = ParseIdentifier();
+            operation = new AlterTypeOperation.DropAttribute(attrName)
+            {
+                IfExists = attrIfExists
+            };
+        }
+        else if (ParseKeywordSequence(Keyword.ALTER, Keyword.ATTRIBUTE))
+        {
+            var attrName = ParseIdentifier();
+            ExpectKeywords(Keyword.SET, Keyword.DATA, Keyword.TYPE);
+            var dataType = ParseDataType();
+            ObjectName? collation = null;
+            if (ParseKeyword(Keyword.COLLATE))
+            {
+                collation = ParseObjectName();
+            }
+            operation = new AlterTypeOperation.AlterAttribute(attrName, dataType)
+            {
+                Collation = collation
+            };
+        }
+        else
+        {
+            throw Expected("ADD VALUE, RENAME TO, RENAME VALUE, OWNER TO, SET SCHEMA, ADD ATTRIBUTE, DROP ATTRIBUTE, or ALTER ATTRIBUTE", PeekToken());
+        }
+
+        return new AlterType(name, operation);
+    }
+
+    /// <summary>
+    /// Parse ALTER SEQUENCE statement
+    /// </summary>
+    public Statement ParseAlterSequence()
+    {
+        var ifExists = ParseIfExists();
+        var name = ParseObjectName();
+        var options = ParseCreateSequenceOptions();
+
+        return new AlterSequence(name, options)
+        {
+            IfExists = ifExists
+        };
+    }
+
+    /// <summary>
     /// Parse CREATE SERVER statement
     /// </summary>
     public Statement ParseCreateServer()
     {
         var ifNotExists = ParseIfNotExists();
-        var name = ParseObjectName();
+        var name = ParseIdentifier();
 
-        ObjectName? serverType = null;
+        Ident? serverType = null;
         if (ParseKeyword(Keyword.TYPE))
         {
-            serverType = ParseObjectName();
+            serverType = ParseIdentifier();
         }
 
-        ObjectName? version = null;
+        Ident? version = null;
         if (ParseKeyword(Keyword.VERSION))
         {
-            version = ParseObjectName();
+            version = ParseIdentifier();
         }
 
         ExpectKeywords(Keyword.FOREIGN, Keyword.DATA, Keyword.WRAPPER);
@@ -2766,16 +3169,26 @@ public partial class Parser
         Sequence<SqlOption>? options = null;
         if (ParseKeyword(Keyword.OPTIONS))
         {
-            options = ExpectParens(() => ParseCommaSeparated(ParseSqlOption));
+            options = ExpectParens(() => ParseCommaSeparated(ParseServerOption));
         }
 
         return new CreateServer(new CreateServerStatement(name, foreignDataWrapper)
         {
             IfNotExists = ifNotExists,
             ServerType = serverType,
-            Version = version,
+            ServerVersion = version,
             Options = options
         });
+    }
+
+    /// <summary>
+    /// Parse PostgreSQL-style server option (name 'value')
+    /// </summary>
+    private SqlOption ParseServerOption()
+    {
+        var name = ParseIdentifier();
+        var value = ParseValue();
+        return new SqlOption.NameValue(name, new LiteralValue(value));
     }
 
     /// <summary>
@@ -2788,7 +3201,7 @@ public partial class Parser
 
         if (ParseKeywordSequence(Keyword.RENAME, Keyword.TO))
         {
-            var newName = ParseObjectName();
+            var newName = ParseIdentifier();
             operation = new AlterSchemaOperation.RenameTo(newName);
         }
         else if (ParseKeywordSequence(Keyword.OWNER, Keyword.TO))
@@ -2889,7 +3302,7 @@ public partial class Parser
             return ParseCreateOperatorFamily();
         }
 
-        var name = ParseObjectName();
+        var name = ParseOperatorSymbol();
         ExpectLeftParen();
         var options = ParseCommaSeparated(ParseOperatorOption);
         ExpectRightParen();
@@ -2905,7 +3318,7 @@ public partial class Parser
     {
         var name = ParseObjectName();
         var isDefault = ParseKeyword(Keyword.DEFAULT);
-        ExpectKeywordSequence(Keyword.FOR, Keyword.TYPE);
+        ExpectKeywords(Keyword.FOR, Keyword.TYPE);
         var dataType = ParseDataType();
         ExpectKeyword(Keyword.USING);
         var indexMethod = ParseIdentifier();
@@ -2956,7 +3369,7 @@ public partial class Parser
             return ParseAlterOperatorFamily();
         }
 
-        var name = ParseObjectName();
+        var name = ParseOperatorSymbol();
         ExpectLeftParen();
 
         DataType? leftType = null;
@@ -3057,6 +3470,15 @@ public partial class Parser
     {
         var name = ParseIdentifier();
         ExpectToken<Equal>();
+
+        // COMMUTATOR and NEGATOR take operator symbols, not expressions
+        if (name.Value.Equals("COMMUTATOR", StringComparison.OrdinalIgnoreCase) ||
+            name.Value.Equals("NEGATOR", StringComparison.OrdinalIgnoreCase))
+        {
+            var op = ParseOperatorSymbol();
+            return new OperatorOption(name, new Identifier(new Ident(op.ToString())));
+        }
+
         var value = ParseExpr();
         return new OperatorOption(name, value);
     }
@@ -3071,9 +3493,9 @@ public partial class Parser
     {
         if (ParseKeyword(Keyword.OPERATOR))
         {
-            var strategyNumber = (int)ParseLiteralUint();
+            var strategyNumber = int.Parse(((Value.Number)ParseNumberValue()).Value);
 
-            var opName = ParseObjectName();
+            var opName = ParseOperatorSymbol();
 
             DataType? leftType = null;
             DataType? rightType = null;
@@ -3110,7 +3532,7 @@ public partial class Parser
         }
         else if (ParseKeyword(Keyword.FUNCTION))
         {
-            var supportNumber = (int)ParseLiteralUint();
+            var supportNumber = int.Parse(((Value.Number)ParseNumberValue()).Value);
 
             var funcName = ParseObjectName();
 
@@ -3146,7 +3568,7 @@ public partial class Parser
     {
         if (ParseKeyword(Keyword.OPERATOR))
         {
-            var strategyNumber = (int)ParseLiteralUint();
+            var strategyNumber = int.Parse(((Value.Number)ParseNumberValue()).Value);
             ExpectLeftParen();
 
             DataType? leftType = null;
@@ -3169,7 +3591,7 @@ public partial class Parser
         }
         else if (ParseKeyword(Keyword.FUNCTION))
         {
-            var supportNumber = (int)ParseLiteralUint();
+            var supportNumber = int.Parse(((Value.Number)ParseNumberValue()).Value);
             ExpectLeftParen();
 
             DataType? leftType = null;

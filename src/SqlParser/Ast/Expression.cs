@@ -866,7 +866,7 @@ public abstract record Expression : IWriteSql, IElement
             : this(expression, negated, pattern, (string?)null, Any) { }
 
         public Like(Expression? expression, bool negated, Expression pattern)
-            : this(expression, negated, pattern, (string?)null, false) { }
+            : this(expression, negated, pattern, (string?)null) { }
 
         public override void ToSql(SqlTextWriter writer)
         {
@@ -1355,11 +1355,11 @@ public abstract record Expression : IWriteSql, IElement
     /// <summary>
     /// MySQL MEMBER OF expression
     /// </summary>
-    public record MemberOf(Expression Member, Expression Array) : Expression
+    public record MemberOf(Expression Member, Expression ArrayExpr) : Expression
     {
         public override void ToSql(SqlTextWriter writer)
         {
-            writer.WriteSql($"{Member} MEMBER OF({Array})");
+            writer.WriteSql($"{Member} MEMBER OF({ArrayExpr})");
         }
     }
     /// <summary>

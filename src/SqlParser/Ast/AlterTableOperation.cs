@@ -555,6 +555,39 @@ public abstract record AlterTableOperation : IWriteSql
         }
     }
     /// <summary>
+    /// REPLICA IDENTITY { DEFAULT | FULL | NOTHING | USING INDEX index_name }
+    /// Note: this is a PostgreSQL-specific operation.
+    /// </summary>
+    public record ReplicaIdentity(ReplicaIdentityType Identity) : AlterTableOperation
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"REPLICA IDENTITY {Identity}");
+        }
+    }
+    /// <summary>
+    /// VALIDATE CONSTRAINT constraint_name
+    /// Note: this is a PostgreSQL-specific operation.
+    /// </summary>
+    public record ValidateConstraint(Ident Name) : AlterTableOperation
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"VALIDATE CONSTRAINT {Name}");
+        }
+    }
+    /// <summary>
+    /// SET SCHEMA schema_name
+    /// Note: this is a PostgreSQL-specific operation.
+    /// </summary>
+    public record SetSchema(ObjectName SchemaName) : AlterTableOperation
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"SET SCHEMA {SchemaName}");
+        }
+    }
+    /// <summary>
     /// UNFREEZE PARTITION partition_expr
     /// </summary>
     public record UnfreezePartition(Partition Partition, Ident? WithName = null) : AlterTableOperation

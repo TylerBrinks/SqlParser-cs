@@ -11,6 +11,22 @@ public record CreateIndex([property: Visit(0)] ObjectName? Name, [property: Visi
     /// </summary>
     public Ident? CustomIndexTypeName { get; init; }
     /// <summary>
+    /// Returns the USING clause value as a string
+    /// </summary>
+    public string? Using => IndexType switch
+    {
+        null or Ast.IndexType.None => null,
+        Ast.IndexType.Custom => CustomIndexTypeName?.Value,
+        Ast.IndexType.BTree => "btree",
+        Ast.IndexType.Hash => "hash",
+        Ast.IndexType.GIN => "gin",
+        Ast.IndexType.GiST => "gist",
+        Ast.IndexType.SPGiST => "spgist",
+        Ast.IndexType.BRIN => "brin",
+        Ast.IndexType.Bloom => "bloom",
+        _ => IndexType.ToString()?.ToLowerInvariant()
+    };
+    /// <summary>
     /// Columns for the index
     /// </summary>
     [Visit(2)] public Sequence<OrderByExpression>? Columns { get; init; }
@@ -37,7 +53,8 @@ public record CreateIndex([property: Visit(0)] ObjectName? Name, [property: Visi
 
         writer.WriteSql($"ON {TableName}");
 
-        if (IndexType != null && IndexType != Ast.IndexType.None)
+        var hasUsing = IndexType != null && IndexType != Ast.IndexType.None;
+        if (hasUsing)
         {
             if (IndexType == Ast.IndexType.Custom && CustomIndexTypeName != null)
             {
@@ -47,14 +64,14 @@ public record CreateIndex([property: Visit(0)] ObjectName? Name, [property: Visi
             {
                 var indexTypeName = IndexType switch
                 {
-                    Ast.IndexType.BTree => "BTREE",
-                    Ast.IndexType.Hash => "HASH",
-                    Ast.IndexType.GIN => "GIN",
-                    Ast.IndexType.GiST => "GIST",
-                    Ast.IndexType.SPGiST => "SPGIST",
-                    Ast.IndexType.BRIN => "BRIN",
-                    Ast.IndexType.Bloom => "BLOOM",
-                    _ => IndexType.ToString()!.ToUpperInvariant()
+                    Ast.IndexType.BTree => "btree",
+                    Ast.IndexType.Hash => "hash",
+                    Ast.IndexType.GIN => "gin",
+                    Ast.IndexType.GiST => "gist",
+                    Ast.IndexType.SPGiST => "spgist",
+                    Ast.IndexType.BRIN => "brin",
+                    Ast.IndexType.Bloom => "bloom",
+                    _ => IndexType.ToString()!.ToLowerInvariant()
                 };
                 writer.Write($" USING {indexTypeName}");
             }

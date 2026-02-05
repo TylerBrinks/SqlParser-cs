@@ -231,7 +231,8 @@ public abstract partial class Dialect
                 Word
                 {
                     Keyword: Keyword.LIKE or Keyword.ILIKE or Keyword.SIMILAR or Keyword.REGEXP or Keyword.RLIKE
-                } => GetPrecedence(Precedence.Like), // LikePrecedence,
+                } => GetPrecedence(Precedence.Like),
+                Word { Keyword: Keyword.NULL } when !parser.InColumnDefinition => GetPrecedence(Precedence.Is),
                 _ => 0
             };
         }

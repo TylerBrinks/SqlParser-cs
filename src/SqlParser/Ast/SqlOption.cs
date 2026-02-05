@@ -29,6 +29,17 @@ public abstract record SqlOption : IWriteSql, IElement
         }
     }
 
+    /// <summary>
+    /// PostgreSQL-style option without equals sign: name 'value'
+    /// </summary>
+    public record NameValue(Ident Name, Expression Value) : SqlOption
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{Name} {Value}");
+        }
+    }
+
     public record Partition(Ident ColumnName, Sequence<Expression> ForValues, PartitionRangeDirection? RangeDirection = null) : SqlOption
     {
         public override void ToSql(SqlTextWriter writer)

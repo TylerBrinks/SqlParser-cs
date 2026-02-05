@@ -16,6 +16,7 @@ public abstract record CastFormat : IWriteSql, IElement
             case Value v:
                 writer.WriteSql($"{v.Val}");
                 break;
+
             case ValueAtTimeZone tz:
                 writer.WriteSql($"{tz.Val} AT TIME ZONE {tz.TimeZone}");
                 break;

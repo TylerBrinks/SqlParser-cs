@@ -485,7 +485,8 @@ public enum ObjectType
     Sequence,
     Stage,
     Database,
-    Type
+    Type,
+    Extension
 }
 
 public enum OffsetRows

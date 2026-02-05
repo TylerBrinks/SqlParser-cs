@@ -253,7 +253,7 @@ public class ParserTests : ParserTestBase
     public void Test_Parser_Error_Loc()
     {
         var ex = Assert.Throws<ParserException>(() => new Parser().ParseSql("SELECT this is a syntax error", new GenericDialect()));
-        Assert.Equal("Expected [NOT] NULL or TRUE|FALSE or [NOT] DISTINCT FROM after IS, found a, Line: 1, Col: 16", ex.Message);
+        Assert.Equal("Expected [NOT] NULL or TRUE|FALSE or [NOT] DISTINCT FROM or [NOT] NORMALIZED after IS, found a, Line: 1, Col: 16", ex.Message);
     }
 
     [Fact]
@@ -448,8 +448,9 @@ public class ParserTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new ClickHouseDialect()];
 
-        TestDataType("ENUM8('a', 'b', 'c')", new DataType.Enum8(["'a'", "'b'", "'c'"]));
-        TestDataType("ENUM16('x', 'y')", new DataType.Enum16(["'x'", "'y'"]));
+        // Values are stored without quotes; ToSql adds quotes back during serialization
+        TestDataType("ENUM8('a', 'b', 'c')", new DataType.Enum8(["a", "b", "c"]));
+        TestDataType("ENUM16('x', 'y')", new DataType.Enum16(["x", "y"]));
     }
 
     [Fact]

@@ -42,6 +42,4 @@ public record CaseStatement(Sequence<CaseStatementBranch> Branches) : IWriteSql,
 /// <summary>
 /// Branch of a CASE statement
 /// </summary>
-public record CaseStatementBranch(
-    Expression Condition,
-    Sequence<Statement> Statements);
+public record CaseStatementBranch(Expression Condition, Sequence<Statement> Statements);

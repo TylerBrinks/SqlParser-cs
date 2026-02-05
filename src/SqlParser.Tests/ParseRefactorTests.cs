@@ -1,7 +1,9 @@
+using System.Text;
 using SqlParser.Ast;
 using SqlParser.Dialects;
 using static SqlParser.Ast.Expression;
 using static SqlParser.Ast.Statement;
+using Assert = Xunit.Assert;
 
 // ReSharper disable StringLiteralTypo
 
@@ -10,7 +12,7 @@ namespace SqlParser.Tests;
 /// <summary>
 /// Tests for new features from Rust v0.53-v0.60
 /// </summary>
-public class NewFeaturesTests : ParserTestBase
+public class ParseRefactorTests : ParserTestBase
 {
     #region Statement Tests
 
@@ -49,7 +51,7 @@ public class NewFeaturesTests : ParserTestBase
         statement = VerifiedStatement(sql);
         Assert.IsType<Vacuum>(statement);
         var vacuum = (Vacuum)statement;
-        Assert.NotNull(vacuum.VacuumStatement.Table);
+        Assert.NotNull(vacuum.VacuumStatement.TableName);
 
         // VACUUM ANALYZE
         sql = "VACUUM ANALYZE";
@@ -134,7 +136,7 @@ public class NewFeaturesTests : ParserTestBase
         Assert.IsType<Deny>(statement);
 
         var deny = (Deny)statement;
-        Assert.Equal("my_user", deny.DenyStatement.Grantee.Value);
+        Assert.Equal("my_user", deny.DenyStatement.Grantees.First().Value);
     }
 
     [Fact]
@@ -149,18 +151,23 @@ public class NewFeaturesTests : ParserTestBase
         var ifStmt = (If)statement;
         Assert.NotNull(ifStmt.IfStatement.ThenBlock);
 
-        // IF with ELSE
-        sql = "IF 1 = 0 THEN SELECT 1 ELSE SELECT 2 END IF";
-        statement = VerifiedStatement(sql);
-        ifStmt = (If)statement;
+        // IF with ELSE (semicolons used to delimit statements)
+        sql = "IF 1 = 0 THEN SELECT 1; ELSE SELECT 2; END IF";
+        var statements = ParseSqlStatements(sql);
+        Assert.Single(statements);
+        ifStmt = (If)statements[0]!;
         Assert.NotNull(ifStmt.IfStatement.ElseBlock);
+        Assert.Single(ifStmt.IfStatement.ThenBlock);
+        Assert.Single(ifStmt.IfStatement.ElseBlock);
 
-        // IF with ELSEIF
-        sql = "IF 1 = 0 THEN SELECT 1 ELSEIF 1 = 1 THEN SELECT 2 ELSE SELECT 3 END IF";
-        statement = VerifiedStatement(sql);
-        ifStmt = (If)statement;
+        // IF with ELSEIF (semicolons used to delimit statements)
+        sql = "IF 1 = 0 THEN SELECT 1; ELSEIF 1 = 1 THEN SELECT 2; ELSE SELECT 3; END IF";
+        statements = ParseSqlStatements(sql);
+        Assert.Single(statements);
+        ifStmt = (If)statements[0]!;
         Assert.NotNull(ifStmt.IfStatement.ElseIfs);
         Assert.Single(ifStmt.IfStatement.ElseIfs);
+        Assert.NotNull(ifStmt.IfStatement.ElseBlock);
     }
 
     [Fact]
@@ -180,15 +187,17 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        // Simple CASE
-        var sql = "CASE WHEN 1 = 1 THEN SELECT 1 END CASE";
-        var statement = VerifiedStatement(sql);
-        Assert.IsType<Case>(statement);
+        // Simple CASE (semicolons used to delimit statements)
+        var sql = "CASE WHEN 1 = 1 THEN SELECT 1; END CASE";
+        var statements = ParseSqlStatements(sql);
+        Assert.Single(statements);
+        Assert.IsType<Statement.Case>(statements[0]);
 
-        // CASE with operand
-        sql = "CASE x WHEN 1 THEN SELECT 'one' WHEN 2 THEN SELECT 'two' ELSE SELECT 'other' END CASE";
-        statement = VerifiedStatement(sql);
-        var caseStmt = (Case)statement;
+        // CASE with operand (semicolons used to delimit statements)
+        sql = "CASE x WHEN 1 THEN SELECT 'one'; WHEN 2 THEN SELECT 'two'; ELSE SELECT 'other'; END CASE";
+        statements = ParseSqlStatements(sql);
+        Assert.Single(statements);
+        var caseStmt = (Statement.Case)statements[0]!;
         Assert.NotNull(caseStmt.CaseStatement.Operand);
         Assert.Equal(2, caseStmt.CaseStatement.Branches.Count);
         Assert.NotNull(caseStmt.CaseStatement.ElseBlock);
@@ -317,8 +326,8 @@ public class NewFeaturesTests : ParserTestBase
         var statement = VerifiedStatement(sql);
         Assert.IsType<CreateServer>(statement);
         var server = (CreateServer)statement;
-        Assert.Equal("myserver", server.ServerStatement.Name.ToString());
-        Assert.Equal("postgres_fdw", server.ServerStatement.ForeignDataWrapper.ToString());
+        Assert.Equal("myserver", server.ServerStatement.ServerName.ToString());
+        Assert.Equal("postgres_fdw", server.ServerStatement.ForeignDataWrapperName.ToString());
 
         // With OPTIONS
         sql = "CREATE SERVER myserver FOREIGN DATA WRAPPER postgres_fdw OPTIONS (host 'localhost', dbname 'testdb')";
@@ -411,7 +420,7 @@ public class NewFeaturesTests : ParserTestBase
 
         var memberOf = (MemberOf)expr;
         Assert.NotNull(memberOf.Member);
-        Assert.NotNull(memberOf.Array);
+        Assert.NotNull(memberOf.ArrayExpr);
     }
 
     [Fact]
@@ -567,14 +576,14 @@ public class NewFeaturesTests : ParserTestBase
         DefaultDialects = [new GenericDialect(), new MySqlDialect()];
 
         // Create table with INVISIBLE column
-        var sql = "CREATE TABLE t (id INT, secret VARCHAR(100) INVISIBLE)";
+        const string sql = "CREATE TABLE t (id INT, secret VARCHAR(100) INVISIBLE)";
         var statement = VerifiedStatement(sql);
-        var create = (CreateTable)statement;
+        var create = (Statement.CreateTable)statement;
         var columns = create.Element.Columns;
 
         Assert.Equal(2, columns.Count);
         var secretCol = columns[1];
-        Assert.Contains(secretCol.Options, opt => opt.Option is ColumnOption.Invisible);
+        Assert.Contains(secretCol.Options!, opt => opt.Option is ColumnOption.Invisible);
     }
 
     [Fact]
@@ -582,30 +591,30 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        // MATCH FULL
+        // MATCH FULL - Note: serialization adds space before (
         var sql = "CREATE TABLE t (id INT REFERENCES parent(id) MATCH FULL)";
-        var statement = VerifiedStatement(sql);
-        var create = (CreateTable)statement;
+        var statement = OneStatementParsesTo(sql, "CREATE TABLE t (id INT REFERENCES parent (id) MATCH FULL)");
+        var create = (Statement.CreateTable)statement;
         var col = create.Element.Columns[0];
-        var fk = col.Options.First(o => o.Option is ColumnOption.ForeignKey).Option as ColumnOption.ForeignKey;
+        var fk = col.Options!.First(o => o.Option is ColumnOption.ForeignKey).Option as ColumnOption.ForeignKey;
         Assert.NotNull(fk);
-        Assert.Equal(MatchType.Full, fk!.Match);
+        Assert.Equal(Ast.MatchType.Full, fk.Match);
 
         // MATCH PARTIAL
         sql = "CREATE TABLE t (id INT REFERENCES parent(id) MATCH PARTIAL)";
-        statement = VerifiedStatement(sql);
-        create = (CreateTable)statement;
+        statement = OneStatementParsesTo(sql, "CREATE TABLE t (id INT REFERENCES parent (id) MATCH PARTIAL)");
+        create = (Statement.CreateTable)statement;
         col = create.Element.Columns[0];
-        fk = col.Options.First(o => o.Option is ColumnOption.ForeignKey).Option as ColumnOption.ForeignKey;
-        Assert.Equal(MatchType.Partial, fk!.Match);
+        fk = col.Options!.First(o => o.Option is ColumnOption.ForeignKey).Option as ColumnOption.ForeignKey;
+        Assert.Equal(Ast.MatchType.Partial, fk!.Match);
 
         // MATCH SIMPLE
         sql = "CREATE TABLE t (id INT REFERENCES parent(id) MATCH SIMPLE)";
-        statement = VerifiedStatement(sql);
-        create = (CreateTable)statement;
+        statement = OneStatementParsesTo(sql, "CREATE TABLE t (id INT REFERENCES parent (id) MATCH SIMPLE)");
+        create = (Statement.CreateTable)statement;
         col = create.Element.Columns[0];
-        fk = col.Options.First(o => o.Option is ColumnOption.ForeignKey).Option as ColumnOption.ForeignKey;
-        Assert.Equal(MatchType.Simple, fk!.Match);
+        fk = col.Options!.First(o => o.Option is ColumnOption.ForeignKey).Option as ColumnOption.ForeignKey;
+        Assert.Equal(Ast.MatchType.Simple, fk!.Match);
     }
 
     [Fact]
@@ -616,37 +625,37 @@ public class NewFeaturesTests : ParserTestBase
         // GIN index
         var sql = "CREATE INDEX idx ON t USING GIN(col)";
         var statement = VerifiedStatement(sql);
-        var createIndex = (CreateIndex)statement;
+        var createIndex = (Statement.CreateIndex)statement;
         Assert.Equal(IndexType.GIN, createIndex.Element.IndexType);
 
         // GiST index
         sql = "CREATE INDEX idx ON t USING GIST(col)";
         statement = VerifiedStatement(sql);
-        createIndex = (CreateIndex)statement;
+        createIndex = (Statement.CreateIndex)statement;
         Assert.Equal(IndexType.GiST, createIndex.Element.IndexType);
 
         // SP-GiST index
         sql = "CREATE INDEX idx ON t USING SPGIST(col)";
         statement = VerifiedStatement(sql);
-        createIndex = (CreateIndex)statement;
+        createIndex = (Statement.CreateIndex)statement;
         Assert.Equal(IndexType.SPGiST, createIndex.Element.IndexType);
 
         // BRIN index
         sql = "CREATE INDEX idx ON t USING BRIN(col)";
         statement = VerifiedStatement(sql);
-        createIndex = (CreateIndex)statement;
+        createIndex = (Statement.CreateIndex)statement;
         Assert.Equal(IndexType.BRIN, createIndex.Element.IndexType);
 
         // Bloom index
         sql = "CREATE INDEX idx ON t USING BLOOM(col)";
         statement = VerifiedStatement(sql);
-        createIndex = (CreateIndex)statement;
+        createIndex = (Statement.CreateIndex)statement;
         Assert.Equal(IndexType.Bloom, createIndex.Element.IndexType);
 
         // Custom index type
         sql = "CREATE INDEX idx ON t USING custom_type(col)";
         statement = VerifiedStatement(sql);
-        createIndex = (CreateIndex)statement;
+        createIndex = (Statement.CreateIndex)statement;
         Assert.Equal(IndexType.Custom, createIndex.Element.IndexType);
         Assert.NotNull(createIndex.Element.CustomIndexTypeName);
     }
@@ -736,12 +745,12 @@ public class NewFeaturesTests : ParserTestBase
     {
         // Test that dynamic table AST types work correctly
         var targetLag = new DynamicTableLag.IntervalLag("1 minute");
-        var writer = new SqlTextWriter();
+        var writer = new SqlTextWriter(new StringBuilder());
         targetLag.ToSql(writer);
         Assert.Equal("TARGET_LAG = '1 minute'", writer.ToString());
 
         var downstream = new DynamicTableLag.Downstream();
-        writer = new SqlTextWriter();
+        writer = new SqlTextWriter(new StringBuilder());
         downstream.ToSql(writer);
         Assert.Equal("TARGET_LAG = DOWNSTREAM", writer.ToString());
     }
@@ -777,7 +786,7 @@ public class NewFeaturesTests : ParserTestBase
             NullsFirst = false
         };
 
-        var writer = new SqlTextWriter();
+        var writer = new SqlTextWriter(new StringBuilder());
         indexCol.ToSql(writer);
         var result = writer.ToString();
 
@@ -797,7 +806,7 @@ public class NewFeaturesTests : ParserTestBase
             new DataType.Text()
         );
 
-        var writer = new SqlTextWriter();
+        var writer = new SqlTextWriter(new StringBuilder());
         info.ToSql(writer);
         var result = writer.ToString();
 
@@ -812,10 +821,10 @@ public class NewFeaturesTests : ParserTestBase
         // Test that ProcedureParam with default value works
         var param = new ProcedureParam(new Ident("param1"), new DataType.Int())
         {
-            Default = new Expression.LiteralValue(new Value.Number("42"))
+            Default = new LiteralValue(new Value.Number("42"))
         };
 
-        var writer = new SqlTextWriter();
+        var writer = new SqlTextWriter(new StringBuilder());
         param.ToSql(writer);
         var result = writer.ToString();
 
@@ -829,12 +838,12 @@ public class NewFeaturesTests : ParserTestBase
     public void Test_Bitwise_Not_Operator()
     {
         // Test cross-dialect BitwiseNot operator AST
-        var expr = new Expression.UnaryOp(
+        var expr = new UnaryOp(
             new Identifier("a"),
             UnaryOperator.BitwiseNot
         );
 
-        var writer = new SqlTextWriter();
+        var writer = new SqlTextWriter(new StringBuilder());
         expr.ToSql(writer);
         var result = writer.ToString();
 
@@ -860,19 +869,18 @@ public class NewFeaturesTests : ParserTestBase
         // Test MATCH type serialization in foreign key
         var fk = new ColumnOption.ForeignKey(
             new ObjectName("parent"),
-            new Sequence<Ident> { new Ident("id") },
-            ReferentialAction.Cascade,
-            ReferentialAction.None)
+            [new Ident("id")],
+            ReferentialAction.Cascade)
         {
-            Match = MatchType.Full
+            Match = Ast.MatchType.Full
         };
 
-        var writer = new SqlTextWriter();
+        var writer = new SqlTextWriter(new StringBuilder());
         fk.ToSql(writer);
         var result = writer.ToString();
 
         Assert.Contains("REFERENCES parent", result);
-        Assert.Contains("MATCH Full", result);
+        Assert.Contains("MATCH FULL", result);
         Assert.Contains("ON DELETE CASCADE", result);
     }
 
@@ -882,12 +890,12 @@ public class NewFeaturesTests : ParserTestBase
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
         // Table constraint with MATCH FULL
-        var sql = "CREATE TABLE t (id INT, FOREIGN KEY (id) REFERENCES parent(id) MATCH FULL ON DELETE CASCADE)";
+        const string sql = "CREATE TABLE t (id INT, FOREIGN KEY (id) REFERENCES parent(id) MATCH FULL ON DELETE CASCADE)";
         var statement = VerifiedStatement(sql);
-        var create = (CreateTable)statement;
+        var create = (Statement.CreateTable)statement;
         var constraint = create.Element.Constraints!.First() as TableConstraint.ForeignKey;
         Assert.NotNull(constraint);
-        Assert.Equal(MatchType.Full, constraint!.Match);
+        Assert.Equal(Ast.MatchType.Full, constraint.Match);
     }
 
     #endregion
@@ -899,9 +907,9 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE TABLE measurement_default PARTITION OF measurement DEFAULT";
+        const string sql = "CREATE TABLE measurement_default PARTITION OF measurement DEFAULT";
         var statement = VerifiedStatement(sql);
-        Assert.IsType<CreateTable>(statement);
+        Assert.IsType<Statement.CreateTable>(statement);
     }
 
     [Fact]
@@ -909,9 +917,9 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE TABLE measurement_y2020 PARTITION OF measurement FOR VALUES IN ('2020')";
+        const string sql = "CREATE TABLE measurement_y2020 PARTITION OF measurement FOR VALUES IN ('2020')";
         var statement = VerifiedStatement(sql);
-        Assert.IsType<CreateTable>(statement);
+        Assert.IsType<Statement.CreateTable>(statement);
     }
 
     [Fact]
@@ -919,9 +927,9 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE TABLE measurement_y2020 PARTITION OF measurement FOR VALUES FROM ('2020-01-01') TO ('2021-01-01')";
+        const string sql = "CREATE TABLE measurement_y2020 PARTITION OF measurement FOR VALUES FROM ('2020-01-01') TO ('2021-01-01')";
         var statement = VerifiedStatement(sql);
-        Assert.IsType<CreateTable>(statement);
+        Assert.IsType<Statement.CreateTable>(statement);
     }
 
     [Fact]
@@ -929,9 +937,9 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE TABLE measurement_p0 PARTITION OF measurement FOR VALUES WITH (MODULUS 4, REMAINDER 0)";
+        const string sql = "CREATE TABLE measurement_p0 PARTITION OF measurement FOR VALUES WITH (MODULUS 4, REMAINDER 0)";
         var statement = VerifiedStatement(sql);
-        Assert.IsType<CreateTable>(statement);
+        Assert.IsType<Statement.CreateTable>(statement);
     }
 
     [Fact]
@@ -941,11 +949,11 @@ public class NewFeaturesTests : ParserTestBase
 
         var sql = "CREATE TABLE measurement_old PARTITION OF measurement FOR VALUES FROM (MINVALUE) TO ('2020-01-01')";
         var statement = VerifiedStatement(sql);
-        Assert.IsType<CreateTable>(statement);
+        Assert.IsType<Statement.CreateTable>(statement);
 
         sql = "CREATE TABLE measurement_future PARTITION OF measurement FOR VALUES FROM ('2030-01-01') TO (MAXVALUE)";
         statement = VerifiedStatement(sql);
-        Assert.IsType<CreateTable>(statement);
+        Assert.IsType<Statement.CreateTable>(statement);
     }
 
     [Fact]
@@ -953,9 +961,9 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE TABLE measurement_y2020m01 PARTITION OF measurement FOR VALUES FROM ('2020-01-01', 1) TO ('2020-02-01', 1)";
+        const string sql = "CREATE TABLE measurement_y2020m01 PARTITION OF measurement FOR VALUES FROM ('2020-01-01', 1) TO ('2020-02-01', 1)";
         var statement = VerifiedStatement(sql);
-        Assert.IsType<CreateTable>(statement);
+        Assert.IsType<Statement.CreateTable>(statement);
     }
 
     [Fact]
@@ -963,17 +971,18 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
+        // Note: function-like syntax serializes without space before (
         var sql = "CREATE TABLE measurement (id INT, created_at DATE) PARTITION BY RANGE (created_at)";
-        var statement = VerifiedStatement(sql);
-        Assert.IsType<CreateTable>(statement);
+        var statement = OneStatementParsesTo(sql, "CREATE TABLE measurement (id INT, created_at DATE) PARTITION BY RANGE(created_at)");
+        Assert.IsType<Statement.CreateTable>(statement);
 
         sql = "CREATE TABLE measurement (id INT, region TEXT) PARTITION BY LIST (region)";
-        statement = VerifiedStatement(sql);
-        Assert.IsType<CreateTable>(statement);
+        statement = OneStatementParsesTo(sql, "CREATE TABLE measurement (id INT, region TEXT) PARTITION BY LIST(region)");
+        Assert.IsType<Statement.CreateTable>(statement);
 
         sql = "CREATE TABLE measurement (id INT) PARTITION BY HASH (id)";
-        statement = VerifiedStatement(sql);
-        Assert.IsType<CreateTable>(statement);
+        statement = OneStatementParsesTo(sql, "CREATE TABLE measurement (id INT) PARTITION BY HASH(id)");
+        Assert.IsType<Statement.CreateTable>(statement);
     }
 
     #endregion
@@ -985,7 +994,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE OPERATOR === (LEFTARG = box, RIGHTARG = box, FUNCTION = area_equal_function)";
+        const string sql = "CREATE OPERATOR === (LEFTARG = box, RIGHTARG = box, FUNCTION = area_equal_function)";
         var statement = VerifiedStatement(sql);
         Assert.IsType<CreateOperator>(statement);
         var createOp = (CreateOperator)statement;
@@ -998,7 +1007,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE OPERATOR @@ (LEFTARG = text, RIGHTARG = text, FUNCTION = ts_match, COMMUTATOR = @@, NEGATOR = !@@)";
+        const string sql = "CREATE OPERATOR @@ (LEFTARG = text, RIGHTARG = text, FUNCTION = ts_match, COMMUTATOR = @@, NEGATOR = !@@)";
         var statement = VerifiedStatement(sql);
         Assert.IsType<CreateOperator>(statement);
         var createOp = (CreateOperator)statement;
@@ -1011,7 +1020,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "ALTER OPERATOR === (box, box) SET (RESTRICT = contsel, JOIN = contjoinsel)";
+        const string sql = "ALTER OPERATOR === (box, box) SET (RESTRICT = contsel, JOIN = contjoinsel)";
         var statement = VerifiedStatement(sql);
         Assert.IsType<AlterOperator>(statement);
         var alterOp = (AlterOperator)statement;
@@ -1026,7 +1035,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "ALTER OPERATOR @@ (NONE, text) SET (RESTRICT = contsel)";
+        const string sql = "ALTER OPERATOR @@ (NONE, text) SET (RESTRICT = contsel)";
         var statement = VerifiedStatement(sql);
         Assert.IsType<AlterOperator>(statement);
         var alterOp = (AlterOperator)statement;
@@ -1039,7 +1048,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE OPERATOR CLASS int4_ops FOR TYPE int4 USING btree AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, FUNCTION 1 btint4cmp(int4, int4)";
+        const string sql = "CREATE OPERATOR CLASS int4_ops FOR TYPE int4 USING btree AS OPERATOR 1 <, OPERATOR 2 <=, OPERATOR 3 =, FUNCTION 1 btint4cmp(int4, int4)";
         var statement = VerifiedStatement(sql);
         Assert.IsType<CreateOperatorClass>(statement);
         var createOpClass = (CreateOperatorClass)statement;
@@ -1054,7 +1063,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE OPERATOR CLASS text_ops DEFAULT FOR TYPE text USING hash AS OPERATOR 1 =, FUNCTION 1 hashtext(text)";
+        const string sql = "CREATE OPERATOR CLASS text_ops DEFAULT FOR TYPE text USING hash AS OPERATOR 1 =, FUNCTION 1 hashtext(text)";
         var statement = VerifiedStatement(sql);
         Assert.IsType<CreateOperatorClass>(statement);
         var createOpClass = (CreateOperatorClass)statement;
@@ -1066,7 +1075,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE OPERATOR CLASS int4_ops FOR TYPE int4 USING btree FAMILY integer_ops AS OPERATOR 1 <";
+        const string sql = "CREATE OPERATOR CLASS int4_ops FOR TYPE int4 USING btree FAMILY integer_ops AS OPERATOR 1 <";
         var statement = VerifiedStatement(sql);
         Assert.IsType<CreateOperatorClass>(statement);
         var createOpClass = (CreateOperatorClass)statement;
@@ -1079,7 +1088,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "ALTER OPERATOR CLASS int4_ops USING btree RENAME TO int4_ops_v2";
+        const string sql = "ALTER OPERATOR CLASS int4_ops USING btree RENAME TO int4_ops_v2";
         var statement = VerifiedStatement(sql);
         Assert.IsType<AlterOperatorClass>(statement);
         var alterOpClass = (AlterOperatorClass)statement;
@@ -1091,7 +1100,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "ALTER OPERATOR CLASS int4_ops USING btree OWNER TO admin";
+        const string sql = "ALTER OPERATOR CLASS int4_ops USING btree OWNER TO admin";
         var statement = VerifiedStatement(sql);
         Assert.IsType<AlterOperatorClass>(statement);
         var alterOpClass = (AlterOperatorClass)statement;
@@ -1103,7 +1112,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "ALTER OPERATOR CLASS int4_ops USING btree SET SCHEMA other_schema";
+        const string sql = "ALTER OPERATOR CLASS int4_ops USING btree SET SCHEMA other_schema";
         var statement = VerifiedStatement(sql);
         Assert.IsType<AlterOperatorClass>(statement);
         var alterOpClass = (AlterOperatorClass)statement;
@@ -1115,7 +1124,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE OPERATOR FAMILY integer_ops USING btree";
+        const string sql = "CREATE OPERATOR FAMILY integer_ops USING btree";
         var statement = VerifiedStatement(sql);
         Assert.IsType<CreateOperatorFamily>(statement);
         var createOpFamily = (CreateOperatorFamily)statement;
@@ -1128,8 +1137,9 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "ALTER OPERATOR FAMILY integer_ops USING btree ADD OPERATOR 1 < (int4, int4), FUNCTION 1 btint4cmp(int4, int4)";
-        var statement = VerifiedStatement(sql);
+        // Note: DataType serializes as uppercase (INT4 instead of int4)
+        const string sql = "ALTER OPERATOR FAMILY integer_ops USING btree ADD OPERATOR 1 < (int4, int4), FUNCTION 1 btint4cmp(int4, int4)";
+        var statement = OneStatementParsesTo(sql, "ALTER OPERATOR FAMILY integer_ops USING btree ADD OPERATOR 1 < (INT4, INT4), FUNCTION 1 btint4cmp(INT4, INT4)");
         Assert.IsType<AlterOperatorFamily>(statement);
         var alterOpFamily = (AlterOperatorFamily)statement;
         Assert.IsType<AlterOperatorFamilyOperation.Add>(alterOpFamily.Operation);
@@ -1142,7 +1152,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "ALTER OPERATOR FAMILY integer_ops USING btree DROP OPERATOR 1 (int4, int4), FUNCTION 1 (int4, int4)";
+        const string sql = "ALTER OPERATOR FAMILY integer_ops USING btree DROP OPERATOR 1 (int4, int4), FUNCTION 1 (int4, int4)";
         var statement = VerifiedStatement(sql);
         Assert.IsType<AlterOperatorFamily>(statement);
         var alterOpFamily = (AlterOperatorFamily)statement;
@@ -1156,7 +1166,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "ALTER OPERATOR FAMILY integer_ops USING btree RENAME TO integer_ops_v2";
+        const string sql = "ALTER OPERATOR FAMILY integer_ops USING btree RENAME TO integer_ops_v2";
         var statement = VerifiedStatement(sql);
         Assert.IsType<AlterOperatorFamily>(statement);
         var alterOpFamily = (AlterOperatorFamily)statement;
@@ -1168,7 +1178,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "ALTER OPERATOR FAMILY integer_ops USING btree OWNER TO admin";
+        const string sql = "ALTER OPERATOR FAMILY integer_ops USING btree OWNER TO admin";
         var statement = VerifiedStatement(sql);
         Assert.IsType<AlterOperatorFamily>(statement);
         var alterOpFamily = (AlterOperatorFamily)statement;
@@ -1180,7 +1190,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "ALTER OPERATOR FAMILY integer_ops USING btree SET SCHEMA other_schema";
+        const string sql = "ALTER OPERATOR FAMILY integer_ops USING btree SET SCHEMA other_schema";
         var statement = VerifiedStatement(sql);
         Assert.IsType<AlterOperatorFamily>(statement);
         var alterOpFamily = (AlterOperatorFamily)statement;
@@ -1192,7 +1202,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE OPERATOR CLASS gist_point_ops FOR TYPE point USING gist AS OPERATOR 1 <<, FUNCTION 1 gist_point_consistent(internal, point, smallint, oid, internal), STORAGE box";
+        const string sql = "CREATE OPERATOR CLASS gist_point_ops FOR TYPE point USING gist AS OPERATOR 1 <<, FUNCTION 1 gist_point_consistent(internal, point, smallint, oid, internal), STORAGE box";
         var statement = VerifiedStatement(sql);
         Assert.IsType<CreateOperatorClass>(statement);
         var createOpClass = (CreateOperatorClass)statement;
@@ -1205,7 +1215,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE OPERATOR CLASS text_pattern_ops FOR TYPE text USING btree AS OPERATOR 1 ~<~ FOR SEARCH";
+        const string sql = "CREATE OPERATOR CLASS text_pattern_ops FOR TYPE text USING btree AS OPERATOR 1 ~<~ FOR SEARCH";
         var statement = VerifiedStatement(sql);
         Assert.IsType<CreateOperatorClass>(statement);
         var createOpClass = (CreateOperatorClass)statement;
@@ -1218,7 +1228,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE OPERATOR CLASS text_pattern_ops FOR TYPE text USING gist AS OPERATOR 1 < FOR ORDER BY integer_ops";
+        const string sql = "CREATE OPERATOR CLASS text_pattern_ops FOR TYPE text USING gist AS OPERATOR 1 < FOR ORDER BY integer_ops";
         var statement = VerifiedStatement(sql);
         Assert.IsType<CreateOperatorClass>(statement);
         var createOpClass = (CreateOperatorClass)statement;
@@ -1237,7 +1247,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE TRIGGER my_trigger INSTEAD OF DELETE ON my_view FOR EACH ROW EXECUTE FUNCTION my_func()";
+        const string sql = "CREATE TRIGGER my_trigger INSTEAD OF DELETE ON my_view FOR EACH ROW EXECUTE FUNCTION my_func()";
         var statement = VerifiedStatement(sql);
         Assert.IsType<CreateTrigger>(statement);
         var trigger = (CreateTrigger)statement;
@@ -1249,7 +1259,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE TRIGGER my_trigger AFTER UPDATE ON my_table FOR EACH ROW WHEN (OLD.value <> NEW.value) EXECUTE FUNCTION my_func()";
+        const string sql = "CREATE TRIGGER my_trigger AFTER UPDATE ON my_table FOR EACH ROW WHEN (OLD.value <> NEW.value) EXECUTE FUNCTION my_func()";
         var statement = VerifiedStatement(sql);
         Assert.IsType<CreateTrigger>(statement);
     }
@@ -1259,7 +1269,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE TRIGGER my_trigger AFTER INSERT OR UPDATE OR DELETE ON my_table FOR EACH ROW EXECUTE FUNCTION my_func()";
+        const string sql = "CREATE TRIGGER my_trigger AFTER INSERT OR UPDATE OR DELETE ON my_table FOR EACH ROW EXECUTE FUNCTION my_func()";
         var statement = VerifiedStatement(sql);
         Assert.IsType<CreateTrigger>(statement);
     }
@@ -1269,7 +1279,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE TRIGGER my_trigger AFTER UPDATE ON my_table REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table FOR EACH STATEMENT EXECUTE FUNCTION my_func()";
+        const string sql = "CREATE TRIGGER my_trigger AFTER UPDATE ON my_table REFERENCING OLD TABLE AS old_table NEW TABLE AS new_table FOR EACH STATEMENT EXECUTE FUNCTION my_func()";
         var statement = VerifiedStatement(sql);
         Assert.IsType<CreateTrigger>(statement);
     }
@@ -1279,7 +1289,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE CONSTRAINT TRIGGER my_trigger AFTER INSERT ON my_table DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION my_func()";
+        const string sql = "CREATE CONSTRAINT TRIGGER my_trigger AFTER INSERT ON my_table DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION my_func()";
         var statement = VerifiedStatement(sql);
         Assert.IsType<CreateTrigger>(statement);
     }
@@ -1322,7 +1332,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE FUNCTION my_func() RETURNS void LANGUAGE SQL SET search_path TO my_schema AS 'SELECT 1'";
+        const string sql = "CREATE FUNCTION my_func() RETURNS void LANGUAGE SQL SET search_path = my_schema AS 'SELECT 1'";
         var statement = VerifiedStatement(sql);
         Assert.IsType<CreateFunction>(statement);
     }
@@ -1350,7 +1360,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE FUNCTION my_func() RETURNS void LANGUAGE C AS 'my_module', 'my_symbol'";
+        const string sql = "CREATE FUNCTION my_func() RETURNS void LANGUAGE C AS 'my_module', 'my_symbol'";
         var statement = VerifiedStatement(sql);
         Assert.IsType<CreateFunction>(statement);
     }
@@ -1365,13 +1375,13 @@ public class NewFeaturesTests : ParserTestBase
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
         var sql = "CREATE INDEX idx ON t (col) NULLS DISTINCT";
-        var statement = VerifiedStatement(sql);
-        var createIndex = (CreateIndex)statement;
+        var statement = OneStatementParsesTo(sql, "CREATE INDEX idx ON t(col) NULLS DISTINCT");
+        var createIndex = (Statement.CreateIndex)statement;
         Assert.True(createIndex.Element.NullsDistinct);
 
         sql = "CREATE INDEX idx ON t (col) NULLS NOT DISTINCT";
-        statement = VerifiedStatement(sql);
-        createIndex = (CreateIndex)statement;
+        statement = OneStatementParsesTo(sql, "CREATE INDEX idx ON t(col) NULLS NOT DISTINCT");
+        createIndex = (Statement.CreateIndex)statement;
         Assert.False(createIndex.Element.NullsDistinct);
     }
 
@@ -1380,9 +1390,10 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE INDEX idx ON t (col1) INCLUDE (col2, col3)";
-        var statement = VerifiedStatement(sql);
-        var createIndex = (CreateIndex)statement;
+        // Note: serialization removes space before ( when no USING clause
+        const string sql = "CREATE INDEX idx ON t (col1) INCLUDE (col2, col3)";
+        var statement = OneStatementParsesTo(sql, "CREATE INDEX idx ON t(col1) INCLUDE (col2,col3)");
+        var createIndex = (Statement.CreateIndex)statement;
         Assert.NotNull(createIndex.Element.Include);
         Assert.Equal(2, createIndex.Element.Include!.Count);
     }
@@ -1392,9 +1403,10 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE INDEX idx ON t (col) WHERE col > 0";
-        var statement = VerifiedStatement(sql);
-        var createIndex = (CreateIndex)statement;
+        // Note: serialization removes space before ( when no USING clause
+        const string sql = "CREATE INDEX idx ON t (col) WHERE col > 0";
+        var statement = OneStatementParsesTo(sql, "CREATE INDEX idx ON t(col) WHERE col > 0");
+        var createIndex = (Statement.CreateIndex)statement;
         Assert.NotNull(createIndex.Element.Predicate);
     }
 
@@ -1403,9 +1415,10 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE INDEX CONCURRENTLY idx ON t (col)";
-        var statement = VerifiedStatement(sql);
-        var createIndex = (CreateIndex)statement;
+        // Note: serialization removes space before ( when no USING clause
+        const string sql = "CREATE INDEX CONCURRENTLY idx ON t (col)";
+        var statement = OneStatementParsesTo(sql, "CREATE INDEX CONCURRENTLY idx ON t(col)");
+        var createIndex = (Statement.CreateIndex)statement;
         Assert.True(createIndex.Element.Concurrently);
     }
 
@@ -1414,9 +1427,9 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE INDEX idx ON t USING GIN(col) WITH (fastupdate = off)";
-        var statement = VerifiedStatement(sql);
-        var createIndex = (CreateIndex)statement;
+        const string sql = "CREATE INDEX idx ON t USING GIN(col) WITH (fastupdate = off)";
+        var statement = OneStatementParsesTo(sql, "CREATE INDEX idx ON t USING gin(col) WITH (fastupdate = off)");
+        var createIndex = (Statement.CreateIndex)statement;
         Assert.NotNull(createIndex.Element.With);
     }
 
@@ -1429,7 +1442,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "TRUNCATE TABLE my_table";
+        const string sql = "TRUNCATE TABLE my_table";
         var statement = VerifiedStatement(sql);
         Assert.IsType<Truncate>(statement);
     }
@@ -1439,10 +1452,10 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "TRUNCATE TABLE table1, table2, table3";
+        const string sql = "TRUNCATE TABLE table1, table2, table3";
         var statement = VerifiedStatement(sql);
         var truncate = (Truncate)statement;
-        Assert.Equal(3, truncate.TableNames.Count);
+        Assert.Equal(3, truncate.Names.Count);
     }
 
     [Fact]
@@ -1467,12 +1480,12 @@ public class NewFeaturesTests : ParserTestBase
         var sql = "TRUNCATE TABLE my_table CASCADE";
         var statement = VerifiedStatement(sql);
         var truncate = (Truncate)statement;
-        Assert.True(truncate.Cascade);
+        Assert.Equal(TruncateCascadeOption.Cascade, truncate.Cascade);
 
         sql = "TRUNCATE TABLE my_table RESTRICT";
         statement = VerifiedStatement(sql);
         truncate = (Truncate)statement;
-        Assert.False(truncate.Cascade);
+        Assert.Equal(TruncateCascadeOption.Restrict, truncate.Cascade);
     }
 
     #endregion
@@ -1506,7 +1519,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "ALTER TABLE my_table VALIDATE CONSTRAINT my_constraint";
+        const string sql = "ALTER TABLE my_table VALIDATE CONSTRAINT my_constraint";
         var statement = VerifiedStatement(sql);
         Assert.IsType<AlterTable>(statement);
     }
@@ -1516,7 +1529,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "ALTER TABLE my_table SET SCHEMA new_schema";
+        const string sql = "ALTER TABLE my_table SET SCHEMA new_schema";
         var statement = VerifiedStatement(sql);
         Assert.IsType<AlterTable>(statement);
     }
@@ -1526,7 +1539,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "ALTER TABLE my_table OWNER TO new_owner";
+        const string sql = "ALTER TABLE my_table OWNER TO new_owner";
         var statement = VerifiedStatement(sql);
         Assert.IsType<AlterTable>(statement);
     }
@@ -1574,7 +1587,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "COPY my_table FROM '/path/to/file.csv' WITH (FORMAT CSV, HEADER true)";
+        const string sql = "COPY my_table FROM '/path/to/file.csv' WITH (FORMAT CSV, HEADER true)";
         var statement = VerifiedStatement(sql);
         Assert.IsType<Copy>(statement);
     }
@@ -1584,7 +1597,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "COPY my_table TO '/path/to/file.csv' WITH (FORMAT CSV, HEADER true)";
+        const string sql = "COPY my_table TO '/path/to/file.csv' WITH (FORMAT CSV, HEADER true)";
         var statement = VerifiedStatement(sql);
         Assert.IsType<Copy>(statement);
     }
@@ -1736,7 +1749,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "CREATE TYPE my_enum AS ENUM ('value1', 'value2', 'value3')";
+        const string sql = "CREATE TYPE my_enum AS ENUM ('value1', 'value2', 'value3')";
         var statement = VerifiedStatement(sql);
         Assert.IsType<CreateType>(statement);
     }
@@ -1778,8 +1791,9 @@ public class NewFeaturesTests : ParserTestBase
         var statement = VerifiedStatement(sql);
         Assert.IsType<CreateRole>(statement);
 
+        // Note: serialization outputs options in a fixed order
         sql = "CREATE ROLE my_role WITH LOGIN PASSWORD 'secret' SUPERUSER";
-        statement = VerifiedStatement(sql);
+        statement = OneStatementParsesTo(sql, "CREATE ROLE my_role SUPERUSER LOGIN PASSWORD 'secret'");
         Assert.IsType<CreateRole>(statement);
     }
 
@@ -1867,7 +1881,7 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
-        var sql = "LOCK TABLE my_table IN ACCESS EXCLUSIVE MODE";
+        const string sql = "LOCK TABLE my_table IN ACCESS EXCLUSIVE MODE";
         var statement = VerifiedStatement(sql);
         Assert.IsType<LockTables>(statement);
     }
@@ -1909,8 +1923,9 @@ public class NewFeaturesTests : ParserTestBase
     {
         DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
 
+        // Note: Parser accepts both TO and = but serializes as =
         var sql = "SET search_path TO my_schema, public";
-        var statement = VerifiedStatement(sql);
+        var statement = OneStatementParsesTo(sql, "SET search_path = my_schema, public");
         Assert.IsType<SetVariable>(statement);
 
         sql = "SET LOCAL timezone = 'UTC'";

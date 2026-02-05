@@ -41,4 +41,6 @@ public class GenericDialect : Dialect
     public override bool SupportsLimitComma => true;
     public override bool SupportsRaise => true;
     public override bool SupportsCaseStatement => true;
+    public override bool SupportsListen => true;
+    public override bool SupportsNotify => true;
 }

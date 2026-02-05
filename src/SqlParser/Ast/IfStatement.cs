@@ -14,30 +14,46 @@ public record IfStatement(
     {
         writer.WriteSql($"IF {Condition} THEN ");
 
-        foreach (var stmt in ThenBlock)
+        for (var i = 0; i < ThenBlock.Count; i++)
         {
-            writer.WriteSql($"{stmt}; ");
+            if (i > 0)
+            {
+                writer.Write("; ");
+            }
+            writer.WriteSql($"{ThenBlock[i]}");
         }
+
+        writer.Write(" ");
 
         if (ElseIfs != null)
         {
             foreach (var elseif in ElseIfs)
             {
                 writer.WriteSql($"ELSEIF {elseif.Condition} THEN ");
-                foreach (var stmt in elseif.Statements)
+                for (var i = 0; i < elseif.Statements.Count; i++)
                 {
-                    writer.WriteSql($"{stmt}; ");
+                    if (i > 0)
+                    {
+                        writer.Write("; ");
+                    }
+                    writer.WriteSql($"{elseif.Statements[i]}");
                 }
+                writer.Write(" ");
             }
         }
 
         if (ElseBlock != null)
         {
             writer.Write("ELSE ");
-            foreach (var stmt in ElseBlock)
+            for (var i = 0; i < ElseBlock.Count; i++)
             {
-                writer.WriteSql($"{stmt}; ");
+                if (i > 0)
+                {
+                    writer.Write("; ");
+                }
+                writer.WriteSql($"{ElseBlock[i]}");
             }
+            writer.Write(" ");
         }
 
         writer.Write("END IF");

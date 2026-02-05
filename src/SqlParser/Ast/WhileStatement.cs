@@ -18,12 +18,16 @@ public record WhileStatement(
 
         writer.WriteSql($"WHILE {Condition} DO ");
 
-        foreach (var stmt in Body)
+        for (var i = 0; i < Body.Count; i++)
         {
-            writer.WriteSql($"{stmt}; ");
+            if (i > 0)
+            {
+                writer.Write("; ");
+            }
+            writer.WriteSql($"{Body[i]}");
         }
 
-        writer.Write("END WHILE");
+        writer.Write(" END WHILE");
 
         if (Label != null)
         {

@@ -8,6 +8,10 @@ public record VacuumStatement : IWriteSql, IElement
     public ObjectName? TableName { get; init; }
     public Sequence<Ident>? Columns { get; init; }
     public Sequence<VacuumOption>? Options { get; init; }
+    /// <summary>
+    /// Whether options were specified in parentheses: VACUUM (ANALYZE) vs VACUUM ANALYZE
+    /// </summary>
+    public bool OptionsInParens { get; init; }
 
     public void ToSql(SqlTextWriter writer)
     {
@@ -15,7 +19,14 @@ public record VacuumStatement : IWriteSql, IElement
 
         if (Options.SafeAny())
         {
-            writer.WriteSql($" ({Options.ToSqlDelimited()})");
+            if (OptionsInParens)
+            {
+                writer.WriteSql($" ({Options.ToSqlDelimited()})");
+            }
+            else
+            {
+                writer.WriteSql($" {Options.ToSqlDelimited(Symbols.Space)}");
+            }
         }
 
         if (TableName != null)

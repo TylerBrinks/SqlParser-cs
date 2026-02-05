@@ -77,7 +77,7 @@ public record Join(TableFactor? Relation = null, JoinOperator? JoinOperator = nu
         writer.WriteSql($" {Prefix(constraint)}{joinText} {Relation}{Suffix(constraint)}");
         return;
 
-        string? Suffix(JoinConstraint constraint)
+        static string? Suffix(JoinConstraint constraint)
         {
             return constraint switch
             {
@@ -87,7 +87,7 @@ public record Join(TableFactor? Relation = null, JoinOperator? JoinOperator = nu
             };
         }
 
-        string? Prefix(JoinConstraint prefixConstraint)
+        static string? Prefix(JoinConstraint prefixConstraint)
         {
             return prefixConstraint is JoinConstraint.Natural ? "NATURAL " : null;
         }

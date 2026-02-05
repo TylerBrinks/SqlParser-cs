@@ -1371,4 +1371,109 @@ public class MySqlDialectTests : ParserTestBase
 
         Assert.Throws<ParserException>(() => ParseSqlStatements("CREATE TABLE foo (id INT(11)) ENGINE=InnoDB AS SELECT 1 DEFAULT CHARSET=utf8mb3"));
     }
+
+    [Fact]
+    public void Parse_Like_With_Escape()
+    {
+        // verify backslash is not stripped for escaped wildcards
+        VerifiedOnlySelect(@"SELECT 'a\%c' LIKE 'a\%c'");
+        VerifiedOnlySelect(@"SELECT 'a\_c' LIKE 'a\_c'");
+        VerifiedOnlySelect(@"SELECT '%\_\%' LIKE '%\_\%'");
+        VerifiedOnlySelect(@"SELECT '\_\%' LIKE CONCAT('\_', '\%')");
+        VerifiedOnlySelect("SELECT 'a%c' LIKE 'a$%c' ESCAPE '$'");
+        VerifiedOnlySelect("SELECT 'a_c' LIKE 'a#_c' ESCAPE '#'");
+    }
+
+    [Fact]
+    public void Parse_Longblob_Type()
+    {
+        DefaultDialects = [new MySqlDialect(), new GenericDialect()];
+
+        VerifiedStatement("CREATE TABLE foo (bar LONGBLOB)");
+        VerifiedStatement("CREATE TABLE foo (bar TINYBLOB)");
+        VerifiedStatement("CREATE TABLE foo (bar MEDIUMBLOB)");
+        VerifiedStatement("CREATE TABLE foo (bar TINYTEXT)");
+        VerifiedStatement("CREATE TABLE foo (bar MEDIUMTEXT)");
+        VerifiedStatement("CREATE TABLE foo (bar LONGTEXT)");
+    }
+
+    [Fact]
+    public void Parse_Logical_Xor()
+    {
+        DefaultDialects = [new MySqlDialect(), new GenericDialect()];
+
+        VerifiedOnlySelect("SELECT true XOR true, false XOR false, true XOR false, false XOR true");
+    }
+
+    [Fact]
+    public void Parse_Bitstring_Literal()
+    {
+        DefaultDialects = [new MySqlDialect(), new GenericDialect()];
+
+        VerifiedOnlySelect("SELECT B'111'");
+    }
+
+    [Fact]
+    public void Parse_Straight_Join()
+    {
+        VerifiedStatement("SELECT a.*, b.* FROM table_a AS a STRAIGHT_JOIN table_b AS b ON a.b_id = b.id");
+        VerifiedStatement("SELECT a.*, b.* FROM table_a STRAIGHT_JOIN table_b AS b ON a.b_id = b.id");
+    }
+
+    [Fact]
+    public void Parse_Lock_Tables_Extended()
+    {
+        VerifiedStatement("LOCK TABLES trans AS t READ, customer WRITE");
+        VerifiedStatement("LOCK TABLES trans AS t READ LOCAL, customer WRITE");
+        VerifiedStatement("LOCK TABLES trans AS t READ, customer LOW_PRIORITY WRITE");
+        VerifiedStatement("UNLOCK TABLES");
+    }
+
+    [Fact]
+    public void Parse_Replace_Insert()
+    {
+        VerifiedStatement("REPLACE DELAYED INTO tasks (title, priority) VALUES ('Test Some Inserts', 1)");
+    }
+
+    [Fact]
+    public void Parse_Json_Member_Of()
+    {
+        VerifiedStatement("SELECT 17 MEMBER OF('[23, \"abc\", 17, \"ab\", 10]')");
+        VerifiedStatement("SELECT 'ab' MEMBER OF('[23, \"abc\", 17, \"ab\", 10]')");
+    }
+
+    [Fact]
+    public void Parse_Alter_Table_Add_Columns()
+    {
+        OneStatementParsesTo(
+            "ALTER TABLE tab ADD COLUMN a TEXT FIRST, ADD COLUMN b INT AFTER foo",
+            "ALTER TABLE tab ADD COLUMN a TEXT FIRST,ADD COLUMN b INT AFTER foo");
+    }
+
+    [Fact]
+    public void Parse_Double_Precision()
+    {
+        VerifiedStatement("CREATE TABLE foo (bar DOUBLE)");
+    }
+
+    [Fact]
+    public void Parse_Limit_MySql_Syntax_Extended()
+    {
+        DefaultDialects = [new MySqlDialect(), new GenericDialect()];
+
+        VerifiedStatement("SELECT id, fname, lname FROM customer LIMIT 10 OFFSET 5");
+        VerifiedStatement("SELECT * FROM user LIMIT ? OFFSET ?");
+    }
+
+    [Fact]
+    public void Parse_Select_With_Concatenation_Of_Exp_Number_And_Numeric_Prefix_Column()
+    {
+        VerifiedStatement("SELECT 123e4, 123col_$@123abc FROM \"table\"");
+    }
+
+    [Fact]
+    public void Parse_Insert_With_Numeric_Prefix_Column_Name()
+    {
+        VerifiedStatement("INSERT INTO s1.t1 (123col_$@length123) VALUES (67.654)");
+    }
 }
