@@ -121,6 +121,11 @@ public partial class Parser
         };
     }
 
+    /// <summary>
+    /// Parse a PostgreSQL `LISTEN` statement.
+    /// Used to subscribe to a notification channel.
+    /// </summary>
+    /// <returns>Listen statement</returns>
     public Statement ParseListen()
     {
         var channel = ParseIdentifier();
@@ -195,6 +200,11 @@ public partial class Parser
 
         throw Expected("lock mode (ACCESS SHARE, ROW SHARE, ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, or ACCESS EXCLUSIVE)", PeekToken());
     }
+    /// <summary>
+    /// Parse a PostgreSQL `NOTIFY` statement.
+    /// Sends a notification to listening clients on a specific channel.
+    /// </summary>
+    /// <returns>Notify statement</returns>
     public Statement ParseNotify()
     {
         var channel = ParseIdentifier();

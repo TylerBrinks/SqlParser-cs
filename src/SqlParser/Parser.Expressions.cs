@@ -9,6 +9,11 @@ namespace SqlParser;
 
 public partial class Parser
 {
+    /// <summary>
+    /// Parse a new expression including wildcard and qualified wildcard.
+    /// Handles both simple wildcards (*) and qualified wildcards (table.*).
+    /// </summary>
+    /// <returns>Expression representing a wildcard or regular expression</returns>
     public Expression ParseWildcardExpr()
     {
         var index = _index;
