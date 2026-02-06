@@ -1,7 +1,4 @@
-﻿using SqlParser.Ast;
-using SqlParser.Tokens;
-
-namespace SqlParser.Dialects;
+﻿namespace SqlParser.Dialects;
 
 /// <summary>
 /// ClickHouse SQL dialect
@@ -19,4 +16,7 @@ public class ClickHouseDialect : Dialect
     public override bool DescribeRequiresTableKeyword => true;
     public override bool RequireIntervalQualifier => true;
     public override bool SupportsLimitComma => true;
+    public override bool SupportsDictionarySyntax => true;
+    public override bool SupportsInsertTableFunction => true;
+    public override bool SupportsInsertFormat => true;
 }

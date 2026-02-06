@@ -136,13 +136,14 @@ public abstract record ColumnOption : IWriteSql, IElement
     /// <param name="ReferredColumns">Referred Columns</param>
     /// <param name="OnDeleteAction">On Delete Action</param>
     /// <param name="OnUpdateAction">On DoUpdate Action</param>
-    public record ForeignKey(ObjectName Name, 
-        Sequence<Ident>? ReferredColumns = null, 
-        ReferentialAction OnDeleteAction = ReferentialAction.None, 
+    public record ForeignKey(ObjectName Name,
+        Sequence<Ident>? ReferredColumns = null,
+        ReferentialAction OnDeleteAction = ReferentialAction.None,
         ReferentialAction OnUpdateAction = ReferentialAction.None)
         : ColumnOption
     {
         public ConstraintCharacteristics? Characteristics { get; init; }
+        public MatchType? Match { get; init; }
 
         public override void ToSql(SqlTextWriter writer)
         {
@@ -150,6 +151,11 @@ public abstract record ColumnOption : IWriteSql, IElement
             if (ReferredColumns.SafeAny())
             {
                 writer.WriteSql($" ({ReferredColumns})");
+            }
+
+            if (Match != null)
+            {
+                writer.WriteSql($" MATCH {Match}");
             }
 
             if (OnDeleteAction != ReferentialAction.None)
@@ -338,6 +344,16 @@ public abstract record ColumnOption : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             writer.WriteSql($"{TagOptions}");
+        }
+    }
+    /// <summary>
+    /// MySQL INVISIBLE column option
+    /// </summary>
+    public record Invisible : ColumnOption
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("INVISIBLE");
         }
     }
 

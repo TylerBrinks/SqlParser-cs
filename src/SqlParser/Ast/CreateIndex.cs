@@ -2,7 +2,33 @@
 
 public record CreateIndex([property: Visit(0)] ObjectName? Name, [property: Visit(1)] ObjectName TableName) : IWriteSql, IIfNotExists
 {
-    public Ident? Using { get; init; }
+    /// <summary>
+    /// Index type (USING clause)
+    /// </summary>
+    public IndexType? IndexType { get; init; }
+    /// <summary>
+    /// Custom index type name when IndexType is Custom
+    /// </summary>
+    public Ident? CustomIndexTypeName { get; init; }
+    /// <summary>
+    /// Returns the USING clause value as a string
+    /// </summary>
+    public string? Using => IndexType switch
+    {
+        null or Ast.IndexType.None => null,
+        Ast.IndexType.Custom => CustomIndexTypeName?.Value,
+        Ast.IndexType.BTree => "btree",
+        Ast.IndexType.Hash => "hash",
+        Ast.IndexType.GIN => "gin",
+        Ast.IndexType.GiST => "gist",
+        Ast.IndexType.SPGiST => "spgist",
+        Ast.IndexType.BRIN => "brin",
+        Ast.IndexType.Bloom => "bloom",
+        _ => IndexType.ToString()?.ToLowerInvariant()
+    };
+    /// <summary>
+    /// Columns for the index
+    /// </summary>
     [Visit(2)] public Sequence<OrderByExpression>? Columns { get; init; }
     public bool Unique { get; init; }
     public bool IfNotExists { get; init; }
@@ -27,9 +53,28 @@ public record CreateIndex([property: Visit(0)] ObjectName? Name, [property: Visi
 
         writer.WriteSql($"ON {TableName}");
 
-        if (Using != null)
+        var hasUsing = IndexType != null && IndexType != Ast.IndexType.None;
+        if (hasUsing)
         {
-            writer.WriteSql($" USING {Using}");
+            if (IndexType == Ast.IndexType.Custom && CustomIndexTypeName != null)
+            {
+                writer.WriteSql($" USING {CustomIndexTypeName}");
+            }
+            else
+            {
+                var indexTypeName = IndexType switch
+                {
+                    Ast.IndexType.BTree => "btree",
+                    Ast.IndexType.Hash => "hash",
+                    Ast.IndexType.GIN => "gin",
+                    Ast.IndexType.GiST => "gist",
+                    Ast.IndexType.SPGiST => "spgist",
+                    Ast.IndexType.BRIN => "brin",
+                    Ast.IndexType.Bloom => "bloom",
+                    _ => IndexType.ToString()!.ToLowerInvariant()
+                };
+                writer.Write($" USING {indexTypeName}");
+            }
         }
 
         writer.Write($"({Columns.ToSqlDelimited(Symbols.Comma)})");

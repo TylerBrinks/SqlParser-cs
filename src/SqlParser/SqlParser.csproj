@@ -2,14 +2,14 @@
 
 	<PropertyGroup>
 		<LangVersion>12.0</LangVersion>
-		<TargetFrameworks>net8.0;net7.0;</TargetFrameworks>
+		<TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<Title>SqlParser - Extensible SQL Parser for .NET</Title>
 		<Authors>Tyler Brinks</Authors>
 		<Company />
 		<Description>Friendly SQL Parser for .NET</Description>
-		<Copyright>2025 Tyler Brinks</Copyright>
+		<Copyright>2026 Tyler Brinks</Copyright>
 		<PackageProjectUrl>https://github.com/TylerBrinks/SqlParser-cs</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/TylerBrinks/SqlParser-cs</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>

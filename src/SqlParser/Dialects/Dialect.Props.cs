@@ -81,4 +81,14 @@ public partial class Dialect
     public virtual bool SupportsTopBeforeDistinct => false;
     public virtual bool SupportsFactorialOperator => false;
     public virtual bool SupportsBangNotOperator => false;
+    /// <summary>
+    /// Returns true if the dialect supports the RAISE statement
+    /// </summary>
+    public virtual bool SupportsRaise => false;
+    /// <summary>
+    /// Returns true if the dialect supports the procedural CASE statement
+    /// </summary>
+    public virtual bool SupportsCaseStatement => false;
+    public virtual bool SupportsInsertTableFunction => false;
+    public virtual bool SupportsInsertFormat => false;
 }

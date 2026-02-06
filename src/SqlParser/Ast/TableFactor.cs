@@ -389,6 +389,61 @@ public abstract record TableFactor : IWriteSql, IElement
         }
     }
 
+    /// <summary>
+    /// TABLESAMPLE clause
+    /// </summary>
+    public record TableSample(
+        TableFactor TableFactor,
+        TableSampleKind TableSampleKind) : TableFactor
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{TableFactor} {TableSampleKind}");
+
+            if (Alias != null)
+            {
+                writer.WriteSql($" AS {Alias}");
+            }
+        }
+    }
+    /// <summary>
+    /// XMLTABLE expression
+    /// </summary>
+    public record XmlTable(XmlTableExpression XmlTableExpression) : TableFactor
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"{XmlTableExpression}");
+
+            if (Alias != null)
+            {
+                writer.WriteSql($" AS {Alias}");
+            }
+        }
+    }
+    /// <summary>
+    /// SEMANTIC_VIEW table factor
+    /// </summary>
+    public record SemanticView(ObjectName Name, Sequence<FunctionArg> Args) : TableFactor
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"SEMANTIC_VIEW({Name}");
+
+            if (Args.SafeAny())
+            {
+                writer.WriteSql($", {Args.ToSqlDelimited()}");
+            }
+
+            writer.Write(")");
+
+            if (Alias != null)
+            {
+                writer.WriteSql($" AS {Alias}");
+            }
+        }
+    }
+
     public T As<T>() where T : TableFactor
     {
         return (T)this;

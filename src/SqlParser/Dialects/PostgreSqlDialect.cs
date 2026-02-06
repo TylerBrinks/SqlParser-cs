@@ -167,6 +167,8 @@ public class PostgreSqlDialect : Dialect
                 or Keyword.REGEXP
                 or Keyword.SIMILAR
                 or Keyword.OPERATOR
+                or Keyword.OVERLAPS
+                or Keyword.MEMBER
             } => BetweenLikePrecedence,
             Word { Keyword: Keyword.DIV } => MulDivModOpPrecedence,
             Word { Keyword: Keyword.COLLATE } => CollatePrecedence,
@@ -269,7 +271,7 @@ public class PostgreSqlDialect : Dialect
 
         var labels = parser.ParseCommaSeparated0(parser.ParseIdentifier, typeof(RightParen));
         parser.ExpectRightParen();
-        return new Statement.CreateType(name, new UserDefinedTypeRepresentation.Enum(labels));
+        return new Statement.CreateType(name ?? "", new UserDefinedTypeRepresentation.Enum(labels));
     }
 
     public override bool SupportsGroupByExpression => true;
@@ -281,4 +283,6 @@ public class PostgreSqlDialect : Dialect
     public override bool SupportsListen => true;
     public override bool SupportsNotify => true;
     public override bool SupportsFactorialOperator => true;
+    public override bool SupportsRaise => true;
+    public override bool SupportsCaseStatement => true;
 }

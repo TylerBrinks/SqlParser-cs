@@ -1,4 +1,5 @@
-﻿using SqlParser.Ast;
+﻿using System.Text;
+using SqlParser.Ast;
 using SqlParser.Dialects;
 using SqlParser.Tokens;
 using static SqlParser.Ast.Expression;
@@ -10,6 +11,7 @@ namespace SqlParser;
 public partial class Parser
 {
     private int _index;
+    private bool _inColumnDefinition;
     private Sequence<Token> _tokens = null!;
     private DepthGuard _depthGuard = null!;
     private Dialect _dialect = null!;
@@ -54,6 +56,8 @@ public partial class Parser
     {
         return _dialect.GetNextPrecedenceDefault(this);
     }
+
+    public bool InColumnDefinition => _inColumnDefinition;
 
     /// <summary>
     /// Gets the next token in the queue without advancing the current
@@ -769,13 +773,74 @@ public partial class Parser
                     return new IsNotDistinctFrom(expr, ParseExpr());
 
                 case Keyword.IS:
-                    throw Expected("[NOT] NULL or TRUE|FALSE or [NOT] DISTINCT FROM after IS", PeekToken());
+                    {
+                        var negated = ParseKeyword(Keyword.NOT);
+                        // Parse optional normalization form
+                        var form = ParseOneOfKeywords(Keyword.NFC, Keyword.NFD, Keyword.NFKC, Keyword.NFKD) switch
+                        {
+                            Keyword.NFC => (NormalForm?)NormalForm.NFC,
+                            Keyword.NFD => NormalForm.NFD,
+                            Keyword.NFKC => NormalForm.NFKC,
+                            Keyword.NFKD => NormalForm.NFKD,
+                            _ => null
+                        };
+
+                        if (ParseKeyword(Keyword.NORMALIZED))
+                        {
+                            return new IsNormalized(expr, negated, form);
+                        }
+
+                        // If we consumed NOT but didn't find NORMALIZED, that's an error
+                        if (negated)
+                        {
+                            throw Expected("NORMALIZED after IS NOT", PeekToken());
+                        }
+                        // If we consumed a normalization form but didn't find NORMALIZED
+                        if (form != null)
+                        {
+                            throw Expected("NORMALIZED after normalization form", PeekToken());
+                        }
+
+                        throw Expected("[NOT] NULL or TRUE|FALSE or [NOT] DISTINCT FROM or [NOT] NORMALIZED after IS", PeekToken());
+                    }
 
                 case Keyword.AT:
                     {
                         ExpectKeywords(Keyword.TIME, Keyword.ZONE);
                         return new AtTimeZone(expr, ParseSubExpression(precedence));
                     }
+
+                case Keyword.MEMBER:
+                    {
+                        ExpectKeyword(Keyword.OF);
+                        var array = ExpectParens(ParseExpr);
+                        return new MemberOf(expr, array);
+                    }
+
+                case Keyword.NOTNULL:
+                    return new NotNull(expr);
+
+                case Keyword.OVERLAPS:
+                    {
+                        // OVERLAPS takes two row expressions: (a, b) OVERLAPS (c, d)
+                        // The left expression is already parsed, now parse the right side
+                        var right = ParseExpr();
+                        // Extract sequences from both sides (they should be tuple/row expressions)
+                        var leftSequence = ExtractOverlapExpressions(expr);
+                        var rightSequence = ExtractOverlapExpressions(right);
+                        return new Overlaps(leftSequence, rightSequence);
+
+                        Sequence<Expression> ExtractOverlapExpressions(Expression e)
+                        {
+                            return e switch
+                            {
+                                Nested n => ExtractOverlapExpressions(n.Expression),
+                                Expression.Tuple t => t.Expressions,
+                                _ => [e]
+                            };
+                        }
+                    }
+
                 case Keyword.NOT or
                     Keyword.IN or
                     Keyword.BETWEEN or
@@ -789,13 +854,19 @@ public partial class Parser
                         var negated = ParseKeyword(Keyword.NOT);
                         var regexp = ParseKeyword(Keyword.REGEXP);
                         var rlike = ParseKeyword(Keyword.RLIKE);
+                        var @null = !_inColumnDefinition && ParseKeyword(Keyword.NULL);
                         if (regexp || rlike)
                         {
                             return new RLike(
-                                negated, 
-                                expr, 
-                                ParseSubExpression(_dialect.GetPrecedence(Precedence.Like)), 
+                                negated,
+                                expr,
+                                ParseSubExpression(_dialect.GetPrecedence(Precedence.Like)),
                                 regexp);
+                        }
+
+                        if (negated && @null)
+                        {
+                            return new IsNotNull(expr);
                         }
 
                         if (ParseKeyword(Keyword.IN))
@@ -827,8 +898,8 @@ public partial class Parser
                         if (ParseKeywordSequence(Keyword.SIMILAR, Keyword.TO))
                         {
                             return new SimilarTo(
-                                expr, 
-                                negated, 
+                                expr,
+                                negated,
                                 ParseSubExpression(_dialect.GetPrecedence(Precedence.Like)),
                                 ParseEscapeChar());
                         }
@@ -1000,6 +1071,71 @@ public partial class Parser
     }
 
     /// <summary>
+    /// Parse a PostgreSQL operator name (e.g., ===, @@, ~, &lt;, etc.)
+    /// Operators can contain: + - * / &lt; &gt; = ~ ! @ # % ^ &amp; | ` ?
+    /// </summary>
+    public ObjectName ParseOperatorSymbol()
+    {
+        var sb = new StringBuilder();
+
+        while (true)
+        {
+            var token = PeekToken();
+            var part = token switch
+            {
+                Plus => "+",
+                Minus => "-",
+                Multiply => "*",
+                Divide => "/",
+                LessThan => "<",
+                GreaterThan => ">",
+                Equal => "=",
+                Tilde => "~",
+                ExclamationMark => "!",
+                AtSign => "@",
+                Hash => "#",
+                Modulo => "%",
+                Caret => "^",
+                Ampersand => "&",
+                Pipe => "|",
+                Question => "?",
+                AtAt => "@@",
+                LessThanOrEqual => "<=",
+                GreaterThanOrEqual => ">=",
+                NotEqual => "<>",
+                DoubleEqual => "==",
+                ShiftLeft => "<<",
+                ShiftRight => ">>",
+                DoubleTilde => "~~",
+                DoubleTildeAsterisk => "~~*",
+                ExclamationMarkTilde => "!~",
+                ExclamationMarkTildeAsterisk => "!~*",
+                ExclamationMarkDoubleTilde => "!~~",
+                ExclamationMarkDoubleTildeAsterisk => "!~~*",
+                TildeAsterisk => "~*",
+                StringConcat => "||",
+                CustomBinaryOperator custom => custom.Value,
+                _ => null
+            };
+
+            if (part == null)
+            {
+                break;
+            }
+
+            NextToken();
+            sb.Append(part);
+        }
+
+        if (sb.Length == 0)
+        {
+            throw Expected("operator symbol", PeekToken());
+        }
+
+        return new ObjectName(new Ident(sb.ToString()));
+    }
+
+    /// <summary>
     /// Initializes a field if the input condition is met; default initialization if not.
     /// </summary>
     /// <typeparam name="T">Type to initialize</typeparam>
@@ -1126,6 +1262,11 @@ public partial class Parser
                 if (limit == null && ParseKeyword(Keyword.LIMIT))
                 {
                     limit = ParseLimit();
+
+                    if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.BY))
+                    {
+                        limitBy = ParseCommaSeparated(ParseExpr);
+                    }
                 }
 
                 if (offset == null && ParseKeyword(Keyword.OFFSET))
@@ -1140,11 +1281,6 @@ public partial class Parser
                     offset = new Offset(limit, OffsetRows.None);
                     limit = ParseExpr();
                 }
-            }
-
-            if (_dialect is ClickHouseDialect or GenericDialect && ParseKeyword(Keyword.BY))
-            {
-                limitBy = ParseCommaSeparated(ParseExpr);
             }
 
             var settings = ParseSettings();
@@ -1284,6 +1420,14 @@ public partial class Parser
             });
 
         return settings;
+    }
+
+    public InputFormatClause ParseInputFormatClause()
+    {
+        var ident = ParseIdentifier();
+        var values = MaybeParse(() => ParseCommaSeparated(ParseExpr));
+
+        return new InputFormatClause(ident, values);
     }
 
     public static void ThrowExpectedToken(Token expected, Token actual)

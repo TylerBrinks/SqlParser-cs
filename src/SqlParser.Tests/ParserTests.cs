@@ -253,7 +253,7 @@ public class ParserTests : ParserTestBase
     public void Test_Parser_Error_Loc()
     {
         var ex = Assert.Throws<ParserException>(() => new Parser().ParseSql("SELECT this is a syntax error", new GenericDialect()));
-        Assert.Equal("Expected [NOT] NULL or TRUE|FALSE or [NOT] DISTINCT FROM after IS, found a, Line: 1, Col: 16", ex.Message);
+        Assert.Equal("Expected [NOT] NULL or TRUE|FALSE or [NOT] DISTINCT FROM or [NOT] NORMALIZED after IS, found a, Line: 1, Col: 16", ex.Message);
     }
 
     [Fact]
@@ -367,4 +367,99 @@ public class ParserTests : ParserTestBase
         Assert.NotNull(addedConstraint.Characteristics);
         Assert.True(addedConstraint.Characteristics.Deferrable);
     }
+
+    #region New Data Types Tests (v0.53-v0.60)
+
+    [Fact]
+    public void Test_Parse_New_Integer_Types()
+    {
+        DefaultDialects = [new GenericDialect(), new DuckDbDialect()];
+
+        TestDataType("HUGEINT", new DataType.HugeInt());
+        TestDataType("UHUGEINT", new DataType.UHugeInt());
+        TestDataType("UTINYINT", new DataType.UTinyInt());
+        TestDataType("USMALLINT", new DataType.USmallInt());
+        TestDataType("UBIGINT", new DataType.UBigInt());
+    }
+
+    [Fact]
+    public void Test_Parse_Bit_Types()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        TestDataType("BIT", new DataType.Bit());
+        TestDataType("BIT(8)", new DataType.Bit(8));
+        TestDataType("BIT VARYING", new DataType.BitVarying());
+        TestDataType("BIT VARYING(64)", new DataType.BitVarying(64));
+        TestDataType("VARBIT", new DataType.VarBit());
+        TestDataType("VARBIT(32)", new DataType.VarBit(32));
+    }
+
+    [Fact]
+    public void Test_Parse_Mysql_Blob_Types()
+    {
+        DefaultDialects = [new GenericDialect(), new MySqlDialect()];
+
+        TestDataType("TINYBLOB", new DataType.TinyBlob());
+        TestDataType("MEDIUMBLOB", new DataType.MediumBlob());
+        TestDataType("LONGBLOB", new DataType.LongBlob());
+    }
+
+    [Fact]
+    public void Test_Parse_Mysql_Text_Types()
+    {
+        DefaultDialects = [new GenericDialect(), new MySqlDialect()];
+
+        TestDataType("TINYTEXT", new DataType.TinyText());
+        TestDataType("MEDIUMTEXT", new DataType.MediumText());
+        TestDataType("LONGTEXT", new DataType.LongText());
+    }
+
+    [Fact]
+    public void Test_Parse_Timestamp_Ntz()
+    {
+        DefaultDialects = [new GenericDialect(), new SnowflakeDialect()];
+
+        TestDataType("TIMESTAMP_NTZ", new DataType.TimestampNtz());
+        TestDataType("TIMESTAMP_NTZ(6)", new DataType.TimestampNtz(6));
+    }
+
+    [Fact]
+    public void Test_Parse_Postgres_Text_Search_Types()
+    {
+        DefaultDialects = [new GenericDialect(), new PostgreSqlDialect()];
+
+        TestDataType("TSVECTOR", new DataType.TsVector());
+        TestDataType("TSQUERY", new DataType.TsQuery());
+    }
+
+    [Fact]
+    public void Test_Parse_BigDecimal_Type()
+    {
+        DefaultDialects = [new GenericDialect()];
+
+        TestDataType("BIGDECIMAL", new DataType.BigDecimal(new ExactNumberInfo.None()));
+        TestDataType("BIGDECIMAL(10)", new DataType.BigDecimal(new ExactNumberInfo.Precision(10)));
+        TestDataType("BIGDECIMAL(10,2)", new DataType.BigDecimal(new ExactNumberInfo.PrecisionAndScale(10, 2)));
+    }
+
+    [Fact]
+    public void Test_Parse_ClickHouse_Enum_Types()
+    {
+        DefaultDialects = [new GenericDialect(), new ClickHouseDialect()];
+
+        // Values are stored without quotes; ToSql adds quotes back during serialization
+        TestDataType("ENUM8('a', 'b', 'c')", new DataType.Enum8(["a", "b", "c"]));
+        TestDataType("ENUM16('x', 'y')", new DataType.Enum16(["x", "y"]));
+    }
+
+    [Fact]
+    public void Test_Parse_Any_Type()
+    {
+        DefaultDialects = [new GenericDialect()];
+
+        TestDataType("ANY TYPE", new DataType.AnyType());
+    }
+
+    #endregion
 }

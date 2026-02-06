@@ -1181,7 +1181,7 @@ public class ClickhouseDialectTests : ParserTestBase
     [Fact]
     public void Private_Test_Case_Expected_Join_Table()
     {
-        var sql = "SELECT toUInt32(toDateTime(install_date)) * 1000 AS t, groupArray(('Day ' || toString(day), rr / users)) FROM (SELECT install_date, total AS users, rr, day FROM (SELECT install_date, sum(r[1]) AS total, sumForEach(r) AS retention FROM (WITH date - install_date AS visit_day SELECT install_date,player_id, retention(visit_day = 0, visit_day = 1, visit_day = 3, visit_day = 7, visit_day = 14, visit_day = 28) AS r FROM (SELECT player_id, date, toDate(toDateTimeOrZero(player_install_date)) AS install_date FROM mw2.pause WHERE date BETWEEN toDate(1741163029) AND toDate(1748935429) + INTERVAL 28 day AND install_date BETWEEN toDate(1741163029) AND toDate(1748935429) UNION ALL SELECT player_id, date, toDate(toDateTimeOrZero(player_install_date)) AS install_date FROM mw2.registration WHERE date BETWEEN toDate(1741163029) AND toDate(1748935429) + INTERVAL 28 day AND install_date BETWEEN toDate(1741163029) AND toDate(1748935429)) GROUP BY install_date, player_id) GROUP BY install_date) ARRAY JOIN\n  retention AS rr, [0, 1, 3, 7, 14, 28] AS day)GROUP BY t ORDER BY t ASC FORMAT JSON";
+        var sql = "SELECT toUInt32(toDateTime(install_date)) * 1000 AS t, groupArray(('Day ' || toString(day), rr / users)) FROM (SELECT install_date, total AS users, rr, day FROM (SELECT install_date, sum(r[1]) AS total, sumForEach(r) AS retention FROM (WITH date - install_date AS visit_day SELECT install_date, player_id, retention(visit_day = 0, visit_day = 1, visit_day = 3, visit_day = 7, visit_day = 14, visit_day = 28) AS r FROM (SELECT player_id, date, toDate(toDateTimeOrZero(player_install_date)) AS install_date FROM mw2.pause WHERE date BETWEEN toDate(1741163029) AND toDate(1748935429) + INTERVAL 28 DAY AND install_date BETWEEN toDate(1741163029) AND toDate(1748935429) UNION ALL SELECT player_id, date, toDate(toDateTimeOrZero(player_install_date)) AS install_date FROM mw2.registration WHERE date BETWEEN toDate(1741163029) AND toDate(1748935429) + INTERVAL 28 DAY AND install_date BETWEEN toDate(1741163029) AND toDate(1748935429)) GROUP BY install_date, player_id) GROUP BY install_date) ARRAY JOIN retention AS rr, [0, 1, 3, 7, 14, 28] AS day) GROUP BY t ORDER BY t ASC FORMAT JSON";
         VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
     }   
     
@@ -1234,5 +1234,65 @@ public class ClickhouseDialectTests : ParserTestBase
     {
      var sql = "SELECT ROW_NUMBER() OVER (ORDER BY (WITH sorted_col AS col SELECT sorted_col)) FROM table1";
      VerifiedStatement<Statement.Select>(sql, DefaultDialects!);
+    }
+
+    [Fact]
+    public void Parse_Insert_Into_Function()
+    {
+        VerifiedStatement("INSERT INTO TABLE FUNCTION remote('localhost', default.simple_table) VALUES (100, 'inserted via remote()')");
+        VerifiedStatement("INSERT INTO FUNCTION remote('localhost', default.simple_table) VALUES (100, 'inserted via remote()')");
+    }
+
+    [Fact]
+    public void Parse_Limit_By()
+    {
+        DefaultDialects = new Dialect[] { new ClickHouseDialect(), new GenericDialect() };
+        VerifiedStatement("SELECT * FROM default.last_asset_runs_mv ORDER BY created_at DESC LIMIT 1 BY asset");
+        VerifiedStatement("SELECT * FROM default.last_asset_runs_mv ORDER BY created_at DESC LIMIT 1 BY asset, toStartOfDay(created_at)");
+        Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT * FROM default.last_asset_runs_mv ORDER BY created_at DESC BY asset, toStartOfDay(created_at)"));
+        Assert.Throws<ParserException>(() => ParseSqlStatements("SELECT * FROM T OFFSET 5 BY foo"));
+    }
+
+    [Fact]
+    public void Parse_Table_Sample()
+    {
+        VerifiedStatement("SELECT * FROM tbl SAMPLE 0.1");
+        VerifiedStatement("SELECT * FROM tbl SAMPLE 1000");
+        VerifiedStatement("SELECT * FROM tbl SAMPLE 1 / 10");
+        VerifiedStatement("SELECT * FROM tbl SAMPLE 1 / 10 OFFSET 1 / 2");
+    }
+
+    [Fact]
+    public void Test_Insert_Query_With_Format_Clause()
+    {
+        var cases = new[]
+        {
+            "INSERT INTO tbl FORMAT JSONEachRow {\"id\": 1, \"value\": \"foo\"}, {\"id\": 2, \"value\": \"bar\"}",
+            "INSERT INTO tbl FORMAT JSONEachRow [\"first\", \"second\", \"third\"]",
+            "INSERT INTO tbl FORMAT JSONEachRow [{\"first\": 1}]",
+            "INSERT INTO tbl (foo) FORMAT JSONAsObject {\"foo\": {\"bar\": {\"x\": \"y\"}, \"baz\": 1}}",
+            "INSERT INTO tbl (foo, bar) FORMAT JSON {\"foo\": 1, \"bar\": 2}",
+            "INSERT INTO tbl FORMAT CSV col1, col2, col3",
+            "INSERT INTO tbl FORMAT LineAsString \"I love apple\", \"I love banana\", \"I love orange\"",
+            "INSERT INTO tbl (foo) SETTINGS input_format_json_read_bools_as_numbers = true FORMAT JSONEachRow {\"id\": 1, \"value\": \"foo\"}",
+            "INSERT INTO tbl SETTINGS format_template_resultset = '/some/path/resultset.format', format_template_row = '/some/path/row.format' FORMAT Template",
+            "INSERT INTO tbl SETTINGS input_format_json_read_bools_as_numbers = true FORMAT JSONEachRow {\"id\": 1, \"value\": \"foo\"}"
+        };
+
+        foreach (var sql in cases)
+        {
+            VerifiedStatement(sql);
+        }
+    }
+
+    [Fact]
+    public void Test_Parse_Not_Null_In_Column_Options()
+    {
+        var canonical = "CREATE TABLE foo (abc INT DEFAULT (42 IS NOT NULL) NOT NULL, not_null BOOL MATERIALIZED (abc IS NOT NULL), CHECK (abc IS NOT NULL))";
+        VerifiedStatement(canonical);
+        OneStatementParsesTo(
+            "CREATE TABLE foo (abc INT DEFAULT (42 NOT NULL) NOT NULL, not_null BOOL MATERIALIZED (abc NOT NULL), CHECK (abc NOT NULL))",
+            canonical
+        );
     }
 }

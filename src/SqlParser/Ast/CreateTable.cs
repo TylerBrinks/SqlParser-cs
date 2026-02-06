@@ -49,6 +49,34 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
     public ObjectName? WithAggregationPolicy { get; init; }
     public RowAccessPolicy? WithRowAccessPolicy { get; init; }
     public Sequence<Tag>? WithTags { get; init; }
+    /// <summary>
+    /// PostgreSQL PARTITION OF clause - specifies the parent table
+    /// </summary>
+    [Visit(6)] public ObjectName? PartitionOf { get; init; }
+    /// <summary>
+    /// PostgreSQL partition bound specification (FOR VALUES IN, FROM/TO, WITH, or DEFAULT)
+    /// </summary>
+    public PartitionBound? PartitionBoundSpec { get; init; }
+    /// <summary>
+    /// Snowflake dynamic table support
+    /// </summary>
+    public bool Dynamic { get; init; }
+    /// <summary>
+    /// Dynamic table target lag
+    /// </summary>
+    public DynamicTableLag? TargetLag { get; init; }
+    /// <summary>
+    /// Dynamic table refresh mode
+    /// </summary>
+    public DynamicTableRefreshMode? RefreshMode { get; init; }
+    /// <summary>
+    /// Dynamic table initialize setting
+    /// </summary>
+    public DynamicTableInitialize? Initialize { get; init; }
+    /// <summary>
+    /// Dynamic table warehouse
+    /// </summary>
+    public ObjectName? Warehouse { get; init; }
     
     public void ToSql(SqlTextWriter writer)
     {
@@ -59,12 +87,24 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
         var transient = Transient ? "TRANSIENT " : null;
         var ifNot = IfNotExists ? $"{((IIfNotExists)this).IfNotExistsText} " : null;
         var isVolatile = Volatile ? "VOLATILE " : null;
+        var dynamic = Dynamic ? "DYNAMIC " : null;
 
-        writer.WriteSql($"CREATE {orReplace}{external}{global}{temp}{transient}{isVolatile}TABLE {ifNot}{Name}");
+        writer.WriteSql($"CREATE {orReplace}{external}{global}{temp}{transient}{isVolatile}{dynamic}TABLE {ifNot}{Name}");
 
         if (OnCluster != null)
         {
             writer.WriteSql($" ON CLUSTER {OnCluster}");
+        }
+
+        // PostgreSQL PARTITION OF
+        if (PartitionOf != null)
+        {
+            writer.WriteSql($" PARTITION OF {PartitionOf}");
+
+            if (PartitionBoundSpec != null)
+            {
+                writer.WriteSql($" {PartitionBoundSpec}");
+            }
         }
 
         var hasColumns = Columns.SafeAny();
@@ -81,7 +121,7 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
 
             writer.WriteSql($"{Constraints})");
         }
-        else if (Query == null && Like == null && CloneClause == null)
+        else if (Query == null && Like == null && CloneClause == null && PartitionOf == null)
         {
             // PostgreSQL allows `CREATE TABLE t ();`, but requires empty parens
             writer.Write(" ()");
@@ -279,6 +319,40 @@ public record CreateTable([property: Visit(0)] ObjectName Name, [property: Visit
         if (WithRowAccessPolicy != null)
         {
             writer.WriteSql($" {WithRowAccessPolicy}");
+        }
+
+        // Dynamic table options
+        if (TargetLag != null)
+        {
+            writer.WriteSql($" {TargetLag}");
+        }
+
+        if (Warehouse != null)
+        {
+            writer.WriteSql($" WAREHOUSE = {Warehouse}");
+        }
+
+        if (RefreshMode != null)
+        {
+            var refreshModeStr = RefreshMode switch
+            {
+                DynamicTableRefreshMode.Auto => "AUTO",
+                DynamicTableRefreshMode.Full => "FULL",
+                DynamicTableRefreshMode.Incremental => "INCREMENTAL",
+                _ => RefreshMode.ToString()!.ToUpperInvariant()
+            };
+            writer.Write($" REFRESH_MODE = {refreshModeStr}");
+        }
+
+        if (Initialize != null)
+        {
+            var initializeStr = Initialize switch
+            {
+                DynamicTableInitialize.OnCreate => "ON_CREATE",
+                DynamicTableInitialize.OnSchedule => "ON_SCHEDULE",
+                _ => Initialize.ToString()!.ToUpperInvariant()
+            };
+            writer.Write($" INITIALIZE = {initializeStr}");
         }
 
         if (DefaultCharset != null)

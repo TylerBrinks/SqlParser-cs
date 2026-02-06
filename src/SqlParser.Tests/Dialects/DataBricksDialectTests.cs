@@ -103,4 +103,31 @@ public class DatabricksDialectTests : ParserTestBase
             Assert.Throws<ParserException>(() => ParseSqlStatements(sql));
         }
     }
+
+    [Fact]
+    public void Data_Type_Timestamp_Ntz()
+    {
+        // Literal
+        VerifiedExpr("TIMESTAMP_NTZ '2025-03-29T18:52:00'");
+        // Cast
+        VerifiedExpr("(created_at)::TIMESTAMP_NTZ");
+        // Column definition
+        VerifiedStatement("CREATE TABLE foo (x TIMESTAMP_NTZ)");
+    }
+
+    [Fact]
+    public void Parse_Databricks_Struct_Function()
+    {
+        VerifiedOnlySelect("SELECT STRUCT(1, 'foo')");
+        VerifiedOnlySelect("SELECT STRUCT(1 AS one, 'foo' AS foo, false)");
+    }
+
+    [Fact]
+    public void Test_Databricks_Lambdas()
+    {
+        var sql = "SELECT array_sort(array('Hello', 'World'), (p1, p2) -> CASE WHEN p1 = p2 THEN 0 WHEN reverse(p1) < reverse(p2) THEN -1 ELSE 1 END)";
+        VerifiedOnlySelect(sql);
+        VerifiedExpr("map_zip_with(map(1, 'a', 2, 'b'), map(1, 'x', 2, 'y'), (k, v1, v2) -> concat(v1, v2))");
+        VerifiedExpr("transform(array(1, 2, 3), x -> x + 1)");
+    }
 }

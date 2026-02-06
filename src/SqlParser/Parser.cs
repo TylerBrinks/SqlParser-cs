@@ -15,6 +15,8 @@ using Select = SqlParser.Ast.Select;
 using HiveRowDelimiter = SqlParser.Ast.HiveRowDelimiter;
 using Subscript = SqlParser.Ast.Subscript;
 // ReSharper disable InconsistentNaming
+// ReSharper disable GrammarMistakeInComment
+// ReSharper disable CommentTypo
 
 namespace SqlParser;
 
@@ -44,6 +46,12 @@ public partial class Parser
         return this;
     }
 
+    /// <summary>
+    /// Parse a ClickHouse `OPTIMIZE TABLE` statement.
+    /// Syntax: OPTIMIZE TABLE [db.]name [ON CLUSTER cluster] [PARTITION partition | PARTITION ID 'partition_id'] [FINAL] [DEDUPLICATE [BY expression]]
+    /// <see href="https://clickhouse.com/docs/en/sql-reference/statements/optimize">ClickHouse Documentation</see>
+    /// </summary>
+    /// <returns>OptimizeTable statement</returns>
     public OptimizeTable ParseOptimizeTable()
     {
         ExpectKeyword(Keyword.TABLE);
@@ -83,6 +91,11 @@ public partial class Parser
         return new OptimizeTable(name, onCluster, partition, includeFinal, deduplicate);
     }
 
+    /// <summary>
+    /// Parse an `MSCK` statement.
+    /// Used for Hive metastore consistency checks and repairs.
+    /// </summary>
+    /// <returns>Msck statement</returns>
     // ReSharper disable once IdentifierTypo
     public Msck ParseMsck()
     {
@@ -108,6 +121,11 @@ public partial class Parser
         return new Msck(tableName, repair, partitionAction);
     }
 
+    /// <summary>
+    /// Parse a `TRUNCATE` statement.
+    /// Removes all rows from a table without logging individual row deletions.
+    /// </summary>
+    /// <returns>Truncate statement</returns>
     public Truncate ParseTruncate()
     {
         var table = ParseKeyword(Keyword.TABLE);
@@ -146,6 +164,11 @@ public partial class Parser
         return new Truncate(tableNames, table, only, partitions, identity, cascade, onCluster);
     }
 
+    /// <summary>
+    /// Parse a DuckDB `ATTACH DATABASE` statement.
+    /// Attaches an external database file to the current session.
+    /// </summary>
+    /// <returns>AttachDuckDbDatabase statement</returns>
     public AttachDuckDbDatabase ParseAttachDuckDbDatabase()
     {
         var database = ParseKeyword(Keyword.DATABASE);
@@ -157,6 +180,11 @@ public partial class Parser
         return new AttachDuckDbDatabase(ifNotExists, database, path, alias, attachOptions);
     }
 
+    /// <summary>
+    /// Parse a DuckDB `DETACH DATABASE` statement.
+    /// Detaches a previously attached database from the current session.
+    /// </summary>
+    /// <returns>DetachDuckDbDatabase statement</returns>
     public DetachDuckDbDatabase ParseDetachDuckDbDatabase()
     {
         var database = ParseKeyword(Keyword.DATABASE);
@@ -165,6 +193,12 @@ public partial class Parser
         return new DetachDuckDbDatabase(ifExists, database, alias);
     }
 
+    /// <summary>
+    /// Parse a DuckDB struct literal using brace syntax.
+    /// Structs in DuckDB can be created using {key: value} notation.
+    /// <see href="https://duckdb.org/docs/sql/data_types/struct#creating-structs">DuckDB Documentation</see>
+    /// </summary>
+    /// <returns>Dictionary representing the struct literal</returns>
     public Dictionary ParseDuckDbStructLiteral()
     {
         PrevToken();
@@ -208,6 +242,11 @@ public partial class Parser
         return (new StructField(fieldType, fieldName), trailingBracket);
     }
 
+    /// <summary>
+    /// Parse a ClickHouse MAP data type definition.
+    /// Syntax: MAP(key_type, value_type)
+    /// </summary>
+    /// <returns>Tuple containing the key data type and value data type</returns>
     public (DataType, DataType) ParseClickHouseMapDef()
     {
         ExpectKeyword(Keyword.MAP);
@@ -245,6 +284,11 @@ public partial class Parser
         }
     }
 
+    /// <summary>
+    /// Parse a function argument list enclosed in parentheses.
+    /// Handles various clauses like ORDER BY, LIMIT, HAVING, SEPARATOR, and null treatment.
+    /// </summary>
+    /// <returns>FunctionArgumentList containing the parsed arguments and clauses</returns>
     public FunctionArgumentList ParseFunctionArgumentList()
     {
         if (ConsumeToken<RightParen>())
@@ -310,6 +354,11 @@ public partial class Parser
         return new FunctionArgumentList(args, duplicateTreatment, clauses);
     }
 
+    /// <summary>
+    /// Parse the `ON OVERFLOW` clause for `LISTAGG` aggregate function.
+    /// Specifies how to handle result overflow (either ERROR or TRUNCATE with optional filler).
+    /// </summary>
+    /// <returns>ListAggOnOverflow specification, or null if not present</returns>
     public ListAggOnOverflow? ParseListAggOnOverflow()
     {
         if (ParseKeywordSequence(Keyword.ON, Keyword.OVERFLOW))
@@ -359,6 +408,11 @@ public partial class Parser
         return null;
     }
 
+    /// <summary>
+    /// Parse null treatment clause for window functions.
+    /// Specifies whether to RESPECT NULLS or IGNORE NULLS in the function.
+    /// </summary>
+    /// <returns>NullTreatment specification, or null if not present</returns>
     public NullTreatment? ParseNullTreatment()
     {
         var keyword = ParseOneOfKeywords(Keyword.RESPECT, Keyword.IGNORE);
@@ -377,6 +431,10 @@ public partial class Parser
         return null;
     }
 
+    /// <summary>
+    /// Parse duplicate treatment clause (ALL or DISTINCT) for aggregate functions.
+    /// </summary>
+    /// <returns>DuplicateTreatment specification, or null if neither ALL nor DISTINCT is present</returns>
     public DuplicateTreatment? ParseDuplicateTreatment()
     {
         var token = PeekToken();
@@ -393,6 +451,11 @@ public partial class Parser
         };
     }
 
+    /// <summary>
+    /// Parse window frame units clause: `ROWS`, `RANGE`, or `GROUPS`.
+    /// These specify how the window frame boundaries are interpreted.
+    /// </summary>
+    /// <returns>WindowFrameUnit enumeration value</returns>
     public WindowFrameUnit ParseWindowFrameUnits()
     {
         var token = NextToken();
@@ -410,6 +473,11 @@ public partial class Parser
         throw Expected("ROWS, RANGE, GROUPS", token);
     }
 
+    /// <summary>
+    /// Parse a `WINDOW` frame definition (units and bounds).
+    /// Defines the window frame for window functions, including start and optional end bounds.
+    /// </summary>
+    /// <returns>WindowFrame specification</returns>
     public WindowFrame ParseWindowFrame()
     {
         var units = ParseWindowFrameUnits();
@@ -467,6 +535,11 @@ public partial class Parser
         throw Expected("PRECEDING or FOLLOWING", PeekToken());
     }
 
+    /// <summary>
+    /// Parse a named window definition from the WINDOW clause.
+    /// Format: window_name AS (window_spec)
+    /// </summary>
+    /// <returns>NamedWindowDefinition</returns>
     public NamedWindowDefinition ParseNamedWindow()
     {
         var ident = ParseIdentifier();
@@ -508,6 +581,11 @@ public partial class Parser
         return new WindowSpec(partitionBy, orderBy, windowFrame, windowName);
     }
 
+    /// <summary>
+    /// Parse a procedure parameter definition.
+    /// Format: parameter_name data_type
+    /// </summary>
+    /// <returns>ProcedureParam containing parameter name and data type</returns>
     public ProcedureParam ParseProcedureParam()
     {
         var name = ParseIdentifier();
@@ -515,6 +593,11 @@ public partial class Parser
         return new ProcedureParam(name, dataType);
     }
 
+    /// <summary>
+    /// Parse a date/time field identifier for use in EXTRACT expressions.
+    /// Supports standard fields like YEAR, MONTH, DAY, HOUR, etc., and dialect-specific extensions.
+    /// </summary>
+    /// <returns>DateTimeField enumeration or custom field</returns>
     public DateTimeField ParseDateTimeField()
     {
         var token = NextToken();
@@ -592,6 +675,11 @@ public partial class Parser
         }
     }
 
+    /// <summary>
+    /// Check if the next token is a temporal unit keyword (e.g., YEAR, MONTH, DAY).
+    /// Used to determine if an interval expression follows.
+    /// </summary>
+    /// <returns>True if the next token represents a temporal/date-time field</returns>
     public bool NextTokenIsTemporalUnit()
     {
         var next = PeekToken();
@@ -599,6 +687,11 @@ public partial class Parser
         return next is Word w && Extensions.DateTimeFields.Any(kwd => kwd == w.Keyword);
     }
 
+    /// <summary>
+    /// Parse array or map subscript expression, supporting both index access and slice notation.
+    /// Formats: [index], [lower:upper], [:upper], [lower:], [lower:upper:stride]
+    /// </summary>
+    /// <returns>Subscript representing either an index or slice operation</returns>
     public Subscript ParseSubscriptInner()
     {
         var lowerBound = ParseInit(!ConsumeToken<Colon>(), ParseExpr);
@@ -642,6 +735,12 @@ public partial class Parser
         return new Subscript.Slice(lowerBound, upperBound, stride);
     }
 
+    /// <summary>
+    /// Parse JSON access path expression for accessing nested JSON elements.
+    /// Supports both dot notation (e.g., obj.field) and bracket notation (e.g., obj["field"]).
+    /// </summary>
+    /// <param name="expr">Base expression to access JSON from</param>
+    /// <returns>JsonAccess with the parsed path elements</returns>
     public JsonAccess ParseJsonAccess(Expression expr)
     {
         var path = new Sequence<JsonPathElement>();
@@ -675,6 +774,11 @@ public partial class Parser
         return new JsonAccess(expr, new JsonPath(path));
     }
 
+    /// <summary>
+    /// Parse a JSON path object key segment.
+    /// Keys can be unquoted identifiers or double-quoted strings.
+    /// </summary>
+    /// <returns>JsonPathElement representing a dot-notation key access</returns>
     public JsonPathElement ParseJsonPathObjectKey()
     {
         var token = NextToken();
@@ -696,12 +800,7 @@ public partial class Parser
     /// </summary>
     public string? ParseEscapeChar()
     {
-        if (ParseKeyword(Keyword.ESCAPE))
-        {
-            return ParseLiteralString();
-        }
-
-        return null;
+        return ParseKeyword(Keyword.ESCAPE) ? ParseLiteralString() : null;
     }
     //public Expression ParseArrayIndex(Expression expr)
     //{
@@ -719,10 +818,15 @@ public partial class Parser
     //    return new ArrayIndex(expr, indexes);
     //}
 
+    /// <summary>
+    /// Parse a table lock specification for MySQL `LOCK TABLES` statement.
+    /// Format: table_name [alias] lock_type
+    /// </summary>
+    /// <returns>LockTable specification</returns>
     public LockTable ParseLockTable()
     {
         var table = ParseIdentifier();
-        var alias = ParseOptionalAlias(new[] { Keyword.READ, Keyword.WRITE, Keyword.LOW_PRIORITY });
+        var alias = ParseOptionalAlias([Keyword.READ, Keyword.WRITE, Keyword.LOW_PRIORITY]);
         LockTableType lockType;
 
         if (ParseKeyword(Keyword.READ))
@@ -789,6 +893,11 @@ public partial class Parser
         return new DistinctFilter.On(columnNames);
     }
 
+    /// <summary>
+    /// Parse an owner specification for database objects.
+    /// Can be CURRENT_USER, CURRENT_ROLE, SESSION_USER, or an identifier.
+    /// </summary>
+    /// <returns>Owner specification</returns>
     public Owner ParseOwner()
     {
         var owner = ParseOneOfKeywords(Keyword.CURRENT_USER, Keyword.CURRENT_ROLE, Keyword.SESSION_USER);
@@ -993,6 +1102,11 @@ public partial class Parser
         };
     }
 
+    /// <summary>
+    /// Parse optional USING clause for CREATE FUNCTION statements.
+    /// Specifies the resource location (JAR, FILE, or ARCHIVE) containing the function implementation.
+    /// </summary>
+    /// <returns>CreateFunctionUsing specification</returns>
     public CreateFunctionUsing ParseOptionalCreateFunctionUsing()
     {
         if (!ParseKeyword(Keyword.USING))
@@ -1012,6 +1126,11 @@ public partial class Parser
         };
     }
 
+    /// <summary>
+    /// Parse a function argument definition for CREATE FUNCTION statements.
+    /// Format: [IN | OUT | INOUT] [argname] argtype [DEFAULT expr]
+    /// </summary>
+    /// <returns>OperateFunctionArg containing argument mode, name, type, and default expression</returns>
     public OperateFunctionArg ParseFunctionArg()
     {
         var mode = ArgMode.None;
@@ -1058,6 +1177,12 @@ public partial class Parser
         return new MacroArg(name, defaultExpression);
     }
 
+    /// <summary>
+    /// Parse a CREATE EXTERNAL TABLE statement.
+    /// External tables reference data stored outside the database, commonly used with Hive and data lakes.
+    /// </summary>
+    /// <param name="orReplace">Whether OR REPLACE was specified</param>
+    /// <returns>CreateTable AST representing an external table</returns>
     public Ast.CreateTable ParseCreateExternalTable(bool orReplace)
     {
         ExpectKeyword(Keyword.TABLE);
@@ -1092,6 +1217,11 @@ public partial class Parser
         };
     }
 
+    /// <summary>
+    /// Parse a file format specification for external tables.
+    /// Supports formats like AVRO, JSONFILE, ORC, PARQUET, RCFILE, SEQUENCEFILE, and TEXTFILE.
+    /// </summary>
+    /// <returns>FileFormat enumeration value</returns>
     public FileFormat ParseFileFormat()
     {
         var token = NextToken();
@@ -1109,6 +1239,13 @@ public partial class Parser
         };
     }
 
+    /// <summary>
+    /// Parse a CREATE VIEW statement.
+    /// Views are virtual tables defined by a SELECT query. Can be materialized or temporary.
+    /// </summary>
+    /// <param name="orReplace">Whether OR REPLACE was specified</param>
+    /// <param name="temporary">Whether TEMPORARY was specified</param>
+    /// <returns>CreateView statement</returns>
     public CreateView ParseCreateView(bool orReplace, bool temporary)
     {
         var materialized = ParseKeyword(Keyword.MATERIALIZED);
@@ -1185,6 +1322,11 @@ public partial class Parser
         };
     }
 
+    /// <summary>
+    /// Parse a CREATE ROLE statement.
+    /// Creates a new database role with optional authorization and login settings.
+    /// </summary>
+    /// <returns>CreateRole statement</returns>
     public CreateRole ParseCrateRole()
     {
         var ifNotExists = ParseIfNotExists();
@@ -1198,10 +1340,9 @@ public partial class Parser
         {
             optionalKeywords.Add(Keyword.AUTHORIZATION);
         }
-        else if (_dialect is PostgreSqlDialect)
+        else if (_dialect is PostgreSqlDialect or GenericDialect)
         {
-            optionalKeywords.AddRange(new[]
-            {
+            optionalKeywords.AddRange([
                 Keyword.LOGIN,
                 Keyword.NOLOGIN,
                 Keyword.INHERIT,
@@ -1222,8 +1363,8 @@ public partial class Parser
                 Keyword.IN,
                 Keyword.ROLE,
                 Keyword.ADMIN,
-                Keyword.USER,
-            });
+                Keyword.USER
+            ]);
         }
 
         // MSSQL
@@ -1459,7 +1600,7 @@ public partial class Parser
 
     public DropTrigger ParseDropTrigger()
     {
-        if (_dialect is not PostgreSqlDialect or not GenericDialect)
+        if (_dialect is not PostgreSqlDialect and not GenericDialect)
         {
             PrevToken();
             throw Expected("an object of type after DROP", PeekToken());
@@ -1471,11 +1612,11 @@ public partial class Parser
         var tableName = ParseObjectName();
         var optionKeyword = ParseOneOfKeywords(Keyword.CASCADE, Keyword.RESTRICT);
 
-        var option = optionKeyword switch
+        ReferentialAction? option = optionKeyword switch
         {
             Keyword.CASCADE => ReferentialAction.Cascade,
             Keyword.RESTRICT => ReferentialAction.Restrict,
-            _ => throw Expected("CASCADE or RESTRICT")
+            _ => null
         };
 
         return new DropTrigger(ifExists, triggerName, tableName, option);
@@ -1524,23 +1665,27 @@ public partial class Parser
 
     public TriggerReferencing? ParseTriggerReferencing()
     {
-        TriggerReferencingType referType = ParseOneOfKeywords(Keyword.OLD, Keyword.NEW) switch
+        TriggerReferencingType? referType = ParseOneOfKeywords(Keyword.OLD, Keyword.NEW) switch
         {
-            Keyword.OLD => TriggerReferencingType.OldTable,
-            Keyword.NEW => TriggerReferencingType.NewTable,
-            _ => throw Expected("OLD or NEW")
+            Keyword.OLD when ParseKeyword(Keyword.TABLE) => TriggerReferencingType.OldTable,
+            Keyword.NEW when ParseKeyword(Keyword.TABLE) => TriggerReferencingType.NewTable,
+            _ => null
         };
 
-        var isAs = ParseKeyword(Keyword.AS);
+        if (referType == null)
+        {
+            return null;
+        }
 
+        var isAs = ParseKeyword(Keyword.AS);
         var transitionRelationName = ParseObjectName();
 
-        return new TriggerReferencing(isAs, transitionRelationName, referType);
+        return new TriggerReferencing(isAs, transitionRelationName, referType.Value);
     }
 
     public TriggerExecBody ParseTriggerExecBody()
     {
-        TriggerExecBodyType bodyType = ExpectOneOfKeywords(Keyword.FUNCTION, Keyword.PROCEDURE) switch
+        var bodyType = ExpectOneOfKeywords(Keyword.FUNCTION, Keyword.PROCEDURE) switch
         {
             Keyword.FUNCTION => TriggerExecBodyType.Function,
             Keyword.PROCEDURE => TriggerExecBodyType.Procedure,
@@ -1567,7 +1712,11 @@ public partial class Parser
 
         if (ConsumeToken<LeftParen>())
         {
-            if (!ConsumeToken<RightParen>())
+            if (ConsumeToken<RightParen>())
+            {
+                args = new Sequence<OperateFunctionArg>();
+            }
+            else
             {
                 args = ParseCommaSeparated(ParseFunctionArg);
                 ExpectToken<RightParen>();
@@ -1626,7 +1775,7 @@ public partial class Parser
             {
                 if (ConsumeToken<RightParen>())
                 {
-                    return new FunctionDesc(name);
+                    return new FunctionDesc(name, []);
                 }
 
                 var opArgs = ParseCommaSeparated(ParseFunctionArg);
@@ -1649,17 +1798,28 @@ public partial class Parser
         return new DropPolicy(ifExists, name, tableName, option);
     }
 
+    /// <summary>
+    /// Parse a Microsoft SQL Server variable declaration expression.
+    /// Format: = expression
+    /// </summary>
+    /// <returns>DeclareAssignment or null if no assignment exists</returns>
     public DeclareAssignment? ParseMsSqlVariableDeclarationExpression()
     {
-        if (PeekToken() is Equal)
+        if (PeekToken() is not Equal)
         {
-            NextToken();
-            return new DeclareAssignment.MsSqlAssignment(ParseExpr());
+            return null;
         }
 
-        return null;
+        NextToken();
+        return new DeclareAssignment.MsSqlAssignment(ParseExpr());
+
     }
 
+    /// <summary>
+    /// Parse a Snowflake variable declaration expression.
+    /// Supports both DEFAULT and := assignment operators.
+    /// </summary>
+    /// <returns>DeclareAssignment or null if no assignment exists</returns>
     public DeclareAssignment? ParseSnowflakeVariableDeclarationExpression()
     {
         return PeekToken() switch
@@ -1683,6 +1843,12 @@ public partial class Parser
     }
 
 
+    /// <summary>
+    /// Parse a PostgreSQL `DISCARD` statement.
+    /// Releases internal resources associated with a database session.
+    /// Syntax: DISCARD { ALL | PLANS | SEQUENCES | TEMPORARY | TEMP }
+    /// </summary>
+    /// <returns>Discard statement</returns>
     public Discard ParseDiscard()
     {
         var objectType =
@@ -1695,6 +1861,12 @@ public partial class Parser
         return new Discard(objectType);
     }
 
+    /// <summary>
+    /// Parse a `CREATE INDEX` statement.
+    /// Creates an index on a table to improve query performance.
+    /// </summary>
+    /// <param name="unique">Whether UNIQUE was specified</param>
+    /// <returns>CreateIndex statement</returns>
     public Ast.CreateIndex ParseCreateIndex(bool unique)
     {
         var concurrently = ParseKeyword(Keyword.CONCURRENTLY);
@@ -1708,7 +1880,33 @@ public partial class Parser
         }
 
         var tableName = ParseObjectName();
-        var @using = ParseInit(ParseKeyword(Keyword.USING), ParseIdentifier);
+
+        IndexType? indexType = null;
+        Ident? customIndexTypeName = null;
+
+        if (ParseKeyword(Keyword.USING))
+        {
+            var typeIdent = ParseIdentifier();
+            var typeName = typeIdent.Value.ToUpperInvariant();
+
+            indexType = typeName switch
+            {
+                "BTREE" => IndexType.BTree,
+                "HASH" => IndexType.Hash,
+                "GIN" => IndexType.GIN,
+                "GIST" => IndexType.GiST,
+                "SPGIST" => IndexType.SPGiST,
+                "BRIN" => IndexType.BRIN,
+                "BLOOM" => IndexType.Bloom,
+                _ => IndexType.Custom
+            };
+
+            if (indexType == IndexType.Custom)
+            {
+                customIndexTypeName = typeIdent;
+            }
+        }
+
         var columns = ExpectParens(() => ParseCommaSeparated(ParseOrderByExpr));
 
         var include = ParseInit(ParseKeyword(Keyword.INCLUDE), () =>
@@ -1733,7 +1931,8 @@ public partial class Parser
 
         return new Ast.CreateIndex(indexName, tableName)
         {
-            Using = @using,
+            IndexType = indexType,
+            CustomIndexTypeName = customIndexTypeName,
             Columns = columns,
             Unique = unique,
             IfNotExists = ifNotExists,
@@ -1745,6 +1944,11 @@ public partial class Parser
         };
     }
 
+    /// <summary>
+    /// Parse Hive table distribution style (PARTITIONED BY clause).
+    /// Defines how table data is partitioned across storage.
+    /// </summary>
+    /// <returns>HiveDistributionStyle specification</returns>
     public HiveDistributionStyle ParseHiveDistribution()
     {
         if (ParseKeywordSequence(Keyword.PARTITIONED, Keyword.BY))
@@ -1757,6 +1961,11 @@ public partial class Parser
         return new HiveDistributionStyle.None();
     }
 
+    /// <summary>
+    /// Parse optional Hive CLUSTERED BY clause.
+    /// Specifies column-based bucketing for Hive tables.
+    /// </summary>
+    /// <returns>ClusteredBy specification, or null if not present</returns>
     public ClusteredBy? ParseOptionalClusteredBy()
     {
         return ParseInit(
@@ -1778,6 +1987,11 @@ public partial class Parser
             });
     }
 
+    /// <summary>
+    /// Parse Hive table format specifications.
+    /// Includes ROW FORMAT, STORED AS, LOCATION, and SERDEPROPERTIES clauses.
+    /// </summary>
+    /// <returns>HiveFormat containing format specifications, or null if none present</returns>
     public HiveFormat? ParseHiveFormats()
     {
         HiveFormat? hiveFormat = null;
@@ -1866,10 +2080,7 @@ public partial class Parser
                 case Keyword.FIELDS:
                     if (ParseKeywordSequence(Keyword.TERMINATED, Keyword.BY))
                     {
-                        rowDelimiters = new Sequence<HiveRowDelimiter>
-                        {
-                            new (HiveDelimiter.FieldsTerminatedBy, ParseIdentifier())
-                        };
+                        rowDelimiters = [new(HiveDelimiter.FieldsTerminatedBy, ParseIdentifier())];
 
                         if (ParseKeywordSequence(Keyword.ESCAPED, Keyword.BY))
                         {
@@ -1942,6 +2153,15 @@ public partial class Parser
         var tableName = ParseObjectName(allowUnquotedHyphen);
 
         var onCluster = ParseOptionalOnCluster();
+
+        // PostgreSQL PARTITION OF syntax
+        ObjectName? partitionOf = null;
+        PartitionBound? partitionBound = null;
+        if (ParseKeywordSequence(Keyword.PARTITION, Keyword.OF))
+        {
+            partitionOf = ParseObjectName(allowUnquotedHyphen);
+            partitionBound = ParsePartitionBound();
+        }
 
         var like = ParseInit<ObjectName?>(ParseKeyword(Keyword.LIKE) || ParseKeyword(Keyword.ILIKE), () => ParseObjectName(allowUnquotedHyphen));
 
@@ -2024,7 +2244,7 @@ public partial class Parser
                 var cols = ParseInit(PeekToken() is not RightParen, () => ParseCommaSeparated(ParseExpr));
 
                 ExpectRightParen();
-                orderExpression = new OneOrManyWithParens<Expression>.Many(cols);
+                orderExpression = new OneOrManyWithParens<Expression>.Many(cols!);
             }
             else
             {
@@ -2118,8 +2338,73 @@ public partial class Parser
             PartitionBy = createTableConfig.PartitionBy,
             ClusterBy = createTableConfig.ClusterBy,
             ClusteredBy = clusteredBy,
-            Options = createTableConfig.Options
+            Options = createTableConfig.Options,
+            PartitionOf = partitionOf,
+            PartitionBoundSpec = partitionBound
         };
+    }
+
+    /// <summary>
+    /// Parse PostgreSQL PARTITION OF bound specification
+    /// </summary>
+    public PartitionBound? ParsePartitionBound()
+    {
+        if (ParseKeyword(Keyword.DEFAULT))
+        {
+            return new PartitionBound.Default();
+        }
+
+        if (!ParseKeywordSequence(Keyword.FOR, Keyword.VALUES))
+        {
+            return null;
+        }
+
+        if (ParseKeyword(Keyword.IN))
+        {
+            var values = ExpectParens(() => ParseCommaSeparated(ParseExpr));
+            return new PartitionBound.In(values);
+        }
+
+        if (ParseKeyword(Keyword.FROM))
+        {
+            var from = ExpectParens(() => ParseCommaSeparated(ParsePartitionBoundValue));
+            ExpectKeyword(Keyword.TO);
+            var to = ExpectParens(() => ParseCommaSeparated(ParsePartitionBoundValue));
+            return new PartitionBound.FromTo(from, to);
+        }
+
+        if (ParseKeyword(Keyword.WITH))
+        {
+            return ExpectParens(() =>
+            {
+                ExpectKeywords(Keyword.MODULUS);
+                var modulus = ParseLiteralUnit();
+                ExpectToken<Comma>();
+                ExpectKeywords(Keyword.REMAINDER);
+                var remainder = ParseLiteralUnit();
+                return new PartitionBound.Hash((int)modulus, (int)remainder);
+            });
+        }
+
+        throw Expected("IN, FROM, or WITH for partition bound", PeekToken());
+    }
+
+    /// <summary>
+    /// Parse partition bound value (expression, MINVALUE, or MAXVALUE)
+    /// </summary>
+    public PartitionBoundValue ParsePartitionBoundValue()
+    {
+        if (ParseKeyword(Keyword.MINVALUE))
+        {
+            return new PartitionBoundValue.MinValue();
+        }
+
+        if (ParseKeyword(Keyword.MAXVALUE))
+        {
+            return new PartitionBoundValue.MaxValue();
+        }
+
+        return new PartitionBoundValue.Expression(ParseExpr());
     }
 
     private Ident? ParseOptionalOnCluster()
@@ -2139,10 +2424,10 @@ public partial class Parser
         Sequence<SqlOption>? options = null;
 
         var partitionBy = ParseInit(
-            _dialect is BigQueryDialect or PostgreSqlDialect && ParseKeywordSequence(Keyword.PARTITION, Keyword.BY),
+            _dialect is BigQueryDialect or PostgreSqlDialect or GenericDialect && ParseKeywordSequence(Keyword.PARTITION, Keyword.BY),
             ParseExpr);
 
-        if (_dialect is BigQueryDialect or PostgreSqlDialect)
+        if (_dialect is BigQueryDialect or PostgreSqlDialect or GenericDialect)
         {
             if (ParseKeywordSequence(Keyword.CLUSTER, Keyword.BY))
             {
@@ -2232,6 +2517,20 @@ public partial class Parser
 
     public ColumnOption? ParseOptionalColumnOption()
     {
+        var previousState = _inColumnDefinition;
+        _inColumnDefinition = true;
+        try
+        {
+            return ParseOptionalColumnOptionInner();
+        }
+        finally
+        {
+            _inColumnDefinition = previousState;
+        }
+    }
+
+    private ColumnOption? ParseOptionalColumnOptionInner()
+    {
         var option = _dialect.ParseColumnOption(this);
         if (option!=null)
         {
@@ -2318,6 +2617,7 @@ public partial class Parser
             var referredColumns = ParseParenthesizedColumnList(IsOptional.Optional, false);
             var onDelete = ReferentialAction.None;
             var onUpdate = ReferentialAction.None;
+            Ast.MatchType? matchType = null;
 
             while (true)
             {
@@ -2328,6 +2628,16 @@ public partial class Parser
                 else if (onUpdate == ReferentialAction.None && ParseKeywordSequence(Keyword.ON, Keyword.UPDATE))
                 {
                     onUpdate = ParseReferentialAction();
+                }
+                else if (matchType == null && ParseKeyword(Keyword.MATCH))
+                {
+                    matchType = ParseOneOfKeywords(Keyword.FULL, Keyword.PARTIAL, Keyword.SIMPLE) switch
+                    {
+                        Keyword.FULL => Ast.MatchType.Full,
+                        Keyword.PARTIAL => Ast.MatchType.Partial,
+                        Keyword.SIMPLE => Ast.MatchType.Simple,
+                        _ => throw Expected("FULL, PARTIAL, or SIMPLE", PeekToken())
+                    };
                 }
                 else
                 {
@@ -2343,7 +2653,8 @@ public partial class Parser
                 onDelete,
                 onUpdate)
             {
-                Characteristics = characteristics
+                Characteristics = characteristics,
+                Match = matchType
             };
         }
 
@@ -2416,6 +2727,12 @@ public partial class Parser
         if (_dialect is SQLiteDialect or GenericDialect && ParseKeywordSequence(Keyword.ON, Keyword.CONFLICT))
         {
             return new ColumnOption.OnConflict(ExpectOneOfKeywords(Keyword.ROLLBACK, Keyword.ABORT, Keyword.FAIL, Keyword.IGNORE, Keyword.REPLACE));
+        }
+
+        // MySQL INVISIBLE column option
+        if (_dialect is MySqlDialect or GenericDialect && ParseKeyword(Keyword.INVISIBLE))
+        {
+            return new ColumnOption.Invisible();
         }
 
         return null;
@@ -2615,7 +2932,7 @@ public partial class Parser
 
     bool ParseAnyOptionalTableConstraints(Action<TableConstraint> action)
     {
-        bool any = false;
+        var any = false;
         while (true)
         {
             var constraint = ParseOptionalTableConstraint(any, false);
@@ -2636,10 +2953,8 @@ public partial class Parser
             Word { Keyword: Keyword.PRIMARY or Keyword.UNIQUE } w => ParsePrimary(w),
             Word { Keyword: Keyword.FOREIGN } => ParseForeign(),
             Word { Keyword: Keyword.CHECK } => ParseCheck(),
-            Word { Keyword: Keyword.INDEX or Keyword.KEY } w when _dialect is GenericDialect or MySqlDialect =>
-                ParseIndex(w),
-            Word { Keyword: Keyword.FULLTEXT or Keyword.SPATIAL } w when _dialect is GenericDialect or MySqlDialect =>
-                ParseText(w),
+            Word { Keyword: Keyword.INDEX or Keyword.KEY } w when _dialect is GenericDialect or MySqlDialect => ParseIndex(w),
+            Word { Keyword: Keyword.FULLTEXT or Keyword.SPATIAL } w when _dialect is GenericDialect or MySqlDialect => ParseText(w),
             _ => ParseDefault()
         };
 
@@ -2654,7 +2969,7 @@ public partial class Parser
                 var indexName = ParseIdentifier();
                 var characteristics = ParseConstraintCharacteristics();
 
-                return new TableConstraint.PostgresAlterTableIndex(name, indexName)
+                return new TableConstraint.PostgresAlterTableIndex(name!, indexName)
                 {
                     Characteristics = characteristics,
                     IsPrimaryKey = isPrimary
@@ -2686,6 +3001,7 @@ public partial class Parser
             var referredColumns = ParseParenthesizedColumnList(IsOptional.Mandatory, false);
             var onDelete = ReferentialAction.None;
             var onUpdate = ReferentialAction.None;
+            Ast.MatchType? matchType = null;
 
             while (true)
             {
@@ -2696,6 +3012,16 @@ public partial class Parser
                 else if (onUpdate == ReferentialAction.None && ParseKeywordSequence(Keyword.ON, Keyword.UPDATE))
                 {
                     onUpdate = ParseReferentialAction();
+                }
+                else if (matchType == null && ParseKeyword(Keyword.MATCH))
+                {
+                    matchType = ParseOneOfKeywords(Keyword.FULL, Keyword.PARTIAL, Keyword.SIMPLE) switch
+                    {
+                        Keyword.FULL => Ast.MatchType.Full,
+                        Keyword.PARTIAL => Ast.MatchType.Partial,
+                        Keyword.SIMPLE => Ast.MatchType.Simple,
+                        _ => throw Expected("FULL, PARTIAL, or SIMPLE", PeekToken())
+                    };
                 }
                 else
                 {
@@ -2711,7 +3037,8 @@ public partial class Parser
                 ReferredColumns = referredColumns,
                 OnDelete = onDelete,
                 OnUpdate = onUpdate,
-                Characteristics = characteristics
+                Characteristics = characteristics,
+                Match = matchType
             };
         }
 
@@ -3165,7 +3492,7 @@ public partial class Parser
 
                 ExpectKeywords(Keyword.AS, Keyword.IDENTITY);
 
-                Sequence<SequenceOptions>? options = ParseInit(PeekToken() is LeftParen, () => ExpectParens(ParseCreateSequenceOptions));
+                var options = ParseInit(PeekToken() is LeftParen, () => ExpectParens(ParseCreateSequenceOptions));
 
                 op = new AlterColumnOperation.AddGenerated(genAs, options);
             }
@@ -3231,6 +3558,39 @@ public partial class Parser
             };
 
             return new OwnerTo(newOwner);
+        }
+        else if (_dialect is PostgreSqlDialect or GenericDialect && ParseKeywordSequence(Keyword.REPLICA, Keyword.IDENTITY))
+        {
+            ReplicaIdentityType identity;
+            if (ParseKeyword(Keyword.DEFAULT))
+            {
+                identity = new ReplicaIdentityType.Default();
+            }
+            else if (ParseKeyword(Keyword.FULL))
+            {
+                identity = new ReplicaIdentityType.Full();
+            }
+            else if (ParseKeyword(Keyword.NOTHING))
+            {
+                identity = new ReplicaIdentityType.Nothing();
+            }
+            else if (ParseKeywordSequence(Keyword.USING, Keyword.INDEX))
+            {
+                identity = new ReplicaIdentityType.UsingIndex(ParseIdentifier());
+            }
+            else
+            {
+                throw Expected("DEFAULT, FULL, NOTHING, or USING INDEX after REPLICA IDENTITY", PeekToken());
+            }
+            return new ReplicaIdentity(identity);
+        }
+        else if (_dialect is PostgreSqlDialect or GenericDialect && ParseKeywordSequence(Keyword.VALIDATE, Keyword.CONSTRAINT))
+        {
+            return new ValidateConstraint(ParseIdentifier());
+        }
+        else if (_dialect is PostgreSqlDialect or GenericDialect && ParseKeywordSequence(Keyword.SET, Keyword.SCHEMA))
+        {
+            return new SetSchema(ParseObjectName());
         }
         else
         {
@@ -3320,8 +3680,6 @@ public partial class Parser
             {
                 return new MySqlColumnPosition.After(ParseIdentifier());
             }
-
-            return null;
         }
 
         return null;
@@ -3361,7 +3719,7 @@ public partial class Parser
             ParseKeyword(Keyword.PROGRAM) ? new CopyTarget.Program(ParseLiteralString()) :
             new CopyTarget.File(ParseLiteralString());
 
-        ParseKeyword(Keyword.WITH);
+        var withKeyword = ParseKeyword(Keyword.WITH);
         Sequence<CopyOption>? options = null;
         if (ConsumeToken<LeftParen>())
         {
@@ -3387,7 +3745,8 @@ public partial class Parser
         {
             Options = options.SafeAny() ? options : null,
             LegacyOptions = legacyOptions.Any() ? legacyOptions : null,
-            Values = values
+            Values = values,
+            WithKeyword = withKeyword
         };
     }
 
@@ -3531,92 +3890,47 @@ public partial class Parser
     {
         var token = NextToken();
 
-        switch (token)
+        return token switch
         {
-            case Word w:
-                return w.Keyword switch
-                {
-                    Keyword.TRUE => new Value.Boolean(true),
-                    Keyword.FALSE => new Value.Boolean(false),
-                    Keyword.NULL => new Value.Null(),
-                    Keyword.undefined when w.QuoteStyle == Symbols.DoubleQuote => new Value.DoubleQuotedString(w.Value),
-                    Keyword.undefined when w.QuoteStyle == Symbols.SingleQuote => new Value.SingleQuotedString(w.Value),
-                    Keyword.undefined when w.QuoteStyle != null => throw Expected("a value", PeekToken()),
+            Word w => w.Keyword switch
+            {
+                Keyword.TRUE => new Value.Boolean(true),
+                Keyword.FALSE => new Value.Boolean(false),
+                Keyword.NULL => new Value.Null(),
+                Keyword.undefined when w.QuoteStyle == Symbols.DoubleQuote => new Value.DoubleQuotedString(w.Value),
+                Keyword.undefined when w.QuoteStyle == Symbols.SingleQuote => new Value.SingleQuotedString(w.Value),
+                Keyword.undefined when w.QuoteStyle != null => throw Expected("a value", PeekToken()),
 
-                    //// Case when Snowflake Semi-structured data like key:value
-                    //Keyword.undefined or Keyword.LOCATION or Keyword.TYPE or Keyword.DATE or Keyword.START or Keyword.END
-                    //    when _dialect is SnowflakeDialect or GenericDialect
-                    //        => new Value.UnQuotedString(w.Value),
+                //// Case when Snowflake Semi-structured data like key:value
+                //Keyword.undefined or Keyword.LOCATION or Keyword.TYPE or Keyword.DATE or Keyword.START or Keyword.END
+                //    when _dialect is SnowflakeDialect or GenericDialect
+                //        => new Value.UnQuotedString(w.Value),
 
-                    _ => throw Expected("a concrete value", PeekToken())
-                };
-
-            case Number n:
-                return ParseNumeric(n);
-
-            case SingleQuotedString s:
-                return new Value.SingleQuotedString(s.Value);
-
-            case DoubleQuotedString s:
-                return new Value.DoubleQuotedString(s.Value);
-
-            case SingleQuotedByteStringLiteral s:
-                return new Value.SingleQuotedByteStringLiteral(s.Value);
-
-            case DoubleQuotedByteStringLiteral s:
-                return new Value.DoubleQuotedByteStringLiteral(s.Value);
-
-            case TripleSingleQuotedString s:
-                return new Value.TripleSingleQuotedString(s.Value);
-
-            case TripleDoubleQuotedString s:
-                return new Value.TripleDoubleQuotedString(s.Value);
-
-            case DollarQuotedString s:
-                return new Value.DollarQuotedString(new DollarQuotedStringValue(s.Value, s.Tag));
-
-            case TripleSingleQuotedByteStringLiteral s:
-                return new Value.TripleSingleQuotedByteStringLiteral(s.Value);
-
-            case TripleDoubleQuotedByteStringLiteral s:
-                return new Value.TripleDoubleQuotedByteStringLiteral(s.Value);
-
-            case SingleQuotedRawStringLiteral s:
-                return new Value.SingleQuotedRawStringLiteral(s.Value);
-
-            case DoubleQuotedRawStringLiteral s:
-                return new Value.DoubleQuotedRawStringLiteral(s.Value);
-
-            case TripleSingleQuotedRawStringLiteral s:
-                return new Value.TripleSingleQuotedRawStringLiteral(s.Value);
-
-            case TripleDoubleQuotedRawStringLiteral s:
-                return new Value.TripleDoubleQuotedRawStringLiteral(s.Value);
-
-            case NationalStringLiteral n:
-                return new Value.NationalStringLiteral(n.Value);
-
-            case EscapedStringLiteral e:
-                return new Value.EscapedStringLiteral(e.Value);
-
-            case UnicodeStringLiteral u:
-                return new Value.UnicodeStringLiteral(u.Value);
-
-            case HexStringLiteral h:
-                return new Value.HexStringLiteral(h.Value);
-
-            case Placeholder p:
-                return new Value.Placeholder(p.Value);
-
-            case Colon c:
-                return ParsePlaceholder(c);
-
-            case AtSign a:
-                return ParsePlaceholder(a);
-
-            default:
-                throw Expected("a value", PeekToken());
-        }
+                _ => throw Expected("a concrete value", PeekToken())
+            },
+            Number n => ParseNumeric(n),
+            SingleQuotedString s => new Value.SingleQuotedString(s.Value),
+            DoubleQuotedString s => new Value.DoubleQuotedString(s.Value),
+            SingleQuotedByteStringLiteral s => new Value.SingleQuotedByteStringLiteral(s.Value),
+            DoubleQuotedByteStringLiteral s => new Value.DoubleQuotedByteStringLiteral(s.Value),
+            TripleSingleQuotedString s => new Value.TripleSingleQuotedString(s.Value),
+            TripleDoubleQuotedString s => new Value.TripleDoubleQuotedString(s.Value),
+            DollarQuotedString s => new Value.DollarQuotedString(new DollarQuotedStringValue(s.Value, s.Tag)),
+            TripleSingleQuotedByteStringLiteral s => new Value.TripleSingleQuotedByteStringLiteral(s.Value),
+            TripleDoubleQuotedByteStringLiteral s => new Value.TripleDoubleQuotedByteStringLiteral(s.Value),
+            SingleQuotedRawStringLiteral s => new Value.SingleQuotedRawStringLiteral(s.Value),
+            DoubleQuotedRawStringLiteral s => new Value.DoubleQuotedRawStringLiteral(s.Value),
+            TripleSingleQuotedRawStringLiteral s => new Value.TripleSingleQuotedRawStringLiteral(s.Value),
+            TripleDoubleQuotedRawStringLiteral s => new Value.TripleDoubleQuotedRawStringLiteral(s.Value),
+            NationalStringLiteral n => new Value.NationalStringLiteral(n.Value),
+            EscapedStringLiteral e => new Value.EscapedStringLiteral(e.Value),
+            UnicodeStringLiteral u => new Value.UnicodeStringLiteral(u.Value),
+            HexStringLiteral h => new Value.HexStringLiteral(h.Value),
+            Placeholder p => new Value.Placeholder(p.Value),
+            Colon c => ParsePlaceholder(c),
+            AtSign a => ParsePlaceholder(a),
+            _ => throw Expected("a value", PeekToken())
+        };
 
         Value ParsePlaceholder(Token tok)
         {
@@ -3699,6 +4013,8 @@ public partial class Parser
             Word { Keyword: Keyword.INT64 } => new DataType.Int64(),
             Word { Keyword: Keyword.INT128 } => new DataType.Int128(),
             Word { Keyword: Keyword.INT256 } => new DataType.Int256(),
+            Word { Keyword: Keyword.HUGEINT } => new DataType.HugeInt(),
+            Word { Keyword: Keyword.UHUGEINT } => new DataType.UHugeInt(),
 
             Word { Keyword: Keyword.INTEGER } => ParseInteger(),
             Word { Keyword: Keyword.BIGINT } => ParseBigInt(),
@@ -3709,6 +4025,9 @@ public partial class Parser
             Word { Keyword: Keyword.UINT64 } => new DataType.UInt64(),
             Word { Keyword: Keyword.UINT128 } => new DataType.UInt128(),
             Word { Keyword: Keyword.UINT256 } => new DataType.UInt256(),
+            Word { Keyword: Keyword.UTINYINT } => new DataType.UTinyInt(),
+            Word { Keyword: Keyword.USMALLINT } => new DataType.USmallInt(),
+            Word { Keyword: Keyword.UBIGINT } => new DataType.UBigInt(),
 
             Word { Keyword: Keyword.VARCHAR } => new DataType.Varchar(ParseOptionalCharacterLength()),
             Word { Keyword: Keyword.NVARCHAR } => new DataType.Nvarchar(ParseOptionalCharacterLength()),
@@ -3718,8 +4037,13 @@ public partial class Parser
             Word { Keyword: Keyword.BINARY } => new DataType.Binary(ParseOptionalPrecision()),
             Word { Keyword: Keyword.VARBINARY } => new DataType.Varbinary(ParseOptionalBinaryLength()),
             Word { Keyword: Keyword.BLOB } => new DataType.Blob(ParseOptionalPrecision()),
+            Word { Keyword: Keyword.TINYBLOB } => new DataType.TinyBlob(),
+            Word { Keyword: Keyword.MEDIUMBLOB } => new DataType.MediumBlob(),
+            Word { Keyword: Keyword.LONGBLOB } => new DataType.LongBlob(),
             Word { Keyword: Keyword.BYTES } => new DataType.Bytes(ParseOptionalPrecision()),
             Word { Keyword: Keyword.UUID } => new DataType.Uuid(),
+            Word { Keyword: Keyword.BIT } => ParseBit(),
+            Word { Keyword: Keyword.VARBIT } => new DataType.VarBit(ParseOptionalPrecision()),
 
             Word { Keyword: Keyword.DATE } => new DataType.Date(),
             Word { Keyword: Keyword.DATE32 } => new DataType.Date32(),
@@ -3729,6 +4053,7 @@ public partial class Parser
 
             Word { Keyword: Keyword.TIMESTAMP } => ParseTimestamp(),
             Word { Keyword: Keyword.TIMESTAMPTZ } => new DataType.Timestamp(TimezoneInfo.Tz, ParseOptionalPrecision()),
+            Word { Keyword: Keyword.TIMESTAMP_NTZ } => new DataType.TimestampNtz(ParseOptionalPrecision()),
 
             Word { Keyword: Keyword.TIME } => ParseTime(),
             Word { Keyword: Keyword.TIMETZ } => new DataType.Time(TimezoneInfo.Tz, ParseOptionalPrecision()),
@@ -3743,12 +4068,20 @@ public partial class Parser
             Word { Keyword: Keyword.FIXEDSTRING } => ParseFixedString(),
 
             Word { Keyword: Keyword.TEXT } => new DataType.Text(),
+            Word { Keyword: Keyword.TINYTEXT } => new DataType.TinyText(),
+            Word { Keyword: Keyword.MEDIUMTEXT } => new DataType.MediumText(),
+            Word { Keyword: Keyword.LONGTEXT } => new DataType.LongText(),
             Word { Keyword: Keyword.BYTEA } => new DataType.Bytea(),
+            Word { Keyword: Keyword.TSVECTOR } => new DataType.TsVector(),
+            Word { Keyword: Keyword.TSQUERY } => new DataType.TsQuery(),
             Word { Keyword: Keyword.NUMERIC } => new DataType.Numeric(ParseExactNumberOptionalPrecisionScale()),
             Word { Keyword: Keyword.DECIMAL } => new DataType.Decimal(ParseExactNumberOptionalPrecisionScale()),
             Word { Keyword: Keyword.DEC } => new DataType.Dec(ParseExactNumberOptionalPrecisionScale()),
             Word { Keyword: Keyword.BIGNUMERIC } => new DataType.BigNumeric(ParseExactNumberOptionalPrecisionScale()),
+            Word { Keyword: Keyword.BIGDECIMAL } => new DataType.BigDecimal(ParseExactNumberOptionalPrecisionScale()),
             Word { Keyword: Keyword.ENUM } => new DataType.Enum(ParseStringValue()),
+            Word { Keyword: Keyword.ENUM8 } => new DataType.Enum8(ParseStringValue()),
+            Word { Keyword: Keyword.ENUM16 } => new DataType.Enum16(ParseStringValue()),
             Word { Keyword: Keyword.SET } => new DataType.Set(ParseStringValue()),
             Word { Keyword: Keyword.ARRAY } => ParseArray(),
             Word { Keyword: Keyword.STRUCT } when _dialect is DuckDbDialect => ParseDuckDbStruct(),
@@ -3765,6 +4098,7 @@ public partial class Parser
 
             Word { Keyword: Keyword.TUPLE } when _dialect is ClickHouseDialect or GenericDialect => ParseClickhouseTuple(),
             Word { Keyword: Keyword.TRIGGER } => new DataType.Trigger(),
+            Word { Keyword: Keyword.ANY } when ParseKeyword(Keyword.TYPE) => new DataType.AnyType(),
             _ => ParseUnmatched()
         };
 
@@ -3845,6 +4179,15 @@ public partial class Parser
         {
             var precision = ParseOptionalPrecision();
             return ParseKeyword(Keyword.UNSIGNED) ? new DataType.UnsignedBigInt(precision) : new DataType.BigInt(precision);
+        }
+
+        DataType ParseBit()
+        {
+            if (ParseKeywordSequence(Keyword.VARYING))
+            {
+                return new DataType.BitVarying(ParseOptionalPrecision());
+            }
+            return new DataType.Bit(ParseOptionalPrecision());
         }
 
         DataType ParseCharacter()
@@ -4069,14 +4412,14 @@ public partial class Parser
             return null;
         }
     }
-    /// <summary>
-    /// Parse `AS identifier` when the AS is describing a table-valued object,
-    /// like in `... FROM generate_series(1, 10) AS t (col)`. In this case
-    /// the alias is allowed to optionally name the columns in the table, in
-    /// addition to the table it
-    /// </summary>
-    /// <param name="keywords"></param>
-    /// <returns></returns>
+    // <summary>
+    // Parse `AS identifier` when the AS is describing a table-valued object,
+    // like in `... FROM generate_series(1, 10) AS t (col)`. In this case
+    // the alias is allowed to optionally name the columns in the table, in
+    // addition to the table it
+    // </summary>
+    // <param name="keywords"></param>
+    // <returns></returns>
     //public TableAlias? ParseOptionalTableAlias(IEnumerable<Keyword> keywords)
     //{
     //    var alias = ParseOptionalAlias(keywords);
@@ -4457,7 +4800,7 @@ public partial class Parser
     {
         var isExpression = IsExpression();
         var isScalarSubquery = IsScalarSubquery();
-        var isAlias = IsAlias();
+        _ = IsAlias();
         
         if (_dialect is ClickHouseDialect && (isExpression || isScalarSubquery))
         {
@@ -4508,7 +4851,7 @@ public partial class Parser
             }
             
             ExpectKeyword(Keyword.AS);
-            CteAsMaterialized? isMaterialized = ParseInit<CteAsMaterialized?>(_dialect is PostgreSqlDialect, () =>
+            var isMaterialized = ParseInit<CteAsMaterialized?>(_dialect is PostgreSqlDialect, () =>
             {
                 if (ParseKeyword(Keyword.MATERIALIZED))
                 {
@@ -4584,7 +4927,7 @@ public partial class Parser
             }
             
             ExpectKeyword(Keyword.AS);
-            CteAsMaterialized? isMaterialized = ParseInit<CteAsMaterialized?>(_dialect is PostgreSqlDialect, () =>
+            var isMaterialized = ParseInit<CteAsMaterialized?>(_dialect is PostgreSqlDialect, () =>
             {
                 if (ParseKeyword(Keyword.MATERIALIZED))
                 {
@@ -4618,8 +4961,8 @@ public partial class Parser
         if (token is Word word)
         {
             var keyword = word.Keyword;
-            if (keyword == Keyword.SELECT || 
-                keyword == Keyword.WITH || 
+            if (keyword == Keyword.SELECT ||
+                keyword == Keyword.WITH ||
                 keyword == Keyword.VALUES ||
                 keyword == Keyword.TABLE ||
                 keyword == Keyword.INSERT ||
@@ -4628,17 +4971,65 @@ public partial class Parser
             {
                 return false;
             }
-            
+
             var peekedToken = PeekNthToken(1);
-                        
-            return peekedToken is LeftParen or Minus;
+
+            // Function call, subtraction, or compound name (table.column)
+            if (peekedToken is LeftParen or Minus or Period)
+            {
+                return true;
+            }
+
+            // For ClickHouse, check if this is "WITH identifier AS identifier SELECT ..." pattern
+            // (expression-style WITH where alias follows expression)
+            // But NOT "WITH alias AS identifier - ..." (standard style where expression continues)
+            if (_dialect is ClickHouseDialect && peekedToken is Word { Keyword: Keyword.AS })
+            {
+                var tokenAfterAs = PeekNthToken(2);
+                // If it's "(", it's standard CTE syntax
+                if (tokenAfterAs is LeftParen)
+                {
+                    return false;
+                }
+
+                // Check if it's "WITH identifier AS identifier SELECT" (ClickHouse style)
+                // vs "WITH alias AS expr - ..." (standard style where expression continues)
+                if (tokenAfterAs is Word)
+                {
+                    var tokenAfterIdentifier = PeekNthToken(3);
+                    // If the token after "AS identifier" is SELECT, it's ClickHouse expression style
+                    if (tokenAfterIdentifier is Word { Keyword: Keyword.SELECT })
+                    {
+                        return true;
+                    }
+                    // If it's a comma (multiple CTEs), it's also ClickHouse expression style
+                    if (tokenAfterIdentifier is Comma)
+                    {
+                        return true;
+                    }
+                    // Otherwise, the expression continues (standard style: "alias AS expr")
+                    return false;
+                }
+            }
+
+            return false;
         }
-        else
+        // For ClickHouse, a parenthesized expression like (CASE...), ([1,2,3]), ((1,'a'))
+        // in WITH context is a ClickHouse-style expression CTE
+        if (_dialect is ClickHouseDialect && token is LeftParen)
         {
-           return false; 
+            var nextToken = PeekNthToken(1);
+            // If it's (SELECT or (WITH, it's a standard subquery, not an expression
+            if (nextToken is Word w && (w.Keyword == Keyword.SELECT || w.Keyword == Keyword.WITH))
+            {
+                return false;
+            }
+            return true;
         }
+
+        return false;
     }
-    
+
     private bool IsScalarSubquery()
     {
         var token = PeekToken();
@@ -4646,7 +5037,7 @@ public partial class Parser
         if (token is LeftParen)
         {
             var nextToken = PeekNthToken(1);
-        
+
             if (nextToken is Word word)
             {
                 var keyword = word.Keyword;
@@ -4655,6 +5046,7 @@ public partial class Parser
                     return true;
                 }
             }
+
         }
 
         return false;
@@ -4676,7 +5068,7 @@ public partial class Parser
             }
         
             var nextToken = PeekNthToken(1);
-            if (nextToken is Word nextWord && nextWord.Keyword == Keyword.AS)
+            if (nextToken is Word { Keyword: Keyword.AS })
             {
                 return true;
             }
@@ -4878,9 +5270,9 @@ public partial class Parser
                 var lateralView = ParseExpr();
                 var lateralViewName = ParseObjectName();
                 var lateralColAlias = ParseCommaSeparated(() =>
-                    ParseOptionalAlias(new[] { Keyword.WHERE, Keyword.GROUP, Keyword.CLUSTER, Keyword.HAVING, Keyword.LATERAL }));
+                    ParseOptionalAlias([Keyword.WHERE, Keyword.GROUP, Keyword.CLUSTER, Keyword.HAVING, Keyword.LATERAL]));
 
-                lateralViews ??= new Sequence<LateralView>();
+                lateralViews ??= [];
                 lateralViews.Add(new LateralView(lateralView)
                 {
                     LateralViewName = lateralViewName,
@@ -5175,9 +5567,6 @@ public partial class Parser
                 if (ParseKeyword(Keyword.ARRAY))
                 {
                     ExpectKeyword(Keyword.JOIN);
-                    var arrayExpr = ParseExpr();
-                    var arrayAlias = MaybeParseTableAlias();
-                    var arrayRel = new TableFactor.ExpressionTable(arrayExpr) { Alias = arrayAlias };
 
                     if (inner && left)
                     {
@@ -5187,9 +5576,18 @@ public partial class Parser
 
                     var op = left ? (JoinOperator)new JoinOperator.LeftArrayJoin() : new JoinOperator.InnerArrayJoin();
 
-                    var item = new Join(arrayRel, op);
-                    joins ??= [];
-                    joins.Add(item);
+                    // Parse comma-separated list of array expressions with aliases
+                    do
+                    {
+                        var arrayExpr = ParseExpr();
+                        var arrayAlias = MaybeParseTableAlias();
+                        var arrayRel = new TableFactor.ExpressionTable(arrayExpr) { Alias = arrayAlias };
+
+                        var item = new Join(arrayRel, op);
+                        joins ??= [];
+                        joins.Add(item);
+                    } while (ConsumeToken<Comma>());
+
                     continue;
                 }
 
@@ -5313,6 +5711,11 @@ public partial class Parser
                     ParseKeyword(Keyword.OUTER); // [ OUTER ]
                     ExpectKeyword(Keyword.JOIN);
                     joinAction = constraint => new JoinOperator.FullOuter(constraint);
+                }
+                else if (peekKeyword == Keyword.STRAIGHT_JOIN)
+                {
+                    NextToken();  // consume STRAIGHT_JOIN
+                    joinAction = constraint => new JoinOperator.StraightJoin(constraint);
                 }
                 else if (peekKeyword == Keyword.OUTER)
                 {
@@ -5563,6 +5966,28 @@ public partial class Parser
             return jsonTable;
         }
 
+        // XMLTABLE
+        if (nextToken is Word { Keyword: Keyword.XMLTABLE } && PeekNthTokenIs<LeftParen>(1))
+        {
+            return ParseXmlTable();
+        }
+
+        // SEMANTIC_VIEW
+        if (nextToken is Word { Keyword: Keyword.SEMANTIC_VIEW } && PeekNthTokenIs<LeftParen>(1))
+        {
+            NextToken(); // consume SEMANTIC_VIEW
+            ExpectToken<LeftParen>();
+            var semanticName = ParseObjectName();
+            Sequence<FunctionArg>? semanticArgs = null;
+            if (ConsumeToken<Comma>())
+            {
+                semanticArgs = ParseCommaSeparated(ParseFunctionArgs);
+            }
+            ExpectToken<RightParen>();
+            var alias = MaybeParseTableAlias();
+            return new TableFactor.SemanticView(semanticName, semanticArgs ?? new Sequence<FunctionArg>()) { Alias = alias };
+        }
+
         var name = ParseObjectNameWithClause(true);
 
         var partitions = ParseInit(
@@ -5622,7 +6047,162 @@ public partial class Parser
             table = ParseMatchRecognize(table);
         }
 
+        // Parse TABLESAMPLE clause
+        if (ParseKeyword(Keyword.TABLESAMPLE))
+        {
+            var tableSample = ParseTableSample();
+            var tsAlias = MaybeParseTableAlias();
+            return new TableFactor.TableSample(table, tableSample) { Alias = tsAlias };
+        }
+
+        // Parse ClickHouse SAMPLE clause (no parentheses)
+        if (ParseKeyword(Keyword.SAMPLE))
+        {
+            var value = ParseExpr();
+            Expression? offset = null;
+            if (ParseKeyword(Keyword.OFFSET))
+            {
+                offset = ParseExpr();
+            }
+            return new TableFactor.TableSample(table, new TableSampleKind.Sample(value) { Offset = offset });
+        }
+
         return table;
+    }
+
+    /// <summary>
+    /// Parse TABLESAMPLE clause
+    /// </summary>
+    public TableSampleKind ParseTableSample()
+    {
+        // Parse optional method (BERNOULLI, SYSTEM, ROW)
+        TableSampleMethod? method = ParseOneOfKeywords(Keyword.BERNOULLI, Keyword.SYSTEM, Keyword.ROW) switch
+        {
+            Keyword.BERNOULLI => TableSampleMethod.Bernoulli,
+            Keyword.SYSTEM => TableSampleMethod.System,
+            Keyword.ROW => TableSampleMethod.Row,
+            _ => null
+        };
+
+        ExpectToken<LeftParen>();
+
+        // Check for BUCKET syntax
+        if (ParseKeyword(Keyword.BUCKET))
+        {
+            var bucketNum = ParseExpr();
+            ExpectKeywords(Keyword.OUT, Keyword.OF);
+            var totalBuckets = ParseExpr();
+            Expression? on = null;
+            if (ParseKeyword(Keyword.ON))
+            {
+                on = ParseExpr();
+            }
+            ExpectToken<RightParen>();
+            return new TableSampleKind.Bucket(bucketNum, totalBuckets) { On = on };
+        }
+
+        var sampleExpr = ParseExpr();
+
+        // Check for PERCENT or ROWS
+        if (ParseKeyword(Keyword.PERCENT))
+        {
+            ExpectToken<RightParen>();
+            bool? repeatable = null;
+            if (ParseKeyword(Keyword.REPEATABLE))
+            {
+                repeatable = ExpectParens(() => ParseOneOfKeywords(Keyword.TRUE, Keyword.FALSE) == Keyword.TRUE);
+            }
+            return new TableSampleKind.Percent(method, sampleExpr) { RepeatableSeed = repeatable };
+        }
+
+        if (ParseKeyword(Keyword.ROWS))
+        {
+            ExpectToken<RightParen>();
+            return new TableSampleKind.Rows(method, sampleExpr);
+        }
+
+        // No PERCENT or ROWS suffix - raw value (e.g., 100M for Hive byte-size)
+        ExpectToken<RightParen>();
+        return new TableSampleKind.Raw(method, sampleExpr);
+    }
+
+    /// <summary>
+    /// Parse XMLTABLE expression
+    /// </summary>
+    public TableFactor ParseXmlTable()
+    {
+        ExpectKeyword(Keyword.XMLTABLE);
+        ExpectToken<LeftParen>();
+
+        // Parse optional XMLNAMESPACES
+        Sequence<XmlNamespace>? namespaces = null;
+        if (ParseKeyword(Keyword.XMLNAMESPACES))
+        {
+            namespaces = ExpectParens(() => ParseCommaSeparated(ParseXmlNamespace));
+            ExpectToken<Comma>();
+        }
+
+        var rowExpression = ParseExpr();
+        ExpectKeyword(Keyword.PASSING);
+        var passingExpression = ParseExpr();
+        ExpectKeyword(Keyword.COLUMNS);
+        var columns = ParseCommaSeparated(ParseXmlTableColumn);
+
+        ExpectToken<RightParen>();
+        var alias = MaybeParseTableAlias();
+
+        return new TableFactor.XmlTable(new XmlTableExpression(rowExpression, passingExpression, columns)
+        {
+            Namespaces = namespaces
+        })
+        {
+            Alias = alias
+        };
+    }
+
+    public XmlNamespace ParseXmlNamespace()
+    {
+        var uri = ParseValue();
+
+        if (ParseKeywordSequence(Keyword.AS, Keyword.DEFAULT))
+        {
+            return new XmlNamespace(uri) { IsDefault = true };
+        }
+
+        if (ParseKeyword(Keyword.AS))
+        {
+            var prefix = ParseIdentifier();
+            return new XmlNamespace(uri, prefix);
+        }
+
+        return new XmlNamespace(uri);
+    }
+
+    public XmlTableColumn ParseXmlTableColumn()
+    {
+        var name = ParseIdentifier();
+        var dataType = ParseDataType();
+
+        Expression? path = null;
+        if (ParseKeyword(Keyword.PATH))
+        {
+            path = ParseExpr();
+        }
+
+        Expression? defaultVal = null;
+        if (ParseKeyword(Keyword.DEFAULT))
+        {
+            defaultVal = ParseExpr();
+        }
+
+        var notNull = ParseKeywordSequence(Keyword.NOT, Keyword.NULL);
+
+        return new XmlTableColumn(name, dataType)
+        {
+            Path = path,
+            Default = defaultVal,
+            NotNull = notNull
+        };
     }
 
     private TableFunctionArgs ParseTableFunctionArgs()
@@ -5779,7 +6359,7 @@ public partial class Parser
                 }
             case Word { Value: "PERMUTE" }:
                 {
-                    Sequence<MatchRecognizeSymbol> symbols = ExpectParens(() =>
+                    var symbols = ExpectParens(() =>
                         ParseCommaSeparated<MatchRecognizeSymbol>(() => new MatchRecognizeSymbol.Named(ParseIdentifier())));
                     return new MatchRecognizePattern.Permute(symbols);
                 }
@@ -6226,7 +6806,9 @@ public partial class Parser
             throw new ParserException("Cannot specify both CASCADE and RESTRICT in REVOKE");
         }
 
-        return new Revoke(privileges, grantObjects, grantees, cascade, grantedBy);
+        bool? cascadeOption = cascade ? true : restrict ? false : null;
+
+        return new Revoke(privileges, grantObjects, grantees, cascadeOption, grantedBy);
     }
 
     private AssignmentTarget ParseAssignmentTarget()

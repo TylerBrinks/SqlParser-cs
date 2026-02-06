@@ -152,4 +152,25 @@ public class RedshiftDialectTests : ParserTestBase
         VerifiedStatement("CREATE VIEW myevent AS SELECT eventname FROM event WITH NO SCHEMA BINDING",
             [new RedshiftDialect(), new GenericDialect()]);
     }
+
+    [Fact]
+    public void Test_Parse_Select_Numbered_Columns()
+    {
+        DefaultDialects = [new RedshiftDialect(), new GenericDialect()];
+        VerifiedStatement("SELECT 1 AS \"1\" FROM a");
+        VerifiedStatement("SELECT 1 AS \"1abc\" FROM a");
+    }
+
+    [Fact]
+    public void Parse_Vacuum()
+    {
+        var stmt = VerifiedStatement<Statement.Vacuum>("VACUUM FULL");
+        Assert.Contains(stmt.VacuumStatement.Options!, o => o is VacuumOption.Full);
+    }
+
+    [Fact]
+    public void Parse_Vacuum_Table()
+    {
+        VerifiedStatement("VACUUM tbl");
+    }
 }

@@ -29,4 +29,10 @@ public record InsertOperation([property: Visit(0)] ObjectName Name, [property: V
     /// Only for mysql
     public MySqlInsertPriority Priority { get; init; }
     public InsertAliases? InsertAlias { get; init; }
+    /// Table function for ClickHouse INSERT INTO TABLE FUNCTION
+    public Expression? TableFunction { get; init; }
+    /// Settings for ClickHouse INSERT
+    public Sequence<Setting>? Settings { get; init; }
+    /// Format clause for ClickHouse INSERT
+    public InputFormatClause? FormatClause { get; init; }
 }

@@ -68,12 +68,16 @@ public record Join(TableFactor? Relation = null, JoinOperator? JoinOperator = nu
                 joinText = "RIGHT ANTI JOIN";
                 constraint = rightAnti.JoinConstraint;
                 break;
+            case JoinOperator.StraightJoin straightJoin:
+                joinText = "STRAIGHT_JOIN";
+                constraint = straightJoin.JoinConstraint;
+                break;
         }
 
         writer.WriteSql($" {Prefix(constraint)}{joinText} {Relation}{Suffix(constraint)}");
         return;
 
-        string? Suffix(JoinConstraint constraint)
+        static string? Suffix(JoinConstraint constraint)
         {
             return constraint switch
             {
@@ -83,7 +87,7 @@ public record Join(TableFactor? Relation = null, JoinOperator? JoinOperator = nu
             };
         }
 
-        string? Prefix(JoinConstraint prefixConstraint)
+        static string? Prefix(JoinConstraint prefixConstraint)
         {
             return prefixConstraint is JoinConstraint.Natural ? "NATURAL " : null;
         }
@@ -160,6 +164,10 @@ public abstract record JoinOperator : IElement
     public record LeftArrayJoin : JoinOperator;
 
     public record AsOf(Expression MatchCondition, JoinConstraint Constraint) : JoinOperator;
+    /// <summary>
+    /// MySQL STRAIGHT_JOIN
+    /// </summary>
+    public record StraightJoin(JoinConstraint JoinConstraint) : ConstrainedJoinOperator(JoinConstraint);
 }
 
 /// <summary>

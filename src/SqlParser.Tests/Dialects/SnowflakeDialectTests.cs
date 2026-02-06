@@ -1543,4 +1543,71 @@ public class SnowflakeDialectTests : ParserTestBase
 
         Assert.Equal(expected, create.Element.Columns);
     }
+
+    [Fact]
+    public void Parse_Division_Correctly()
+    {
+        DefaultDialects = [new SnowflakeDialect(), new GenericDialect()];
+
+        OneStatementParsesTo(
+            "SELECT field/1000 FROM tbl1",
+            "SELECT field / 1000 FROM tbl1");
+
+        OneStatementParsesTo(
+            "SELECT tbl1.field/tbl2.field FROM tbl1 JOIN tbl2 ON tbl1.id = tbl2.entity_id",
+            "SELECT tbl1.field / tbl2.field FROM tbl1 JOIN tbl2 ON tbl1.id = tbl2.entity_id");
+    }
+
+    [Fact]
+    public void Parse_Top()
+    {
+        OneStatementParsesTo(
+            "SELECT TOP 4 c1 FROM testtable",
+            "SELECT TOP 4 c1 FROM testtable");
+    }
+
+    [Fact]
+    public void Test_Select_Wildcard_With_Ilike()
+    {
+        DefaultDialects = [new SnowflakeDialect(), new GenericDialect()];
+
+        var select = VerifiedOnlySelect("SELECT * ILIKE '%id%' FROM tbl");
+        var expected = new SelectItem.Wildcard(new WildcardAdditionalOptions
+        {
+            ILikeOption = new IlikeSelectItem("%id%")
+        });
+        Assert.Equal(expected, select.Projection[0]);
+    }
+
+    [Fact]
+    public void Test_Table_Sample()
+    {
+        DefaultDialects = [new SnowflakeDialect(), new GenericDialect()];
+
+        VerifiedStatement("SELECT * FROM testtable TABLESAMPLE (10)");
+        VerifiedStatement("SELECT * FROM testtable AS t TABLESAMPLE BERNOULLI (10)");
+        VerifiedStatement("SELECT * FROM testtable AS t TABLESAMPLE ROW (10)");
+        VerifiedStatement("SELECT * FROM testtable AS t TABLESAMPLE ROW (10 ROWS)");
+    }
+
+    [Fact]
+    public void Test_Parse_Position()
+    {
+        VerifiedQuery("SELECT position('an', 'banana', 1)");
+        VerifiedQuery("SELECT n, h, POSITION(n IN h) FROM pos");
+    }
+
+    [Fact]
+    public void Test_Timestamp_Ntz_With_Precision()
+    {
+        VerifiedStatement("SELECT CAST('2024-01-01 01:00:00' AS TIMESTAMP_NTZ(1))");
+        VerifiedStatement("SELECT CAST('2024-01-01 01:00:00' AS TIMESTAMP_NTZ(9))");
+    }
+
+    [Fact]
+    public void Test_Snowflake_Create_Table_Comment()
+    {
+        VerifiedStatement("CREATE TABLE my_table (a INT) COMMENT = 'some comment'");
+    }
+
 }

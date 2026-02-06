@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build:*)",
+      "Bash(dotnet test:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebSearch",
+      "Bash(Select-String \"Failed|Passed|Total|Error\")",
+      "Bash(Select-Object -Last 20)",
+      "Bash(git stash:*)",
+      "Bash(dotnet run:*)",
+      "Bash(sql=\"SELECT * FROM \\(SELECT a, b, c, d FROM \\(SELECT a, sum\\(r\\) AS b, sumForEach\\(r\\) AS c FROM \\(WITH date - install_date AS visit_day SELECT a, b, retention\\(visit_day = 0\\) AS r FROM \\(SELECT a, b, c FROM t1 WHERE a BETWEEN 1 AND 2 UNION ALL SELECT a, b, c FROM t2 WHERE a BETWEEN 1 AND 2\\) GROUP BY a, b\\) GROUP BY a\\) ARRAY JOIN c AS rr, [0, 1, 3] AS d\\)\")",
+      "Bash(echo:*)",
+      "Bash(grep:*)",
+      "Bash(for file in \"C:/Users/tyler/source/repos/code/sqlparser-rs/src/\"**/*.rs)",
+      "Bash(do grep -E \"^\\\\s*#\\\\[test\\\\]|^\\\\s*fn\\\\s+\" \"$file\")",
+      "Bash(done)",
+      "Bash(find:*)",
+      "Bash(findstr:*)",
+      "Bash(python3:*)",
+      "Bash(python -c:*)",
+      "Bash(xxd:*)",
+      "Bash(ls:*)",
+      "Bash(xargs:*)"
+    ]
+  }
+}

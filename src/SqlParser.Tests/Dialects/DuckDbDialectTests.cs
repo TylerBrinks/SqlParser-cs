@@ -423,4 +423,37 @@ public class DuckDbDialectTests : ParserTestBase
 
         Assert.Equal(new Statement.Use(new Use.Object(new ObjectName(["mydb", "my_schema"]))), VerifiedStatement("USE mydb.my_schema"));
     }
+
+    [Fact]
+    public void Test_DuckDb_Specific_Int_Types()
+    {
+        var duckdbTypes = new (string TypeStr, DataType Type)[]
+        {
+            ("UTINYINT", new DataType.UTinyInt()),
+            ("USMALLINT", new DataType.USmallInt()),
+            ("UBIGINT", new DataType.UBigInt()),
+            ("UHUGEINT", new DataType.UHugeInt()),
+            ("HUGEINT", new DataType.HugeInt()),
+        };
+
+        foreach (var (typeStr, dataType) in duckdbTypes)
+        {
+            var sql = $"SELECT 123::{typeStr}";
+            var select = VerifiedOnlySelect(sql);
+            var expected = new Expression.Cast(
+                new Expression.LiteralValue(new Value.Number("123")),
+                dataType,
+                CastKind.DoubleColon);
+            Assert.Equal(expected, select.Projection[0].AsExpr());
+        }
+    }
+
+    [Fact]
+    public void Test_Create_Secret_Simple()
+    {
+        var create = VerifiedStatement<Statement.CreateSecret>("CREATE SECRET ( TYPE type )");
+        var expected = new Statement.CreateSecret(false, null, false, null, null, "type", []);
+        Assert.Equal(expected, create);
+    }
+
 }

@@ -8,13 +8,14 @@ public abstract record MacroDefinition : IWriteSql, IElement
 
     public void ToSql(SqlTextWriter writer)
     {
-        if (this is MacroExpression e)
+        switch (this)
         {
-            writer.WriteSql($"{e.Expression}");
-        }
-        else if (this is MacroTable t)
-        {
-            writer.WriteSql($"{t.Query}");
+            case MacroExpression e:
+                writer.WriteSql($"{e.Expression}");
+                break;
+            case MacroTable t:
+                writer.WriteSql($"{t.Query}");
+                break;
         }
     }
 }

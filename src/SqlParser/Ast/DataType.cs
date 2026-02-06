@@ -130,6 +130,46 @@ public abstract record DataType : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// BigDecimal type used in BigQuery
+    /// </summary>
+    public record BigDecimal(ExactNumberInfo ExactNumberInfo) : ExactNumberDataType(ExactNumberInfo)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.WriteSql($"BIGDECIMAL{ExactNumberInfo}");
+        }
+    }
+    /// <summary>
+    /// Bit string data type with optional length e.g. BIT(8)
+    /// </summary>
+    public record Bit(ulong? Length = null) : LengthDataType(Length)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            FormatTypeWithOptionalLength(writer, "BIT", Length);
+        }
+    }
+    /// <summary>
+    /// Bit varying data type with optional length e.g. BIT VARYING(8) or VARBIT(8)
+    /// </summary>
+    public record BitVarying(ulong? Length = null) : LengthDataType(Length)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            FormatTypeWithOptionalLength(writer, "BIT VARYING", Length);
+        }
+    }
+    /// <summary>
+    /// VarBit data type (PostgreSQL alias for BIT VARYING)
+    /// </summary>
+    public record VarBit(ulong? Length = null) : LengthDataType(Length)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            FormatTypeWithOptionalLength(writer, "VARBIT", Length);
+        }
+    }
+    /// <summary>
     /// Fixed-length binary type with optional length e.g.
     ///
     /// <see href="https://jakewheat.github.io/sql-overview/sql-2016-foundation-grammar.html#binary-string-type"/>
@@ -145,7 +185,7 @@ public abstract record DataType : IWriteSql, IElement
     }
     /// <summary>
     /// Large binary object with optional length e.g. BLOB, BLOB(1000)
-    /// 
+    ///
     /// <see href="https://jakewheat.github.io/sql-overview/sql-2016-foundation-grammar.html#binary-large-object-string-type"/>
     /// <see href="https://docs.oracle.com/javadb/10.8.3.0/ref/rrefblob.html"/>
     /// </summary>
@@ -154,6 +194,36 @@ public abstract record DataType : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             FormatTypeWithOptionalLength(writer, "BLOB", Length);
+        }
+    }
+    /// <summary>
+    /// MySQL TINYBLOB type
+    /// </summary>
+    public record TinyBlob : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("TINYBLOB");
+        }
+    }
+    /// <summary>
+    /// MySQL MEDIUMBLOB type
+    /// </summary>
+    public record MediumBlob : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("MEDIUMBLOB");
+        }
+    }
+    /// <summary>
+    /// MySQL LONGBLOB type
+    /// </summary>
+    public record LongBlob : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("LONGBLOB");
         }
     }
     /// <summary>
@@ -397,7 +467,7 @@ public abstract record DataType : IWriteSql, IElement
         }
     }
     /// <summary>
-    /// Enum data types 
+    /// Enum data types
     /// </summary>
     /// <param name="Values"></param>
     public record Enum(Sequence<string> Values) : DataType
@@ -405,6 +475,44 @@ public abstract record DataType : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             writer.Write("ENUM(");
+            for (var i = 0; i < Values.Count; i++)
+            {
+                if (i > 0)
+                {
+                    writer.WriteCommaSpaced();
+                }
+                writer.Write($"'{Values[i].EscapeSingleQuoteString()}'");
+            }
+            writer.Write(')');
+        }
+    }
+    /// <summary>
+    /// ClickHouse Enum8 data type
+    /// </summary>
+    public record Enum8(Sequence<string> Values) : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("ENUM8(");
+            for (var i = 0; i < Values.Count; i++)
+            {
+                if (i > 0)
+                {
+                    writer.WriteCommaSpaced();
+                }
+                writer.Write($"'{Values[i].EscapeSingleQuoteString()}'");
+            }
+            writer.Write(')');
+        }
+    }
+    /// <summary>
+    /// ClickHouse Enum16 data type
+    /// </summary>
+    public record Enum16(Sequence<string> Values) : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("ENUM16(");
             for (var i = 0; i < Values.Count; i++)
             {
                 if (i > 0)
@@ -601,6 +709,56 @@ public abstract record DataType : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             writer.Write("INT256");
+        }
+    }
+    /// <summary>
+    /// DuckDB HugeInt (128-bit signed integer)
+    /// </summary>
+    public record HugeInt : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("HUGEINT");
+        }
+    }
+    /// <summary>
+    /// DuckDB UHugeInt (128-bit unsigned integer)
+    /// </summary>
+    public record UHugeInt : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("UHUGEINT");
+        }
+    }
+    /// <summary>
+    /// DuckDB UTinyInt (8-bit unsigned integer)
+    /// </summary>
+    public record UTinyInt : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("UTINYINT");
+        }
+    }
+    /// <summary>
+    /// DuckDB USmallInt (16-bit unsigned integer)
+    /// </summary>
+    public record USmallInt : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("USMALLINT");
+        }
+    }
+    /// <summary>
+    /// DuckDB UBigInt (64-bit unsigned integer)
+    /// </summary>
+    public record UBigInt : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("UBIGINT");
         }
     }
     /// <summary>
@@ -809,6 +967,36 @@ public abstract record DataType : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// MySQL TINYTEXT type
+    /// </summary>
+    public record TinyText : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("TINYTEXT");
+        }
+    }
+    /// <summary>
+    /// MySQL MEDIUMTEXT type
+    /// </summary>
+    public record MediumText : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("MEDIUMTEXT");
+        }
+    }
+    /// <summary>
+    /// MySQL LONGTEXT type
+    /// </summary>
+    public record LongText : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("LONGTEXT");
+        }
+    }
+    /// <summary>
     /// Time with optional time precision and time zone information
     ///
     /// <see href="https://jakewheat.github.io/sql-overview/sql-2016-foundation-grammar.html#datetime-type"/>
@@ -833,6 +1021,16 @@ public abstract record DataType : IWriteSql, IElement
         }
     }
     /// <summary>
+    /// TIMESTAMP_NTZ - Timestamp without timezone (Snowflake, Databricks)
+    /// </summary>
+    public record TimestampNtz(ulong? Length = null) : LengthDataType(Length)
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            FormatTypeWithOptionalLength(writer, "TIMESTAMP_NTZ", Length);
+        }
+    }
+    /// <summary>
     /// Tiny integer with optional display width e.g. TINYINT or TINYINT(3)
     /// </summary>
     public record TinyInt(ulong? Length = null) : LengthDataType(Length)
@@ -850,6 +1048,36 @@ public abstract record DataType : IWriteSql, IElement
         public override void ToSql(SqlTextWriter writer)
         {
             writer.Write("TRIGGER");
+        }
+    }
+    /// <summary>
+    /// BigQuery ANY TYPE - a placeholder for any type
+    /// </summary>
+    public record AnyType : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("ANY TYPE");
+        }
+    }
+    /// <summary>
+    /// PostgreSQL TsVector text search type
+    /// </summary>
+    public record TsVector : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("TSVECTOR");
+        }
+    }
+    /// <summary>
+    /// PostgreSQL TsQuery text search type
+    /// </summary>
+    public record TsQuery : DataType
+    {
+        public override void ToSql(SqlTextWriter writer)
+        {
+            writer.Write("TSQUERY");
         }
     }
     /// <summary>

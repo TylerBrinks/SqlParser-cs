@@ -177,6 +177,7 @@ public static class EnumWriter
             UnaryOperator.Plus => "+",
             UnaryOperator.Minus => "-",
             UnaryOperator.Not => "NOT",
+            UnaryOperator.BitwiseNot => "~",
             UnaryOperator.PGBitwiseNot => "~",
             UnaryOperator.PGSquareRoot => "|/",
             UnaryOperator.PGCubeRoot => "||/",

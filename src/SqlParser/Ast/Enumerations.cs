@@ -365,7 +365,19 @@ public enum IndexType
 {
     None,
     BTree,
-    Hash
+    Hash,
+    // PostgreSQL GIN index
+    GIN,
+    // PostgreSQL GiST index
+    GiST,
+    // PostgreSQL SP-GiST index
+    SPGiST,
+    // PostgreSQL BRIN index
+    BRIN,
+    // PostgreSQL Bloom index
+    Bloom,
+    // Custom index type with custom name
+    Custom
 }
 
 public enum IsLateral
@@ -473,7 +485,8 @@ public enum ObjectType
     Sequence,
     Stage,
     Database,
-    Type
+    Type,
+    Extension
 }
 
 public enum OffsetRows
@@ -666,6 +679,8 @@ public enum UnaryOperator
     Minus,
     // Not, e.g. `NOT(true)`
     Not,
+    // Bitwise Not, e.g. ~9 (cross-dialect)
+    BitwiseNot,
     // Bitwise Not, e.g. ~9 (PostgreSQL-specific)
     PGBitwiseNot,
     // Square root, e.g. |/9 (PostgreSQL-specific)
@@ -688,4 +703,34 @@ public enum WindowFrameUnit
     Rows,
     Range,
     Groups
+}
+
+/// <summary>
+/// Unicode normalization form for IS NORMALIZED expression
+/// </summary>
+public enum NormalForm
+{
+    NFC,
+    NFD,
+    NFKC,
+    NFKD
+}
+
+/// <summary>
+/// DROP behavior for statements like DROP DOMAIN
+/// </summary>
+public enum DropBehavior
+{
+    Cascade,
+    Restrict
+}
+
+/// <summary>
+/// MATCH type for foreign key constraints
+/// </summary>
+public enum MatchType
+{
+    Full,
+    Partial,
+    Simple
 }

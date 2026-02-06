@@ -4,12 +4,8 @@ using SqlParser.Ast;
 
 namespace SqlParser;
 
-public class SqlTextWriter : StringWriter
+public class SqlTextWriter(StringBuilder sb) : StringWriter(sb)
 {
-    public SqlTextWriter(StringBuilder sb) : base(sb)
-    {
-    }
-    
     /// <summary>
     /// Writes SQL using a custom string interpolation handler.  Doing so
     /// allows IWriteSql types to be written using "ToSql" using the

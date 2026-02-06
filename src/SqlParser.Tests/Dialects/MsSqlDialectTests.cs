@@ -423,4 +423,92 @@ public class MsSqlDialectTests : ParserTestBase
 
         Assert.Equal(binary, aliased.Expression.AsBinaryOp());
     }
+
+    [Fact]
+    public void Parse_MsSql_Apply_Join()
+    {
+        var dialects = new Dialect[] { new MsSqlDialect(), new GenericDialect() };
+
+        VerifiedOnlySelect(
+            "SELECT * FROM sys.dm_exec_query_stats AS deqs CROSS APPLY sys.dm_exec_query_plan(deqs.plan_handle)",
+            dialects);
+
+        VerifiedOnlySelect(
+            "SELECT * FROM sys.dm_exec_query_stats AS deqs OUTER APPLY sys.dm_exec_query_plan(deqs.plan_handle)",
+            dialects);
+
+        VerifiedOnlySelect(
+            "SELECT * FROM foo OUTER APPLY (SELECT foo.x + 1) AS bar",
+            dialects);
+    }
+
+    [Fact]
+    public void Parse_Nested_Slash_Star_Comment()
+    {
+        var sql = @"
+    select
+    /*
+       comment level 1
+       /*
+          comment level 2
+       */
+    */
+    1;
+    ";
+        OneStatementParsesTo(sql, "SELECT 1");
+    }
+
+    [Fact]
+    public void Parse_MsSql_Raiserror()
+    {
+        VerifiedStatement("RAISERROR('This is a test', 16, 1)");
+        VerifiedStatement("RAISERROR('This is a test', 16, 1) WITH NOWAIT");
+        VerifiedStatement("RAISERROR('This is a test', 16, 1, 'ARG') WITH SETERROR, LOG");
+        VerifiedStatement("RAISERROR(N'This is message %s %d.', 10, 1, N'number', 5)");
+        VerifiedStatement("RAISERROR(N'<<%*.*s>>', 10, 1, 7, 3, N'abcde')");
+        VerifiedStatement("RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState)");
+    }
+
+    [Fact]
+    public void Parse_MsSql_Print_Statements()
+    {
+        VerifiedStatement("PRINT 'Hello, world!'");
+        VerifiedStatement("PRINT @my_variable");
+    }
+
+    [Fact]
+    public void Parse_MsSql_Grant_Statement()
+    {
+        VerifiedStatement("GRANT SELECT ON my_table TO public, db_admin");
+    }
+
+    [Fact]
+    public void Parse_MsSql_Deny_Statement()
+    {
+        VerifiedStatement("DENY SELECT ON my_table TO public, db_admin");
+    }
+
+    [Fact]
+    public void Parse_MsSql_Alter_Role()
+    {
+        VerifiedStatement("ALTER ROLE role_name ADD MEMBER new_member");
+        VerifiedStatement("ALTER ROLE role_name DROP MEMBER old_member");
+    }
+
+    [Fact]
+    public void Parse_MsSql_Varbinary_Max_Length()
+    {
+        var dialects = new Dialect[] { new MsSqlDialect(), new GenericDialect() };
+
+        VerifiedStatement("CREATE TABLE example (var_binary_col VARBINARY(MAX))", dialects);
+        VerifiedStatement("CREATE TABLE example (var_binary_col VARBINARY(50))", dialects);
+    }
+
+    [Fact]
+    public void Parse_Substring_In_Select()
+    {
+        OneStatementParsesTo(
+            "SELECT DISTINCT SUBSTRING(description, 0, 1) FROM test",
+            "SELECT DISTINCT SUBSTRING(description, 0, 1) FROM test");
+    }
 }
