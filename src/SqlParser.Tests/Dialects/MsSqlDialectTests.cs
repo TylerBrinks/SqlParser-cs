@@ -375,7 +375,7 @@ public class MsSqlDialectTests : ParserTestBase
     {
         var withColumnOptions = new List<(string, Sequence<ColumnOptionDef>)>
         {
-            ("CREATE TABLE mytable (columnA INT IDENTITY NOT NULL)", 
+            ("CREATE TABLE mytable (columnA INT IDENTITY NOT NULL)",
                 [
                     new ColumnOptionDef(new ColumnOption.Identity(new IdentityPropertyKind.Identity(new IdentityProperty(null, null)))),
                     new ColumnOptionDef(new ColumnOption.NotNull())
@@ -510,5 +510,17 @@ public class MsSqlDialectTests : ParserTestBase
         OneStatementParsesTo(
             "SELECT DISTINCT SUBSTRING(description, 0, 1) FROM test",
             "SELECT DISTINCT SUBSTRING(description, 0, 1) FROM test");
+    }
+
+    [Fact]
+    public void Parse_MsSql_If_ObjectId_Drop_Table()
+    {
+        const string sql = """
+                           IF OBJECT_ID(N'dbo.Users', N'U') IS NOT NULL
+                               DROP TABLE dbo.Users;
+                           """;
+        const string canonical = "IF OBJECT_ID(N'dbo.Users', N'U') IS NOT NULL DROP TABLE dbo.Users";
+
+        OneStatementParsesTo(sql, canonical);
     }
 }
