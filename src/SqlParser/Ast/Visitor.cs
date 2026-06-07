@@ -53,9 +53,29 @@ public interface IElement
                     return visitor.PostVisitStatement(s);
                 }
 
+            case Query q:
+                {
+                    var flow = visitor.PreVisitQuery(q);
+                    if (flow == ControlFlow.Break)
+                    {
+                        return flow;
+                    }
+
+                    VisitChildren(this, visitor);
+                    return visitor.PostVisitQuery(q);
+                }
+
             default:
-                VisitChildren(this, visitor);
-                return ControlFlow.Continue;
+                {
+                    var flow = visitor.PreVisitDefault(this);
+                    if (flow == ControlFlow.Break)
+                    {
+                        return flow;
+                    }
+
+                    VisitChildren(this, visitor);
+                    return visitor.PostVisitDefault(this);
+                }
         }
     }
 
@@ -117,7 +137,7 @@ public interface IElement
 
             var decoratedParameters = constructorParams.Where(p => p.GetCustomAttribute<VisitAttribute>() != null)
                 .OrderBy(p => p.GetCustomAttribute<VisitAttribute>()!.Order)
-                .Select(p => (Property:p, p.GetCustomAttribute<VisitAttribute>()!.Order))
+                .Select(p => (Property: p, p.GetCustomAttribute<VisitAttribute>()!.Order))
                 .ToList();
 
             foreach (var param in decoratedParameters)
@@ -139,11 +159,21 @@ public interface IElement
 
 public abstract class Visitor
 {
+    public virtual ControlFlow PreVisitDefault(IElement element)
+    {
+        return ControlFlow.Continue;
+    }
+
+    public virtual ControlFlow PostVisitDefault(IElement element)
+    {
+        return ControlFlow.Continue;
+    }
+
     public virtual ControlFlow PreVisitQuery(Query query)
     {
         return ControlFlow.Continue;
     }
-   
+
     public virtual ControlFlow PostVisitQuery(Query query)
     {
         return ControlFlow.Continue;
