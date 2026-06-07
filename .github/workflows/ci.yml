@@ -12,11 +12,27 @@ on:
 
   pull_request:
     branches:
-      - feature/**
-      - bugfix/**
+      - main
 
 jobs:
+  validate-pr-branch-name:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce PR branch naming convention
+        run: |
+          branch="${{ github.head_ref }}"
+          if [[ ! "$branch" =~ ^(feature|bugfix)/ ]]; then
+            echo "::error::PR branch must start with 'feature/' or 'bugfix/'. Got: $branch"
+            exit 1
+          fi
+
   continuous-integration:
+    needs: validate-pr-branch-name
+    if: |
+      always() &&
+      (needs.validate-pr-branch-name.result == 'success' ||
+       needs.validate-pr-branch-name.result == 'skipped')
     uses: ./.github/workflows/build.yml
     with:
       pack: false
