@@ -660,7 +660,6 @@ public ref struct Tokenizer(bool unescape = true)
             return StartBinOp("->", new Arrow());
         }
 
-        _state.Next();
         return ConsumeForBinOp("->>", new LongArrow());
     }
 
